@@ -5,10 +5,8 @@ import pg from "pg";
 import environment from "../config/environment.js";
 const { Pool } = pg;
 
-// Parse الـ URL بشكل صحيح
-const connectionString = environment.database.url.trim(); // امسح أي مسافات
 
-console.log("Database URL:", connectionString);
+const connectionString = environment.database.url.trim();
 const pool = new Pool({
   connectionString: connectionString,
 });

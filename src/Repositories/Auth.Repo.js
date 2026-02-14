@@ -4,6 +4,7 @@ const CreateUser = async (phoneNumber) => {
   const user = await prisma.user.create({
     data: {
       phoneNumber: phoneNumber,
+      
     },
   });
   return user;

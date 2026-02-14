@@ -12,13 +12,13 @@ model Session {
   userId            Int
   token             String   @unique
   isRevoked         Boolean  @default(false)
-  deviceFingerprint String   @unique
+  deviceFingerprint String   
   lastUsedAt        DateTime @default(now())
   createdAt         DateTime @default(now())
   expiresAt         DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  @@unique([userId, deviceFingerprint])
   @@index([token, deviceFingerprint, userId])
   @@map("sessions")
 }
