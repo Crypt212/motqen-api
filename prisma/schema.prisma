@@ -1,12 +1,9 @@
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/lib/prisma/client"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-
 
 }
 
@@ -33,7 +30,8 @@ model OTPs {
   updatedAt   DateTime
   expiresAt   DateTime
   createdAt   DateTime @default(now())
-  InProcess   Boolean // race condition
+  isUsed      Boolean  @default(false)
+  method      methods // "SMS" or "WhatsApp"
 
   @@map("OTPs")
 }
@@ -41,10 +39,10 @@ model OTPs {
 model User {
   id          Int           @id @default(autoincrement())
   phoneNumber String        @unique
-  fristName   String
-  lastName    String
-  government  String
-  city        String
+  firstName   String?
+  lastName    String?
+  government  String?
+  city        String?
   bio         String?
   status      AccountStatus @default(INCOMPLETE)
 
@@ -66,7 +64,7 @@ model WorkerInfo {
   secondarySpecializations SpecializationsForWorkers[]
   primarySpecialization    Specialization              @relation(fields: [primarySpecializationId], references: [id])
   user                     User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  goverments               Goverment[]
+  governments               Government[]
 
   @@map("worker_infos")
 }
@@ -91,7 +89,7 @@ model Specialization {
   @@map("specializations")
 }
 
-model Goverment {
+model Government {
   id           Int         @id @default(autoincrement())
   name         String
   workerInfo   WorkerInfo? @relation(fields: [workerInfoId], references: [id])
@@ -111,5 +109,11 @@ enum Role {
   WORKER
   CLIENT
   ADMIN
+  NOTCONFIRMED
+  UNDEFINED
 }
 
+enum methods {
+  SMS
+  WhatsApp
+}
