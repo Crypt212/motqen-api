@@ -3,8 +3,8 @@ import {
   GetOTPByPhoneNumber,
   markAsUsed,
   UpdateOTPAttempts,
-} from "../Repo/Auth.Repo.js";
-import AppError from "../utils/AppError.utils.js";
+} from "../repositories/AuthRepo.js";
+import AppError from "../errors/AppError.js";
 
 export const isValidOTP = async (phoneNumber, method, hashedOTP) => {
   // in production -> Invalid or expired OTP only 

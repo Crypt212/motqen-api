@@ -1,11 +1,10 @@
 import { PrismaClient } from "./prisma/client/client.js";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
-import environment from "../config/environment.js";
+import environment from "../configs/environment.js";
 const { Pool } = pg;
 
-// Parse الـ URL بشكل صحيح
-const connectionString = environment.database.url.trim(); // امسح أي مسافات
+const connectionString = environment.database.url.trim();
 
 console.log("Database URL:", connectionString);
 const pool = new Pool({

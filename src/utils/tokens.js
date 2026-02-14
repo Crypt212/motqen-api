@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import environment from "../config/environment.js";
+import environment from "../configs/environment.js";
 
 const {
   accessToken: { secret: accessSecret, expiresIn: accessDuration },

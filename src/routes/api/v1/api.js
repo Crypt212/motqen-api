@@ -1,10 +1,11 @@
 import { Router } from "express";
-import authRoutes from "./auth.routes.js";
-import userRoutes from "./user.routes.js";
+import authRouter from "../../auth.js";
+import usersRouter from "../../users.js";
 
 const apiV1Router = Router();
 
-apiV1Router.use("/auth", authRoutes);
-apiV1Router.use("/users", userRoutes);
+// Mount routers
+apiV1Router.use("/auth", authRouter);
+apiV1Router.use("/users", usersRouter);
 
 export default apiV1Router;

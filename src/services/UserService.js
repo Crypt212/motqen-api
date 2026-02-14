@@ -1,5 +1,5 @@
 
-import { CreateUser, GetUserByPhoneNumber } from "../Repo/Auth.Repo.js";
+import { CreateUser, GetUserByPhoneNumber } from "../repositories/AuthRepo.js";
 const GetOrCreateUserService = async (phoneNumber) => {
   const existingUser = await GetUserByPhoneNumber(phoneNumber);
   if (!existingUser) {

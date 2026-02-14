@@ -1,5 +1,5 @@
 import redis from "redis";
-import environment from "../config/environment.js";
+import environment from "../configs/environment.js";
 import { logger } from "./winston.js";
 
 const redisClient = redis.createClient(environment.redis.url);

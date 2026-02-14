@@ -1,4 +1,4 @@
-import prisma from "../lib/database.js";
+import prisma from "../libs/database.js";
 
 const CreateUser = async (phoneNumber) => {
   const user = await prisma.user.create({

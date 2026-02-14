@@ -1,7 +1,7 @@
 import {
   RequestOrResendOTPService,
   VerifyOTPService,
-} from "../services/auth.services.js";
+} from "../services/AuthService.js";
 
 const RequestOTP = async (req, res, next) => {
   try {

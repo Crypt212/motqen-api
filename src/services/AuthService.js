@@ -5,15 +5,15 @@ import {
   GetOTPByPhoneNumber,
   UpdateOTPAttempts,
   markAsUsed,
-} from "../Repo/Auth.Repo.js";
-import { isValidOTP } from "./otp.services.js";
-import { GetOrCreateUserService } from "./user.services.js";
-import { createSessionForUser } from "./sessions.services.js";
-import { generateAccessToken } from "../utils/jwt.utils.js";
-import AppError from "../utils/AppError.utils.js";
-import SendOTPProvider from "../providers/SendOTP.provider.js";
-import { generateOTP, hashOTP } from "../utils/otp.utils.js";
-import environment from "../config/environment.js";
+} from "../repositories/AuthRepo.js";
+import { isValidOTP } from "./OTPService.js";
+import { GetOrCreateUserService } from "./UserService.js";
+import { createSessionForUser } from "./SessionsService.js";
+import { generateAccessToken } from "../utils/tokens.js";
+import AppError from "../errors/AppError.js";
+import SendOTPProvider from "../providers/SendOTPProvider.js";
+import { generateOTP, hashOTP } from "../utils/OTP.js";
+import environment from "../configs/environment.js";
 
 const { cooldownConstant, expiresIn } = environment.otps;
 
