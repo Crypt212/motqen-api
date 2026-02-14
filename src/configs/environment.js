@@ -53,6 +53,11 @@ const otps = {
   expiresIn: parseInt(process.env.OTP_EXPIRES_IN ) || 15 * 60, // 15 minutes 
   cooldownConstant: parseInt(process.env.OTP_COOLDOWN_CONSTANT) || 60, // 60 seconds
 };
+const twilio = {
+  accountSid: process.env.TWILIO_ACCOUNT_SID,
+  authToken: process.env.TWILIO_AUTH_TOKEN,
+  virtualNumber: process.env.TWILIO_VIRTUAL_NUMBER, 
+}
 const environment = {
   nodeEnv,
   backend,
@@ -64,6 +69,7 @@ const environment = {
   logging,
   whatsapp,
   otps,
+  twilio,
 };
 
 Object.freeze(environment);

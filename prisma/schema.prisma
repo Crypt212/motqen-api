@@ -7,19 +7,19 @@ datasource db {
 }
 
 model Session {
-    id                Int      @id @default(autoincrement())
-    userId            Int
-    token             String   @unique
-    isRevoked         Boolean  @default(false)
-    deviceFingerprint String   @unique
-    lastUsedAt        DateTime @default(now())
-    createdAt         DateTime @default(now())
-    expiresAt         DateTime
+  id                Int      @id @default(autoincrement())
+  userId            Int
+  token             String   @unique
+  isRevoked         Boolean  @default(false)
+  deviceFingerprint String   
+  lastUsedAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
+  expiresAt         DateTime
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    @@index([token, deviceFingerprint, userId])
-    @@map("sessions")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, deviceFingerprint])
+  @@index([token, deviceFingerprint, userId])
+  @@map("sessions")
 }
 
 model OTPs {

@@ -1,16 +1,42 @@
+import twilio from "twilio";
+import AppError from "../Core/errors/AppError.js";
+import environment from "../config/environment.js";
+
+const { accountSid, authToken, virtualNumber } = environment.twilio;
+
 export default async function (method, OTP, phoneNumber) {
   if (method === "SMS") {
-     await sendViaSMS(`Your OTP is ${OTP}`, phoneNumber, "MOTQEN");
+    await sendViaSMS(`Your OTP is ${OTP}`, phoneNumber);
   } else if (method === "WhatsApp") {
-    await  sendViaWhatApp(`Your OTP is ${OTP}`, phoneNumber, "MOTQEN");
+    if (environment.nodeEnv === "development") {
+      await sendViaWhatApp(`Your OTP is ${OTP}`, phoneNumber);
+    } else {
+      throw AppError("this feature is not working yet", 500);
+    }
   }
-  
 }
 
-async function sendViaSMS(message, to, from) {
-  console.log(`Sending message: ${message} to: ${to} from: ${from}`);
+const client = twilio(accountSid, authToken);
+
+async function sendViaSMS(message, to) {
+  try {
+    const messageResponse = await client.messages.create({
+      body: message,
+      From: virtualNumber,
+      to: to,
+    });
+
+    console.log(
+      `Sending message: ${messageResponse} to: ${to} from: ${virtualNumber}`,
+    );
+    return { success: true, messageId: messageResponse.sid };
+  } catch (error) {
+    console.error("❌ error in sending message ", error.message);
+    throw new AppError(error.message, 500);
+  }
 }
 
-async function sendViaWhatApp(message, to, from) {
-  console.log(`Sending message: ${message} to: ${to} from: ${from}`);
+async function sendViaWhatApp(message, to) {
+  // for send message using whatsapp api
+  console.log(`Sending message: ${message} to: ${to} from: ${VirtualNumber}`);
 }
