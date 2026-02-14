@@ -3,7 +3,7 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import cors from "cors";
 import mainRouter from "./routes/api.js";
-import { errorHandler } from "./middlewares/errorHandlerMiddleware.js";
+import  errorHandler  from "./middlewares/errorHandlerMiddleware.js";
 import redisClient from "./lib/redis.js";
 import environment from "./config/environment.js";
 import  prismaClient  from "./lib/database.js";

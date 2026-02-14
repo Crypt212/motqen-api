@@ -1,0 +1,61 @@
+{
+    "status": "error",
+    "message": "
+    Invalid `prisma.oTPs.create()` invocation:
+    
+    {
+      data: {
+        phoneNumber: \"+201112385149\",
+        hashedOTP: \"d2739591f738c400c486179d3aa8603987f3963a706089d5ab07a6d87314ace6\",
+        expiresAt: new Date(\"2026-02-14T06:11:11.154Z\"),
+        method: \"sms\",
+    +   updatedAt: DateTime
+      }
+    }
+    
+    Argument `updatedAt` is missing.",
+    "stack": "PrismaClientValidationError: 
+    Invalid `prisma.oTPs.create()` invocation:
+    
+    {
+      data: {
+        phoneNumber: \"+201112385149\",
+        hashedOTP: \"d2739591f738c400c486179d3aa8603987f3963a706089d5ab07a6d87314ace6\",
+        expiresAt: new Date(\"2026-02-14T06:11:11.154Z\"),
+        method: \"sms\",
+    +   updatedAt: DateTime
+      }
+    }
+    
+    Argument `updatedAt` is missing.
+        at ar (D:\\UberEats\\MOTQEN\
+    ew folder\
+    ew folder\\motqen-api\
+    ode_modules\\@prisma\\client\\runtime\\client.js:10:1379)
+        at zr.handleRequestError (D:\\UberEats\\MOTQEN\
+    ew folder\
+    ew folder\\motqen-api\
+    ode_modules\\@prisma\\client\\runtime\\client.js:65:7815)
+        at zr.handleAndLogRequestError (D:\\UberEats\\MOTQEN\
+    ew folder\
+    ew folder\\motqen-api\
+    ode_modules\\@prisma\\client\\runtime\\client.js:65:7467)
+        at zr.request (D:\\UberEats\\MOTQEN\
+    ew folder\
+    ew folder\\motqen-api\
+    ode_modules\\@prisma\\client\\runtime\\client.js:65:7174)
+        at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        at async a (D:\\UberEats\\MOTQEN\
+    ew folder\
+    ew folder\\motqen-api\
+    ode_modules\\@prisma\\client\\runtime\\client.js:75:5816)
+        at async CreateOTP (file:///D:/UberEats/MOTQEN/New%20folder/New%20folder/motqen-api/src/Repo/Auth.Repo.js:22:15)
+        at async RequestOTPService (file:///D:/UberEats/MOTQEN/New%20folder/New%20folder/motqen-api/src/services/auth.services.js:22:3)
+        at async RequestOTP (file:///D:/UberEats/MOTQEN/New%20folder/New%20folder/motqen-api/src/controllers/auth.controllers.js:10:5)",
+    "error": {
+        "name": "PrismaClientValidationError",
+        "clientVersion": "7.4.0",
+        "statusCode": 500,
+        "status": "error"
+    }
+}

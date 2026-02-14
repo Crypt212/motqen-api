@@ -3,7 +3,7 @@ generator client {
     output   = "../src/lib/prisma/client"
 }
 datasource db {
-    provider = "postgresql"
+  provider = "postgresql"
 }
 
 model Session {
@@ -23,26 +23,27 @@ model Session {
 }
 
 model OTPs {
-    attempts    Int      @default(1)
-    phoneNumber String   @unique
-    hashedOTP   String
-    updatedAt   DateTime
-    expiresAt   DateTime
-    createdAt   DateTime @default(now())
-    InProcess   Boolean // race condition
+  attempts    Int      @default(1)
+  phoneNumber String   @unique
+  hashedOTP   String
+  updatedAt   DateTime
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  isUsed      Boolean  @default(false)
+  method      methods // "SMS" or "WhatsApp"
 
     @@map("OTPs")
 }
 
 model User {
-    id          Int           @id @default(autoincrement())
-    phoneNumber String        @unique
-    fristName   String
-    lastName    String
-    government  String
-    city        String
-    bio         String?
-    status      AccountStatus @default(INCOMPLETE)
+  id          Int           @id @default(autoincrement())
+  phoneNumber String        @unique
+  firstName   String?
+  lastName    String?
+  government  String?
+  city        String?
+  bio         String?
+  status      AccountStatus @default(INCOMPLETE)
 
     role       Role        @default(CLIENT)
     sessions   Session[]
@@ -59,10 +60,10 @@ model WorkerInfo {
     acceptsUrgentJobs       Boolean
     primarySpecializationId Int
 
-    secondarySpecializations SpecializationsForWorkers[]
-    primarySpecialization    Specialization              @relation(fields: [primarySpecializationId], references: [id])
-    user                     User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
-    goverments               Goverment[]
+  secondarySpecializations SpecializationsForWorkers[]
+  primarySpecialization    Specialization              @relation(fields: [primarySpecializationId], references: [id])
+  user                     User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  governments               Government[]
 
     @@map("worker_infos")
 }
@@ -87,11 +88,11 @@ model Specialization {
     @@map("specializations")
 }
 
-model Goverment {
-    id           Int         @id @default(autoincrement())
-    name         String
-    workerInfo   WorkerInfo? @relation(fields: [workerInfoId], references: [id])
-    workerInfoId Int?
+model Government {
+  id           Int         @id @default(autoincrement())
+  name         String
+  workerInfo   WorkerInfo? @relation(fields: [workerInfoId], references: [id])
+  workerInfoId Int?
 
     @@map("governments")
 }
@@ -104,7 +105,14 @@ enum AccountStatus {
 }
 
 enum Role {
-    WORKER
-    CLIENT
-    ADMIN
+  WORKER
+  CLIENT
+  ADMIN
+  NOTCONFIRMED
+  UNDEFINED
+}
+
+enum methods {
+  SMS
+  WhatsApp
 }
