@@ -21,13 +21,17 @@ const redis = {
 };
 
 const jwt = {
-  accessToken: {
+  access: {
     secret: process.env.JWT_ACCESS_SECRET,
     expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || "24h",
   },
-  refreshToken: {
+  refresh: {
     secret: process.env.JWT_REFRESH_SECRET,
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
+  },
+  create: {
+    secret: process.env.JWT_CREATE_SECRET,
+    expiresIn: process.env.JWT_CREATE_EXPIRES_IN || "7d",
   },
 };
 

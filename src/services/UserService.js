@@ -1,12 +1,21 @@
-import { CreateUser, GetUserByPhoneNumber } from "../repositories/AuthRepo.js";
+import UserRepository from "../repositories/UserRepository.js";
+import Service from "./Service.js";
 
-const GetOrCreateUserService = async (phoneNumber) => {
-  const existingUser = await GetUserByPhoneNumber(phoneNumber);
-  if (!existingUser) {
-    return await CreateUser(phoneNumber);
-  }
+const userRepository = new UserRepository();
 
-  return existingUser;
-};
+export default class UserService extends Service {
+    async getUser(phoneNumber) {
+        const existingUser = await userRepository.getByPhoneNumber(phoneNumber);
+        if (existingUser) return existingUser;
+        else return null;
+    };
 
-export { GetOrCreateUserService };
+    async createUser({ phoneNumber, role, firstName, lastName, government, city, bio }) {
+        const existingUser = await userRepository.getByPhoneNumber(phoneNumber);
+
+        if (existingUser) return existingUser;
+
+        return await userRepository.create({ phoneNumber, role, firstName, lastName, government, city, bio });
+    };
+
+}

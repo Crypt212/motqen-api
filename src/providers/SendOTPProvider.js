@@ -1,6 +1,6 @@
 import twilio from "twilio";
-import AppError from "../Core/errors/AppError.js";
-import environment from "../config/environment.js";
+import AppError from "../errors/AppError.js";
+import environment from "../configs/environment.js";
 
 const { accountSid, authToken, virtualNumber } = environment.twilio;
 
@@ -38,5 +38,5 @@ async function sendViaSMS(message, to) {
 
 async function sendViaWhatApp(message, to) {
   // for send message using whatsapp api
-  console.log(`Sending message: ${message} to: ${to} from: ${VirtualNumber}`);
+  console.log(`Sending message: ${message} to: ${to} from: ${virtualNumber}`);
 }

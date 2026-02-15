@@ -38,10 +38,10 @@ model OTPs {
 model User {
   id          Int           @id @default(autoincrement())
   phoneNumber String        @unique
-  firstName   String?
-  lastName    String?
-  government  String?
-  city        String?
+  firstName   String
+  lastName    String
+  government  String
+  city        String
   bio         String?
   status      AccountStatus @default(INCOMPLETE)
 
