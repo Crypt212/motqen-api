@@ -81,6 +81,7 @@ export default class OTPRepository extends Repository {
     async getLatest(phone, method) {
         return await prisma.oTPs.findUnique({
             where: { phoneNumber: phone, method: method },
+            orderBy: { createdAt: "desc" }, 
         });
     }
 

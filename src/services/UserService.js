@@ -12,15 +12,15 @@ export default class UserService extends Service {
 
     async createUser({ phoneNumber, role, firstName, lastName, government, city, bio }) {
         const existingUser = await userRepository.getByPhoneNumber(phoneNumber);
-
+        if (existingUser) throw new AppError("User already exists", 400);
         return await userRepository.create({ phoneNumber, role, firstName, lastName, government, city, bio });
     };
 
     async updateBasicInfo(phoneNumber, { role, firstName, lastName, government, city, bio }) {
-        userRepository.update(phoneNumber, { role, firstName, lastName, government, city, bio });
+       await userRepository.update(phoneNumber, { role, firstName, lastName, government, city, bio });
     }
 
     async updateWorkerInfo(phoneNumber, { role, firstName, lastName, government, city, bio }) {
-        userRepository.update(phoneNumber, { role, firstName, lastName, government, city, bio });
-    }
+        await userRepository.update(phoneNumber, { role, firstName, lastName, government, city, bio });
+    }   
 }

@@ -7,15 +7,7 @@ export const updateBasicInfo = async (req, res, next) => {
 
     const existingUser = await userService.updateBasicInfo(phoneNumber, { role, firstName, lastName, government, city, bio });
 
-    new SuccessResponse("updated user successfully", 200).send(res);
-};
-
-export const updateWorkerInfo = async (req, res, next) => {
-    const { phoneNumber, experienceYears, isInTeam, acceptsUrgentJobs, primarySpecialization, secondarySpecializations, governments } = req.body;
-
-    const existingUser = await userService.updateInfo(phoneNumber, { role, firstName, lastName, government, city, bio });
-
-    new SuccessResponse("updated worker profile successfully", { phoneNumber, tokenType, token }, 200).send(res);
+    new SuccessResponse("updated user successfully",{}, 200).send(res);
 };
 
 export const updateWorkerInfo = async (req, res, next) => {
@@ -28,8 +20,10 @@ export const updateWorkerInfo = async (req, res, next) => {
 
 export const getMe = async (req, res, next) => {
     const { registerToken, firstName, lastName, government, city, bio } = req.body;
+    const deviceFingerprint= null 
+    const expiresAt = null
     const { phoneNumber } = verifyAndDecodeToken("register", registerToken);
-
+const role = null;
     const user = await userService.createUser({ phoneNumber, role, firstName, lastName, government, city, bio });
 
     const { unHashedRefreshToken } = await sessionService.create({

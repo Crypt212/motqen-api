@@ -1,5 +1,5 @@
 import { Repository } from "./Repository.js";
-
+import prisma from "../libs/database.js";
 export default class UserRepository extends Repository {
     async create({ phoneNumber, role, firstName, lastName, government, city, bio }) {
         const user = await prisma.user.create({

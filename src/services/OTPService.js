@@ -1,18 +1,21 @@
-import AppError from "../errors/AppError.js";
+
 import Service from "./Service.js";
 import { generateOTP, hashOTP } from "../utils/OTP.js";
 import SendOTPProvider from "../providers/SendOTPProvider.js";
 import { otpRepository } from "../state.js";
+import environment from "../configs/environment.js";
+
 
 export default class OTPService extends Service {
     async requestOTP(phoneNumber, method) {
-        const expiresAt = new Date(Date.now() + expiresIn * 1000);
+        const expiresAt = new Date(Date.now() + environment.otps.expiresIn * 1000);
         const OTP = generateOTP();
         const hashedOTP = hashOTP(OTP);
 
+        const existingOTP = await otpRepository.getLatest(phoneNumber, method);
         if (!existingOTP)
             await otpRepository.createOTP(phoneNumber, hashedOTP, expiresAt, method);
-        
+        else
         await otpRepository.updateOTP(phoneNumber, method, { expiresAt, hashedOTP });
 
         await SendOTPProvider(method, OTP, phoneNumber);
@@ -22,18 +25,18 @@ export default class OTPService extends Service {
 
     async verifyOTP(phoneNumber, method) {
         // maybe i will separate the logic to sub services SoC
-        await markAsUsed(phoneNumber, method);
-        await deleteOTPByPhoneNumber(phoneNumber, method);
+        await otpRepository.markAsUsed(phoneNumber, method);
+        await otpRepository.deleteByPhoneNumber(phoneNumber, method);
     };
 
-    async getOTPExpireDate(phoneNumber) {
+    async getOTPExpireDate(phoneNumber , method) {
         const existingOTP = await otpRepository.getLatest(phoneNumber, method);
         if (!existingOTP) {
             return null;
         }
         const expireDate = existingOTP.expiresAt;
 
-        if (expireDate.getTime() < Date.now()) {
+        if (expireDate.getTime() > Date.now()) {
             return expireDate.getTime();
         }
         return null;
@@ -41,34 +44,27 @@ export default class OTPService extends Service {
 
     async isValidOTP(phoneNumber, method, otp) {
         // in production -> Invalid or expired OTP only
-        const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
-        const storedOTP = await GetOTPByPhoneNumber(phoneNumber, method);
+        const storedOTP = await otpRepository.findByPhoneNumber(phoneNumber, method);
 
-        let message = null;
-        let ok = true;
+
         if (!storedOTP) {
-            message = "Invalid OTP";
-            ok = false;
+            return {message:"Invalid OTP" , ok:false}
         }
         if (storedOTP.isUsed) {
-            message = "OTP already used";
-            ok = false;
+            return {message:"OTP already used" , ok:false}
         }
         if (storedOTP.expiresAt < new Date()) {
-            await deleteOTPByPhoneNumber(phoneNumber, method);
-            message = "Expired OTP";
-            ok = false;
+            await otpRepository.deleteOTPByPhoneNumber(phoneNumber, method);
+            return {message:"Expired OTP" , ok:false}
         }
         if (storedOTP.attempts >= 5) {
-            await deleteOTPByPhoneNumber(phoneNumber, method);
-            message = "Too many attempts. Please request a new OTP.";
-            ok = false;
+            await otpRepository.deleteOTPByPhoneNumber(phoneNumber, method);
+            return {message:"Too many attempts. Please request a new OTP." , ok:false}
         }
-        if (hashedOTP !== storedOTP.hashedOTP) {
-            await UpdateOTPAttempts(phoneNumber, method);
-            message = "Invalid OTP";
-            ok = false;
+        if (otp !== storedOTP.hashedOTP) {
+            await otpRepository.updateAttempts(phoneNumber, method);
+            return {message:"Invalid OTP" , ok:false}
         }
-        return { ok, message };
+        return {ok:true , message:"OTP verified successfully" };
     };
 }

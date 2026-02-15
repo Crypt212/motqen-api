@@ -11,7 +11,7 @@ export default async function (method, OTP, phoneNumber) {
     if (environment.nodeEnv === "development") {
       await sendViaWhatApp(`Your OTP is ${OTP}`, phoneNumber);
     } else {
-      throw AppError("this feature is not working yet", 500);
+      throw new AppError("this feature is not working yet", 500);
     }
   }
 }

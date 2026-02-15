@@ -1,6 +1,6 @@
 generator client {
     provider = "prisma-client-js"
-    output   = "../src/lib/prisma/client"
+
 }
 datasource db {
   provider = "postgresql"
@@ -17,8 +17,8 @@ model Session {
   expiresAt         DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@unique([userId, deviceFingerprint])
-  @@index([token, deviceFingerprint, userId])
+
+  
   @@map("sessions")
 }
 
