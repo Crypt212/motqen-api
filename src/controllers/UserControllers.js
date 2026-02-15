@@ -5,17 +5,25 @@ import { generateToken, verifyAndDecodeToken } from "../utils/tokens.js";
 export const updateBasicInfo = async (req, res, next) => {
     const { phoneNumber, role, firstName, lastName, government, city, bio } = req.body;
 
-    const existingUser = await userService.updateUser(phoneNumber, { role, firstName, lastName, government, city, bio });
+    const existingUser = await userService.updateBasicInfo(phoneNumber, { role, firstName, lastName, government, city, bio });
 
     new SuccessResponse("updated user successfully", 200).send(res);
 };
 
 export const updateWorkerInfo = async (req, res, next) => {
-    const { experienceYears, isInTeam, acceptsUrgentJobs, primarySpecialization, secondarySpecializations, governments } = req.body;
+    const { phoneNumber, experienceYears, isInTeam, acceptsUrgentJobs, primarySpecialization, secondarySpecializations, governments } = req.body;
 
+    const existingUser = await userService.updateInfo(phoneNumber, { role, firstName, lastName, government, city, bio });
 
+    new SuccessResponse("updated worker profile successfully", { phoneNumber, tokenType, token }, 200).send(res);
+};
 
-    new SuccessResponse("OTP verified successfully", { phoneNumber, tokenType, token }, 200).send(res);
+export const updateWorkerInfo = async (req, res, next) => {
+    const { phoneNumber, experienceYears, isInTeam, acceptsUrgentJobs, primarySpecialization, secondarySpecializations, governments } = req.body;
+
+    const existingUser = await userService.updateInfo(phoneNumber, { role, firstName, lastName, government, city, bio });
+
+    new SuccessResponse("updated worker profile successfully", { phoneNumber, tokenType, token }, 200).send(res);
 };
 
 export const getMe = async (req, res, next) => {

@@ -16,8 +16,11 @@ export default class UserService extends Service {
         return await userRepository.create({ phoneNumber, role, firstName, lastName, government, city, bio });
     };
 
-    async updateUser(phoneNumber, { role, firstName, lastName, government, city, bio }) {
+    async updateBasicInfo(phoneNumber, { role, firstName, lastName, government, city, bio }) {
         userRepository.update(phoneNumber, { role, firstName, lastName, government, city, bio });
     }
 
+    async updateWorkerInfo(phoneNumber, { role, firstName, lastName, government, city, bio }) {
+        userRepository.update(phoneNumber, { role, firstName, lastName, government, city, bio });
+    }
 }

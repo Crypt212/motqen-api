@@ -3,7 +3,8 @@ import { updateBasicInfo, updateWorkerInfo, getMe } from "../controllers/UserCon
 
 const router = Router();
 
-router.post("/basic-info", updateBasicInfo);
+router.put("/basic-info", updateBasicInfo);
+router.put("/worker-info", updateWorkerInfo);
 router.post("/worker-info", updateWorkerInfo);
 router.get("/me", getMe);
 
