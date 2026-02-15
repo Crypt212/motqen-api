@@ -13,9 +13,11 @@ export default class UserService extends Service {
     async createUser({ phoneNumber, role, firstName, lastName, government, city, bio }) {
         const existingUser = await userRepository.getByPhoneNumber(phoneNumber);
 
-        if (existingUser) return existingUser;
-
         return await userRepository.create({ phoneNumber, role, firstName, lastName, government, city, bio });
     };
+
+    async updateUser(phoneNumber, { role, firstName, lastName, government, city, bio }) {
+        userRepository.update(phoneNumber, { role, firstName, lastName, government, city, bio });
+    }
 
 }

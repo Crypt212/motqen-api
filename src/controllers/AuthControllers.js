@@ -1,3 +1,4 @@
+import environment from "../configs/environment.js";
 import SuccessResponse from "../responses/successResponse.js";
 import { otpService, sessionService, userService } from "../state.js";
 import { generateToken, verifyAndDecodeToken } from "../utils/tokens.js";
@@ -28,7 +29,7 @@ export const verifyOTP = async (req, res, next) => {
         }
     }
 
-    const payload = await otpService.verifyOTP(phoneNumber, otp, method, deviceFingerprint);
+    await otpService.verifyOTP(phoneNumber, method);
     const user = await userService.getUser(phoneNumber);
 
     let tokenType;
@@ -41,51 +42,33 @@ export const verifyOTP = async (req, res, next) => {
 };
 
 export const register = async (req, res, next) => {
-    const { registerToken, firstName, lastName, government, city, bio } = req.body;
+    const { registerToken, firstName, lastName, government, city, bio, deviceFingerprint } = req.body;
     const { phoneNumber } = verifyAndDecodeToken("register", registerToken);
 
     const user = await userService.createUser({ phoneNumber, role, firstName, lastName, government, city, bio });
 
-    const { unHashedRefreshToken } = await sessionService.create({
-        userId: user.id,
-        deviceFingerprint,
-        expiresAt,
-        role: user.role,
-    });
-
-    new SuccessResponse("User created successfully", user, 200).send(res);
+    new SuccessResponse("User created successfully", { user }, 200).send(res);
 };
 
 export const login = async (req, res, next) => {
     const { loginToken, deviceFingerprint } = req.body;
     const payload = verifyAndDecodeToken("login", loginToken);
 
-    if (payload.deviceFingerprint == deviceFingerprint)
-        throw new AppError("Number is verified from another device", 400);
-
-    const user = await userService.getUser(phoneNumber);
+    const user = await userService.getUser(payload.phoneNumber);
 
     if (!user)
         throw new AppError("User not found", 404);
 
 
-    const existingSession = await sessionService.find({ userId: user.id, deviceFingerprint });
-
+    await sessionService.find({ userId: user.id, deviceFingerprint });
     const { unHashedRefreshToken } = await sessionService.create({
         userId: user.id,
         deviceFingerprint,
-        expiresAt,
+        expiresAt: environment.jwt.refresh.expiresIn,
         role: user.role,
     });
 
-    res.cookie("refreshToken", unHashedRefreshToken, {
-        httpOnly: true,
-        secure: true,
-        maxAge: 1000 * 60 * 60 * 24 * 7,
-        sameSite: "none",
-    });
-
-    new SuccessResponse("User created successfully", user, 200).send(res);
+    new SuccessResponse("User created successfully", { user }, 200).send(res);
 }
 
 export const logout = async (req, res, next) => {

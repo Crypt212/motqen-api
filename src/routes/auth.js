@@ -5,7 +5,6 @@ const router = Router();
 
 router.post("/otp/request", requestOTP);
 router.post("/otp/verify", verifyOTP);
-router.post("/otp/resend", requestOTP);
 router.post("/register", register);
 router.post("/login", login);
 router.post("/logout", logout);

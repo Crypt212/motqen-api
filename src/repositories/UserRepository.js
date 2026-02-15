@@ -8,6 +8,14 @@ export default class UserRepository extends Repository {
         return user;
     };
 
+    async update(phoneNumber, { role, firstName, lastName, government, city, bio }) {
+        const user = await prisma.user.update({
+            where: { phoneNumber },
+            data: { role, firstName, lastName, government, city, bio: bio || undefined },
+        });
+        return user;
+    };
+
     async getByPhoneNumber(phoneNumber) {
         const user = await prisma.user.findUnique({
             where: {

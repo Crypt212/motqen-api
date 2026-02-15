@@ -20,12 +20,10 @@ export default class OTPService extends Service {
         return true;
     };
 
-    async verifyOTP(phoneNumber, otp, method, deviceFingerprint) {
+    async verifyOTP(phoneNumber, method) {
         // maybe i will separate the logic to sub services SoC
         await markAsUsed(phoneNumber, method);
         await deleteOTPByPhoneNumber(phoneNumber, method);
-
-        return { phoneNumber, deviceFingerprint };
     };
 
     async getOTPExpireDate(phoneNumber) {
