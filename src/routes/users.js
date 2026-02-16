@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { updateBasicInfo, updateWorkerInfo, getMe } from "../controllers/UserControllers.js";
 
-const router = Router();
+const usersRouter = Router();
 
-router.put("/basic-info", updateBasicInfo);
-router.put("/worker-info", updateWorkerInfo);
-router.post("/worker-info", updateWorkerInfo);
-router.get("/me", getMe);
+usersRouter.put("/basic-info", updateBasicInfo);
+usersRouter.put("/worker-info", updateWorkerInfo);
+usersRouter.post("/worker-info", updateWorkerInfo);
+usersRouter.get("/me", getMe);
 
-export default router;
+export default usersRouter;
