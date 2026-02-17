@@ -1,4 +1,8 @@
-export default (err, req, res, next) => {
+/**
+ * Error handler middleware
+ * @type {import("express").ErrorRequestHandler}
+ */
+export default (err, _, res) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 

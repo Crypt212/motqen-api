@@ -2,7 +2,7 @@ import redis from "redis";
 import environment from "../configs/environment.js";
 import { logger } from "./winston.js";
 
-const redisClient = redis.createClient(environment.redis.url);
+const redisClient = redis.createClient({ url: environment.redis.url });
 
 redisClient.on("error", (err) => logger.error("❌ Redis client error", err));
 redisClient.on("connect", () => logger.info("✅ Redis client connected"));

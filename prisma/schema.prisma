@@ -1,42 +1,45 @@
 generator client {
-    provider = "prisma-client-js"
-
+  provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
 }
 
 model Session {
-  id                Int      @id @default(autoincrement())
-  userId            Int
+  id                String   @id @default(uuid())
+  userId            String
   token             String   @unique
   isRevoked         Boolean  @default(false)
-  deviceFingerprint String   
+  deviceFingerprint String
+  ipAddress         String?
+  userAgent         String?
   lastUsedAt        DateTime @default(now())
   createdAt         DateTime @default(now())
   expiresAt         DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  
   @@map("sessions")
 }
 
-model OTPs {
-  attempts    Int      @default(1)
-  phoneNumber String   @unique
+model OTP {
+  id          String   @id @default(uuid())
+  phoneNumber String
   hashedOTP   String
+  attempts    Int      @default(1)
   updatedAt   DateTime
   expiresAt   DateTime
   createdAt   DateTime @default(now())
   isUsed      Boolean  @default(false)
-  method      methods // "SMS" or "WhatsApp"
+  method      Method
 
-    @@map("OTPs")
+  @@unique([phoneNumber, method])
+  @@map("OTP")
 }
 
 model User {
-  id          Int           @id @default(autoincrement())
+  id          String        @id @default(uuid())
   phoneNumber String        @unique
   firstName   String
   lastName    String
@@ -45,63 +48,75 @@ model User {
   bio         String?
   status      AccountStatus @default(INCOMPLETE)
 
-    role       Role        @default(CLIENT)
-    sessions   Session[]
-    workerInfo WorkerInfo?
+  role       Role        @default(CLIENT)
+  sessions   Session[]
+  workerInfo WorkerInfo?
 
-    @@map("users")
+  @@map("users")
 }
 
 model WorkerInfo {
-    id                      Int     @id @default(autoincrement())
-    userId                  Int     @unique
-    experienceYears         Int
-    isInTeam                Boolean
-    acceptsUrgentJobs       Boolean
-    primarySpecializationId Int
+  id                      String  @id @default(uuid())
+  userId                  String  @unique
+  experienceYears         Int
+  isInTeam                Boolean
+  acceptsUrgentJobs       Boolean
+  primarySpecializationId String
 
   secondarySpecializations SpecializationsForWorkers[]
   primarySpecialization    Specialization              @relation(fields: [primarySpecializationId], references: [id])
   user                     User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  governments               Government[]
+  governments              GovernmentsForWorkers[]
 
-    @@map("worker_infos")
+  @@map("worker_infos")
 }
 
 model SpecializationsForWorkers {
-    workerInfoId     Int
-    specializationId Int
+  workerInfoId     String
+  specializationId String
 
-    workerInfo     WorkerInfo     @relation(fields: [workerInfoId], references: [id], onDelete: Cascade)
-    specialization Specialization @relation(fields: [specializationId], references: [id], onDelete: Cascade)
+  workerInfo     WorkerInfo     @relation(fields: [workerInfoId], references: [id], onDelete: Cascade)
+  specialization Specialization @relation(fields: [specializationId], references: [id], onDelete: Cascade)
 
-    @@id([workerInfoId, specializationId])
+  @@id([workerInfoId, specializationId])
+  @@map("specializations_for_workers")
+}
+
+model GovernmentsForWorkers {
+  workerInfoId String
+  governmentId String
+
+  workerInfo WorkerInfo @relation(fields: [workerInfoId], references: [id], onDelete: Cascade)
+  government Government @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+
+  @@id([workerInfoId, governmentId])
+  @@map("governments_for_workers")
 }
 
 model Specialization {
-    id               Int                         @id @default(autoincrement())
-    name             String
-    field            String
-    secondaryWorkers SpecializationsForWorkers[]
-    primaryWorkers   WorkerInfo[]
+  id   String @id @default(uuid())
+  name String
 
-    @@map("specializations")
+  secondaryWorkers SpecializationsForWorkers[]
+  primaryWorkers   WorkerInfo[]
+
+  @@index([name])
+  @@map("specializations")
 }
 
 model Government {
-  id           Int         @id @default(autoincrement())
-  name         String
-  workerInfo   WorkerInfo? @relation(fields: [workerInfoId], references: [id])
-  workerInfoId Int?
+  id      String                  @id @default(uuid())
+  name    String
+  workers GovernmentsForWorkers[]
 
-    @@map("governments")
+  @@map("governments")
 }
 
 enum AccountStatus {
-    INCOMPLETE
-    ACTIVE
-    SUSPENDED
-    BANNED
+  INCOMPLETE
+  ACTIVE
+  SUSPENDED
+  BANNED
 }
 
 enum Role {
@@ -112,7 +127,7 @@ enum Role {
   UNDEFINED
 }
 
-enum methods {
+enum Method {
   SMS
   WhatsApp
 }

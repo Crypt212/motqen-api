@@ -29,9 +29,13 @@ const jwt = {
     secret: process.env.JWT_REFRESH_SECRET,
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
   },
-  create: {
-    secret: process.env.JWT_CREATE_SECRET,
-    expiresIn: process.env.JWT_CREATE_EXPIRES_IN || "7d",
+  login: {
+    secret: process.env.JWT_LOGIN_SECRET,
+    expiresIn: process.env.JWT_LOGIN_EXPIRES_IN || "7d",
+  },
+  register: {
+    secret: process.env.JWT_REGISTER_SECRET,
+    expiresIn: process.env.JWT_REGISTER_EXPIRES_IN || "7d",
   },
 };
 
@@ -54,13 +58,13 @@ const whatsapp = {
 };
 
 const otps = {
-  expiresIn: parseInt(process.env.OTP_EXPIRES_IN ) || 15 * 60, // 15 minutes 
+  expiresIn: parseInt(process.env.OTP_EXPIRES_IN ) || 15 * 60, // 15 minutes
   cooldownConstant: parseInt(process.env.OTP_COOLDOWN_CONSTANT) || 60, // 60 seconds
 };
 const twilio = {
   accountSid: process.env.TWILIO_ACCOUNT_SID,
   authToken: process.env.TWILIO_AUTH_TOKEN,
-  virtualNumber: process.env.TWILIO_VIRTUAL_NUMBER, 
+  virtualNumber: process.env.TWILIO_VIRTUAL_NUMBER,
 }
 const environment = {
   nodeEnv,
