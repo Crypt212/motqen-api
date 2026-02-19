@@ -1,4 +1,4 @@
-import redisClient from "../libs/redis.js";
+import redisClient from '../libs/redis.js';
 
 export default class RateLimitRepository {
   #client;
@@ -7,12 +7,11 @@ export default class RateLimitRepository {
   constructor() {
     this.#client = redisClient;
 
-    
     this.#keys = {
-      send:       (phone)    => `rate:send:phone:${phone}`,
+      send: (phone) => `rate:send:phone:${phone}`,
       sendDevice: (deviceId) => `rate:send:device:${deviceId}`,
-      verify:     (phone)    => `rate:verify:phone:${phone}`,
-      api:        (key)      => `rate:api:${key}`,
+      verify: (phone) => `rate:verify:phone:${phone}`,
+      api: (key) => `rate:api:${key}`,
     };
   }
 
@@ -20,11 +19,10 @@ export default class RateLimitRepository {
 
   async #getRecord(key) {
     const raw = await this.#client.get(key);
-    return JSON.parse(raw?.toString() || "{}");
+    return JSON.parse(raw?.toString() || '{}');
   }
 
   async #setRecord(key, record, ttlSeconds) {
-   
     const safeTtl = Math.max(ttlSeconds, 1);
     await this.#client.set(key, JSON.stringify(record), { EX: safeTtl });
   }
@@ -34,7 +32,22 @@ export default class RateLimitRepository {
   }
 
   #calcCooldown(attempts) {
-    return Math.pow(attempts, 2) * 60;
+    switch (attempts) {
+      case 1:
+        return 0;
+      case 2:
+        return 30;
+      case 3:
+        return 60;
+      case 4:
+        return 300;
+      case 5:
+        return 900;
+      case 6:
+        return 3600;
+      default:
+        return 86400;
+    }
   }
 
   // ─── Send ──────────────────────────────────────────────────────────────────
@@ -49,9 +62,9 @@ export default class RateLimitRepository {
 
   async incrementSend(phone, deviceId) {
     const increment = async (key) => {
-      const record        = await this.#getRecord(key);
-      record.attempts     = (record.attempts ?? 0) + 1;
-      record.lastAttempt  = Date.now();
+      const record = await this.#getRecord(key);
+      record.attempts = (record.attempts ?? 0) + 1;
+      record.lastAttempt = Date.now();
       record.blockedUntil = this.#calcCooldown(record.attempts);
       await this.#setRecord(key, record, record.blockedUntil);
       return record;
@@ -72,11 +85,11 @@ export default class RateLimitRepository {
   }
 
   async incrementVerify(phone) {
-    const key    = this.#keys.verify(phone);
+    const key = this.#keys.verify(phone);
     const record = await this.#getRecord(key);
 
-    record.attempts     = (record.attempts ?? 0) + 1;
-    record.lastAttempt  = Date.now();
+    record.attempts = (record.attempts ?? 0) + 1;
+    record.lastAttempt = Date.now();
     record.blockedUntil = this.#calcCooldown(record.attempts);
 
     await this.#setRecord(key, record, record.blockedUntil);
@@ -92,7 +105,4 @@ export default class RateLimitRepository {
       this.#deleteKey(this.#keys.verify(phone)),
     ]);
   }
-
-
- 
 }
