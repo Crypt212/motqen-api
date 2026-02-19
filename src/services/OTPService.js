@@ -1,7 +1,7 @@
 import Service from "./Service.js";
 import { generateOTP, hashOTP } from "../utils/OTP.js";
 import SendOTPProvider from "../providers/SendOTPProvider.js";
-import { otpRepository } from "../state.js";
+import { otpRepository, rateLimitRepository } from "../state.js";
 import environment from "../configs/environment.js";
 import { $Enums } from "@prisma/client";
 
@@ -36,7 +36,7 @@ export default class OTPService extends Service {
         if (!existingOTP)
             await otpRepository.create(phoneNumber, hashedOTP, expiresAt, method);
         else
-            await otpRepository.updateOTP(phoneNumber, method, { expiresAt, hashedOTP });
+            await otpRepository.updateOTP(existingOTP.id, { expiresAt, hashedOTP });
 
         await SendOTPProvider(method, OTP, phoneNumber);
         // must return better response not only true
@@ -52,11 +52,7 @@ export default class OTPService extends Service {
      * @returns {Promise<void>}
      * @description Marks the OTP as used and removes it from the database
      */
-    async verifyOTP(phoneNumber, method) {
-        // maybe i will separate the logic to sub services SoC
-        await otpRepository.markAsUsed(phoneNumber, method);
-        await otpRepository.deleteByPhoneNumber(phoneNumber, method);
-    };
+
 
     /**
      * Get the expiration date for OTP cooldown
@@ -98,21 +94,20 @@ export default class OTPService extends Service {
         if (!storedOTP) {
             return {message:"Invalid OTP" , ok:false}
         }
-        if (storedOTP.isUsed) {
-            return {message:"OTP already used" , ok:false}
-        }
         if (storedOTP.expiresAt < new Date()) {
             await otpRepository.deleteByPhoneNumber(phoneNumber, method);
             return {message:"Expired OTP" , ok:false}
         }
         if (storedOTP.attempts >= 5) {
+            
             await otpRepository.deleteByPhoneNumber(phoneNumber, method);
             return {message:"Too many attempts. Please request a new OTP." , ok:false}
         }
         if (otp !== storedOTP.hashedOTP) {
-            await otpRepository.updateAttempts(phoneNumber, method);
+
             return {message:"Invalid OTP" , ok:false}
         }
-        return {ok:true , message:"OTP verified successfully" };
+        
+        return {ok:true , message:"OTP verified successfully" , id:storedOTP.id };
     };
 }

@@ -1,6 +1,6 @@
-import { $Enums } from "@prisma/client";
-import prisma from "../libs/database.js";
-import { Repository } from "./Repository.js";
+import { $Enums } from '@prisma/client';
+import prisma from '../libs/database.js';
+import { Repository } from './Repository.js';
 
 /**
  * @fileoverview OTP Repository - Handle database operations for OTPs
@@ -36,7 +36,7 @@ export default class OTPRepository extends Repository {
       },
     });
     return otp;
-  };
+  }
 
   /**
    * Find OTP by phone number and method
@@ -52,10 +52,10 @@ export default class OTPRepository extends Repository {
         phoneNumber: phoneNumber,
         method: method,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
     return otp;
-  };
+  }
 
   /**
    * Delete OTP by phone number and method
@@ -72,7 +72,7 @@ export default class OTPRepository extends Repository {
         method,
       },
     });
-  };
+  }
 
   /**
    * Update OTP record
@@ -83,38 +83,13 @@ export default class OTPRepository extends Repository {
    * @param {Object} data - Update data
    * @returns {Promise<Object>} Updated OTP
    */
-  async updateOTP(phoneNumber, method, data) {
+  async updateOTP(id, data) {
+    console.log(data);
     return await prisma.oTP.update({
-      where: { phoneNumber, method },
+      where: { id },
       data,
     });
-  };
-
-  /**
-   * Increment OTP attempt count
-   * @async
-   * @method updateAttempts
-   * @param {string} phoneNumber - User's phone number
-   * @param {$Enums.Method} method - OTP delivery method
-   * @returns {Promise<Object>} Updated attempts count
-   */
-  async updateAttempts(phoneNumber, method) {
-    const otp = await prisma.oTP.findUnique({
-      where: { phoneNumber, method },
-    });
-    if (otp) {
-      await prisma.oTP.update({
-        where: { phoneNumber, method },
-        data: {
-          attempts: {
-            increment: 1,
-          },
-          updatedAt: new Date(),
-        },
-      });
-    }
-    return otp ? { attempts: otp.attempts + 1, updatedAt: new Date() } : null;
-  };
+  }
 
   /**
    * Get OTP attempt count
@@ -134,7 +109,7 @@ export default class OTPRepository extends Repository {
     return otp
       ? { attempts: otp.attempts, lastAttemptAt: otp.updatedAt }
       : null;
-  };
+  }
 
   /**
    * Get the latest OTP for a phone number and method
@@ -147,7 +122,7 @@ export default class OTPRepository extends Repository {
   async getLatest(phone, method) {
     return await prisma.oTP.findFirst({
       where: { phoneNumber: phone, method: method },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -162,6 +137,12 @@ export default class OTPRepository extends Repository {
   async markAsUsed(phoneNumber, method) {
     return await prisma.oTP.update({
       where: { phoneNumber, method },
+      data: { isUsed: true },
+    });
+  }
+  async deleteByID(id) {
+    return await prisma.oTP.update({
+      where: { id },
       data: { isUsed: true },
     });
   }

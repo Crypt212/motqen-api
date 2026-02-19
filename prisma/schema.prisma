@@ -27,11 +27,8 @@ model OTP {
   id          String   @id @default(uuid())
   phoneNumber String
   hashedOTP   String
-  attempts    Int      @default(1)
   updatedAt   DateTime
-  expiresAt   DateTime
   createdAt   DateTime @default(now())
-  isUsed      Boolean  @default(false)
   method      Method
 
   @@unique([phoneNumber, method])

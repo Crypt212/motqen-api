@@ -136,9 +136,7 @@ export default class UserRepository extends Repository {
         phoneNumber: phoneNumber,
       },
     });
-    {
-      if (!user) throw new RepositoryError("user not found", RepositoryErrorType.NOT_FOUND);
-    }
+
     return user;
   };
 

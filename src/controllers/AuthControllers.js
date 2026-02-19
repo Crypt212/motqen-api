@@ -3,12 +3,22 @@
  * @module controllers/AuthControllers
  */
 
-import AppError from "../errors/AppError.js";
-import SuccessResponse from "../responses/successResponse.js";
-import { otpService, sessionService, userService } from "../state.js";
-import { hashOTP } from "../utils/OTP.js";
-import { generateToken, verifyAndDecodeToken } from "../utils/tokens.js";
-import { asyncUnAuthenticatedHandler, asyncAuthenticatedHandler } from '../types/asyncHandler.js';
+import AppError from '../errors/AppError.js';
+import SuccessResponse from '../responses/successResponse.js';
+import {
+  otpService,
+  sessionService,
+  userService,
+  rateLimitService,
+  otpRepository,
+  rateLimitRepository,
+} from '../state.js';
+import { hashOTP } from '../utils/OTP.js';
+import { generateToken, verifyAndDecodeToken } from '../utils/tokens.js';
+import {
+  asyncUnAuthenticatedHandler,
+  asyncAuthenticatedHandler,
+} from '../types/asyncHandler.js';
 
 /**
  * Get client IP address from request
@@ -16,7 +26,12 @@ import { asyncUnAuthenticatedHandler, asyncAuthenticatedHandler } from '../types
  * @returns {string} Client IP address
  */
 const getClientIp = (req) => {
-  return req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0] || 'unknown';
+  return (
+    req.ip ||
+    req.connection?.remoteAddress ||
+    req.headers['x-forwarded-for']?.split(',')[0] ||
+    'unknown'
+  );
 };
 
 /**
@@ -30,18 +45,19 @@ const getClientIp = (req) => {
  */
 export const requestOTP = asyncUnAuthenticatedHandler(async (req, res) => {
   const { method, phoneNumber } = req.body;
-
-  const waitUntilDate = await otpService.getOTPExpireDate(phoneNumber, method);
-  if (waitUntilDate)
-    return res.status(400).json({
-      success: false,
-      message: "Please wait until " + waitUntilDate + " to request a new OTP.",
-      waitUntilDate
-    });
+  const deviceId =
+    req.headers['x-device-fingerprint']?.trim() ||
+    req.headers['x-device-id']?.trim() ||
+    req.ip;
 
   await otpService.requestOTP(phoneNumber, method);
+  await rateLimitService.incrementSend(phoneNumber, deviceId);
 
-  new SuccessResponse("OTP sent successfully", { phoneNumber, method }, 200).send(res);
+  new SuccessResponse(
+    'OTP sent successfully',
+    { phoneNumber, method },
+    200
+  ).send(res);
 });
 
 /**
@@ -58,33 +74,35 @@ export const verifyOTP = asyncUnAuthenticatedHandler(async (req, res) => {
 
   const hashedOTP = hashOTP(otp);
 
-  {
-    const result = await otpService.isValidOTP(phoneNumber, method, hashedOTP);
-    if (!result.ok) {
-      throw new AppError(result.message, 400);
-    }
+  const result = await otpService.isValidOTP(phoneNumber, method, hashedOTP);
+  if (!result.ok) {
+    await rateLimitRepository.incrementVerify(phoneNumber);
+    throw new AppError(result.message, 400);
   }
 
-
-  await otpService.verifyOTP(phoneNumber, method);
+  await otpRepository.deleteByID(result.id);
+  await rateLimitService.reset(phoneNumber);
   const user = await userService.getUser(phoneNumber);
 
-  let token = "";
-  let tokenType = "";
+  let token = '';
+  let tokenType = '';
   if (user) {
     /** @type import("../types/tokens.js").LoginTokenPayload */
-    const payload = { type: "login", phoneNumber, role: user.role };
-    tokenType = "login";
+    const payload = { type: 'login', phoneNumber, role: user.role };
+    tokenType = 'login';
     token = generateToken(payload);
-  }
-  else {
+  } else {
     /** @type import("../types/tokens.js").RegisterTokenPayload */
-    const payload = { type: "register", phoneNumber };
-    tokenType = "register";
+    const payload = { type: 'register', phoneNumber };
+    tokenType = 'register';
     token = generateToken(payload);
   }
 
-  new SuccessResponse("OTP verified successfully", { phoneNumber, tokenType, token }, 200).send(res);
+  new SuccessResponse(
+    'OTP verified successfully',
+    { phoneNumber, tokenType, token },
+    200
+  ).send(res);
 });
 
 /**
@@ -97,14 +115,23 @@ export const verifyOTP = asyncUnAuthenticatedHandler(async (req, res) => {
  * @description Creates a new user account with the provided registration token and user details
  */
 export const register = asyncUnAuthenticatedHandler(async (req, res) => {
-  const { registerToken, firstName, lastName, government, city, bio } = req.body;
-  const { phoneNumber } = verifyAndDecodeToken(registerToken, "register");
+  const { registerToken, firstName, lastName, government, city, bio } =
+    req.body;
+  const { phoneNumber } = verifyAndDecodeToken(registerToken, 'register');
 
   /** @type {import('../types/role.js').Role} */
-  const role = "CLIENT";
-  const user = await userService.createUser({ phoneNumber, role, firstName, lastName, government, city, bio });
+  const role = 'CLIENT';
+  const user = await userService.createUser({
+    phoneNumber,
+    role,
+    firstName,
+    lastName,
+    government,
+    city,
+    bio,
+  });
 
-  new SuccessResponse("User created successfully", { user }, 200).send(res);
+  new SuccessResponse('User created successfully', { user }, 200).send(res);
 });
 
 /**
@@ -118,14 +145,11 @@ export const register = asyncUnAuthenticatedHandler(async (req, res) => {
  */
 export const login = asyncUnAuthenticatedHandler(async (req, res) => {
   const { loginToken, deviceFingerprint } = req.body;
-  const payload = verifyAndDecodeToken(loginToken, "login");
+  const payload = verifyAndDecodeToken(loginToken, 'login');
 
   const user = await userService.getUser(payload.phoneNumber);
 
-  if (!user)
-    throw new AppError("User not found", 404);
-
-
+  if (!user) throw new AppError('User not found', 404);
 
   const { unHashedRefreshToken } = await sessionService.create({
     userId: user.id,
@@ -133,10 +157,14 @@ export const login = asyncUnAuthenticatedHandler(async (req, res) => {
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toString(),
     role: user.role,
     ipAddress: getClientIp(req),
-    userAgent: req.headers["user-agent"],
+    userAgent: req.headers['user-agent'],
   });
 
-  new SuccessResponse("login successfully", { user, refreshToken: unHashedRefreshToken }, 200).send(res);
+  new SuccessResponse(
+    'login successfully',
+    { user, refreshToken: unHashedRefreshToken },
+    200
+  ).send(res);
 });
 
 /**
@@ -149,10 +177,9 @@ export const login = asyncUnAuthenticatedHandler(async (req, res) => {
  * @description Revokes the user's session based on device fingerprint
  */
 export const logout = asyncAuthenticatedHandler(async (req, res) => {
-  const fingerprint = String(req.headers["x-device-fingerprint"]);
+  const fingerprint = String(req.headers['x-device-fingerprint']);
   await sessionService.revokeByUserIDAndFingerprint(req.user.id, fingerprint);
-  new SuccessResponse("Logged out successfully", null, 200).send(res);
-
+  new SuccessResponse('Logged out successfully', null, 200).send(res);
 });
 
 /**
@@ -164,17 +191,22 @@ export const logout = asyncAuthenticatedHandler(async (req, res) => {
  * @returns {Promise<void>}
  * @description Validates refresh token and generates a new access token
  */
-export const generateAccessToken = asyncUnAuthenticatedHandler(async (req, res) => {
-  const deviceFingerprint = String(req.headers["x-device-fingerprint"]);
-  const refreshToken = req.headers["authorization"]?.split(" ")[1];
+export const generateAccessToken = asyncUnAuthenticatedHandler(
+  async (req, res) => {
+    const deviceFingerprint = String(req.headers['x-device-fingerprint']);
+    const refreshToken = req.headers['authorization']?.split(' ')[1];
 
-  const { role, userId } = verifyAndDecodeToken(refreshToken, "refresh");
-  const accessToken = await sessionService.generateAccessToken({
-    deviceFingerprint,
-    userId,
-    role,
-    refreshToken
-  });
-  new SuccessResponse("Access token generated successfully", { accessToken }, 200).send(res);
-
-});
+    const { role, userId } = verifyAndDecodeToken(refreshToken, 'refresh');
+    const accessToken = await sessionService.generateAccessToken({
+      deviceFingerprint,
+      userId,
+      role,
+      refreshToken,
+    });
+    new SuccessResponse(
+      'Access token generated successfully',
+      { accessToken },
+      200
+    ).send(res);
+  }
+);

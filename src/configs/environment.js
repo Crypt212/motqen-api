@@ -43,7 +43,7 @@ const api = {
   baseUrl: process.env.API_BASE_URL,
   version: process.env.API_VERSION || "v1",
   rateLimit: {
-    windowMs: 15 * 60 * 1000,
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
     max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
   },
 };
@@ -66,6 +66,14 @@ const twilio = {
   authToken: process.env.TWILIO_AUTH_TOKEN,
   virtualNumber: process.env.TWILIO_VIRTUAL_NUMBER,
 }
+// configs/environment.js  — add these fields
+
+const rateLimit= {
+  windowMs:          parseInt(process.env.RATE_LIMIT_WINDOW_MS)          || 15 * 60 * 1000,
+  max:               parseInt(process.env.RATE_LIMIT_MAX)                || 100,
+  sensitiveWindowMs: parseInt(process.env.RATE_LIMIT_SENSITIVE_WINDOW_MS)|| 15 * 60 * 1000,
+  sensitiveMax:      parseInt(process.env.RATE_LIMIT_SENSITIVE_MAX)      || 10,
+}
 const environment = {
   nodeEnv,
   backend,
@@ -78,6 +86,7 @@ const environment = {
   whatsapp,
   otps,
   twilio,
+  rateLimit
 };
 
 Object.freeze(environment);

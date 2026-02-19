@@ -23,10 +23,10 @@ export default class UserService extends Service {
    * @returns {Promise<Object>} User object
    */
   async getUser(phoneNumber) {
-    return tryCatch(async () => {
+
       const user = await userRepository.getByPhoneNumber(phoneNumber);
       return user;
-    });
+
   };
 
   /**
