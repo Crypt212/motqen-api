@@ -36,75 +36,122 @@ model OTP {
 }
 
 model User {
-  id          String        @id @default(uuid())
-  phoneNumber String        @unique
-  firstName   String
-  lastName    String
-  government  String
-  city        String
-  bio         String?
-  status      AccountStatus @default(INCOMPLETE)
+  id           String        @id @default(uuid())
+  phoneNumber  String        @unique
+  firstName    String
+  lastName     String
+  governmentId String?
+  cityId       String?
+  bio          String?
+  status       AccountStatus @default(INCOMPLETE)
 
+  city       City?       @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  government Government? @relation(fields: [governmentId], references: [id], onDelete: Cascade)
   role       Role        @default(CLIENT)
   sessions   Session[]
-  workerInfo WorkerInfo?
+  workerProfile WorkerProfile?
+  clientProfile ClientProfile?
 
   @@map("users")
 }
 
-model WorkerInfo {
-  id                      String  @id @default(uuid())
-  userId                  String  @unique
-  experienceYears         Int
-  isInTeam                Boolean
-  acceptsUrgentJobs       Boolean
-  primarySpecializationId String
+model ClientProfile {
+  id                String  @id @default(uuid())
+  userId            String  @unique
 
-  secondarySpecializations SpecializationsForWorkers[]
-  primarySpecialization    Specialization              @relation(fields: [primarySpecializationId], references: [id])
-  user                     User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  governments              GovernmentsForWorkers[]
+  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("worker_infos")
+  @@map("client_profiles")
 }
 
-model SpecializationsForWorkers {
-  workerInfoId     String
+model WorkerProfile {
+  id                String  @id @default(uuid())
+  userId            String  @unique
+  experienceYears   Int
+  isInTeam          Boolean
+  acceptsUrgentJobs Boolean
+
+  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chosenSpecializations ChosenSpecialization[]
+  governments           GovernmentsForWorkers[]
+
+  @@map("worker_profiles")
+}
+
+model ChosenSpecialization {
+  workerProfileId     String
   specializationId String
 
-  workerInfo     WorkerInfo     @relation(fields: [workerInfoId], references: [id], onDelete: Cascade)
-  specialization Specialization @relation(fields: [specializationId], references: [id], onDelete: Cascade)
+  workerProfile               WorkerProfile                @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  specialization           Specialization            @relation(fields: [specializationId], references: [id], onDelete: Cascade)
+  chosenSubSpecializations ChosenSubSpecialization[]
 
-  @@id([workerInfoId, specializationId])
-  @@map("specializations_for_workers")
+  @@id([workerProfileId, specializationId])
+  @@map("chosen_specializations")
 }
 
-model GovernmentsForWorkers {
-  workerInfoId String
-  governmentId String
+model ChosenSubSpecialization {
+  workerProfileId           String
+  subSpecializationId    String
+  chosenSpecializationId String
 
-  workerInfo WorkerInfo @relation(fields: [workerInfoId], references: [id], onDelete: Cascade)
-  government Government @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  subSpecialization    SubSpecialization    @relation(fields: [subSpecializationId], references: [id], onDelete: Cascade)
+  chosenSpecialization ChosenSpecialization @relation(fields: [workerProfileId, chosenSpecializationId], references: [workerProfileId, specializationId], onDelete: Cascade)
 
-  @@id([workerInfoId, governmentId])
-  @@map("governments_for_workers")
+  @@id([chosenSpecializationId, subSpecializationId])
+  @@unique([chosenSpecializationId, subSpecializationId])
+  @@map("chosen_sub_specializations")
 }
 
 model Specialization {
   id   String @id @default(uuid())
   name String
 
-  secondaryWorkers SpecializationsForWorkers[]
-  primaryWorkers   WorkerInfo[]
+  subSpecializations SubSpecialization[]
+  chosenByWorker     ChosenSpecialization[]
 
   @@index([name])
   @@map("specializations")
 }
 
+model SubSpecialization {
+  id                   String @id @default(uuid())
+  name                 String
+  mainSpecializationId String
+
+  chosenByWorker     ChosenSubSpecialization[]
+  mainSpecialization Specialization            @relation(fields: [mainSpecializationId], references: [id], onDelete: Cascade)
+
+  @@index([name])
+  @@map("sub_specializations")
+}
+
+model GovernmentsForWorkers {
+  workerProfileId String
+  governmentId String
+
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  government Government @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+
+  @@id([workerProfileId, governmentId])
+  @@map("governments_for_workers")
+}
+
+model City {
+  id   String @id @default(uuid())
+  name String
+
+  users User[]
+
+  @@map("cities")
+}
+
 model Government {
-  id      String                  @id @default(uuid())
-  name    String
+  id   String @id @default(uuid())
+  name String
+
   workers GovernmentsForWorkers[]
+  users   User[]
 
   @@map("governments")
 }
