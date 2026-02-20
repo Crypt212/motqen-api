@@ -7,6 +7,8 @@ import { ipRateLimiter } from "./middlewares/rateLimitMiddleware.js";
 import redisClient from "./libs/redis.js";
 import environment from "./configs/environment.js";
 import prismaClient from "./libs/database.js";
+import swaggerSpec from "./configs/swagger.js";
+import swaggerUi from "swagger-ui-express";
 
 const initApp = async () => {
   const app = express();
@@ -31,6 +33,23 @@ const initApp = async () => {
       database: prismaClient ? "connected" : "disconnected",
       redis: redisClient.isReady ? "connected" : "disconnected",
     });
+  });
+
+  // Swagger API Documentation
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: "Motqen API Documentation",
+    customfavIcon: "/favicon.ico",
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+    },
+  }));
+
+  // API JSON documentation endpoint
+  app.get("/api-docs.json", (req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    res.send(swaggerSpec);
   });
 
   app.use(errorHandler);

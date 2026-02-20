@@ -16,13 +16,13 @@ import { asyncAuthenticatedHandler } from '../types/asyncHandler.js';
  * @returns {Promise<void>}
  * @description Updates the basic profile information for a user
  */
-export const updateBasicInfo = asyncAuthenticatedHandler(async (req, res) => {
+export const updateUser = asyncAuthenticatedHandler(async (req, res) => {
   const { role, firstName, lastName, government, city, bio } = req.body;
   const userId = req.user.id;
 
   // If phoneNumber is provided, update user's phone (need additional verification)
   // For now, update other fields only
-  await userService.updateBasicInfoById(userId, { role, firstName, lastName, government, city, bio });
+  await userService.updateUser(userId, { role, firstName, lastName, government, city, bio });
 
   new SuccessResponse("updated user successfully", {}, 200).send(res);
 });
@@ -37,16 +37,13 @@ export const updateBasicInfo = asyncAuthenticatedHandler(async (req, res) => {
  * @description Updates the professional profile information for a worker
  */
 export const updateWorkerInfo = asyncAuthenticatedHandler(async (req, res) => {
-  const { experienceYears, isInTeam, acceptsUrgentJobs, primarySpecialization, secondarySpecializations, governments } = req.body;
+  const { experienceYears, isInTeam, acceptsUrgentJobs } = req.body;
   const userId = req.user.id;
 
-  await userService.updateWorkerInfoById(userId, {
+  await userService.updateWorkerProfile(userId, {
     experienceYears,
     isInTeam,
     acceptsUrgentJobs,
-    primarySpecialization,
-    secondarySpecializations,
-    governments
   });
 
   new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
@@ -62,8 +59,8 @@ export const updateWorkerInfo = asyncAuthenticatedHandler(async (req, res) => {
  * @description Retrieves the profile information of the currently authenticated user
  */
 export const getMe = asyncAuthenticatedHandler(async (req, res) => {
-  const { id: userId } = req.user;
-  const user = await userService.getUserById(userId);
+  const { id } = req.user;
+  const user = await userService.getUser({ id });
 
   new SuccessResponse("User retrieved successfully", { user }, 200).send(res);
 });

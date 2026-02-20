@@ -11,24 +11,97 @@ import prisma from "../libs/database.js";
 /** @typedef {import("./Repository.js").BatchPayload} BatchPayload */
 
 /** @typedef {{name: String}} SpecializationData */
-/** @typedef {SpecializationData | { id: IDType }} Specialization */
+/** @typedef {SpecializationData & { id: IDType }} Specialization */
 /** @typedef {import("./Repository.js").FilterArgs<Specialization>} SpecializationFilter */
 
 /** @typedef {{name: String}} SubSpecializationData */
-/** @typedef {SubSpecializationData | { id: IDType, mainSpecializationId: IDType }} SubSpecialization */
+/** @typedef {SubSpecializationData & { id: IDType, mainSpecializationId: IDType }} SubSpecialization */
 /** @typedef {import("./Repository.js").FilterArgs<SubSpecialization>} SubSpecializationFilter */
 
 
 /**
  * Specialization Repository - Handles all database operations for specializations and their sub-specializations
  * @class
- * @extends Repository<Specialization, SpecializationData, SpecializationFilter>
+ * @extends Repository
  */
 export default class SpecializationRepository extends Repository {
 
-  constructor() {
-    super(prisma.specialization);
+  /**
+   * @async
+   * @method
+   * @param {SpecializationFilter} where
+   * @returns {Promise<boolean>}
+   */
+  async exists(where) {
+    return (await prisma.specialization.count({ where })) > 0;
   }
+
+
+  /**
+   * @async
+   * @method
+   * @param {SpecializationFilter} where
+   * @returns {Promise<Specialization|null>}
+   */
+  async findOne(where) {
+    return await prisma.specialization.findFirst({ where });
+  };
+
+  /**
+   * @async
+   * @method
+   * @param {SpecializationFilter} where
+   * @returns {Promise<Specialization[]>}
+   */
+  async findMany(where) {
+    return await prisma.specialization.findMany({ where });
+  };
+
+  /**
+   * @async
+   * @method
+   * @param {SpecializationData} data
+   * @returns {Promise<Specialization>}
+   */
+  async create(data) {
+    return await prisma.specialization.create({ data });
+  };
+
+  /**
+   * @async
+   * @method
+   * @param {SpecializationData[]} data
+   * @returns {Promise<BatchPayload>}
+   */
+  async createMany(data) {
+    return await prisma.specialization.createMany({ data });
+  };
+
+  /**
+   * @async
+   * @method
+   * @param {SpecializationFilter} filter
+   * @param {SpecializationData} data
+   * @returns {Promise<BatchPayload>}
+   */
+  async update(filter, data) {
+    return await prisma.specialization.updateMany({
+      where: filter,
+      data,
+    });
+  };
+
+  /**
+   * @async
+   * @method
+   * @param {SpecializationFilter} filter
+   * @returns {Promise<BatchPayload>}
+   */
+  async delete(filter) {
+    return await prisma.specialization.deleteMany({
+      where: filter,
+    });
+  };
 
   // Handling Sub-Specializations ----------------------------------------------------
 

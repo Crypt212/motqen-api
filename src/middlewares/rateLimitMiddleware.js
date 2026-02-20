@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Rate Limit Middleware - Rate limiting for API endpoints
+ * @module middlewares/rateLimitMiddleware
+ */
+
 import rateLimit from "express-rate-limit";
 import { rateLimitService } from "../state.js";
 import AppError from "../errors/AppError.js";

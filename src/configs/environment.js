@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Environment Configuration - Application environment variables and settings
+ * @module configs/environment
+ */
+
 import "dotenv/config";
 
 const nodeEnv = process.env.NODE_ENV || "development";

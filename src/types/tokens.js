@@ -1,4 +1,9 @@
 /**
+ * @fileoverview Token Type Definitions - JWT token payload type definitions
+ * @module types/tokens
+ */
+
+/**
  * @typedef {Object} RefreshTokenPayload
  * @property {"refresh"} type
  * @property {string} userId

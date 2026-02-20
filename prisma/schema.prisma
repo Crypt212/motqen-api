@@ -43,12 +43,12 @@ model User {
   governmentId String?
   cityId       String?
   bio          String?
-  status       AccountStatus @default(INCOMPLETE)
+  status       AccountStatus @default(SUSPENDED)
+  role          Role           @default(USER)
 
-  city       City?       @relation(fields: [cityId], references: [id], onDelete: Cascade)
-  government Government? @relation(fields: [governmentId], references: [id], onDelete: Cascade)
-  role       Role        @default(CLIENT)
-  sessions   Session[]
+  city          City?          @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  government    Government?    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  sessions      Session[]
   workerProfile WorkerProfile?
   clientProfile ClientProfile?
 
@@ -56,10 +56,10 @@ model User {
 }
 
 model ClientProfile {
-  id                String  @id @default(uuid())
-  userId            String  @unique
+  id     String @id @default(uuid())
+  userId String @unique
 
-  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("client_profiles")
 }
@@ -79,10 +79,10 @@ model WorkerProfile {
 }
 
 model ChosenSpecialization {
-  workerProfileId     String
+  workerProfileId  String
   specializationId String
 
-  workerProfile               WorkerProfile                @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  workerProfile            WorkerProfile             @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
   specialization           Specialization            @relation(fields: [specializationId], references: [id], onDelete: Cascade)
   chosenSubSpecializations ChosenSubSpecialization[]
 
@@ -91,7 +91,7 @@ model ChosenSpecialization {
 }
 
 model ChosenSubSpecialization {
-  workerProfileId           String
+  workerProfileId        String
   subSpecializationId    String
   chosenSpecializationId String
 
@@ -128,47 +128,46 @@ model SubSpecialization {
 
 model GovernmentsForWorkers {
   workerProfileId String
-  governmentId String
+  governmentId    String
 
   workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
-  government Government @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  government    Government    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
 
   @@id([workerProfileId, governmentId])
   @@map("governments_for_workers")
-}
-
-model City {
-  id   String @id @default(uuid())
-  name String
-
-  users User[]
-
-  @@map("cities")
 }
 
 model Government {
   id   String @id @default(uuid())
   name String
 
+  cities  City[]
   workers GovernmentsForWorkers[]
   users   User[]
 
   @@map("governments")
 }
 
+model City {
+  id   String @id @default(uuid())
+  name String
+  governmentId String?
+
+  users        User[]
+  government   Government? @relation(fields: [governmentId], references: [id])
+
+  @@map("cities")
+}
+
 enum AccountStatus {
-  INCOMPLETE
   ACTIVE
   SUSPENDED
   BANNED
 }
 
 enum Role {
-  WORKER
-  CLIENT
+  USER
   ADMIN
-  NOTCONFIRMED
-  UNDEFINED
 }
 
 enum Method {

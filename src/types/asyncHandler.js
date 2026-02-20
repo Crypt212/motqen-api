@@ -1,4 +1,9 @@
 /**
+ * @fileoverview Async Handler - Wrapper functions for async controller error handling
+ * @module types/asyncHandler
+ */
+
+/**
  * @typedef {import('../types/express.js').AuthenticatedRequest} AuthenticatedRequest
  * @typedef {import('../types/express.js').MaybeAuthenticatedRequest} MaybeAuthenticatedRequest
  * @typedef {import('express').Request} Request

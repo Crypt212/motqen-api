@@ -1,3 +1,8 @@
+/**
+ * @fileoverview API Routes - Main router combining all route modules
+ * @module routes/api
+ */
+
 import { Router } from "express";
 import authRouter from "./auth.js";
 import usersRouter from "./users.js";

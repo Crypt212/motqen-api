@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Express Type Definitions - Custom type definitions for Express
+ * @module types/express
+ */
+
 import { $Enums } from '@prisma/client';
 
 /**

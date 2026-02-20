@@ -1,4 +1,9 @@
 /**
+ * @fileoverview Error Handler Middleware - Global error handling for Express
+ * @module middlewares/errorMiddleware
+ */
+
+/**
  * Error handler middleware
  * @type {import("express").ErrorRequestHandler}
  */

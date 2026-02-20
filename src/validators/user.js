@@ -6,70 +6,60 @@
 import { body } from "express-validator";
 
 /**
- * Validation rules for updating basic user info
- * @returns {Array} Validation chain
+ * Validation rules for updating user basic info
+ * @constant {Array<import('express-validator').ValidationChain>}
  */
-export const validateUpdateBasicInfo = [
-  body("phoneNumber")
+export const updateUserValidator = [
+  body('role')
     .optional()
-    .trim()
-    .isMobilePhone("ar-EG")
-    .withMessage("Invalid Egyptian phone number"),
-  body("firstName")
-    .optional()
-    .trim()
-    .isLength({ min: 2, max: 50 })
-    .withMessage("First name must be 2-50 characters"),
-  body("lastName")
+    .isIn(['USER', 'ADMIN'])
+    .withMessage('Role must be either USER or ADMIN'),
+  body('firstName')
     .optional()
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage("Last name must be 2-50 characters"),
-  body("government")
+    .withMessage('First name must be between 2 and 50 characters')
+    .isAlpha('ar-EG', { ignore: ' ' })
+    .withMessage('First name must contain only letters'),
+  body('lastName')
     .optional()
     .trim()
-    .notEmpty()
-    .withMessage("Government cannot be empty"),
-  body("city")
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Last name must be between 2 and 50 characters')
+    .isAlpha('ar-EG', { ignore: ' ' })
+    .withMessage('Last name must contain only letters'),
+  body('government')
     .optional()
     .trim()
-    .notEmpty()
-    .withMessage("City cannot be empty"),
-  body("bio")
+    .isUUID()
+    .withMessage('Government must be a valid UUID'),
+  body('city')
+    .optional()
+    .trim()
+    .isUUID()
+    .withMessage('City must be a valid UUID'),
+  body('bio')
     .optional()
     .trim()
     .isLength({ max: 500 })
-    .withMessage("Bio must not exceed 500 characters"),
+    .withMessage('Bio must not exceed 500 characters'),
 ];
 
 /**
  * Validation rules for updating worker info
- * @returns {Array} Validation chain
+ * @constant {Array<import('express-validator').ValidationChain>}
  */
-export const validateUpdateWorkerInfo = [
-  body("experienceYears")
+export const updateWorkerInfoValidator = [
+  body('experienceYears')
     .optional()
     .isInt({ min: 0, max: 50 })
-    .withMessage("Experience years must be 0-50"),
-  body("isInTeam")
+    .withMessage('Experience years must be between 0 and 50'),
+  body('isInTeam')
     .optional()
     .isBoolean()
-    .withMessage("isInTeam must be a boolean"),
-  body("acceptsUrgentJobs")
+    .withMessage('isInTeam must be a boolean'),
+  body('acceptsUrgentJobs')
     .optional()
     .isBoolean()
-    .withMessage("acceptsUrgentJobs must be a boolean"),
-  body("primarySpecialization")
-    .optional()
-    .trim()
-    .notEmpty()
-    .withMessage("Primary specialization is required"),
-  body("secondarySpecializations")
-    .optional()
-    .isArray()
-    .withMessage("Secondary specializations must be an array"),
-  body("governments")
-    .optional()
-    .isArray()
-    .withMessage("Governments must be an array"),
+    .withMessage('acceptsUrgentJobs must be a boolean'),
 ];

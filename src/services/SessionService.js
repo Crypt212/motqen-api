@@ -28,23 +28,23 @@ export default class SessionService extends Service {
    * @param {string} params.userId - The user's ID
    * @param {string} params.deviceFingerprint - Device fingerprint
    * @param {import("../types/role.js").Role} params.role - User's role
-   * @param {string} [params.expiresAt] - Token expiration date
+   * @param {Date} [params.expiresAt] - Token expiration date
    * @param {string} [params.ipAddress] - Client IP address
    * @param {string} [params.userAgent] - Client user agent
    * @returns {Promise<{session: Object, unHashedRefreshToken: string}>} Created session and refresh token
    * @description Creates a new session, revokes existing ones for the same device
    */
-  async create({
+  async createSession({
     userId,
     deviceFingerprint,
     role,
-    expiresAt = environment.jwt.refresh.expiresIn,
+    expiresAt,
     ipAddress,
     userAgent,
   }) {
     // each mobile have only one active session
 
-    await sessionRepository.revokeSessionsForFingerprint(deviceFingerprint);
+    await sessionRepository.delete({deviceFingerprint});
 
     const unHashedRefreshToken = generateToken({ type: "refresh", userId, role });
     logger.info("Generated Refresh Token:", expiresAt);
@@ -52,10 +52,13 @@ export default class SessionService extends Service {
     const hashedToken = crypto.createHash("sha256").update(unHashedRefreshToken).digest("hex");
 
     const session = await sessionRepository.create({
+      isRevoked: false,
+      lastUsedAt: new Date(Date.now()),
+      createdAt: new Date(Date.now()),
       userId,
-      fingerprint: deviceFingerprint,
+      deviceFingerprint,
       expiresAt,
-      hashedToken,
+      token: hashedToken,
       ipAddress,
       userAgent,
     });

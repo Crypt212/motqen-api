@@ -12,6 +12,7 @@ import {
   rateLimitService,
   otpRepository,
   rateLimitRepository,
+  authService,
 } from '../state.js';
 import { hashOTP } from '../utils/OTP.js';
 import { generateToken, verifyAndDecodeToken } from '../utils/tokens.js';
@@ -80,7 +81,7 @@ export const verifyOTP = asyncUnAuthenticatedHandler(async (req, res) => {
     throw new AppError(result.message, 400);
   }
 
-  await otpRepository.deleteByID(result.id);
+  await otpRepository.delete({ hashedOTP });
   await rateLimitService.reset(phoneNumber);
   const user = await userService.getUser(phoneNumber);
 
@@ -106,24 +107,20 @@ export const verifyOTP = asyncUnAuthenticatedHandler(async (req, res) => {
 });
 
 /**
- * Register a new user account
+ * Register a new client user
  * @async
- * @function register
+ * @function registerClient
  * @param {import('express').Request} req - Express request object
  * @param {import('express').Response} res - Express response object
  * @returns {Promise<void>}
- * @description Creates a new user account with the provided registration token and user details
+ * @description Registers a new client user with basic profile information
  */
-export const register = asyncUnAuthenticatedHandler(async (req, res) => {
-  const { registerToken, firstName, lastName, government, city, bio } =
-    req.body;
+export const registerClient = asyncUnAuthenticatedHandler(async (req, res) => {
+  const { registerToken, firstName, lastName, government, city, bio } = req.body;
   const { phoneNumber } = verifyAndDecodeToken(registerToken, 'register');
 
-  /** @type {import('../types/role.js').Role} */
-  const role = 'CLIENT';
-  const user = await userService.createUser({
+  const user = await authService.register({
     phoneNumber,
-    role,
     firstName,
     lastName,
     government,
@@ -131,7 +128,59 @@ export const register = asyncUnAuthenticatedHandler(async (req, res) => {
     bio,
   });
 
-  new SuccessResponse('User created successfully', { user }, 200).send(res);
+
+  const clientProfile = await userService.createClientProfile({
+    userId: user.id,
+  });
+
+
+  new SuccessResponse('User created successfully', { user, clientProfile }, 200).send(res);
+});
+
+/**
+ * Register a new worker user
+ * @async
+ * @function registerWorker
+ * @param {import('express').Request} req - Express request object
+ * @param {import('express').Response} res - Express response object
+ * @returns {Promise<void>}
+ * @description Registers a new worker user with professional profile information
+ */
+export const registerWorker = asyncUnAuthenticatedHandler(async (req, res) => {
+  const {
+    registerToken,
+    firstName,
+    lastName,
+    government,
+    city,
+    bio,
+    experienceYears,
+    isInTeam,
+    acceptsUrgentJobs,
+    specializationNames,
+    subSpecializationNames,
+    workGovernmentNames } = req.body;
+  const { phoneNumber } = verifyAndDecodeToken(registerToken, 'register');
+
+  const user = await authService.register({
+    phoneNumber,
+    firstName,
+    lastName,
+    government,
+    city,
+    bio,
+  });
+
+  const workerProfile = await userService.createWorkerProfile(user.id, {
+    experienceYears,
+    isInTeam,
+    acceptsUrgentJobs,
+    specializationNames,
+    subSpecializationNames,
+    governmentNames: workGovernmentNames
+  });
+
+  new SuccessResponse('User created successfully', { user, workerProfile }, 200).send(res);
 });
 
 /**
@@ -147,14 +196,14 @@ export const login = asyncUnAuthenticatedHandler(async (req, res) => {
   const { loginToken, deviceFingerprint } = req.body;
   const payload = verifyAndDecodeToken(loginToken, 'login');
 
-  const user = await userService.getUser(payload.phoneNumber);
+  const user = await userService.getUser({ phoneNumber: payload.phoneNumber });
 
   if (!user) throw new AppError('User not found', 404);
 
-  const { unHashedRefreshToken } = await sessionService.create({
+  const { unHashedRefreshToken } = await sessionService.createSession({
     userId: user.id,
     deviceFingerprint,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toString(),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     role: user.role,
     ipAddress: getClientIp(req),
     userAgent: req.headers['user-agent'],

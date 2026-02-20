@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Rate Limit Service - Handle rate limiting for API endpoints
+ * @module services/RateLimitService
+ */
+
 // RateLimitService.js
 
 import AppError from "../errors/AppError.js";
@@ -6,6 +11,11 @@ import environment from "../configs/environment.js";
 
 const MAX_VERIFY_ATTEMPTS = 5;
 
+/**
+ * RateLimit Service - Manages rate limiting for OTP and API requests
+ * @class
+ * @extends Service
+ */
 export default class RateLimitService extends Service {
   #repository;
 
@@ -20,6 +30,15 @@ export default class RateLimitService extends Service {
     return { windowSeconds: (windowMs ?? 15 * 60 * 1000) / 1000, max: max ?? 100 };
   }
 
+  /**
+   * Check if OTP send request is allowed for the given phone and device
+   * @async
+   * @method checkSendOtp
+   * @param {string} phone - User's phone number
+   * @param {string} deviceId - Device identifier
+   * @returns {Promise<void>}
+   * @throws {AppError} If rate limit is exceeded
+   */
   async checkSendOtp(phone, deviceId) {
     const [phoneRecord, deviceRecord] = await Promise.all([
       this.#repository.getSendRecord(phone),
@@ -38,11 +57,27 @@ export default class RateLimitService extends Service {
   }
 
 
+  /**
+   * Increment the send OTP attempt count
+   * @async
+   * @method incrementSend
+   * @param {string} phone - User's phone number
+   * @param {string} deviceId - Device identifier
+   * @returns {Promise<void>}
+   */
   async incrementSend(phone, deviceId) {
     return this.#repository.incrementSend(phone, deviceId);
   }
 
 
+  /**
+   * Check if OTP verification attempt is allowed
+   * @async
+   * @method checkVerify
+   * @param {string} phone - User's phone number
+   * @returns {Promise<void>}
+   * @throws {AppError} If too many verification attempts
+   */
   async checkVerify(phone) {
     const record   = await this.#repository.getVerifyRecord(phone);
     const attempts = record.attempts ?? 0;
@@ -57,6 +92,13 @@ export default class RateLimitService extends Service {
   }
 
 
+  /**
+   * Increment the verification attempt count
+   * @async
+   * @method incrementVerify
+   * @param {string} phone - User's phone number
+   * @returns {Promise<{attempts: number, remaining: number, blocked: boolean}>} Current rate limit status
+   */
   async incrementVerify(phone) {
     const record = await this.#repository.incrementVerify(phone);
 
@@ -68,6 +110,14 @@ export default class RateLimitService extends Service {
   }
 
 
+  /**
+   * Reset rate limits for a phone and device
+   * @async
+   * @method reset
+   * @param {string} phone - User's phone number
+   * @param {string} deviceId - Device identifier
+   * @returns {Promise<void>}
+   */
   async reset(phone, deviceId) {
     await this.#repository.reset(phone, deviceId);
   }
