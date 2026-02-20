@@ -1,9 +1,4 @@
 /**
- * @fileoverview Repository Error - Custom error for repository layer
- * @module errors/RepositoryError
- */
-
-/**
  * Error types for repository operations
  * @readonly
  * @enum {number}

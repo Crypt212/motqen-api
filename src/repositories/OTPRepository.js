@@ -8,142 +8,20 @@ import { Repository } from './Repository.js';
  * @extends {Repository}
  */
 
+/** @typedef {import("./Repository.js").IDType} IDType */
+
+/** @typedef {{ phoneNumber: String, hashedOTP: String, updatedAt: Date, createdAt: Date, method: $Enums.Method }} OTPData */
+/** @typedef {OTPData | {id: IDType}} OTP */
+/** @typedef {import("./Repository.js").FilterArgs<OTP>} OTPFilter */
+
 /**
  * OTP Repository - Handles all database operations for OTPs
  * @class
- * @extends Repository
+ * @extends Repository<OTP, OTPData, OTPFilter>
  */
 export default class OTPRepository extends Repository {
-  /**
-   * Create a new OTP record
-   * @async
-   * @method create
-   * @param {string} phoneNumber - User's phone number
-   * @param {string} hashedOTP - Hashed OTP
-   * @param {Date} expiresAt - Expiration date
-   * @param {$Enums.Method} method - OTP delivery method (SMS or WhatsApp)
-   * @returns {Promise<Object>} Created OTP
-   */
-  async create(phoneNumber, hashedOTP, expiresAt, method) {
-    const otp = await prisma.oTP.create({
-      data: {
-        phoneNumber: phoneNumber,
-        hashedOTP: hashedOTP,
-        expiresAt: expiresAt,
-        method: method,
-        updatedAt: new Date(),
-        createdAt: new Date(),
-      },
-    });
-    return otp;
-  }
 
-  /**
-   * Find OTP by phone number and method
-   * @async
-   * @method findByPhoneNumber
-   * @param {string} phoneNumber - User's phone number
-   * @param {$Enums.Method} method - OTP delivery method
-   * @returns {Promise<Object|null>} Found OTP or null
-   */
-  async findByPhoneNumber(phoneNumber, method) {
-    const otp = await prisma.oTP.findFirst({
-      where: {
-        phoneNumber: phoneNumber,
-        method: method,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return otp;
-  }
-
-  /**
-   * Delete OTP by phone number and method
-   * @async
-   * @method deleteByPhoneNumber
-   * @param {string} phoneNumber - User's phone number
-   * @param {$Enums.Method} method - OTP delivery method
-   * @returns {Promise<void>}
-   */
-  async deleteByPhoneNumber(phoneNumber, method) {
-    await prisma.oTP.delete({
-      where: {
-        phoneNumber: phoneNumber,
-        method,
-      },
-    });
-  }
-
-  /**
-   * Update OTP record
-   * @async
-   * @method updateOTP
-   * @param {string} phoneNumber - User's phone number
-   * @param {$Enums.Method} method - OTP delivery method
-   * @param {Object} data - Update data
-   * @returns {Promise<Object>} Updated OTP
-   */
-  async updateOTP(id, data) {
-    console.log(data);
-    return await prisma.oTP.update({
-      where: { id },
-      data,
-    });
-  }
-
-  /**
-   * Get OTP attempt count
-   * @async
-   * @method getAttempts
-   * @param {string} phoneNumber - User's phone number
-   * @param {$Enums.Method} method - OTP delivery method
-   * @returns {Promise<{attempts: number, lastAttemptAt: Date}|null>} Attempts info or null
-   */
-  async getAttempts(phoneNumber, method) {
-    const otp = await prisma.oTP.findUnique({
-      where: {
-        phoneNumber: phoneNumber,
-        method: method,
-      },
-    });
-    return otp
-      ? { attempts: otp.attempts, lastAttemptAt: otp.updatedAt }
-      : null;
-  }
-
-  /**
-   * Get the latest OTP for a phone number and method
-   * @async
-   * @method getLatest
-   * @param {string} phone - User's phone number
-   * @param {$Enums.Method} method - OTP delivery method
-   * @returns {Promise<Object|null>} Latest OTP or null
-   */
-  async getLatest(phone, method) {
-    return await prisma.oTP.findFirst({
-      where: { phoneNumber: phone, method: method },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  /**
-   * Mark OTP as used
-   * @async
-   * @method markAsUsed
-   * @param {string} phoneNumber - User's phone number
-   * @param {$Enums.Method} method - OTP delivery method
-   * @returns {Promise<Object>} Updated OTP
-   */
-  async markAsUsed(phoneNumber, method) {
-    return await prisma.oTP.update({
-      where: { phoneNumber, method },
-      data: { isUsed: true },
-    });
-  }
-  async deleteByID(id) {
-    return await prisma.oTP.update({
-      where: { id },
-      data: { isUsed: true },
-    });
+  constructor() {
+    super(prisma.oTP);
   }
 }
