@@ -4,18 +4,20 @@
  */
 
 import { Router } from "express";
-import { updateUser, updateWorkerInfo, getMe } from "../controllers/UserControllers.js";
+import { updateUser, updateWorkerProfile, updateClientProfile, getUser, getProfileImage, updateProfileImage, deleteProfileImage, createWorkerProfile, createClientProfile, getClientProfile, getWorkerProfile } from "../controllers/UserControllers.js";
+import { authorizeWorker, unAuthorizeWorker } from "../middlewares/workerMiddleware.js";
+import { authorizeClient, unAuthorizeClient } from "../middlewares/clientMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
-import { updateUserValidator, updateWorkerInfoValidator } from "../validators/user.js";
+import { updateUserValidators, updateWorkerProfileValidators, createWorkerProfileValidators, createClientProfileValidators, updateClientProfileValidators } from "../validators/user.js";
+import upload from "../configs/multer.js";
 
 const usersRouter = Router();
 
 /**
  * @swagger
- * /users/me:
+ * /api/users/me:
  *   get:
- *     summary: Get Current User
- *     description: Retrieve the authenticated user's profile information
+ *     summary: Get current user profile
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -25,32 +27,31 @@ const usersRouter = Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
- *             example:
- *               success: true
- *               message: "User profile retrieved successfully"
- *               data:
- *                 id: "123e4567-e89b-12d3-a456-426614174000"
- *                 firstName: "أحمد"
- *                 lastName: "محمد"
- *                 phoneNumber: "+201234567890"
- *                 role: "USER"
- *                 government: "القاهرة"
- *                 city: "الشيخ زايد"
- *                 bio: "مستخدم جديد"
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: User retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
- *       500:
- *         $ref: '#/components/responses/InternalServerError'
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
  */
-usersRouter.get("/me", getMe);
+usersRouter.get("/me", getUser);
 
 /**
  * @swagger
- * /users/basic-info:
+ * /api/users/me:
  *   put:
- *     summary: Update Basic Info
- *     description: Update the authenticated user's basic profile information
+ *     summary: Update current user profile
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -60,45 +61,261 @@ usersRouter.get("/me", getMe);
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/UpdateUserBasicInfo'
- *           example:
- *             firstName: "أحمد"
- *             lastName: "علي"
- *             government: "123e4567-e89b-12d3-a456-426614174000"
- *             city: "123e4567-e89b-12d3-a456-426614174001"
- *             bio: "مستخدم نشط يبحث عن أفضل الخدمات"
  *     responses:
  *       200:
- *         description: User basic info updated successfully
+ *         description: User profile updated successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
- *             example:
- *               success: true
- *               message: "User basic info updated successfully"
- *               data:
- *                 id: "123e4567-e89b-12d3-a456-426614174000"
- *                 firstName: "أحمد"
- *                 lastName: "علي"
- *                 government: "القاهرة"
- *                 city: "الشيخ زايد"
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: updated user successfully
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+usersRouter.put("/me", updateUserValidators, validateRequest, updateUser);
+
+/**
+ * @swagger
+ * /api/users/profile-image:
+ *   get:
+ *     summary: Get user's profile image
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile image retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: retrieved profile image successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     profileImage:
+ *                       type: string
+ *                       nullable: true
+ *                       example: https://res.cloudinary.com/.../image.jpg
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+usersRouter.get("/profile-image", getProfileImage);
+
+/**
+ * @swagger
+ * /api/users/profile-image:
+ *   put:
+ *     summary: Update user's profile image
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Profile image file (required)
+ *     responses:
+ *       200:
+ *         description: Profile image updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: updated profile image successfully
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ */
+usersRouter.put("/profile-image", upload.single("file"), updateProfileImage);
+
+/**
+ * @swagger
+ * /api/users/profile-image:
+ *   delete:
+ *     summary: Delete user's profile image
+ *     description: Workers cannot delete their profile image
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile image deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: deleted profile image successfully
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ */
+usersRouter.delete("/profile-image", unAuthorizeWorker, deleteProfileImage);
+
+// --------------- Worker --------------------------
+
+/**
+ * @swagger
+ * /api/users/worker-profile:
+ *   post:
+ *     summary: Create worker profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - experienceYears
+ *               - isInTeam
+ *               - acceptsUrgentJobs
+ *               - specializationNames
+ *               - governmentNames
+ *               - personal_image
+ *               - id_image
+ *               - personal_with_id_image
+ *             properties:
+ *               experienceYears:
+ *                 type: integer
+ *                 example: 5
+ *                 description: Years of experience (0-50)
+ *               isInTeam:
+ *                 type: boolean
+ *                 example: false
+ *               acceptsUrgentJobs:
+ *                 type: boolean
+ *                 example: true
+ *               specializationNames:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["plumbing", "electrical"]
+ *               subSpecializationNames:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["installation", "repair"]
+ *               governmentNames:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["Cairo", "Giza"]
+ *               personal_image:
+ *                 type: string
+ *                 format: binary
+ *               id_image:
+ *                 type: string
+ *                 format: binary
+ *               personal_with_id_image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Worker profile created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: created worker profile successfully
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         $ref: '#/components/responses/NotFound'
- *       500:
- *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.put("/basic-info", updateUserValidator, validateRequest, updateUser);
+usersRouter.post("/worker-profile", unAuthorizeWorker, upload.fields([
+  { name: "personal_image", maxCount: 1 },
+  { name: "id_image", maxCount: 1 },
+  { name: "personal_with_id_image", maxCount: 1 }
+]), createWorkerProfileValidators, validateRequest, createWorkerProfile);
 
 /**
  * @swagger
- * /users/worker-info:
+ * /api/users/worker-profile:
+ *   get:
+ *     summary: Get worker profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Worker profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: retrieved worker profile successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     workerProfile:
+ *                       type: object
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
+ */
+usersRouter.get("/worker-profile", authorizeWorker, getWorkerProfile);
+
+/**
+ * @swagger
+ * /api/users/worker-profile:
  *   put:
- *     summary: Update Worker Info
- *     description: Update the authenticated worker's professional information
+ *     summary: Update worker profile
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -108,36 +325,130 @@ usersRouter.put("/basic-info", updateUserValidator, validateRequest, updateUser)
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/UpdateWorkerInfo'
- *           example:
- *             experienceYears: 8
- *             isInTeam: true
- *             acceptsUrgentJobs: false
  *     responses:
  *       200:
- *         description: Worker info updated successfully
+ *         description: Worker profile updated successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
- *             example:
- *               success: true
- *               message: "Worker info updated successfully"
- *               data:
- *                 id: "123e4567-e89b-12d3-a456-426614174000"
- *                 experienceYears: 8
- *                 isInTeam: true
- *                 acceptsUrgentJobs: false
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: updated worker profile successfully
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       403:
  *         $ref: '#/components/responses/Forbidden'
+ */
+usersRouter.put("/worker-profile", authorizeWorker, updateWorkerProfileValidators, validateRequest, updateWorkerProfile);
+
+// ----------------- Client -----------------------
+
+/**
+ * @swagger
+ * /api/users/client-profile:
+ *   post:
+ *     summary: Create client profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Client profile created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: created client profile successfully
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         $ref: '#/components/responses/NotFound'
- *       500:
- *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.put("/worker-info", updateWorkerInfoValidator, validateRequest, updateWorkerInfo);
+usersRouter.post("/client-profile", unAuthorizeClient, createClientProfileValidators, validateRequest, createClientProfile);
+
+/**
+ * @swagger
+ * /api/users/client-profile:
+ *   get:
+ *     summary: Get client profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Client profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: retrieved client profile successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     clientProfile:
+ *                       type: object
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
+ */
+usersRouter.get("/client-profile", authorizeClient, getClientProfile);
+
+/**
+ * @swagger
+ * /api/users/client-profile:
+ *   put:
+ *     summary: Update client profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties: {}
+ *     responses:
+ *       200:
+ *         description: Client profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: updated client profile successfully
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ */
+usersRouter.put("/client-profile", authorizeClient, updateClientProfileValidators, validateRequest, updateClientProfile);
 
 export default usersRouter;

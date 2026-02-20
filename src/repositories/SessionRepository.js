@@ -10,7 +10,7 @@ import { Repository } from "./Repository.js";
 /** @typedef {import('@prisma/client').Prisma.BatchPayload} BatchPayload */
 /** @typedef {import("./Repository.js").IDType} IDType */
 
-/** @typedef {{userId: IDType, token: String, isRevoked: boolean, deviceFingerprint: String, ipAddress?: String, userAgent?: String, lastUsedAt: Date, createdAt: Date, expiresAt: Date}} SessionData */
+/** @typedef {{userId: IDType, token: String, isRevoked: boolean, deviceFingerprint: String, lastUsedAt: Date, createdAt: Date, expiresAt: Date}} SessionData */
 /** @typedef {SessionData & {id: IDType}} Session */
 /** @typedef {import("./Repository.js").FilterArgs<Session>} SessionFilter */
 

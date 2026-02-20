@@ -30,18 +30,31 @@ export default class UserService extends Service {
   }
 
   /**
+   * Get all roles of a user
+   * @async
+   * @method getUserRoles
+   * @param {import("../repositories/UserRepository.js").IDType} userId - User ID
+   * @returns {Promise<{ isWorker: boolean, isClient: boolean }>} Roles of user
+   */
+  async getUserRoles(userId) {
+    const isWorker = await userRepository.hasWorkerProfile(userId);
+    const isClient = await userRepository.hasClientProfile(userId);
+    return { isWorker, isClient };
+  }
+
+  /**
    * Update a user's basic information
    * @async
    * @method updateUser
    * @param {import("../repositories/UserRepository.js").IDType} userId - User ID
    * @param {Object} data - Update data
-   * @param {import('$Enums').Role} [data.role] - User's role
+   * @param {$Enums.Role} [data.role] - User's role
    * @param {string} [data.firstName] - First name
    * @param {string} [data.lastName] - Last name
    * @param {string} [data.government] - Government name
    * @param {string} [data.city] - City name
    * @param {string} [data.bio] - Biography
-   * @param {import('$Enums').AccountStatus} [data.status] - Account status
+   * @param {$Enums.AccountStatus} [data.status] - Account status
    * @returns {Promise<Object>} Updated user
    * @throws {AppError} If government or city not found
    */
@@ -173,13 +186,141 @@ export default class UserService extends Service {
       const user = await userRepository.findOne({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
-      const data = {};
-
       return await userRepository.updateWorkerProfile(userId, {
         experienceYears,
         isInTeam,
         acceptsUrgentJobs,
       });
+    });
+  }
+
+  /**
+   * Get a client's profile for a user
+   * @async
+   * @method getClientProfile
+   * @param {import("../repositories/Repository.js").IDType} userId - User ID
+   * @returns {Promise<Object>} Client profile
+   * @throws {AppError} If user not found
+   */
+  async getClientProfile(userId) {
+    return tryCatch(async () => {
+      const user = await userRepository.findOne({ id: userId });
+      if (!user) throw new AppError("User not found", 404);
+
+      const clientProfiles = await userRepository.getClientProfile(userId);
+      if (!clientProfiles || clientProfiles.length === 0)
+        throw new AppError("Client profile not found", 404);
+
+      return clientProfiles[0];
+    });
+  }
+
+  /**
+   * Update a client's profile for a user
+   * @async
+   * @method updateClientProfile
+   * @param {import("../repositories/Repository.js").IDType} userId - User ID
+   * @param {Object} data - Client profile data to update
+   * @returns {Promise<Object>} Updated client profile
+   * @throws {AppError} If user not found or profile not found
+   */
+  async updateClientProfile(userId, data = {}) {
+    return tryCatch(async () => {
+      const user = await userRepository.findOne({ id: userId });
+      if (!user) throw new AppError("User not found", 404);
+
+      const clientProfiles = await userRepository.getClientProfile(userId);
+      if (!clientProfiles || clientProfiles.length === 0)
+        throw new AppError("Client profile not found", 404);
+
+      return await userRepository.updateClientProfile(userId, data);
+    });
+  }
+
+  /**
+   * Get a worker's profile for a user
+   * @async
+   * @method getWorkerProfile
+   * @param {import("../repositories/Repository.js").IDType} userId - User ID
+   * @returns {Promise<Object>} Worker profile
+   * @throws {AppError} If user not found
+   */
+  async getWorkerProfile(userId) {
+    return tryCatch(async () => {
+      const user = await userRepository.findOne({ id: userId });
+      if (!user) throw new AppError("User not found", 404);
+
+      const workerProfiles = await userRepository.getWorkerProfile(userId);
+      if (!workerProfiles || workerProfiles.length === 0)
+        throw new AppError("Worker profile not found", 404);
+
+      return workerProfiles[0];
+    });
+  }
+
+  /**
+   * Get user's profile image URL
+   * @async
+   * @method getProfileImage
+   * @param {import("../repositories/Repository.js").IDType} userId - User ID
+   * @returns {Promise<string|null>} Profile image URL or null
+   * @throws {AppError} If user not found
+   */
+  async getProfileImage(userId) {
+    return tryCatch(async () => {
+      const user = await userRepository.findOne({ id: userId });
+      if (!user) throw new AppError("User not found", 404);
+
+      return (await userRepository.findOne({ id: userId })).profileImage;
+    });
+  }
+
+  /**
+   * Update user's profile image URL
+   * For workers, the image will not be updated until approved by an admin
+   * @async
+   * @method updateProfileImage
+   * @param {import("../repositories/Repository.js").IDType} userId - User ID
+   * @param {string} profileImage - New profile image URL
+   * @returns {Promise<Object>} Updated user
+   * @throws {AppError} If user not found
+   */
+  async updateProfileImage(userId, profileImage) {
+    return tryCatch(async () => {
+      const user = await userRepository.findOne({ id: userId });
+      if (!user) throw new AppError("User not found", 404);
+
+      // Check if user has a worker profile - if so, they cannot update their profile image directly
+      const isWorker = await userRepository.hasWorkerProfile(userId);
+      if (isWorker) {
+        throw new AppError("Worker profile image cannot be updated directly. Contact an admin for approval.", 403);
+      }
+
+      return await userRepository.update({ id: userId }, { profileImage });
+    });
+  }
+
+  /**
+   * Delete user's profile image URL
+   * Workers cannot delete their profile image
+   * @async
+   * @method deleteProfileImage
+   * @param {import("../repositories/Repository.js").IDType} userId - User ID
+   * @returns {Promise<Object>} Updated user with null profileImage
+   * @throws {AppError} If user not found or is a worker
+   */
+  async deleteProfileImage(userId) {
+    return tryCatch(async () => {
+      const user = await userRepository.findOne({ id: userId });
+      if (!user) throw new AppError("User not found", 404);
+
+      // Check if user has a worker profile - workers cannot delete their profile image
+      const isWorker = await userRepository.hasWorkerProfile(userId);
+      if (isWorker) {
+        throw new AppError("Workers cannot delete their profile image.", 403);
+      }
+
+      return await userRepository.update({ id: userId }, { profileImage: null, });
     });
   }
 }

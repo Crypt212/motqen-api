@@ -3,44 +3,39 @@
  * @module types/asyncHandler
  */
 
+import { $Enums } from '@prisma/client';
+
+
 /**
- * @typedef {import('../types/express.js').AuthenticatedRequest} AuthenticatedRequest
- * @typedef {import('../types/express.js').MaybeAuthenticatedRequest} MaybeAuthenticatedRequest
+ * @typedef {{ user: {id: string, role: $Enums.Role, isWorker: Boolean, isClient: Boolean} }} UserPayload
+ */
+
+
+/**
+ * @typedef {{fieldname: string, originalname: string, encoding: string, mimetype: string, buffer: Buffer, size: number}} MulterFile 
+ * @typedef {{file?: MulterFile, files?: MulterFile[] }} MulterPayload
+ */
+
+
+/**
  * @typedef {import('express').Request} Request
  * @typedef {import('express').Response} Response
  * @typedef {import('express').NextFunction} NextFunction
  */
 
-/** @typedef {function(Request, Response, NextFunction): any} RequestHandler */
-/** @typedef {function(AuthenticatedRequest, Response, NextFunction): any} AuthenticatedRequestHandler */
+/**
+ * @template T
+ * @typedef {function(Request & T, Response, NextFunction): any} RequestHandler<T>
+ */
 
 /**
+ * @template T = {}
  * Controller wrapper to ensure consistent error handling
- * @param {RequestHandler} controller
- * @returns {RequestHandler}
+ * @param {RequestHandler<T>} controller
+ * @returns {RequestHandler<T>}
  */
-export function asyncUnAuthenticatedHandler(controller) {
-  /**
-   * @param {Request} req
-   * @param {Response} res
-   * @param {NextFunction} next
-   */
-  return (req, res, next) => {
-    Promise.resolve(controller(req, res, next)).catch(next);
-  };
-}
-
-/**
- * Authenticated controller wrapper to ensure consistent error handling
- * @param {AuthenticatedRequestHandler} controller
- * @returns {AuthenticatedRequestHandler}
- */
-export function asyncAuthenticatedHandler(controller) {
-  /**
-   * @param {AuthenticatedRequest} req
-   * @param {Response} res
-   * @param {NextFunction} next
-   */
+export function asyncHandler(controller) {
+  /** @type RequestHandler<T> */
   return (req, res, next) => {
     Promise.resolve(controller(req, res, next)).catch(next);
   };
