@@ -53,11 +53,11 @@ export default class RateLimitRepository {
   // ─── Send ──────────────────────────────────────────────────────────────────
 
   async getSendRecord(phone) {
-    return this.#getRecord(this.#keys.send(phone));
+    return await this.#getRecord(this.#keys.send(phone));
   }
 
   async getDeviceRecord(deviceId) {
-    return this.#getRecord(this.#keys.sendDevice(deviceId));
+    return await this.#getRecord(this.#keys.sendDevice(deviceId));
   }
 
   async incrementSend(phone, deviceId) {

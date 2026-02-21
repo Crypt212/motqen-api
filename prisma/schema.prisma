@@ -23,18 +23,6 @@ model Session {
   @@map("sessions")
 }
 
-model OTP {
-  id          String   @id @default(uuid())
-  phoneNumber String
-  hashedOTP   String
-  updatedAt   DateTime
-  createdAt   DateTime @default(now())
-  method      Method
-
-  @@unique([phoneNumber, method])
-  @@map("OTP")
-}
-
 model User {
   id           String        @id @default(uuid())
   phoneNumber  String        @unique
@@ -70,6 +58,7 @@ model WorkerProfile {
   experienceYears   Int
   isInTeam          Boolean
   acceptsUrgentJobs Boolean
+  isApproved        Boolean @default(false)
 
   user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   chosenSpecializations ChosenSpecialization[]

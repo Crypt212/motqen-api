@@ -25,6 +25,10 @@ import prisma from "../libs/database.js";
  */
 export default class GovernmentRepository extends Repository {
 
+  constructor() {
+    super(prisma);
+  }
+
   /**
    * @async
    * @method
@@ -32,7 +36,7 @@ export default class GovernmentRepository extends Repository {
    * @returns {Promise<boolean>}
    */
   async exists(where) {
-    return (await prisma.government.count({ where })) > 0;
+    return (await this.prismaClient.government.count({ where })) > 0;
   }
 
 
@@ -43,7 +47,7 @@ export default class GovernmentRepository extends Repository {
    * @returns {Promise<Government|null>}
    */
   async findOne(where) {
-    return await prisma.government.findFirst({ where });
+    return await this.prismaClient.government.findFirst({ where });
   };
 
   /**
@@ -53,7 +57,7 @@ export default class GovernmentRepository extends Repository {
    * @returns {Promise<Government[]>}
    */
   async findMany(where) {
-    return await prisma.government.findMany({ where });
+    return await this.prismaClient.government.findMany({ where });
   };
 
   /**
@@ -63,7 +67,7 @@ export default class GovernmentRepository extends Repository {
    * @returns {Promise<Government>}
    */
   async create(data) {
-    return await prisma.government.create({ data });
+    return await this.prismaClient.government.create({ data });
   };
 
   /**
@@ -73,7 +77,7 @@ export default class GovernmentRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async createMany(data) {
-    return await prisma.government.createMany({ data });
+    return await this.prismaClient.government.createMany({ data });
   };
 
   /**
@@ -84,7 +88,7 @@ export default class GovernmentRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async update(filter, data) {
-    return await prisma.government.updateMany({
+    return await this.prismaClient.government.updateMany({
       where: filter,
       data,
     });
@@ -97,7 +101,7 @@ export default class GovernmentRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async delete(filter) {
-    return await prisma.government.deleteMany({
+    return await this.prismaClient.government.deleteMany({
       where: filter,
     });
   };
@@ -111,7 +115,7 @@ export default class GovernmentRepository extends Repository {
    * @returns {Promise<boolean>}
    */
   async existsCity(filter) {
-    return (await prisma.city.count({ where: filter })) > 0;
+    return (await this.prismaClient.city.count({ where: filter })) > 0;
   }
 
   /**
@@ -121,7 +125,7 @@ export default class GovernmentRepository extends Repository {
    * @returns {Promise<City[]>}
    */
   async findCities(filter) {
-    return await prisma.city.findMany({
+    return await this.prismaClient.city.findMany({
       where: filter
     });
   };
@@ -134,7 +138,7 @@ export default class GovernmentRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async updateCities(filter, data) {
-    return await prisma.city.updateMany({
+    return await this.prismaClient.city.updateMany({
       where: filter,
       data,
     });
@@ -148,7 +152,7 @@ export default class GovernmentRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async createCities(governmentId, data) {
-    return await prisma.city.createMany({
+    return await this.prismaClient.city.createMany({
       data: {
         ...data,
         governmentId
@@ -163,7 +167,7 @@ export default class GovernmentRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async deleteCities(filter) {
-    return await prisma.city.deleteMany({
+    return await this.prismaClient.city.deleteMany({
       where: filter
     });
   };

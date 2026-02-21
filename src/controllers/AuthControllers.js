@@ -10,7 +10,6 @@ import {
   sessionService,
   userService,
   rateLimitService,
-  otpRepository,
   rateLimitRepository,
   authService,
 } from '../state.js';
@@ -46,10 +45,12 @@ const getClientIp = (req) => {
  */
 export const requestOTP = asyncUnAuthenticatedHandler(async (req, res) => {
   const { method, phoneNumber } = req.body;
+  const getHeaderValue = (value) => (Array.isArray(value) ? value[0] : value);//global
   const deviceId =
-    req.headers['x-device-fingerprint']?.trim() ||
-    req.headers['x-device-id']?.trim() ||
-    req.ip;
+    getHeaderValue(req.headers['x-device-fingerprint'])?.trim() ||
+    getHeaderValue(req.headers['x-device-id'])?.trim(); // requestOTP
+
+  const fingerprint = getHeaderValue(req.headers['x-device-fingerprint']); //verifyOTP
 
   await otpService.requestOTP(phoneNumber, method);
   await rateLimitService.incrementSend(phoneNumber, deviceId);
@@ -73,16 +74,20 @@ export const requestOTP = asyncUnAuthenticatedHandler(async (req, res) => {
 export const verifyOTP = asyncUnAuthenticatedHandler(async (req, res) => {
   const { phoneNumber, otp, method } = req.body;
 
-  const hashedOTP = hashOTP(otp);
+  const getHeaderValue = (value) => (Array.isArray(value) ? value[0] : value);//global
+  const deviceId =
+    getHeaderValue(req.headers['x-device-fingerprint'])?.trim() ||
+    getHeaderValue(req.headers['x-device-id'])?.trim(); // requestOTP
 
-  const result = await otpService.isValidOTP(phoneNumber, method, hashedOTP);
+
+  const result = await otpService.verifyOTP(phoneNumber, method, otp);
+
   if (!result.ok) {
     await rateLimitRepository.incrementVerify(phoneNumber);
     throw new AppError(result.message, 400);
   }
 
-  await otpRepository.delete({ hashedOTP });
-  await rateLimitService.reset(phoneNumber);
+  await rateLimitService.reset(phoneNumber, deviceId);
   const user = await userService.getUser(phoneNumber);
 
   let token = '';

@@ -8,6 +8,8 @@ import AppError from "../errors/AppError.js";
 import UserRepository from "../repositories/UserRepository.js";
 import { governmentRepository, specializationRepository } from "../state.js";
 import Service, { tryCatch } from "./Service.js";
+import prisma from "../libs/database.js";
+import { Repository } from "../repositories/Repository.js";
 
 const userRepository = new UserRepository();
 
@@ -99,33 +101,38 @@ export default class UserService extends Service {
       if (specializationNames.length !== chosenSpecializations.length)
         throw new AppError("One or more specialization were not found in the database", 404);
 
-      /** @type {Set<import("../repositories/Repository.js").IDType>} */
-      let chosenSubSpecializations = new Set();
-      /** @type {Map<import("../repositories/Repository.js").IDType, import("../repositories/Repository.js").IDType[]>} */
-      let specializationTree = new Map();
-      chosenSpecializations.forEach(async (specialization) => {
-        const subSpecializations = await specializationRepository.findSubSpecializations({ name: { in: subSpecializationNames }, mainSpecializationId: specialization.id });
-        subSpecializations.forEach(foundSubSpecialization => {
-          chosenSubSpecializations.add(foundSubSpecialization.id);
-          if (!specializationTree.has(specialization.id)) specializationTree.set(specialization.id, []);
-          specializationTree.get(specialization.id).push(foundSubSpecialization.id);
-        });
+      const subSpecializations = await specializationRepository.findSubSpecializations({
+        name: { in: subSpecializationNames },
+        mainSpecializationId: { in: chosenSpecializations.map(({ id }) => id) }
       });
 
-      if (chosenSubSpecializations.size !== subSpecializationNames.length)
+
+      const specializationTree = {};
+      for (const { id, mainSpecializationId } of subSpecializations) {
+        if (!(mainSpecializationId in specializationTree)) specializationTree[mainSpecializationId] = [];
+        specializationTree[mainSpecializationId].push(id);
+      }
+
+      if (subSpecializations.length !== subSpecializationNames.length)
         throw new AppError("One or more sub-specialization were not found for the provided main specializations in the database", 404);
 
-      const workerProfile = await userRepository.createWorkerProfile(userId, {
-        experienceYears,
-        isInTeam,
-        acceptsUrgentJobs,
+      /** @type {import("../repositories/UserRepository.js").WorkerProfile} */
+      let workerProfile;
+
+      Repository.createTransaction([ userRepository ], async () => {
+        workerProfile = await userRepository.createWorkerProfile(userId, {
+          experienceYears,
+          isInTeam,
+          acceptsUrgentJobs,
+        });
+
+        await userRepository.addWorkerProfileGovernments(workerProfile.id, governmentEntities.map(government => government.id));
+        await userRepository.addWorkerProfileSpecializations(workerProfile.id, chosenSpecializations.map(specialization => specialization.id));
+        for (let [mainSpecializationId, childrenSpecializationIds] of Object.entries(specializationTree))
+          await userRepository.addWorkerProfileSubSpecializations(workerProfile.id, mainSpecializationId, childrenSpecializationIds);
+      }, (reason) => {
       });
 
-      await userRepository.addWorkerProfileGovernments(workerProfile.id, governmentEntities.map(government => government.id));
-      await userRepository.addWorkerProfileSpecializations(workerProfile.id, chosenSpecializations.map(specialization => specialization.id));
-      for (const [mainId, subIds] of specializationTree.entries()) {
-        await userRepository.addWorkerProfileSubSpecializations(workerProfile.id, mainId, subIds);
-      }
       return workerProfile;
     });
   }

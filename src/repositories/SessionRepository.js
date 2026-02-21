@@ -22,6 +22,9 @@ import { Repository } from "./Repository.js";
  */
 export default class SessionRepository extends Repository {
 
+  constructor() {
+    super(prisma);
+  }
 
   /**
    * @async
@@ -30,7 +33,7 @@ export default class SessionRepository extends Repository {
    * @returns {Promise<boolean>}
    */
   async exists(where) {
-    return (await prisma.session.count({ where })) > 0;
+    return (await this.prismaClient.session.count({ where })) > 0;
   }
 
 
@@ -41,7 +44,7 @@ export default class SessionRepository extends Repository {
    * @returns {Promise<Session|null>}
    */
   async findOne(where) {
-    return await prisma.session.findFirst({ where });
+    return await this.prismaClient.session.findFirst({ where });
   };
 
   /**
@@ -51,7 +54,7 @@ export default class SessionRepository extends Repository {
    * @returns {Promise<Session[]>}
    */
   async findMany(where) {
-    return await prisma.session.findMany({ where });
+    return await this.prismaClient.session.findMany({ where });
   };
 
   /**
@@ -61,7 +64,7 @@ export default class SessionRepository extends Repository {
    * @returns {Promise<Session>}
    */
   async create(data) {
-    return await prisma.session.create({ data });
+    return await this.prismaClient.session.create({ data });
   };
 
   /**
@@ -71,7 +74,7 @@ export default class SessionRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async createMany(data) {
-    return await prisma.session.createMany({ data });
+    return await this.prismaClient.session.createMany({ data });
   };
 
   /**
@@ -82,7 +85,7 @@ export default class SessionRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async update(filter, data) {
-    return await prisma.session.updateMany({
+    return await this.prismaClient.session.updateMany({
       where: filter,
       data,
     });
@@ -95,7 +98,7 @@ export default class SessionRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async delete(filter) {
-    return await prisma.session.deleteMany({
+    return await this.prismaClient.session.deleteMany({
       where: filter,
     });
   };

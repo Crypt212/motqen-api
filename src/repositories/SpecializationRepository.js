@@ -26,6 +26,10 @@ import prisma from "../libs/database.js";
  */
 export default class SpecializationRepository extends Repository {
 
+  constructor() {
+    super(prisma);
+  }
+
   /**
    * @async
    * @method
@@ -33,7 +37,7 @@ export default class SpecializationRepository extends Repository {
    * @returns {Promise<boolean>}
    */
   async exists(where) {
-    return (await prisma.specialization.count({ where })) > 0;
+    return (await this.prismaClient.specialization.count({ where })) > 0;
   }
 
 
@@ -44,7 +48,7 @@ export default class SpecializationRepository extends Repository {
    * @returns {Promise<Specialization|null>}
    */
   async findOne(where) {
-    return await prisma.specialization.findFirst({ where });
+    return await this.prismaClient.specialization.findFirst({ where });
   };
 
   /**
@@ -54,7 +58,7 @@ export default class SpecializationRepository extends Repository {
    * @returns {Promise<Specialization[]>}
    */
   async findMany(where) {
-    return await prisma.specialization.findMany({ where });
+    return await this.prismaClient.specialization.findMany({ where });
   };
 
   /**
@@ -64,7 +68,7 @@ export default class SpecializationRepository extends Repository {
    * @returns {Promise<Specialization>}
    */
   async create(data) {
-    return await prisma.specialization.create({ data });
+    return await this.prismaClient.specialization.create({ data });
   };
 
   /**
@@ -74,7 +78,7 @@ export default class SpecializationRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async createMany(data) {
-    return await prisma.specialization.createMany({ data });
+    return await this.prismaClient.specialization.createMany({ data });
   };
 
   /**
@@ -85,7 +89,7 @@ export default class SpecializationRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async update(filter, data) {
-    return await prisma.specialization.updateMany({
+    return await this.prismaClient.specialization.updateMany({
       where: filter,
       data,
     });
@@ -98,7 +102,7 @@ export default class SpecializationRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async delete(filter) {
-    return await prisma.specialization.deleteMany({
+    return await this.prismaClient.specialization.deleteMany({
       where: filter,
     });
   };
@@ -112,7 +116,7 @@ export default class SpecializationRepository extends Repository {
    * @returns {Promise<boolean>}
    */
   async existsSubSpecialization(filter) {
-    return (await prisma.subSpecialization.count({ where: filter })) > 0;
+    return (await this.prismaClient.subSpecialization.count({ where: filter })) > 0;
   }
 
   /**
@@ -122,7 +126,7 @@ export default class SpecializationRepository extends Repository {
    * @returns {Promise<SubSpecialization[]>}
    */
   async findSubSpecializations(filter) {
-    return await prisma.subSpecialization.findMany({
+    return await this.prismaClient.subSpecialization.findMany({
       where: filter
     });
   };
@@ -135,7 +139,7 @@ export default class SpecializationRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async updateSubSpecializations(filter, data) {
-    return await prisma.subSpecialization.updateMany({
+    return await this.prismaClient.subSpecialization.updateMany({
       where: filter,
       data,
     });
@@ -149,7 +153,7 @@ export default class SpecializationRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async createSubSpecializations(mainSpecializationId, data) {
-    return await prisma.subSpecialization.createMany({
+    return await this.prismaClient.subSpecialization.createMany({
       data: {
         ...data,
         mainSpecializationId
@@ -164,7 +168,7 @@ export default class SpecializationRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async deleteSubSpecializations(filter) {
-    return await prisma.subSpecialization.deleteMany({
+    return await this.prismaClient.subSpecialization.deleteMany({
       where: filter
     });
   };
