@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import { rateLimitService } from "../state.js";
 import AppError from "../errors/AppError.js";
 import environment from "../configs/environment.js";
+import redisClient from "../libs/redis.js";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -22,13 +23,15 @@ const getDeviceId = (req) =>
  */
 export const checkSendOtpLimit = async (req, res, next) => {
   try {
+  
     const phone    = req.body.phoneNumber || req.body.phone;
+    const method   = req.body.method;
     const deviceId = getDeviceId(req);
 
     if (!phone)    return next(new AppError("Phone number is required", 400));
     if (!deviceId) return next(new AppError("X-Device-Fingerprint header is required", 400));
 
-    await rateLimitService.checkSendOtp(phone, deviceId);
+    await rateLimitService.checkSendOtp(phone, method, deviceId);
     next();
   } catch (error) {
     next(error);
@@ -41,11 +44,12 @@ export const checkSendOtpLimit = async (req, res, next) => {
  */
 export const checkVerifyLimit = async (req, res, next) => {
   try {
-    const phone = req.body.phoneNumber || req.body.phone;
+    const phone  = req.body.phoneNumber || req.body.phone;
+    const method = req.body.method;
 
     if (!phone) return next(new AppError("Phone number is required", 400));
 
-    await rateLimitService.checkVerify(phone);
+    await rateLimitService.checkVerify(phone, method);
     next();
   } catch (error) {
     next(error);

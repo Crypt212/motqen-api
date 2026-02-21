@@ -4,6 +4,7 @@ import SendOTPProvider from "../providers/SendOTPProvider.js";
 import { otpRepository, rateLimitRepository } from "../state.js";
 import environment from "../configs/environment.js";
 import { $Enums } from "@prisma/client";
+import AppError from "../errors/AppError.js";
 
 /**
  * @fileoverview OTP Service - Handle OTP generation, validation and verification
@@ -28,15 +29,17 @@ export default class OTPService extends Service {
    * @description Generates a new OTP and sends it via the specified method
    */
   async requestOTP(phoneNumber, method) {
-    const expiresAt = new Date(Date.now() + environment.otps.expiresIn * 1000);
 
     const OTP = generateOTP();
     const hashedOTP = hashOTP(OTP);
 
-    const existingOTP = await otpRepository.upsertOTP(phoneNumber, method);
+    await otpRepository.setOtp(phoneNumber, method, hashedOTP, environment.otps.expiresIn);
 
     await SendOTPProvider(method, OTP, phoneNumber);
-    // must return better response not only true
+
+    // Reset verify attempts so user gets 5 fresh attempts on the new code
+    await rateLimitRepository.resetVerifyAttempts(phoneNumber, method);
+
     return true;
   };
 
@@ -54,18 +57,17 @@ export default class OTPService extends Service {
     // in production -> Invalid or expired OTP only
     //
     const hashedOTP = hashOTP(OTP);
-    const { otp: storedOTP, expiresAt } = await otpRepository.getOTP(phoneNumber, method);
+    const otp= await otpRepository.getOtp(phoneNumber, method);
 
 
-    if (!storedOTP) {
+    if (!otp) {
+      return { message: "Invalid OTP", ok: false }
+    }
+    if (hashedOTP !== otp) {
       return { message: "Invalid OTP", ok: false }
     }
 
-    if (hashedOTP !== storedOTP) {
-      return { message: "Invalid OTP", ok: false }
-    }
-
-    await otpRepository.deleteOTPRecord(phoneNumber, method);
+    await otpRepository.deleteOtp(phoneNumber, method);
 
     return { ok: true, message: "OTP verified successfully" };
   };

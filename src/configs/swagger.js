@@ -278,9 +278,10 @@ const options = {
         SuccessResponse: {
           type: 'object',
           properties: {
-            success: {
-              type: 'boolean',
-              example: true,
+            status: {
+              type: 'string',
+              enum: ['success'],
+              example: 'success',
             },
             message: {
               type: 'string',
@@ -288,27 +289,50 @@ const options = {
             },
             data: {
               type: 'object',
-              description: 'Response data',
+              nullable: true,
+              description: 'Response data (null when no data is returned)',
             },
           },
         },
         ErrorResponse: {
           type: 'object',
           properties: {
+            status: {
+              type: 'string',
+              enum: ['fail', 'error'],
+              example: 'fail',
+              description: '"fail" for 4xx errors, "error" for 5xx errors',
+            },
+            message: {
+              type: 'string',
+              example: 'Error description',
+            },
+          },
+        },
+        ValidationErrorResponse: {
+          type: 'object',
+          properties: {
             success: {
               type: 'boolean',
               example: false,
             },
-            error: {
-              type: 'object',
-              properties: {
-                message: {
-                  type: 'string',
-                  example: 'Error message',
-                },
-                code: {
-                  type: 'string',
-                  example: 'ERROR_CODE',
+            message: {
+              type: 'string',
+              example: 'Validation failed',
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  type: {
+                    type: 'string',
+                    example: 'field',
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'Phone number is required',
+                  },
                 },
               },
             },
@@ -317,120 +341,126 @@ const options = {
       },
       responses: {
         BadRequest: {
-          description: 'Bad Request - Invalid input parameters',
+          description: 'Bad Request - Operation failed due to invalid data or business logic',
           content: {
             'application/json': {
               schema: {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
+                status: 'fail',
+                message: 'Invalid or expired OTP',
+              },
+            },
+          },
+        },
+        ValidationError: {
+          description: 'Validation Error - Request body did not pass validation',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/ValidationErrorResponse',
+              },
+              example: {
                 success: false,
-                error: {
-                  message: 'Validation error: Phone number is required',
-                  code: 'VALIDATION_ERROR',
-                },
+                message: 'Validation failed',
+                errors: [
+                  { type: 'field', message: 'Phone number is required' },
+                  { type: 'field', message: 'Method must be either SMS or WhatsApp' },
+                ],
               },
             },
           },
         },
         Unauthorized: {
-          description: 'Unauthorized - Invalid or missing authentication',
+          description: 'Unauthorized - Invalid, expired, or missing access token',
           content: {
             'application/json': {
               schema: {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                success: false,
-                error: {
-                  message: 'Invalid or expired token',
-                  code: 'UNAUTHORIZED',
-                },
+                status: 'fail',
+                message: 'Unauthorized',
               },
             },
           },
         },
         Forbidden: {
-          description: 'Forbidden - Insufficient permissions',
+          description: 'Forbidden - Insufficient permissions for this action',
           content: {
             'application/json': {
               schema: {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                success: false,
-                error: {
-                  message: 'Access denied',
-                  code: 'FORBIDDEN',
-                },
+                status: 'fail',
+                message: 'Unauthorized',
               },
             },
           },
         },
         NotFound: {
-          description: 'Not Found - Resource not found',
+          description: 'Not Found - Requested resource does not exist',
           content: {
             'application/json': {
               schema: {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                success: false,
-                error: {
-                  message: 'Resource not found',
-                  code: 'NOT_FOUND',
-                },
+                status: 'fail',
+                message: 'User not found',
               },
             },
           },
         },
         Conflict: {
-          description: 'Conflict - Resource already exists',
+          description: 'Conflict - Resource already exists (e.g., phone number already registered)',
           content: {
             'application/json': {
               schema: {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                success: false,
-                error: {
-                  message: 'User already exists',
-                  code: 'CONFLICT',
-                },
+                status: 'fail',
+                message: 'User already exists',
               },
             },
           },
         },
         TooManyRequests: {
           description: 'Too Many Requests - Rate limit exceeded',
+          headers: {
+            'Retry-After': {
+              description: 'Number of seconds to wait before retrying',
+              schema: {
+                type: 'integer',
+                example: 60,
+              },
+            },
+          },
           content: {
             'application/json': {
               schema: {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                success: false,
-                error: {
-                  message: 'Too many requests. Please try again later.',
-                  code: 'RATE_LIMIT_EXCEEDED',
-                },
+                status: 'fail',
+                message: 'Too many requests, please try again later',
               },
             },
           },
         },
         InternalServerError: {
-          description: 'Internal Server Error',
+          description: 'Internal Server Error - Unexpected server failure',
           content: {
             'application/json': {
               schema: {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                success: false,
-                error: {
-                  message: 'Internal server error',
-                  code: 'INTERNAL_ERROR',
-                },
+                status: 'error',
+                message: 'Something went wrong',
               },
             },
           },

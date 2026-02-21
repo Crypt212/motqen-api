@@ -9,11 +9,10 @@ import {
   otpService,
   sessionService,
   userService,
-  rateLimitService,
-  rateLimitRepository,
   authService,
+  rateLimitService,
 } from '../state.js';
-import { hashOTP } from '../utils/OTP.js';
+
 import { generateToken, verifyAndDecodeToken } from '../utils/tokens.js';
 import {
   asyncUnAuthenticatedHandler,
@@ -34,6 +33,7 @@ const getClientIp = (req) => {
   );
 };
 
+let getHeaderValue = (value) => (Array.isArray(value) ? value[0] : value);//global
 /**
  * Request OTP for phone number verification
  * @async
@@ -42,22 +42,22 @@ const getClientIp = (req) => {
  * @param {import('express').Response} res - Express response object
  * @returns {Promise<void>}
  * @description Initiates OTP request by generating and sending OTP to the provided phone number
- */
+*/
+
 export const requestOTP = asyncUnAuthenticatedHandler(async (req, res) => {
   const { method, phoneNumber } = req.body;
-  const getHeaderValue = (value) => (Array.isArray(value) ? value[0] : value);//global
+  console.log(method, phoneNumber);
   const deviceId =
     getHeaderValue(req.headers['x-device-fingerprint'])?.trim() ||
     getHeaderValue(req.headers['x-device-id'])?.trim(); // requestOTP
 
-  const fingerprint = getHeaderValue(req.headers['x-device-fingerprint']); //verifyOTP
 
   await otpService.requestOTP(phoneNumber, method);
-  await rateLimitService.incrementSend(phoneNumber, deviceId);
+  const { cooldown } = await rateLimitService.incrementSend(phoneNumber, method, deviceId);
 
   new SuccessResponse(
     'OTP sent successfully',
-    { phoneNumber, method },
+    { phoneNumber, method, cooldown },
     200
   ).send(res);
 });
@@ -73,21 +73,21 @@ export const requestOTP = asyncUnAuthenticatedHandler(async (req, res) => {
  */
 export const verifyOTP = asyncUnAuthenticatedHandler(async (req, res) => {
   const { phoneNumber, otp, method } = req.body;
-
-  const getHeaderValue = (value) => (Array.isArray(value) ? value[0] : value);//global
   const deviceId =
     getHeaderValue(req.headers['x-device-fingerprint'])?.trim() ||
-    getHeaderValue(req.headers['x-device-id'])?.trim(); // requestOTP
-
+    getHeaderValue(req.headers['x-device-id'])?.trim();
 
   const result = await otpService.verifyOTP(phoneNumber, method, otp);
 
   if (!result.ok) {
-    await rateLimitRepository.incrementVerify(phoneNumber);
-    throw new AppError(result.message, 400);
+    const limitStatus = await rateLimitService.incrementVerify(phoneNumber, method);
+    throw new AppError(result.message, 400, {
+      remainingAttempts: limitStatus.remaining,
+      requestNewOtp: limitStatus.blocked,
+    });
   }
 
-  await rateLimitService.reset(phoneNumber, deviceId);
+  await rateLimitService.reset(phoneNumber, method, deviceId);
   const user = await userService.getUser(phoneNumber);
 
   let token = '';

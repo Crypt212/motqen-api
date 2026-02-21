@@ -36,8 +36,22 @@ const authRouter = Router();
  * /auth/otp/request:
  *   post:
  *     summary: Request OTP
- *     description: Send a one-time password to the user's phone number for authentication
+ *     description: |
+ *       Send a one-time password to the user's phone number for authentication.
+ *
+ *       **Rate limiting:** This endpoint enforces per-phone and per-device send limits
+ *       with escalating cooldowns. The `x-device-fingerprint` header is required to
+ *       track device-level abuse. On success the response includes a `cooldown` value
+ *       (in seconds) indicating how long the user must wait before requesting another OTP.
  *     tags: [Auth]
+ *     parameters:
+ *       - in: header
+ *         name: x-device-fingerprint
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "fp_abc123"
+ *         description: Device fingerprint or device ID for rate-limiting
  *     requestBody:
  *       required: true
  *       content:
@@ -55,13 +69,34 @@ const authRouter = Router();
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *             example:
- *               success: true
+ *               status: "success"
  *               message: "OTP sent successfully"
  *               data:
  *                 phoneNumber: "+201234567890"
- *                 expiresIn: 300
+ *                 method: "SMS"
+ *                 cooldown: 60
  *       400:
- *         $ref: '#/components/responses/BadRequest'
+ *         description: Validation failed or missing device fingerprint
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - $ref: '#/components/schemas/ValidationErrorResponse'
+ *                 - $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               validationError:
+ *                 summary: Validation failed
+ *                 value:
+ *                   success: false
+ *                   message: "Validation failed"
+ *                   errors:
+ *                     - type: "field"
+ *                       message: "Please provide a valid Egyptian phone number"
+ *               missingFingerprint:
+ *                 summary: Missing device fingerprint
+ *                 value:
+ *                   status: "fail"
+ *                   message: "X-Device-Fingerprint header is required"
  *       429:
  *         $ref: '#/components/responses/TooManyRequests'
  *       500:
@@ -69,7 +104,7 @@ const authRouter = Router();
  */
 authRouter.post(
   '/otp/request',
-  sensitiveIpRateLimiter,
+ // sensitiveIpRateLimiter,
   checkSendOtpLimit,
   requestOTPValidator,
   validateRequest,
@@ -81,7 +116,14 @@ authRouter.post(
  * /auth/otp/verify:
  *   post:
  *     summary: Verify OTP
- *     description: Verify the one-time password sent to the user's phone number
+ *     description: |
+ *       Verify the one-time password sent to the user's phone number.
+ *
+ *       On success, returns either a `login` token (if the user exists) or a `register`
+ *       token (if the user is new). The `tokenType` field indicates which one was issued.
+ *
+ *       On failure (wrong OTP), the response includes `remainingAttempts` and
+ *       `requestNewOtp` to indicate whether the user should request a fresh OTP.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -95,30 +137,63 @@ authRouter.post(
  *             method: "SMS"
  *     responses:
  *       200:
- *         description: OTP verified successfully
+ *         description: OTP verified successfully — returns a login or register token
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
- *             example:
- *               success: true
- *               message: "OTP verified successfully"
- *               data:
- *                 registerToken: "reg_token_xxx"
- *                 loginToken: "login_token_xxx"
+ *             examples:
+ *               existingUser:
+ *                 summary: Existing user — login token returned
+ *                 value:
+ *                   status: "success"
+ *                   message: "OTP verified successfully"
+ *                   data:
+ *                     phoneNumber: "+201234567890"
+ *                     tokenType: "login"
+ *                     token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *               newUser:
+ *                 summary: New user — register token returned
+ *                 value:
+ *                   status: "success"
+ *                   message: "OTP verified successfully"
+ *                   data:
+ *                     phoneNumber: "+201234567890"
+ *                     tokenType: "register"
+ *                     token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *       400:
- *         $ref: '#/components/responses/BadRequest'
- *       401:
- *         description: Invalid or expired OTP
+ *         description: Invalid/expired OTP or validation error
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               success: false
- *               error:
- *                 message: "Invalid or expired OTP"
- *                 code: "INVALID_OTP"
+ *               oneOf:
+ *                 - $ref: '#/components/schemas/ErrorResponse'
+ *                 - $ref: '#/components/schemas/ValidationErrorResponse'
+ *             examples:
+ *               invalidOtp:
+ *                 summary: Wrong or expired OTP
+ *                 value:
+ *                   status: "fail"
+ *                   message: "Invalid or expired OTP"
+ *                   errors:
+ *                     remainingAttempts: 2
+ *                     requestNewOtp: false
+ *               noMoreAttempts:
+ *                 summary: All attempts exhausted — must request new OTP
+ *                 value:
+ *                   status: "fail"
+ *                   message: "Invalid or expired OTP"
+ *                   errors:
+ *                     remainingAttempts: 0
+ *                     requestNewOtp: true
+ *               validationError:
+ *                 summary: Validation failed
+ *                 value:
+ *                   success: false
+ *                   message: "Validation failed"
+ *                   errors:
+ *                     - type: "field"
+ *                       message: "OTP must be 4-6 digits"
  *       429:
  *         $ref: '#/components/responses/TooManyRequests'
  *       500:
@@ -126,7 +201,7 @@ authRouter.post(
  */
 authRouter.post(
   '/otp/verify',
-  sensitiveIpRateLimiter,
+  //sensitiveIpRateLimiter,
   checkVerifyLimit,
   verifyOTPValidator,
   validateRequest,
@@ -138,7 +213,11 @@ authRouter.post(
  * /auth/register-client:
  *   post:
  *     summary: Register Client
- *     description: Register a new client user with their personal information
+ *     description: |
+ *       Register a new client user with personal information.
+ *
+ *       Requires a valid `registerToken` obtained from the OTP verification step
+ *       (only issued when the phone number is not yet registered).
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -147,32 +226,54 @@ authRouter.post(
  *           schema:
  *             $ref: '#/components/schemas/RegisterClient'
  *           example:
- *             registerToken: "reg_token_xxx"
+ *             registerToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *             firstName: "أحمد"
  *             lastName: "محمد"
  *             government: "123e4567-e89b-12d3-a456-426614174000"
  *             city: "123e4567-e89b-12d3-a456-426614174001"
  *             bio: "مستخدم جديد يبحث عن خدمات"
  *     responses:
- *       201:
+ *       200:
  *         description: Client registered successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *             example:
- *               success: true
- *               message: "Client registered successfully"
+ *               status: "success"
+ *               message: "User created successfully"
  *               data:
  *                 user:
  *                   id: "123e4567-e89b-12d3-a456-426614174000"
+ *                   phoneNumber: "+201234567890"
  *                   firstName: "أحمد"
  *                   lastName: "محمد"
  *                   role: "USER"
+ *                 clientProfile:
+ *                   id: "223e4567-e89b-12d3-a456-426614174000"
+ *                   userId: "123e4567-e89b-12d3-a456-426614174000"
  *       400:
- *         $ref: '#/components/responses/BadRequest'
- *       401:
- *         $ref: '#/components/responses/Unauthorized'
+ *         description: Validation failed or invalid/expired register token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - $ref: '#/components/schemas/ValidationErrorResponse'
+ *                 - $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               validationError:
+ *                 summary: Validation failed
+ *                 value:
+ *                   success: false
+ *                   message: "Validation failed"
+ *                   errors:
+ *                     - type: "field"
+ *                       message: "First name must be between 2 and 50 characters"
+ *               invalidToken:
+ *                 summary: Invalid or expired register token
+ *                 value:
+ *                   status: "fail"
+ *                   message: "Invalid or expired token"
  *       409:
  *         $ref: '#/components/responses/Conflict'
  *       429:
@@ -182,7 +283,7 @@ authRouter.post(
  */
 authRouter.post(
   '/register-client',
-  sensitiveIpRateLimiter,
+  //sensitiveIpRateLimiter,
   registerClientValidator,
   validateRequest,
   registerClient
@@ -193,7 +294,11 @@ authRouter.post(
  * /auth/register-worker:
  *   post:
  *     summary: Register Worker
- *     description: Register a new worker with their professional information and specializations
+ *     description: |
+ *       Register a new worker with professional information and specializations.
+ *
+ *       Requires a valid `registerToken` obtained from the OTP verification step
+ *       (only issued when the phone number is not yet registered).
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -202,7 +307,7 @@ authRouter.post(
  *           schema:
  *             $ref: '#/components/schemas/RegisterWorker'
  *           example:
- *             registerToken: "reg_token_xxx"
+ *             registerToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *             firstName: "أحمد"
  *             lastName: "محمد"
  *             government: "123e4567-e89b-12d3-a456-426614174000"
@@ -215,25 +320,52 @@ authRouter.post(
  *             subSpecializationNames: ["تركيب", "صيانة", "إصلاح"]
  *             workGovernmentNames: ["القاهرة", "الجيزة", "الإسكندرية"]
  *     responses:
- *       201:
+ *       200:
  *         description: Worker registered successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *             example:
- *               success: true
- *               message: "Worker registered successfully"
+ *               status: "success"
+ *               message: "User created successfully"
  *               data:
  *                 user:
  *                   id: "123e4567-e89b-12d3-a456-426614174000"
+ *                   phoneNumber: "+201234567890"
  *                   firstName: "أحمد"
  *                   lastName: "محمد"
  *                   role: "WORKER"
+ *                 workerProfile:
+ *                   id: "323e4567-e89b-12d3-a456-426614174000"
+ *                   userId: "123e4567-e89b-12d3-a456-426614174000"
+ *                   experienceYears: 10
+ *                   isInTeam: false
+ *                   acceptsUrgentJobs: true
  *       400:
- *         $ref: '#/components/responses/BadRequest'
- *       401:
- *         $ref: '#/components/responses/Unauthorized'
+ *         description: Validation failed or invalid/expired register token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - $ref: '#/components/schemas/ValidationErrorResponse'
+ *                 - $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               validationError:
+ *                 summary: Validation failed
+ *                 value:
+ *                   success: false
+ *                   message: "Validation failed"
+ *                   errors:
+ *                     - type: "field"
+ *                       message: "Experience years must be between 0 and 50"
+ *                     - type: "field"
+ *                       message: "Specialization names must be a non-empty array"
+ *               invalidToken:
+ *                 summary: Invalid or expired register token
+ *                 value:
+ *                   status: "fail"
+ *                   message: "Invalid or expired token"
  *       409:
  *         $ref: '#/components/responses/Conflict'
  *       429:
@@ -243,7 +375,7 @@ authRouter.post(
  */
 authRouter.post(
   '/register-worker',
-  sensitiveIpRateLimiter,
+ // sensitiveIpRateLimiter,
   registerWorkerValidator,
   validateRequest,
   registerWorker
@@ -254,7 +386,12 @@ authRouter.post(
  * /auth/login:
  *   post:
  *     summary: Login
- *     description: Authenticate user with login token and generate session
+ *     description: |
+ *       Authenticate a registered user with a login token and create a new session.
+ *
+ *       The `loginToken` is obtained from the OTP verification step (only issued when
+ *       the phone number is already registered). A refresh token is returned which
+ *       should be used with the `/auth/access` endpoint to generate access tokens.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -263,30 +400,57 @@ authRouter.post(
  *           schema:
  *             $ref: '#/components/schemas/Login'
  *           example:
- *             loginToken: "login_token_xxx"
+ *             loginToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *             deviceFingerprint: "fp_abc123"
  *     responses:
  *       200:
- *         description: Login successful
+ *         description: Login successful — returns user data and refresh token
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *             example:
- *               success: true
- *               message: "Login successful"
+ *               status: "success"
+ *               message: "login successfully"
  *               data:
  *                 user:
  *                   id: "123e4567-e89b-12d3-a456-426614174000"
  *                   phoneNumber: "+201234567890"
+ *                   firstName: "أحمد"
+ *                   lastName: "محمد"
  *                   role: "USER"
- *                 tokens:
- *                   accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
- *                   refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *       400:
- *         $ref: '#/components/responses/BadRequest'
- *       401:
- *         $ref: '#/components/responses/Unauthorized'
+ *         description: Validation failed or invalid/expired login token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - $ref: '#/components/schemas/ValidationErrorResponse'
+ *                 - $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               validationError:
+ *                 summary: Validation failed
+ *                 value:
+ *                   success: false
+ *                   message: "Validation failed"
+ *                   errors:
+ *                     - type: "field"
+ *                       message: "Login token is required"
+ *               invalidToken:
+ *                 summary: Invalid or expired login token
+ *                 value:
+ *                   status: "fail"
+ *                   message: "Invalid or expired token"
+ *       404:
+ *         description: User account not found (may have been deleted)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               status: "fail"
+ *               message: "User not found"
  *       429:
  *         $ref: '#/components/responses/TooManyRequests'
  *       500:
@@ -294,22 +458,31 @@ authRouter.post(
  */
 authRouter.post(
   '/login',
-  sensitiveIpRateLimiter,
+  //sensitiveIpRateLimiter,
   loginValidator,
   validateRequest,
   login
 );
-authRouter.post('/logout', logout);
 
 /**
  * @swagger
  * /auth/logout:
  *   post:
  *     summary: Logout
- *     description: Logout user and invalidate current session
+ *     description: |
+ *       Logout the current user and invalidate the session associated with the
+ *       given device fingerprint.
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: x-device-fingerprint
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "fp_abc123"
+ *         description: Device fingerprint to identify which session to revoke
  *     responses:
  *       200:
  *         description: Logout successful
@@ -318,8 +491,9 @@ authRouter.post('/logout', logout);
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *             example:
- *               success: true
- *               message: "Logout successful"
+ *               status: "success"
+ *               message: "Logged out successfully"
+ *               data: null
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       500:
@@ -332,7 +506,11 @@ authRouter.post('/logout', logout);
  * /auth/access:
  *   post:
  *     summary: Generate Access Token
- *     description: Generate new access token using refresh token
+ *     description: |
+ *       Generate a new short-lived access token using a valid refresh token.
+ *
+ *       The refresh token must be passed in the `Authorization` header as a Bearer token,
+ *       and the `x-device-fingerprint` header must match the device that created the session.
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
@@ -343,7 +521,7 @@ authRouter.post('/logout', logout);
  *         schema:
  *           type: string
  *         example: "fp_abc123"
- *         description: Device fingerprint for security
+ *         description: Device fingerprint for session validation
  *     responses:
  *       200:
  *         description: Access token generated successfully
@@ -352,16 +530,40 @@ authRouter.post('/logout', logout);
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *             example:
- *               success: true
+ *               status: "success"
  *               message: "Access token generated successfully"
  *               data:
  *                 accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *       400:
- *         $ref: '#/components/responses/BadRequest'
+ *         description: Validation failed (missing headers)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationErrorResponse'
+ *             example:
+ *               success: false
+ *               message: "Validation failed"
+ *               errors:
+ *                 - type: "field"
+ *                   message: "Device fingerprint header is required"
  *       401:
- *         $ref: '#/components/responses/Unauthorized'
+ *         description: Invalid or expired refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               status: "fail"
+ *               message: "Invalid or expired token"
  *       403:
- *         $ref: '#/components/responses/Forbidden'
+ *         description: Session mismatch — device fingerprint does not match
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               status: "fail"
+ *               message: "Session not found or revoked"
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */

@@ -15,7 +15,9 @@ const usersRouter = Router();
  * /users/me:
  *   get:
  *     summary: Get Current User
- *     description: Retrieve the authenticated user's profile information
+ *     description: |
+ *       Retrieve the authenticated user's profile information.
+ *       Requires a valid access token in the Authorization header.
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -27,17 +29,18 @@ const usersRouter = Router();
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *             example:
- *               success: true
- *               message: "User profile retrieved successfully"
+ *               status: "success"
+ *               message: "User retrieved successfully"
  *               data:
- *                 id: "123e4567-e89b-12d3-a456-426614174000"
- *                 firstName: "أحمد"
- *                 lastName: "محمد"
- *                 phoneNumber: "+201234567890"
- *                 role: "USER"
- *                 government: "القاهرة"
- *                 city: "الشيخ زايد"
- *                 bio: "مستخدم جديد"
+ *                 user:
+ *                   id: "123e4567-e89b-12d3-a456-426614174000"
+ *                   phoneNumber: "+201234567890"
+ *                   firstName: "أحمد"
+ *                   lastName: "محمد"
+ *                   role: "USER"
+ *                   government: "القاهرة"
+ *                   city: "الشيخ زايد"
+ *                   bio: "مستخدم جديد"
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       500:
@@ -50,7 +53,10 @@ usersRouter.get("/me", getMe);
  * /users/basic-info:
  *   put:
  *     summary: Update Basic Info
- *     description: Update the authenticated user's basic profile information
+ *     description: |
+ *       Update the authenticated user's basic profile information.
+ *       All fields are optional — only the provided fields will be updated.
+ *       Requires a valid access token.
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -74,16 +80,23 @@ usersRouter.get("/me", getMe);
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *             example:
- *               success: true
- *               message: "User basic info updated successfully"
- *               data:
- *                 id: "123e4567-e89b-12d3-a456-426614174000"
- *                 firstName: "أحمد"
- *                 lastName: "علي"
- *                 government: "القاهرة"
- *                 city: "الشيخ زايد"
+ *               status: "success"
+ *               message: "updated user successfully"
+ *               data: {}
  *       400:
- *         $ref: '#/components/responses/BadRequest'
+ *         description: Validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationErrorResponse'
+ *             example:
+ *               success: false
+ *               message: "Validation failed"
+ *               errors:
+ *                 - type: "field"
+ *                   message: "First name must be between 2 and 50 characters"
+ *                 - type: "field"
+ *                   message: "Government must be a valid UUID"
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
@@ -98,7 +111,10 @@ usersRouter.put("/basic-info", updateUserValidator, validateRequest, updateUser)
  * /users/worker-info:
  *   put:
  *     summary: Update Worker Info
- *     description: Update the authenticated worker's professional information
+ *     description: |
+ *       Update the authenticated worker's professional information.
+ *       All fields are optional — only the provided fields will be updated.
+ *       This endpoint is restricted to users with a worker profile.
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -120,15 +136,22 @@ usersRouter.put("/basic-info", updateUserValidator, validateRequest, updateUser)
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *             example:
- *               success: true
- *               message: "Worker info updated successfully"
+ *               status: "success"
+ *               message: "updated worker profile successfully"
  *               data:
- *                 id: "123e4567-e89b-12d3-a456-426614174000"
- *                 experienceYears: 8
- *                 isInTeam: true
- *                 acceptsUrgentJobs: false
+ *                 userId: "123e4567-e89b-12d3-a456-426614174000"
  *       400:
- *         $ref: '#/components/responses/BadRequest'
+ *         description: Validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationErrorResponse'
+ *             example:
+ *               success: false
+ *               message: "Validation failed"
+ *               errors:
+ *                 - type: "field"
+ *                   message: "Experience years must be between 0 and 50"
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       403:
