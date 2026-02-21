@@ -3,6 +3,7 @@
  * @module services/RateLimitService
  */
 
+import { $Enums } from "@prisma/client";
 import AppError from "../errors/AppError.js";
 import Service from "./Service.js";
 
@@ -26,6 +27,7 @@ export default class RateLimitService extends Service {
    * @async
    * @method checkSendOtp
    * @param {string} phone - User's phone number
+   * @param {$Enums.Method} method - OTP delivery method
    * @param {string} deviceId - Device identifier
    * @returns {Promise<void>}
    * @throws {AppError} If rate limit is exceeded

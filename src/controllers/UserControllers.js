@@ -17,12 +17,12 @@ import { asyncHandler } from '../types/asyncHandler.js';
  * @type {RequestHandler<UserPayload>}
  */
 export const updateUser = asyncHandler(async (req, res) => {
-  const { role, firstName, lastName, government, city, bio } = req.body;
+  const { firstName, lastName, government, city, bio } = req.body;
   const userId = req.user.id;
 
   // If phoneNumber is provided, update user's phone (need additional verification)
   // For now, update other fields only
-  await userService.updateUser(userId, { role, firstName, lastName, government, city, bio });
+  await userService.updateUser(userId, { firstName, lastName, government, city, bio });
 
   new SuccessResponse("updated user successfully", {}, 200).send(res);
 });

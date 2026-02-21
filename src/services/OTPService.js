@@ -31,6 +31,7 @@ export default class OTPService extends Service {
   async requestOTP(phoneNumber, method) {
 
     const OTP = generateOTP();
+    console.log(OTP);
     const hashedOTP = hashOTP(OTP);
 
     await otpRepository.setOtp(phoneNumber, method, hashedOTP, environment.otps.expiresIn);
@@ -57,7 +58,12 @@ export default class OTPService extends Service {
     // in production -> Invalid or expired OTP only
     //
     const hashedOTP = hashOTP(OTP);
-    const otp= await otpRepository.getOtp(phoneNumber, method);
+
+    if (!OTP) {
+      return { message: "OTP is not provided", ok: false }
+    }
+
+    const otp = await otpRepository.getOtp(phoneNumber, method);
 
 
     if (!otp) {

@@ -10,27 +10,75 @@ import { authorizeClient, unAuthorizeClient } from "../middlewares/clientMiddlew
 import { validateRequest } from "../middlewares/validateRequest.js";
 import upload from "../configs/multer.js";
 
+// Import validators
+import {
+  validateUpdateUser,
+  validateCreateWorkerProfile,
+  validateUpdateWorkerProfile,
+  validateUpdateProfileImage,
+} from "../validators/user.js";
+
 const usersRouter = Router();
 
-usersRouter.get("/me", getUser);
+usersRouter.get("/me",
+  validateRequest,
+  getUser);
+
 usersRouter.put("/me",
+  validateUpdateUser,
   validateRequest,
   updateUser);
 
-usersRouter.get("/profile-image", getProfileImage);
-usersRouter.put("/profile-image", upload.single("file"), updateProfileImage);
-usersRouter.delete("/profile-image", unAuthorizeWorker, deleteProfileImage);
+usersRouter.get("/profile-image",
+  validateRequest,
+  getProfileImage);
 
-usersRouter.post("/worker-profile", unAuthorizeWorker, upload.fields([
-  { name: "personal_image", maxCount: 1 },
-  { name: "id_image", maxCount: 1 },
-  { name: "personal_with_id_image", maxCount: 1 }
-]), validateRequest, createWorkerProfile);
-usersRouter.get("/worker-profile", authorizeWorker, getWorkerProfile);
-usersRouter.put("/worker-profile", authorizeWorker, validateRequest, updateWorkerProfile);
+usersRouter.put("/profile-image",
+  upload.single("file"),
+  validateUpdateProfileImage,
+  validateRequest,
+  updateProfileImage);
 
-usersRouter.post("/client-profile", unAuthorizeClient, validateRequest, createClientProfile);
-usersRouter.get("/client-profile", authorizeClient, getClientProfile);
-usersRouter.put("/client-profile", authorizeClient, validateRequest, updateClientProfile);
+usersRouter.delete("/profile-image",
+  unAuthorizeWorker,
+  validateRequest,
+  deleteProfileImage);
+
+usersRouter.post("/worker-profile",
+  unAuthorizeWorker,
+  upload.fields([
+    { name: "personal_image", maxCount: 1 },
+    { name: "id_image", maxCount: 1 },
+    { name: "personal_with_id_image", maxCount: 1 }
+  ]),
+  validateCreateWorkerProfile,
+  validateRequest,
+  createWorkerProfile);
+
+usersRouter.get("/worker-profile",
+  authorizeWorker,
+  validateRequest,
+  getWorkerProfile);
+
+usersRouter.put("/worker-profile",
+  authorizeWorker,
+  validateUpdateWorkerProfile,
+  validateRequest,
+  updateWorkerProfile);
+
+usersRouter.post("/client-profile",
+  unAuthorizeClient,
+  validateRequest,
+  createClientProfile);
+
+usersRouter.get("/client-profile",
+  authorizeClient,
+  validateRequest,
+  getClientProfile);
+
+usersRouter.put("/client-profile",
+  authorizeClient,
+  validateRequest,
+  updateClientProfile);
 
 export default usersRouter;

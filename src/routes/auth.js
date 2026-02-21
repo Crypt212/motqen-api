@@ -23,66 +23,79 @@ import { sensitiveIpRateLimiter } from '../middlewares/rateLimitMiddleware.js';
 import upload from '../configs/multer.js';
 import cloudinaryConfig from '../middlewares/cloudinaryMiddleware.js';
 
+// Import validators
+import {
+  validateRequestOTP,
+  validateVerifyOTP,
+  validateRegisterClient,
+  validateRegisterWorker,
+  validateLogin,
+  validateGenerateAccessToken,
+  validateLogout,
+} from '../validators/auth.js';
+
 const authRouter = Router();
 
 authRouter.post(
   '/otp/request',
- // sensitiveIpRateLimiter,
-  checkSendOtpLimit,
+  sensitiveIpRateLimiter,
+  ...validateRequestOTP,
+  // checkSendOtpLimit,
   validateRequest,
   requestOTP
 );
 
 authRouter.post(
   '/otp/verify',
-  //sensitiveIpRateLimiter,
-  checkVerifyLimit,
+  sensitiveIpRateLimiter,
+  ...validateVerifyOTP,
+  // checkVerifyLimit,
   validateRequest,
   verifyOTP
 );
 
 authRouter.post(
   '/register-client',
+  sensitiveIpRateLimiter,
   cloudinaryConfig,
   upload.single("personal_image"),
-  //sensitiveIpRateLimiter,
+  ...validateRegisterClient,
   validateRequest,
   registerClient
 );
 
 authRouter.post(
   '/register-worker',
+  sensitiveIpRateLimiter,
   cloudinaryConfig,
   upload.fields([
     { name: "personal_image", maxCount: 1 },
     { name: "id_image", maxCount: 1 },
     { name: "personal_with_id_image", maxCount: 1 }
   ]),
- // sensitiveIpRateLimiter,
+  ...validateRegisterWorker,
   validateRequest,
   registerWorker
 );
 
 authRouter.post(
   '/login',
-  //sensitiveIpRateLimiter,
+  sensitiveIpRateLimiter,
+  ...validateLogin,
   validateRequest,
   login
 );
-
-authRouter.post('/logout', logout);
 
 authRouter.post(
-  '/login',
-  sensitiveIpRateLimiter,
+  '/logout',
+  ...validateLogout,
   validateRequest,
-  login
+  logout
 );
-
-authRouter.post('/logout', logout);
 
 authRouter.post(
   '/access',
+  ...validateGenerateAccessToken,
   validateRequest,
   generateAccessToken
 );

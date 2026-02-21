@@ -8,7 +8,6 @@ import AppError from "../errors/AppError.js";
 import UserRepository from "../repositories/UserRepository.js";
 import { governmentRepository, specializationRepository } from "../state.js";
 import Service, { tryCatch } from "./Service.js";
-import prisma from "../libs/database.js";
 import { Repository } from "../repositories/Repository.js";
 
 const userRepository = new UserRepository();
@@ -57,7 +56,7 @@ export default class UserService extends Service {
    * @param {string} [data.city] - City name
    * @param {string} [data.bio] - Biography
    * @param {$Enums.AccountStatus} [data.status] - Account status
-   * @returns {Promise<Object>} Updated user
+   * @returns {Promise<import("../repositories/UserRepository.js").User | null>} Updated user
    * @throws {AppError} If government or city not found
    */
   async updateUser(userId, data) {
@@ -76,7 +75,8 @@ export default class UserService extends Service {
       cityId = cities[0].id;
     }
 
-    return await userRepository.update({ id: userId }, { role: data.role, firstName: data.firstName, lastName: data.lastName, governmentId, cityId, bio: data.bio, status: data.status });
+    await userRepository.update({ id: userId }, { role: data.role, firstName: data.firstName, lastName: data.lastName, governmentId, cityId, bio: data.bio, status: data.status });
+    return await userRepository.findOne({ id: userId });
   }
 
   /**
@@ -91,7 +91,7 @@ export default class UserService extends Service {
    * @param {string[]} data.specializationNames - List of specialization names
    * @param {string[]} [data.subSpecializationNames] - List of sub-specialization names
    * @param {string[]} data.governmentNames - List of government names where worker operates
-   * @returns {Promise<Object>} Created worker profile
+   * @returns {Promise<import("../repositories/UserRepository.js").WorkerProfile>} Created worker profile
    * @throws {AppError} If user not found or invalid data
    */
   async createWorkerProfile(userId, {
@@ -132,7 +132,7 @@ export default class UserService extends Service {
       /** @type {import("../repositories/UserRepository.js").WorkerProfile} */
       let workerProfile;
 
-      Repository.createTransaction([ userRepository ], async () => {
+      await Repository.createTransaction([userRepository], async () => {
         workerProfile = await userRepository.createWorkerProfile(userId, {
           experienceYears,
           isInTeam,
@@ -143,7 +143,10 @@ export default class UserService extends Service {
         await userRepository.addWorkerProfileSpecializations(workerProfile.id, chosenSpecializations.map(specialization => specialization.id));
         for (let [mainSpecializationId, childrenSpecializationIds] of Object.entries(specializationTree))
           await userRepository.addWorkerProfileSubSpecializations(workerProfile.id, mainSpecializationId, childrenSpecializationIds);
+        
+        return workerProfile;
       }, (reason) => {
+        throw new AppError("Failed to create worker profile", 500);
       });
 
       return workerProfile;
@@ -156,7 +159,7 @@ export default class UserService extends Service {
    * @method createClientProfile
    * @param {Object} params - Client profile parameters
    * @param {import("../repositories/Repository.js").IDType} params.userId - User ID
-   * @returns {Promise<Object>} Created client profile
+   * @returns {Promise<import("../repositories/UserRepository.js").ClientProfile>} Created client profile
    * @throws {AppError} If user not found
    */
   async createClientProfile({
@@ -181,7 +184,7 @@ export default class UserService extends Service {
    * @param {number} [data.experienceYears] - Years of experience
    * @param {boolean} [data.isInTeam] - Whether worker is in a team
    * @param {boolean} [data.acceptsUrgentJobs] - Whether worker accepts urgent jobs
-   * @returns {Promise<Object>} Updated worker profile
+   * @returns {Promise<import("../repositories/UserRepository.js").WorkerProfile>} Updated worker profile
    * @throws {AppError} If user not found
    */
   async updateWorkerProfile(userId, {
@@ -206,7 +209,7 @@ export default class UserService extends Service {
    * @async
    * @method getClientProfile
    * @param {import("../repositories/Repository.js").IDType} userId - User ID
-   * @returns {Promise<Object>} Client profile
+   * @returns {Promise<import("../repositories/UserRepository.js").ClientProfile>} Client profile
    * @throws {AppError} If user not found
    */
   async getClientProfile(userId) {
@@ -228,7 +231,7 @@ export default class UserService extends Service {
    * @method updateClientProfile
    * @param {import("../repositories/Repository.js").IDType} userId - User ID
    * @param {Object} data - Client profile data to update
-   * @returns {Promise<Object>} Updated client profile
+   * @returns {Promise<import("../repositories/UserRepository.js").ClientProfile>} Updated client profile
    * @throws {AppError} If user not found or profile not found
    */
   async updateClientProfile(userId, data = {}) {
@@ -289,7 +292,7 @@ export default class UserService extends Service {
    * @method updateProfileImage
    * @param {import("../repositories/Repository.js").IDType} userId - User ID
    * @param {string} profileImage - New profile image URL
-   * @returns {Promise<Object>} Updated user
+   * @returns {Promise<import("../repositories/UserRepository.js").User>} Updated user
    * @throws {AppError} If user not found
    */
   async updateProfileImage(userId, profileImage) {
@@ -302,8 +305,8 @@ export default class UserService extends Service {
       if (isWorker) {
         throw new AppError("Worker profile image cannot be updated directly. Contact an admin for approval.", 403);
       }
-
-      return await userRepository.update({ id: userId }, { profileImage });
+      await userRepository.update({ id: userId }, { profileImage });
+      return userRepository.findOne({ id: userId });
     });
   }
 
@@ -313,7 +316,7 @@ export default class UserService extends Service {
    * @async
    * @method deleteProfileImage
    * @param {import("../repositories/Repository.js").IDType} userId - User ID
-   * @returns {Promise<Object>} Updated user with null profileImage
+   * @returns {Promise<import("../repositories/UserRepository.js").User>} Updated user with null profileImage
    * @throws {AppError} If user not found or is a worker
    */
   async deleteProfileImage(userId) {
@@ -326,8 +329,8 @@ export default class UserService extends Service {
       if (isWorker) {
         throw new AppError("Workers cannot delete their profile image.", 403);
       }
-
-      return await userRepository.update({ id: userId }, { profileImage: null, });
+      await userRepository.update({ id: userId }, { profileImage: null, });
+      return userRepository.findOne({ id: userId });
     });
   }
 }

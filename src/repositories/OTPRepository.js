@@ -21,8 +21,7 @@ export default class OtpRepository {
   }
 
   async getOtp(phone, method) {
-    const val = await this.#client.get(this.#keys.otp(phone, method));
-    return val ?? null;
+    return await this.#client.get(this.#keys.otp(phone, method));
   }
 
   async otpExists(phone, method) {

@@ -12,7 +12,7 @@ import { $Enums } from '@prisma/client';
 
 
 /**
- * @typedef {{fieldname: string, originalname: string, encoding: string, mimetype: string, buffer: Buffer, size: number}} MulterFile 
+ * @typedef {{fieldname: string, originalname: string, encoding: string, mimetype: string, buffer: Buffer, size: number}} MulterFile
  * @typedef {{file?: MulterFile, files?: MulterFile[] }} MulterPayload
  */
 

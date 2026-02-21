@@ -24,6 +24,7 @@ export default class AuthService extends Service {
    * @param {string} params.lastName - User's last name
    * @param {string} params.government - Government name
    * @param {string} params.city - City name
+   * @param {string} params.profileImage - Profile image URL
    * @param {string} [params.bio] - User's biography
    * @returns {Promise<Object>} Created user object
    * @throws {AppError} If government or city not found
@@ -34,6 +35,7 @@ export default class AuthService extends Service {
     lastName,
     government,
     city,
+    profileImage,
     bio,
   }) {
     return tryCatch(async () => {
@@ -43,6 +45,9 @@ export default class AuthService extends Service {
       let governmentId, cityId;
 
       {
+        if (!government || !city)
+          throw new AppError("Government and city are required", 400);
+
         const governmentEntity = await governmentRepository.findOne({ name: government });
         if (!governmentEntity)
           throw new AppError("Government not found", 400);
@@ -54,7 +59,7 @@ export default class AuthService extends Service {
         cityId = cities[0].id;
       }
 
-      const user = await userRepository.create({ phoneNumber, role, firstName, lastName, governmentId, cityId, bio, status: "ACTIVE" });
+      const user = await userRepository.create({ phoneNumber, profileImage, role, firstName, lastName, governmentId, cityId, bio, status: "ACTIVE" });
       return user;
 
     });

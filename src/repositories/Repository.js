@@ -1,6 +1,6 @@
 /** @typedef {import('@prisma/client').Prisma.BatchPayload} BatchPayload */
 
-import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import prisma from '../libs/database.js';
 
 /**
@@ -13,11 +13,7 @@ import prisma from '../libs/database.js';
 
 /** @typedef {String} IDType */
 
-/**
- * @template TEntity
- * @template TEntityData
- * @template TFilter
- */
+/** */
 export class Repository {
 
   /**
@@ -29,7 +25,7 @@ export class Repository {
   }
 
   /**
-   * @param {PrismaClient} prismaClient
+   * @param {any} prismaClient
    */
   usePrismaClient(prismaClient) { // for transactions
     this.prismaClient = prismaClient;
@@ -41,16 +37,21 @@ export class Repository {
 
   /**
    * @param {Repository[]} repositories
-   * @param {function(): void} transactionHandler
+   * @param {function(): Promise<T>} transactionHandler
    * @param {function(any): void} catchHandler
+   * @returns {Promise<T | undefined>}
+   * @template T
    */
-  static createTransaction(repositories, transactionHandler, catchHandler) {
-    prisma.$transaction(async (tx) => {
-      repositories.forEach(repository => repository.usePrismaClient(tx));
-      transactionHandler();
-    }).catch(async (reason) => {
+  static async createTransaction(repositories, transactionHandler, catchHandler) {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        repositories.forEach(repository => repository.usePrismaClient(tx));
+        return await transactionHandler();
+      });
+      return result;
+    } catch (error) {
       repositories.forEach(repository => repository.resetPrismaClient());
-      catchHandler();
-    });
+      catchHandler(error);
+    }
   }
 }

@@ -19,12 +19,12 @@ import {
 } from '../types/asyncHandler.js';
 import { dataUri } from '../configs/multer.js';
 import { uploader } from '../configs/cloudinary.js';
+import { getHeaderValue } from '../utils/HTTTHeaders.js';
 
 /** @typedef {import("../types/asyncHandler.js").UserPayload} UserPayload */
 /** @typedef {import("../types/asyncHandler.js").MulterPayload} MulterPayload */
 /** @template T @typedef {import("../types/asyncHandler.js").RequestHandler<T>} RequestHandler<T> */
 
-let getHeaderValue = (value) => (Array.isArray(value) ? value[0] : value);//global
 /**
  * Request OTP for phone number verification
  * @type {RequestHandler<{}>}
@@ -32,7 +32,6 @@ let getHeaderValue = (value) => (Array.isArray(value) ? value[0] : value);//glob
  */
 export const requestOTP = asyncHandler(async (req, res) => {
   const { method, phoneNumber } = req.body;
-  console.log(method, phoneNumber);
   const deviceId =
     getHeaderValue(req.headers['x-device-fingerprint'])?.trim() ||
     getHeaderValue(req.headers['x-device-id'])?.trim(); // requestOTP
@@ -70,7 +69,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
   }
 
   await rateLimitService.reset(phoneNumber, method, deviceId);
-  const user = await userService.getUser(phoneNumber);
+  const user = await userService.getUser({ phoneNumber });
 
   let token = '';
   let tokenType = '';
@@ -99,9 +98,14 @@ export const verifyOTP = asyncHandler(async (req, res) => {
  * @description Registers a new client user with basic profile information
  */
 export const registerClient = asyncHandler(async (req, res) => {
-  const { registerToken, firstName, lastName, government, city, bio } = req.body;
+  const { registerToken , deviceFingerprint, firstName, lastName, government, city, bio } = req.body;
   const image = req.file;
   const { phoneNumber } = verifyAndDecodeToken(registerToken, 'register');
+
+  if (image && image.fieldname == "personal_image") {
+    const file = dataUri(req.file).content;
+    await uploader.upload(file);
+  }
 
   const user = await authService.register({
     phoneNumber,
@@ -109,7 +113,22 @@ export const registerClient = asyncHandler(async (req, res) => {
     lastName,
     government,
     city,
+    profileImage: image.path,
     bio,
+  });
+
+  const { unHashedRefreshToken } = await sessionService.createSession({
+    userId: user.id,
+    deviceFingerprint,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    role: user.role,
+  });
+
+  const accessToken = await sessionService.generateAccessToken({
+    deviceFingerprint,
+    userId: user.id,
+    role: user.role,
+    refreshToken: unHashedRefreshToken,
   });
 
 
@@ -117,12 +136,8 @@ export const registerClient = asyncHandler(async (req, res) => {
     userId: user.id,
   });
 
-  if (image && image.fieldname == "personal_image") {
-    const file = dataUri(req.file).content;
-    await uploader.upload(file);
-  }
 
-  new SuccessResponse('User created successfully', { user, clientProfile }, 200).send(res);
+  new SuccessResponse('User created successfully', { user, clientProfile, accessToken, refreshToken: unHashedRefreshToken }, 200).send(res);
 });
 
 /**
@@ -133,6 +148,7 @@ export const registerClient = asyncHandler(async (req, res) => {
 export const registerWorker = asyncHandler(async (req, res) => {
   const {
     registerToken,
+    deviceFingerprint,
     firstName,
     lastName,
     government,
@@ -149,12 +165,16 @@ export const registerWorker = asyncHandler(async (req, res) => {
   const { phoneNumber } = verifyAndDecodeToken(registerToken, 'register');
   const images = req.files;
 
+  if (!images || !images["personal_image"] || !images["id_image"] || !images["personal_with_id_image"])
+    throw new AppError("Please upload all required images", 400);
+
   const user = await authService.register({
     phoneNumber,
     firstName,
     lastName,
     government,
     city,
+    profileImage: images["personal_image"][0].path,
     bio,
   });
 
@@ -167,8 +187,19 @@ export const registerWorker = asyncHandler(async (req, res) => {
     governmentNames: workGovernmentNames
   });
 
-  if (!images || !images["personal_image"] || !images["id_image"] || !images["personal_with_id_image"])
-    throw new AppError("Please upload all required images", 400);
+  const { unHashedRefreshToken } = await sessionService.createSession({
+    userId: user.id,
+    deviceFingerprint,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    role: user.role,
+  });
+
+  const accessToken = await sessionService.generateAccessToken({
+    deviceFingerprint,
+    userId: user.id,
+    role: user.role,
+    refreshToken: unHashedRefreshToken,
+  });
 
   for (let imageName of ["personal_image", "id_image", "personal_with_id_image"]) {
     const file = dataUri(images[imageName]).content;
@@ -176,7 +207,7 @@ export const registerWorker = asyncHandler(async (req, res) => {
   }
 
 
-  new SuccessResponse('User created successfully', { user, workerProfile }, 200).send(res);
+  new SuccessResponse('User created successfully', { user, workerProfile, accessToken }, 200).send(res);
 });
 
 /**
@@ -199,9 +230,16 @@ export const login = asyncHandler(async (req, res) => {
     role: user.role,
   });
 
+  const accessToken = await sessionService.generateAccessToken({
+    deviceFingerprint,
+    userId: user.id,
+    role: user.role,
+    refreshToken: unHashedRefreshToken,
+  });
+
   new SuccessResponse(
     'login successfully',
-    { user, refreshToken: unHashedRefreshToken },
+    { user, refreshToken: unHashedRefreshToken, accessToken },
     200
   ).send(res);
 });
@@ -212,7 +250,12 @@ export const login = asyncHandler(async (req, res) => {
  * @description Revokes the user's session based on device fingerprint
  */
 export const logout = asyncHandler(async (req, res) => {
-  const fingerprint = String(req.headers['x-device-fingerprint']);
+  const fingerprint = req.headers['x-device-fingerprint'];
+
+  if (!fingerprint || typeof fingerprint !== 'string') {
+    throw new AppError("Device fingerprint is required", 400);
+  }
+
   await sessionService.revokeByUserIDAndFingerprint(req.user.id, fingerprint);
   new SuccessResponse('Logged out successfully', null, 200).send(res);
 });
