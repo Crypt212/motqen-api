@@ -31,6 +31,7 @@ model User {
   governmentId String?
   cityId       String?
   bio          String?
+  profileImage String?
   status       AccountStatus @default(SUSPENDED)
   role          Role           @default(USER)
 

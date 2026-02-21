@@ -3,7 +3,6 @@ import { logger } from "../libs/winston.js";
 import crypto from "crypto";
 import Service from "./Service.js";
 import { sessionRepository } from "../state.js";
-import environment from "../configs/environment.js";
 import AppError from "../errors/AppError.js";
 
 /**
@@ -39,12 +38,10 @@ export default class SessionService extends Service {
     deviceFingerprint,
     role,
     expiresAt,
-    ipAddress,
-    userAgent,
   }) {
     // each mobile have only one active session
 
-    await sessionRepository.delete({deviceFingerprint});
+    await sessionRepository.delete({ deviceFingerprint });
 
     const unHashedRefreshToken = generateToken({ type: "refresh", userId, role });
     logger.info("Generated Refresh Token:", expiresAt);
@@ -59,8 +56,6 @@ export default class SessionService extends Service {
       deviceFingerprint,
       expiresAt,
       token: hashedToken,
-      ipAddress,
-      userAgent,
     });
     return { session, unHashedRefreshToken: unHashedRefreshToken };
   }
@@ -77,10 +72,10 @@ export default class SessionService extends Service {
    */
   async find({ userId, hashedToken, deviceFingerprint }) {
     // have to add logic to check for existing sessions and invalidate them if necessary
-    const session = await sessionRepository.find({
+    const session = await sessionRepository.findOne({
       userId,
       deviceFingerprint,
-      hashedToken,
+      token: hashedToken,
     });
     return { session };
   }
@@ -94,10 +89,10 @@ export default class SessionService extends Service {
    * @returns {Promise<void>}
    */
   async revokeByUserIDAndFingerprint(userId, deviceFingerprint) {
-    await sessionRepository.revokeSessionsByFingerprintAndUserID(
+    await sessionRepository.delete({
       userId,
       deviceFingerprint,
-    );
+    });
   }
 
 
@@ -119,10 +114,10 @@ export default class SessionService extends Service {
       .update(refreshToken)
       .digest("hex");
 
-    const session = await sessionRepository.find({
+    const session = await sessionRepository.findOne({
       userId,
       deviceFingerprint,
-      hashedToken,
+      token: hashedToken,
     });
 
     if (!session) {
@@ -132,7 +127,7 @@ export default class SessionService extends Service {
       throw new AppError("Refresh token has been revoked", 400,);
     }
     if (session.expiresAt.getTime() < Date.now()) {
-      await sessionRepository.revokeBySessionID(session.id);
+      await sessionRepository.delete({ id: session.id });
       throw new AppError("Refresh token has expired", 400);
     }
 

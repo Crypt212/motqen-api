@@ -15,36 +15,22 @@ import {
 
 import { generateToken, verifyAndDecodeToken } from '../utils/tokens.js';
 import {
-  asyncUnAuthenticatedHandler,
-  asyncAuthenticatedHandler,
+  asyncHandler,
 } from '../types/asyncHandler.js';
+import { dataUri } from '../configs/multer.js';
+import { uploader } from '../configs/cloudinary.js';
 
-/**
- * Get client IP address from request
- * @param {Object} req - Express request object
- * @returns {string} Client IP address
- */
-const getClientIp = (req) => {
-  return (
-    req.ip ||
-    req.connection?.remoteAddress ||
-    req.headers['x-forwarded-for']?.split(',')[0] ||
-    'unknown'
-  );
-};
+/** @typedef {import("../types/asyncHandler.js").UserPayload} UserPayload */
+/** @typedef {import("../types/asyncHandler.js").MulterPayload} MulterPayload */
+/** @template T @typedef {import("../types/asyncHandler.js").RequestHandler<T>} RequestHandler<T> */
 
 let getHeaderValue = (value) => (Array.isArray(value) ? value[0] : value);//global
 /**
  * Request OTP for phone number verification
- * @async
- * @function requestOTP
- * @param {import('express').Request} req - Express request object
- * @param {import('express').Response} res - Express response object
- * @returns {Promise<void>}
+ * @type {RequestHandler<{}>}
  * @description Initiates OTP request by generating and sending OTP to the provided phone number
-*/
-
-export const requestOTP = asyncUnAuthenticatedHandler(async (req, res) => {
+ */
+export const requestOTP = asyncHandler(async (req, res) => {
   const { method, phoneNumber } = req.body;
   console.log(method, phoneNumber);
   const deviceId =
@@ -64,14 +50,10 @@ export const requestOTP = asyncUnAuthenticatedHandler(async (req, res) => {
 
 /**
  * Verify OTP and return login or register token
- * @async
- * @function verifyOTP
- * @param {import('express').Request} req - Express request object
- * @param {import('express').Response} res - Express response object
- * @returns {Promise<void>}
+ * @type {RequestHandler<{}>}
  * @description Verifies the OTP and returns either a login or register token based on user existence
  */
-export const verifyOTP = asyncUnAuthenticatedHandler(async (req, res) => {
+export const verifyOTP = asyncHandler(async (req, res) => {
   const { phoneNumber, otp, method } = req.body;
   const deviceId =
     getHeaderValue(req.headers['x-device-fingerprint'])?.trim() ||
@@ -113,15 +95,12 @@ export const verifyOTP = asyncUnAuthenticatedHandler(async (req, res) => {
 
 /**
  * Register a new client user
- * @async
- * @function registerClient
- * @param {import('express').Request} req - Express request object
- * @param {import('express').Response} res - Express response object
- * @returns {Promise<void>}
+ * @type {RequestHandler<MulterPayload>}
  * @description Registers a new client user with basic profile information
  */
-export const registerClient = asyncUnAuthenticatedHandler(async (req, res) => {
+export const registerClient = asyncHandler(async (req, res) => {
   const { registerToken, firstName, lastName, government, city, bio } = req.body;
+  const image = req.file;
   const { phoneNumber } = verifyAndDecodeToken(registerToken, 'register');
 
   const user = await authService.register({
@@ -138,20 +117,20 @@ export const registerClient = asyncUnAuthenticatedHandler(async (req, res) => {
     userId: user.id,
   });
 
+  if (image && image.fieldname == "personal_image") {
+    const file = dataUri(req.file).content;
+    await uploader.upload(file);
+  }
 
   new SuccessResponse('User created successfully', { user, clientProfile }, 200).send(res);
 });
 
 /**
  * Register a new worker user
- * @async
- * @function registerWorker
- * @param {import('express').Request} req - Express request object
- * @param {import('express').Response} res - Express response object
- * @returns {Promise<void>}
+ * @type {RequestHandler<MulterPayload>}
  * @description Registers a new worker user with professional profile information
  */
-export const registerWorker = asyncUnAuthenticatedHandler(async (req, res) => {
+export const registerWorker = asyncHandler(async (req, res) => {
   const {
     registerToken,
     firstName,
@@ -164,8 +143,11 @@ export const registerWorker = asyncUnAuthenticatedHandler(async (req, res) => {
     acceptsUrgentJobs,
     specializationNames,
     subSpecializationNames,
-    workGovernmentNames } = req.body;
+    workGovernmentNames
+  } = req.body;
+
   const { phoneNumber } = verifyAndDecodeToken(registerToken, 'register');
+  const images = req.files;
 
   const user = await authService.register({
     phoneNumber,
@@ -185,19 +167,24 @@ export const registerWorker = asyncUnAuthenticatedHandler(async (req, res) => {
     governmentNames: workGovernmentNames
   });
 
+  if (!images || !images["personal_image"] || !images["id_image"] || !images["personal_with_id_image"])
+    throw new AppError("Please upload all required images", 400);
+
+  for (let imageName of ["personal_image", "id_image", "personal_with_id_image"]) {
+    const file = dataUri(images[imageName]).content;
+    await uploader.upload(file);
+  }
+
+
   new SuccessResponse('User created successfully', { user, workerProfile }, 200).send(res);
 });
 
 /**
  * Login an existing user and create session
- * @async
- * @function login
- * @param {import('express').Request} req - Express request object
- * @param {import('express').Response} res - Express response object
- * @returns {Promise<void>}
+ * @type {RequestHandler<{}>}
  * @description Authenticates user with login token and creates a new session
  */
-export const login = asyncUnAuthenticatedHandler(async (req, res) => {
+export const login = asyncHandler(async (req, res) => {
   const { loginToken, deviceFingerprint } = req.body;
   const payload = verifyAndDecodeToken(loginToken, 'login');
 
@@ -210,8 +197,6 @@ export const login = asyncUnAuthenticatedHandler(async (req, res) => {
     deviceFingerprint,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     role: user.role,
-    ipAddress: getClientIp(req),
-    userAgent: req.headers['user-agent'],
   });
 
   new SuccessResponse(
@@ -223,14 +208,10 @@ export const login = asyncUnAuthenticatedHandler(async (req, res) => {
 
 /**
  * Logout user and revoke session
- * @async
- * @function logout
- * @param {import('express').Request} req - Express request object
- * @param {import('express').Response} res - Express response object
- * @returns {Promise<void>}
+ * @type {RequestHandler<UserPayload>}
  * @description Revokes the user's session based on device fingerprint
  */
-export const logout = asyncAuthenticatedHandler(async (req, res) => {
+export const logout = asyncHandler(async (req, res) => {
   const fingerprint = String(req.headers['x-device-fingerprint']);
   await sessionService.revokeByUserIDAndFingerprint(req.user.id, fingerprint);
   new SuccessResponse('Logged out successfully', null, 200).send(res);
@@ -238,14 +219,10 @@ export const logout = asyncAuthenticatedHandler(async (req, res) => {
 
 /**
  * Generate new access token using refresh token
- * @async
- * @function generateAccessToken
- * @param {import('express').Request} req - Express request object
- * @param {import('express').Response} res - Express response object
- * @returns {Promise<void>}
+ * @type {RequestHandler<UserPayload>}
  * @description Validates refresh token and generates a new access token
  */
-export const generateAccessToken = asyncUnAuthenticatedHandler(
+export const generateAccessToken = asyncHandler(
   async (req, res) => {
     const deviceFingerprint = String(req.headers['x-device-fingerprint']);
     const refreshToken = req.headers['authorization']?.split(' ')[1];

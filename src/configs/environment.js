@@ -58,6 +58,12 @@ const logging = {
   enableFileLogs: process.env.ENABLE_FILE_LOGS === "true",
 };
 
+const cloudinary = {
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+}
+
 const whatsapp = {
   apiKey: process.env.WHATSAPP_API_KEY,
 };
@@ -88,6 +94,7 @@ const environment = {
   jwt,
   api,
   logging,
+  cloudinary,
   whatsapp,
   otps,
   twilio,

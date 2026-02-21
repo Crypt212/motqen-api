@@ -274,6 +274,116 @@ const options = {
             },
           },
         },
+        // User Schema
+        User: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              example: '123e4567-e89b-12d3-a456-426614174000',
+              description: 'User unique identifier',
+            },
+            phoneNumber: {
+              type: 'string',
+              example: '+201234567890',
+              description: 'Egyptian phone number',
+            },
+            firstName: {
+              type: 'string',
+              example: 'أحمد',
+              description: 'User first name',
+            },
+            lastName: {
+              type: 'string',
+              example: 'محمد',
+              description: 'User last name',
+            },
+            governmentId: {
+              type: 'string',
+              format: 'uuid',
+              nullable: true,
+              description: 'Government UUID',
+            },
+            cityId: {
+              type: 'string',
+              format: 'uuid',
+              nullable: true,
+              description: 'City UUID',
+            },
+            bio: {
+              type: 'string',
+              nullable: true,
+              example: 'مستخدم نشط',
+              description: 'User bio (max 500 characters)',
+            },
+            profileImage: {
+              type: 'string',
+              nullable: true,
+              example: 'https://res.cloudinary.com/.../image.jpg',
+              description: 'Profile image URL',
+            },
+            status: {
+              type: 'string',
+              enum: ['ACTIVE', 'SUSPENDED', 'BANNED'],
+              example: 'ACTIVE',
+              description: 'Account status',
+            },
+            role: {
+              type: 'string',
+              enum: ['USER', 'ADMIN'],
+              example: 'USER',
+              description: 'User role',
+            },
+          },
+        },
+        WorkerProfile: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              example: '123e4567-e89b-12d3-a456-426614174002',
+              description: 'Worker profile unique identifier',
+            },
+            userId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'User ID',
+            },
+            experienceYears: {
+              type: 'integer',
+              example: 5,
+              description: 'Years of experience',
+            },
+            isInTeam: {
+              type: 'boolean',
+              example: false,
+              description: 'Whether the worker works in a team',
+            },
+            acceptsUrgentJobs: {
+              type: 'boolean',
+              example: true,
+              description: 'Whether the worker accepts urgent jobs',
+            },
+          },
+        },
+        ClientProfile: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              example: '123e4567-e89b-12d3-a456-426614174003',
+              description: 'Client profile unique identifier',
+            },
+            userId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'User ID',
+            },
+          },
+        },
         // Response Schemas
         SuccessResponse: {
           type: 'object',

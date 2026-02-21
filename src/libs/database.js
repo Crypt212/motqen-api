@@ -4,7 +4,7 @@ import pg from "pg";
 import environment from "../configs/environment.js";
 const { Pool } = pg;
 
-const connectionString = environment.database.url.trim();
+const connectionString = environment.database.url;
 const pool = new Pool({
   connectionString: connectionString,
 });
