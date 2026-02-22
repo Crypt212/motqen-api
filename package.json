@@ -14,19 +14,26 @@
     "dependencies": {
         "@prisma/adapter-pg": "^7.4.0",
         "@prisma/client": "^7.4.0",
+        "axios": "^1.13.5",
+        "cloudinary": "^2.9.0",
         "cors": "^2.8.6",
+        "datauri": "^4.1.0",
         "dotenv": "^17.2.4",
         "express": "^5.2.1",
         "express-rate-limit": "^8.2.1",
         "express-validator": "^7.3.1",
         "helmet": "^8.1.0",
         "jsonwebtoken": "^9.0.3",
-        "nodemon": "^3.1.11",
         "redis": "^5.10.0",
+        "swagger-jsdoc": "^6.2.8",
+        "swagger-ui-express": "^5.0.1",
+        "twilio": "^5.12.1",
         "winston": "^3.19.0"
     },
     "devDependencies": {
+        "@types/express": "^5.0.6",
         "globals": "^17.3.0",
+        "prettier": "^3.8.1",
         "prisma": "^7.4.0"
     }
 }

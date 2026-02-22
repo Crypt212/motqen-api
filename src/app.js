@@ -1,25 +1,19 @@
 import express from "express";
-import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import cors from "cors";
 import mainRouter from "./routes/api.js";
-import { errorHandler } from "./middlewares/errorHandlerMiddleware.js";
-import redisClient from "./lib/redis.js";
-import environment from "./config/environment.js";
-import  prismaClient  from "./lib/database.js";
+import errorHandler from "./middlewares/errorMiddleware.js";
+import { ipRateLimiter } from "./middlewares/rateLimitMiddleware.js";
+import redisClient from "./libs/redis.js";
+import environment from "./configs/environment.js";
+import prismaClient from "./libs/database.js";
+import swaggerSpec from "./configs/swagger.js";
+import swaggerUi from "swagger-ui-express";
 
 const initApp = async () => {
   const app = express();
 
-  app.use(express.json());
   app.use(helmet());
-  app.use(
-    rateLimit({
-      windowMs: environment.api.rateLimit.windowMs,
-      limit: environment.api.rateLimit.max,
-      legacyHeaders: false,
-    }),
-  );
   app.use(
     cors({
       origin: function (origin, callback) {
@@ -27,8 +21,10 @@ const initApp = async () => {
       },
     }),
   );
+  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json());
 
-  app.use("/api", mainRouter);
+  app.use("/api", ipRateLimiter, mainRouter);
 
   // Health check
   app.get("/health", (req, res) => {
@@ -38,6 +34,23 @@ const initApp = async () => {
       database: prismaClient ? "connected" : "disconnected",
       redis: redisClient.isReady ? "connected" : "disconnected",
     });
+  });
+
+  // Swagger API Documentation
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: "Motqen API Documentation",
+    customfavIcon: "/favicon.ico",
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+    },
+  }));
+
+  // API JSON documentation endpoint
+  app.get("/api-docs.json", (req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    res.send(swaggerSpec);
   });
 
   app.use(errorHandler);
