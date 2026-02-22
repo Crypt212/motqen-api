@@ -150,35 +150,29 @@ export const validateRegisterWorker = [
     .withMessage("Urgent jobs acceptance status is required")
     .isBoolean()
     .withMessage("acceptsUrgentJobs must be a boolean value"),
-  body("specializationNames")
+  body("specializationsTree")
     .optional({ nullable: true, checkFalsy: true })
     .isArray()
-    .withMessage("Specialization names must be an array")
+    .withMessage("specialization tree must be an array of { mainId: string, subIds: string[] }")
     .custom((value) => {
-      if (value && value.length > 0) {
-        for (const item of value) {
-          if (typeof item !== "string" || item.trim().length === 0) {
-            throw new Error("Each specialization name must be a non-empty string");
-          }
+      let valid = true;
+      if (!value || value.length == 0) valid = false;
+
+      for (const item of value) {
+        if (!item) { valid = false; break; }
+        if (!("mainId" in Object.keys(item)) || typeof item.mainId !== "string" || item.mainId.trim().length === 0) { valid = false; break; }
+
+        if (!("subIds" in Object.keys(item)) || !Array.isArray(item.subIds)) { valid = false; break; }
+        for (const subId of item.subIds) {
+          if (typeof subId !== "string" || subId.trim().length === 0) { valid = false; break; }
         }
+      }
+      if (!valid) {
+        throw new Error("specialization tree must be an array of { mainId: string, subIds: string[] }");
       }
       return true;
     }),
-  body("subSpecializationNames")
-    .optional({ nullable: true, checkFalsy: true })
-    .isArray()
-    .withMessage("Sub-specialization names must be an array")
-    .custom((value) => {
-      if (value && value.length > 0) {
-        for (const item of value) {
-          if (typeof item !== "string" || item.trim().length === 0) {
-            throw new Error("Each sub-specialization name must be a non-empty string");
-          }
-        }
-      }
-      return true;
-    }),
-  body("workGovernmentNames")
+  body("workGovernmentIds")
     .optional({ nullable: true, checkFalsy: true })
     .isArray()
     .withMessage("Work government names must be an array")

@@ -102,11 +102,6 @@ export const registerClient = asyncHandler(async (req, res) => {
   const image = req.file;
   const { phoneNumber } = verifyAndDecodeToken(registerToken, 'register');
 
-  if (image && image.fieldname == "personal_image") {
-    const file = dataUri(req.file).content;
-    await uploader.upload(file);
-  }
-
   const user = await authService.register({
     phoneNumber,
     firstName,
@@ -116,6 +111,13 @@ export const registerClient = asyncHandler(async (req, res) => {
     profileImage: image.path,
     bio,
   });
+
+  if (image && image.fieldname == "personal_image") {
+    const file = dataUri(req.file).content;
+    const uploadedImage = await uploader.upload(file);
+
+    userService.updateProfileImage(user.id, uploadedImage.secure_url);
+  }
 
   const { unHashedRefreshToken } = await sessionService.createSession({
     userId: user.id,
@@ -157,9 +159,8 @@ export const registerWorker = asyncHandler(async (req, res) => {
     experienceYears,
     isInTeam,
     acceptsUrgentJobs,
-    specializationNames,
-    subSpecializationNames,
-    workGovernmentNames
+    specializationsTree,
+    workGovernmentIds
   } = req.body;
 
   const { phoneNumber } = verifyAndDecodeToken(registerToken, 'register');
@@ -182,9 +183,8 @@ export const registerWorker = asyncHandler(async (req, res) => {
     experienceYears,
     isInTeam,
     acceptsUrgentJobs,
-    specializationNames,
-    subSpecializationNames,
-    governmentNames: workGovernmentNames
+    specializationsTree,
+    governmentIds: workGovernmentIds
   });
 
   const { unHashedRefreshToken } = await sessionService.createSession({
@@ -203,7 +203,10 @@ export const registerWorker = asyncHandler(async (req, res) => {
 
   for (let imageName of ["personal_image", "id_image", "personal_with_id_image"]) {
     const file = dataUri(images[imageName]).content;
-    await uploader.upload(file);
+    const uploadedImage =await uploader.upload(file);
+    if (imageName == "personal_image") {
+      userService.updateProfileImage(user.id, uploadedImage.secure_url);
+    }
   }
 
 

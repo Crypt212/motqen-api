@@ -136,10 +136,10 @@ export default class UserRepository extends Repository {
    * @async
    * @method
    * @param {IDType} userId
-   * @returns {Promise<WorkerProfile[]>}
+   * @returns {Promise<WorkerProfile>}
    */
   async getWorkerProfile(userId) {
-    return await this.prismaClient.workerProfile.findMany({
+    return await this.prismaClient.workerProfile.findUnique({
       where: { userId },
     });
   };
@@ -340,10 +340,10 @@ export default class UserRepository extends Repository {
    * @async
    * @method
    * @param {IDType} userId
-   * @returns {Promise<ClientProfile[]>}
+   * @returns {Promise<ClientProfile>}
    */
   async getClientProfile(userId) {
-    return await this.prismaClient.clientProfile.findMany({
+    return await this.prismaClient.clientProfile.findUnique({
       where: { userId },
     });
   };

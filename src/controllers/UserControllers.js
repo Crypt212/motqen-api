@@ -43,7 +43,7 @@ export const getUser = asyncHandler(async (req, res) => {
 export const createClientProfile = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
-  const clientProfile = await userService.createClientProfile({userId});
+  const clientProfile = await userService.createClientProfile({ userId });
 
   new SuccessResponse("created client profile successfully", { clientProfile }, 200).send(res);
 });
@@ -74,7 +74,7 @@ export const getClientProfile = asyncHandler(async (req, res) => {
  * @type {RequestHandler<UserPayload & import("../types/asyncHandler.js").MulterPayload>}
  */
 export const createWorkerProfile = asyncHandler(async (req, res) => {
-  const { experienceYears, isInTeam, acceptsUrgentJobs, specializationNames, subSpecializationNames, governmentNames } = req.body;
+  const { experienceYears, isInTeam, acceptsUrgentJobs, specializationTree: specializationsTree, workGovernmentIds } = req.body;
   const userId = req.user.id;
   const images = req.files;
 
@@ -82,9 +82,8 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
     experienceYears,
     isInTeam,
     acceptsUrgentJobs,
-    specializationNames,
-    subSpecializationNames,
-    governmentNames
+    specializationsTree,
+    governmentIds: workGovernmentIds
   });
 
   if (!images || !images["personal_image"] || !images["id_image"] || !images["personal_with_id_image"])
@@ -97,18 +96,83 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
 
   new SuccessResponse("created worker profile successfully", { clientProfile }, 200).send(res);
 });
+
 /**
  * @type {RequestHandler<UserPayload>}
  */
 export const updateWorkerProfile = asyncHandler(async (req, res) => {
   const { experienceYears, isInTeam, acceptsUrgentJobs } = req.body;
   const userId = req.user.id;
+  const images = req.files;
 
   await userService.updateWorkerProfile(userId, {
     experienceYears,
     isInTeam,
     acceptsUrgentJobs,
   });
+
+  if (images) { // TODO: they need to be verified later by admins
+    for (let imageName of ["personal_image", "id_image", "personal_with_id_image"]) {
+      if (!(imageName in Object.keys(images)))
+        continue;
+      const file = dataUri(images[imageName]).content;
+      await uploader.upload(file);
+    }
+  }
+
+  new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
+});
+
+/**
+ * @type {RequestHandler<UserPayload>}
+ */
+export const addWorkerGovernments = asyncHandler(async (req, res) => {
+  const { governmentIds } = req.body;
+  const userId = req.user.id;
+  const images = req.files;
+
+  await userService.deleteWorkerProfileSubSpecializations(userId, governmentIds);
+
+  new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
+});
+
+/**
+ * @type {RequestHandler<UserPayload>}
+ */
+export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
+  const { governmentIds } = req.body;
+  const userId = req.user.id;
+  const images = req.files;
+
+  await userService.deleteWorkerProfileSubSpecializations(userId, governmentIds);
+
+  new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
+});
+
+/**
+ * @type {RequestHandler<UserPayload>}
+ */
+export const addWorkerSpecializations = asyncHandler(async (req, res) => {
+  const { specializationTree } = req.body;
+  const userId = req.user.id;
+
+  await userService.insertWorkerProfileSpecializations(userId, specializationTree);
+
+  new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
+});
+
+/**
+ * @type {RequestHandler<UserPayload>}
+ */
+export const deleteWorkerSpecializations = asyncHandler(async (req, res) => {
+  const { mainSpecializationIds, specializationTree } = req.body;
+  const userId = req.user.id;
+
+  if (mainSpecializationIds)
+    await userService.deleteWorkerProfileMainSpecializations(userId, mainSpecializationIds);
+
+  if (specializationTree)
+    await userService.deleteWorkerProfileSubSpecializations(userId, specializationTree);
 
   new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
 });
