@@ -1,110 +1,166 @@
 generator client {
-    provider = "prisma-client-js"
-    output   = "../src/lib/prisma/client"
+  provider = "prisma-client-js"
 }
+
 datasource db {
-    provider = "postgresql"
+  provider = "postgresql"
 }
 
 model Session {
-    id                Int      @id @default(autoincrement())
-    userId            Int
-    token             String   @unique
-    isRevoked         Boolean  @default(false)
-    deviceFingerprint String   @unique
-    lastUsedAt        DateTime @default(now())
-    createdAt         DateTime @default(now())
-    expiresAt         DateTime
+  id                String   @id @default(uuid())
+  userId            String
+  token             String   @unique
+  isRevoked         Boolean  @default(false)
+  deviceFingerprint String
+  ipAddress         String?
+  userAgent         String?
+  lastUsedAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
+  expiresAt         DateTime
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@index([token, deviceFingerprint, userId])
-    @@map("sessions")
-}
-
-model OTPs {
-    attempts    Int      @default(1)
-    phoneNumber String   @unique
-    hashedOTP   String
-    updatedAt   DateTime
-    expiresAt   DateTime
-    createdAt   DateTime @default(now())
-    InProcess   Boolean // race condition
-
-    @@map("OTPs")
+  @@map("sessions")
 }
 
 model User {
-    id          Int           @id @default(autoincrement())
-    phoneNumber String        @unique
-    fristName   String
-    lastName    String
-    government  String
-    city        String
-    bio         String?
-    status      AccountStatus @default(INCOMPLETE)
+  id           String        @id @default(uuid())
+  phoneNumber  String        @unique
+  firstName    String
+  lastName     String
+  governmentId String?
+  cityId       String?
+  bio          String?
+  profileImage String?
+  status       AccountStatus @default(SUSPENDED)
+  role          Role           @default(USER)
 
-    role       Role        @default(CLIENT)
-    sessions   Session[]
-    workerInfo WorkerInfo?
+  city          City?          @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  government    Government?    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  sessions      Session[]
+  workerProfile WorkerProfile?
+  clientProfile ClientProfile?
 
-    @@map("users")
+  @@map("users")
 }
 
-model WorkerInfo {
-    id                      Int     @id @default(autoincrement())
-    userId                  Int     @unique
-    experienceYears         Int
-    isInTeam                Boolean
-    acceptsUrgentJobs       Boolean
-    primarySpecializationId Int
+model ClientProfile {
+  id     String @id @default(uuid())
+  userId String @unique
 
-    secondarySpecializations SpecializationsForWorkers[]
-    primarySpecialization    Specialization              @relation(fields: [primarySpecializationId], references: [id])
-    user                     User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
-    goverments               Goverment[]
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@map("worker_infos")
+  @@map("client_profiles")
 }
 
-model SpecializationsForWorkers {
-    workerInfoId     Int
-    specializationId Int
+model WorkerProfile {
+  id                String  @id @default(uuid())
+  userId            String  @unique
+  experienceYears   Int
+  isInTeam          Boolean
+  acceptsUrgentJobs Boolean
+  isApproved        Boolean @default(false)
 
-    workerInfo     WorkerInfo     @relation(fields: [workerInfoId], references: [id], onDelete: Cascade)
-    specialization Specialization @relation(fields: [specializationId], references: [id], onDelete: Cascade)
+  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chosenSpecializations ChosenSpecialization[]
+  governments           GovernmentsForWorkers[]
 
-    @@id([workerInfoId, specializationId])
+  @@map("worker_profiles")
+}
+
+model ChosenSpecialization {
+  workerProfileId  String
+  specializationId String
+
+  workerProfile            WorkerProfile             @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  specialization           Specialization            @relation(fields: [specializationId], references: [id], onDelete: Cascade)
+  chosenSubSpecializations ChosenSubSpecialization[]
+
+  @@id([workerProfileId, specializationId])
+  @@map("chosen_specializations")
+}
+
+model ChosenSubSpecialization {
+  workerProfileId        String
+  subSpecializationId    String
+  chosenSpecializationId String
+
+  subSpecialization    SubSpecialization    @relation(fields: [subSpecializationId], references: [id], onDelete: Cascade)
+  chosenSpecialization ChosenSpecialization @relation(fields: [workerProfileId, chosenSpecializationId], references: [workerProfileId, specializationId], onDelete: Cascade)
+
+  @@id([chosenSpecializationId, subSpecializationId])
+  @@unique([chosenSpecializationId, subSpecializationId])
+  @@map("chosen_sub_specializations")
 }
 
 model Specialization {
-    id               Int                         @id @default(autoincrement())
-    name             String
-    field            String
-    secondaryWorkers SpecializationsForWorkers[]
-    primaryWorkers   WorkerInfo[]
+  id   String @id @default(uuid())
+  name String
 
-    @@map("specializations")
+  subSpecializations SubSpecialization[]
+  chosenByWorker     ChosenSpecialization[]
+
+  @@index([name])
+  @@map("specializations")
 }
 
-model Goverment {
-    id           Int         @id @default(autoincrement())
-    name         String
-    workerInfo   WorkerInfo? @relation(fields: [workerInfoId], references: [id])
-    workerInfoId Int?
+model SubSpecialization {
+  id                   String @id @default(uuid())
+  name                 String
+  mainSpecializationId String
 
-    @@map("governments")
+  chosenByWorker     ChosenSubSpecialization[]
+  mainSpecialization Specialization            @relation(fields: [mainSpecializationId], references: [id], onDelete: Cascade)
+
+  @@index([name])
+  @@map("sub_specializations")
+}
+
+model GovernmentsForWorkers {
+  workerProfileId String
+  governmentId    String
+
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  government    Government    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+
+  @@id([workerProfileId, governmentId])
+  @@map("governments_for_workers")
+}
+
+model Government {
+  id   String @id @default(uuid())
+  name String
+
+  cities  City[]
+  workers GovernmentsForWorkers[]
+  users   User[]
+
+  @@map("governments")
+}
+
+model City {
+  id   String @id @default(uuid())
+  name String
+  governmentId String?
+
+  users        User[]
+  government   Government? @relation(fields: [governmentId], references: [id])
+
+  @@map("cities")
 }
 
 enum AccountStatus {
-    INCOMPLETE
-    ACTIVE
-    SUSPENDED
-    BANNED
+  ACTIVE
+  SUSPENDED
+  BANNED
 }
 
 enum Role {
-    WORKER
-    CLIENT
-    ADMIN
+  USER
+  ADMIN
+}
+
+enum Method {
+  SMS
+  WhatsApp
 }

@@ -1,8 +1,8 @@
 import initApp from "./app.js";
-import environment from "./config/environment.js";
-import prismaClient from "./lib/database.js";
-import redisClient from "./lib/redis.js";
-import { logger } from "./lib/winston.js";
+import environment from "./configs/environment.js";
+import prismaClient from "./libs/database.js";
+import redisClient from "./libs/redis.js";
+import { logger } from "./libs/winston.js";
 
 const startServer = async () => {
     try {

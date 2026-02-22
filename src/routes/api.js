@@ -1,8 +1,16 @@
+/**
+ * @fileoverview API Routes - Main router combining all route modules
+ * @module routes/api
+ */
+
 import { Router } from "express";
-import apiV1Router from "./api/v1/api.js";
+import authRouter from "./auth.js";
+import usersRouter from "./users.js";
+import { authenticate } from "../middlewares/authMiddleware.js";
 
 const mainRouter = Router();
 
-mainRouter.use("/v1", apiV1Router);
+mainRouter.use("/auth", authRouter);
+mainRouter.use("/users", authenticate, usersRouter);
 
 export default mainRouter;
