@@ -5,11 +5,11 @@
 
 import { $Enums } from "@prisma/client";
 import AppError from "../errors/AppError.js";
-import UserRepository from "../repositories/UserRepository.js";
-import { governmentRepository, specializationRepository } from "../state.js";
+import { governmentRepository, userRepository } from "../state.js";
 import Service, { tryCatch } from "./Service.js";
+import { Repository } from "../repositories/Repository.js";
 
-const userRepository = new UserRepository();
+/** @typedef {import("../repositories/UserRepository.js").IDType} IDType */
 
 /**
  * User Service - Manages user-related operations
@@ -55,7 +55,7 @@ export default class UserService extends Service {
    * @param {string} [data.city] - City name
    * @param {string} [data.bio] - Biography
    * @param {$Enums.AccountStatus} [data.status] - Account status
-   * @returns {Promise<Object>} Updated user
+   * @returns {Promise<import("../repositories/UserRepository.js").User | null>} Updated user
    * @throws {AppError} If government or city not found
    */
   async updateUser(userId, data) {
@@ -74,7 +74,8 @@ export default class UserService extends Service {
       cityId = cities[0].id;
     }
 
-    return await userRepository.update({ id: userId }, { role: data.role, firstName: data.firstName, lastName: data.lastName, governmentId, cityId, bio: data.bio, status: data.status });
+    await userRepository.update({ id: userId }, { role: data.role, firstName: data.firstName, lastName: data.lastName, governmentId, cityId, bio: data.bio, status: data.status });
+    return await userRepository.findOne({ id: userId });
   }
 
   /**
@@ -86,59 +87,43 @@ export default class UserService extends Service {
    * @param {number} data.experienceYears - Years of experience
    * @param {boolean} data.isInTeam - Whether worker is in a team
    * @param {boolean} data.acceptsUrgentJobs - Whether worker accepts urgent jobs
-   * @param {string[]} data.specializationNames - List of specialization names
-   * @param {string[]} [data.subSpecializationNames] - List of sub-specialization names
-   * @param {string[]} data.governmentNames - List of government names where worker operates
-   * @returns {Promise<Object>} Created worker profile
+   * @param {{mainId: IDType, subIds: IDType[]}[]} data.specializationsTree - List of specialization names
+   * @param {IDType[]} data.governmentIds - List of government names where worker operates
+   * @returns {Promise<import("../repositories/UserRepository.js").WorkerProfile>} Created worker profile
    * @throws {AppError} If user not found or invalid data
    */
   async createWorkerProfile(userId, {
     experienceYears,
     isInTeam,
     acceptsUrgentJobs,
-    specializationNames,
-    subSpecializationNames,
-    governmentNames
+    specializationsTree,
+    governmentIds
   }) {
     return tryCatch(async () => {
       const user = await userRepository.findOne({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
-      const governmentEntities = await governmentRepository.findMany({ name: { in: governmentNames } });
-      if (governmentNames.length !== governmentEntities.length)
-        throw new AppError("One or more governments were not found in the database", 404);
+      /** @type {import("../repositories/UserRepository.js").WorkerProfile} */
+      let workerProfile;
 
-      const chosenSpecializations = await specializationRepository.findMany({ name: { in: specializationNames } });
-      if (specializationNames.length !== chosenSpecializations.length)
-        throw new AppError("One or more specialization were not found in the database", 404);
-
-      /** @type {Set<import("../repositories/Repository.js").IDType>} */
-      let chosenSubSpecializations = new Set();
-      /** @type {Map<import("../repositories/Repository.js").IDType, import("../repositories/Repository.js").IDType[]>} */
-      let specializationTree = new Map();
-      chosenSpecializations.forEach(async (specialization) => {
-        const subSpecializations = await specializationRepository.findSubSpecializations({ name: { in: subSpecializationNames }, mainSpecializationId: specialization.id });
-        subSpecializations.forEach(foundSubSpecialization => {
-          chosenSubSpecializations.add(foundSubSpecialization.id);
-          if (!specializationTree.has(specialization.id)) specializationTree.set(specialization.id, []);
-          specializationTree.get(specialization.id).push(foundSubSpecialization.id);
+      await Repository.createTransaction([userRepository], async () => {
+        workerProfile = await userRepository.createWorkerProfile(userId, {
+          experienceYears,
+          isInTeam,
+          acceptsUrgentJobs,
         });
+
+        await userRepository.addWorkerProfileGovernments(workerProfile.id, governmentIds);
+        await userRepository.addWorkerProfileSpecializations(workerProfile.id, specializationsTree.map(({ mainId }) => mainId));
+        for (let { mainId, subIds } of specializationsTree) {
+          await userRepository.addWorkerProfileSubSpecializations(workerProfile.id, mainId, subIds);
+        }
+
+        return workerProfile;
+      }, (reason) => {
+        throw new AppError("Failed to create worker profile", 500, reason);
       });
 
-      if (chosenSubSpecializations.size !== subSpecializationNames.length)
-        throw new AppError("One or more sub-specialization were not found for the provided main specializations in the database", 404);
-
-      const workerProfile = await userRepository.createWorkerProfile(userId, {
-        experienceYears,
-        isInTeam,
-        acceptsUrgentJobs,
-      });
-
-      await userRepository.addWorkerProfileGovernments(workerProfile.id, governmentEntities.map(government => government.id));
-      await userRepository.addWorkerProfileSpecializations(workerProfile.id, chosenSpecializations.map(specialization => specialization.id));
-      for (const [mainId, subIds] of specializationTree.entries()) {
-        await userRepository.addWorkerProfileSubSpecializations(workerProfile.id, mainId, subIds);
-      }
       return workerProfile;
     });
   }
@@ -149,7 +134,7 @@ export default class UserService extends Service {
    * @method createClientProfile
    * @param {Object} params - Client profile parameters
    * @param {import("../repositories/Repository.js").IDType} params.userId - User ID
-   * @returns {Promise<Object>} Created client profile
+   * @returns {Promise<import("../repositories/UserRepository.js").ClientProfile>} Created client profile
    * @throws {AppError} If user not found
    */
   async createClientProfile({
@@ -174,7 +159,7 @@ export default class UserService extends Service {
    * @param {number} [data.experienceYears] - Years of experience
    * @param {boolean} [data.isInTeam] - Whether worker is in a team
    * @param {boolean} [data.acceptsUrgentJobs] - Whether worker accepts urgent jobs
-   * @returns {Promise<Object>} Updated worker profile
+   * @returns {Promise<import("../repositories/UserRepository.js").WorkerProfile>} Updated worker profile
    * @throws {AppError} If user not found
    */
   async updateWorkerProfile(userId, {
@@ -195,11 +180,150 @@ export default class UserService extends Service {
   }
 
   /**
+   * Insert working governments for worker
+   * @async
+   * @method insertWorkerProfileWorkGovernments
+   * @param {IDType} userId - User ID
+   * @param {IDType[]} governmentIds - Ids of working governments
+   * @returns {Promise<Number>} Number of inserted governments
+   */
+  async insertWorkerProfileWorkGovernments(userId, governmentIds) {
+    return tryCatch(async () => {
+
+      const user = await userRepository.findOne({ id: userId });
+      if (!user) throw new AppError("User not found", 404);
+
+      const workerProfile = await userRepository.getWorkerProfile(userId);
+      if (!workerProfile) throw new AppError("Worker profile not found", 404);
+
+      const workerProfileId = workerProfile.id;
+
+      Repository.createTransaction([userRepository], async () => {
+        const { count } = await userRepository.addWorkerProfileGovernments(workerProfileId, governmentIds);
+        return count;
+      }, (error) => {
+        throw new AppError("Failed to insert worker profile governments", 400, error);
+      });
+    });
+  }
+
+  /**
+   * Delete working governments for worker
+   * @async
+   * @method deleteWorkerProfileWorkGovernments
+   * @param {IDType} userId - User ID
+   * @param {IDType[]} governmentIds - Ids of working governments
+   * @returns {Promise<Number>} Number of deleted governments
+   */
+  async deleteProfileWorkGovernments(userId, governmentIds) {
+    return tryCatch(async () => {
+
+      const user = await userRepository.findOne({ id: userId });
+      if (!user) throw new AppError("User not found", 404);
+
+      const workerProfile = await userRepository.getWorkerProfile(userId);
+      if (!workerProfile) throw new AppError("Worker profile not found", 404);
+
+      const workerProfileId = workerProfile.id;
+
+      Repository.createTransaction([userRepository], async () => {
+        const { count } = await userRepository.deleteWorkerProfileGovernments(workerProfileId, governmentIds);
+        return count;
+      }, (error) => {
+        throw new AppError("Failed to insert worker profile governments", 400, error);
+      });
+    });
+  }
+
+  /**
+   * Insert specialization tree for worker
+   * @async
+   * @method insertWorkerProfileSpecializations
+   * @param {IDType} userId - User ID
+   * @param {{mainId: IDType, subIds: IDType[]}[]} specializationsTree - Tree of main and sub specializations
+   */
+  async insertWorkerProfileSpecializations(userId, specializationsTree) {
+    return tryCatch(async () => {
+
+      const user = await userRepository.findOne({ id: userId });
+      if (!user) throw new AppError("User not found", 404);
+
+      const workerProfile = await userRepository.getWorkerProfile(userId);
+      if (!workerProfile) throw new AppError("Worker profile not found", 404);
+
+      const workerProfileId = workerProfile.id;
+
+      Repository.createTransaction([userRepository], async () => {
+        await userRepository.addWorkerProfileSpecializations(workerProfileId, specializationsTree.map(({ mainId }) => mainId));
+        for (let { mainId, subIds } of specializationsTree) {
+          await userRepository.addWorkerProfileSubSpecializations(workerProfileId, mainId, subIds);
+        }
+      }, (error) => {
+        throw new AppError("Failed to insert worker profile specializations", 400, error);
+      });
+    });
+  }
+
+  /**
+   * Delete main specializations
+   * @async
+   * @method deleteWorkerProfileMainSpecializations
+   * @param {IDType} userId - User ID
+   * @param {IDType[]} mainSpecializationIds - IDs of main specializations to be deleted
+   * @returns {Promise<Number>} Number of deleted main specializations
+   */
+  async deleteWorkerProfileMainSpecializations(userId, mainSpecializationIds) {
+    return tryCatch(async () => {
+
+      const user = await userRepository.findOne({ id: userId });
+      if (!user) throw new AppError("User not found", 404);
+
+      const workerProfile = await userRepository.getWorkerProfile(userId);
+      if (!workerProfile) throw new AppError("Worker profile not found", 404);
+
+      const workerProfileId = workerProfile.id;
+
+      const { count } = await userRepository.deleteWorkerProfileSpecializations(workerProfileId, mainSpecializationIds);
+      return count;
+    });
+  }
+
+  /**
+   * Delete sub specializations
+   * @async
+   * @method deleteWorkerProfileSubSpecializations
+   * @param {IDType} userId - User ID
+   * @param {{mainId: IDType, subIds: IDType[]}[]} specializationsTree - Tree of main and sub specializations
+   * @returns {Promise<Number>} Number of deleted sub specializations
+   */
+  async deleteWorkerProfileSubSpecializations(userId, specializationsTree) {
+    return tryCatch(async () => {
+
+      const user = await userRepository.findOne({ id: userId });
+      if (!user) throw new AppError("User not found", 404);
+
+      const workerProfile = await userRepository.getWorkerProfile(userId);
+      if (!workerProfile) throw new AppError("Worker profile not found", 404);
+
+      const workerProfileId = workerProfile.id;
+
+      Repository.createTransaction([userRepository], async () => {
+        for (let { mainId, subIds } of specializationsTree) {
+          await userRepository.deleteWorkerProfileSubSpecializations(workerProfileId, mainId, subIds);
+        }
+      }, (error) => {
+        throw new AppError("Failed to delete worker profile sub specializations", 400, error);
+      });
+    });
+  }
+
+
+  /**
    * Get a client's profile for a user
    * @async
    * @method getClientProfile
    * @param {import("../repositories/Repository.js").IDType} userId - User ID
-   * @returns {Promise<Object>} Client profile
+   * @returns {Promise<import("../repositories/UserRepository.js").ClientProfile>} Client profile
    * @throws {AppError} If user not found
    */
   async getClientProfile(userId) {
@@ -207,11 +331,11 @@ export default class UserService extends Service {
       const user = await userRepository.findOne({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
-      const clientProfiles = await userRepository.getClientProfile(userId);
-      if (!clientProfiles || clientProfiles.length === 0)
+      const clientProfile = await userRepository.getClientProfile(userId);
+      if (!clientProfile)
         throw new AppError("Client profile not found", 404);
 
-      return clientProfiles[0];
+      return clientProfile;
     });
   }
 
@@ -221,7 +345,7 @@ export default class UserService extends Service {
    * @method updateClientProfile
    * @param {import("../repositories/Repository.js").IDType} userId - User ID
    * @param {Object} data - Client profile data to update
-   * @returns {Promise<Object>} Updated client profile
+   * @returns {Promise<import("../repositories/UserRepository.js").ClientProfile>} Updated client profile
    * @throws {AppError} If user not found or profile not found
    */
   async updateClientProfile(userId, data = {}) {
@@ -229,8 +353,8 @@ export default class UserService extends Service {
       const user = await userRepository.findOne({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
-      const clientProfiles = await userRepository.getClientProfile(userId);
-      if (!clientProfiles || clientProfiles.length === 0)
+      const clientProfile = await userRepository.getClientProfile(userId);
+      if (!clientProfile)
         throw new AppError("Client profile not found", 404);
 
       return await userRepository.updateClientProfile(userId, data);
@@ -242,7 +366,7 @@ export default class UserService extends Service {
    * @async
    * @method getWorkerProfile
    * @param {import("../repositories/Repository.js").IDType} userId - User ID
-   * @returns {Promise<Object>} Worker profile
+   * @returns {Promise<import("../repositories/UserRepository.js").WorkerProfile>} Worker profile
    * @throws {AppError} If user not found
    */
   async getWorkerProfile(userId) {
@@ -250,11 +374,11 @@ export default class UserService extends Service {
       const user = await userRepository.findOne({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
-      const workerProfiles = await userRepository.getWorkerProfile(userId);
-      if (!workerProfiles || workerProfiles.length === 0)
+      const workerProfile = await userRepository.getWorkerProfile(userId);
+      if (!workerProfile)
         throw new AppError("Worker profile not found", 404);
 
-      return workerProfiles[0];
+      return workerProfile;
     });
   }
 
@@ -282,7 +406,7 @@ export default class UserService extends Service {
    * @method updateProfileImage
    * @param {import("../repositories/Repository.js").IDType} userId - User ID
    * @param {string} profileImage - New profile image URL
-   * @returns {Promise<Object>} Updated user
+   * @returns {Promise<import("../repositories/UserRepository.js").User>} Updated user
    * @throws {AppError} If user not found
    */
   async updateProfileImage(userId, profileImage) {
@@ -295,8 +419,8 @@ export default class UserService extends Service {
       if (isWorker) {
         throw new AppError("Worker profile image cannot be updated directly. Contact an admin for approval.", 403);
       }
-
-      return await userRepository.update({ id: userId }, { profileImage });
+      await userRepository.update({ id: userId }, { profileImage });
+      return userRepository.findOne({ id: userId });
     });
   }
 
@@ -306,7 +430,7 @@ export default class UserService extends Service {
    * @async
    * @method deleteProfileImage
    * @param {import("../repositories/Repository.js").IDType} userId - User ID
-   * @returns {Promise<Object>} Updated user with null profileImage
+   * @returns {Promise<import("../repositories/UserRepository.js").User>} Updated user with null profileImage
    * @throws {AppError} If user not found or is a worker
    */
   async deleteProfileImage(userId) {
@@ -319,8 +443,8 @@ export default class UserService extends Service {
       if (isWorker) {
         throw new AppError("Workers cannot delete their profile image.", 403);
       }
-
-      return await userRepository.update({ id: userId }, { profileImage: null, });
+      await userRepository.update({ id: userId }, { profileImage: null, });
+      return userRepository.findOne({ id: userId });
     });
   }
 }

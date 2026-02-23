@@ -41,7 +41,9 @@ export default class SessionService extends Service {
   }) {
     // each mobile have only one active session
 
-    await sessionRepository.delete({ deviceFingerprint });
+    if ((await sessionRepository.delete({ deviceFingerprint })).count == 0) {
+      throw new AppError("No session found", 404);
+    }
 
     const unHashedRefreshToken = generateToken({ type: "refresh", userId, role });
     logger.info("Generated Refresh Token:", expiresAt);
@@ -89,10 +91,15 @@ export default class SessionService extends Service {
    * @returns {Promise<void>}
    */
   async revokeByUserIDAndFingerprint(userId, deviceFingerprint) {
-    await sessionRepository.delete({
-      userId,
-      deviceFingerprint,
-    });
+    try {
+      await sessionRepository.delete({
+        userId,
+        deviceFingerprint,
+      });
+    } catch (err) {
+      logger.error("Failed to revoke session:", err);
+      throw err;
+    }
   }
 
 
@@ -109,32 +116,32 @@ export default class SessionService extends Service {
    * @throws {AppError} If refresh token is invalid, revoked, or expired
    */
   async generateAccessToken({ refreshToken, deviceFingerprint, userId, role }) {
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(refreshToken)
-      .digest("hex");
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(refreshToken)
+    .digest("hex");
 
-    const session = await sessionRepository.findOne({
-      userId,
-      deviceFingerprint,
-      token: hashedToken,
-    });
+  const session = await sessionRepository.findOne({
+    userId,
+    deviceFingerprint,
+    token: hashedToken,
+  });
 
-    if (!session) {
-      throw new AppError("Invalid or Expired refresh token", 400);
-    }
-    if (session.isRevoked) {
-      throw new AppError("Refresh token has been revoked", 400,);
-    }
-    if (session.expiresAt.getTime() < Date.now()) {
-      await sessionRepository.delete({ id: session.id });
-      throw new AppError("Refresh token has expired", 400);
-    }
-
-
-    const accessToken = generateToken({ type: "access", userId, role: role });
-    return accessToken;
+  if (!session) {
+    throw new AppError("Invalid or Expired refresh token", 400);
   }
+  if (session.isRevoked) {
+    throw new AppError("Refresh token has been revoked", 400,);
+  }
+  if (session.expiresAt.getTime() < Date.now()) {
+    await sessionRepository.delete({ id: session.id });
+    throw new AppError("Refresh token has expired", 400);
+  }
+
+
+  const accessToken = generateToken({ type: "access", userId, role: role });
+  return accessToken;
+}
 
 
 }

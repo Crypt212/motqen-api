@@ -4,7 +4,7 @@ import UserService from './services/UserService.js';
 import OTPRepository from './repositories/OTPRepository.js';
 import SessionRepository from './repositories/SessionRepository.js';
 import UserRepository from './repositories/UserRepository.js';
-import RateLimitRepository from './repositories/rateLimitRepository.js';
+import RateLimitRepository from './repositories/RateLimitRepository.js';
 import RateLimitService from './services/RateLimitService.js';
 import AuthService from './services/AuthService.js';
 import GovernmentRepository from './repositories/GovernmentRepository.js';

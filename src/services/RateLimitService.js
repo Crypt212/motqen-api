@@ -3,11 +3,9 @@
  * @module services/RateLimitService
  */
 
-// RateLimitService.js
-
+import { $Enums } from "@prisma/client";
 import AppError from "../errors/AppError.js";
 import Service from "./Service.js";
-import environment from "../configs/environment.js";
 
 const MAX_VERIFY_ATTEMPTS = 5;
 
@@ -24,51 +22,44 @@ export default class RateLimitService extends Service {
     this.#repository = rateLimitRepository;
   }
 
-  /** Window and max for general API rate limit (from config or defaults) */
-  #apiWindowSeconds() {
-    const { windowMs, max } = environment.api.rateLimit ?? {};
-    return { windowSeconds: (windowMs ?? 15 * 60 * 1000) / 1000, max: max ?? 100 };
-  }
-
   /**
    * Check if OTP send request is allowed for the given phone and device
    * @async
    * @method checkSendOtp
    * @param {string} phone - User's phone number
+   * @param {$Enums.Method} method - OTP delivery method
    * @param {string} deviceId - Device identifier
    * @returns {Promise<void>}
    * @throws {AppError} If rate limit is exceeded
    */
-  async checkSendOtp(phone, deviceId) {
-    const [phoneRecord, deviceRecord] = await Promise.all([
-      this.#repository.getSendRecord(phone),
-      this.#repository.getDeviceRecord(deviceId),
+  async checkSendOtp(phone, method, deviceId) {
+    const [phoneCooldown, deviceCooldown] = await Promise.all([
+      this.#repository.isSendOnCooldown(phone, method),
+      this.#repository.isDeviceOnCooldown(deviceId),
     ]);
 
-    for (const record of [phoneRecord, deviceRecord]) {
-      if (record.blockedUntil) {
-        const elapsed     = (Date.now() - record.lastAttempt) / 1000;
-        const retryAfter  = Math.ceil(record.blockedUntil - elapsed);
-        if (retryAfter > 0) {
-          throw new AppError("Too many requests", 429, { retryAfter });
-        }
-      }
+    if (phoneCooldown || deviceCooldown) {
+      const retryAfter = await this.#repository.getSendCooldownTTL(phone, method, deviceId);
+      throw new AppError(
+        `Too many requests, retry after ${retryAfter} seconds`,
+        429,
+        { retryAfter }
+      );
     }
   }
-
 
   /**
    * Increment the send OTP attempt count
    * @async
    * @method incrementSend
    * @param {string} phone - User's phone number
+   * @param {string} method - OTP delivery method
    * @param {string} deviceId - Device identifier
-   * @returns {Promise<void>}
+   * @returns {Promise<{attempts: number, cooldown: number}>}
    */
-  async incrementSend(phone, deviceId) {
-    return this.#repository.incrementSend(phone, deviceId);
+  async incrementSend(phone, method, deviceId) {
+    return this.#repository.incrementSend(phone, method, deviceId);
   }
-
 
   /**
    * Check if OTP verification attempt is allowed
@@ -78,19 +69,16 @@ export default class RateLimitService extends Service {
    * @returns {Promise<void>}
    * @throws {AppError} If too many verification attempts
    */
-  async checkVerify(phone) {
-    const record   = await this.#repository.getVerifyRecord(phone);
-    const attempts = record.attempts ?? 0;
-
+  async checkVerify(phone, method) {
+    const attempts = await this.#repository.getVerifyAttempts(phone, method);
     if (attempts >= MAX_VERIFY_ATTEMPTS) {
-      const elapsed    = (Date.now() - record.lastAttempt) / 1000;
-      const retryAfter = 0;
-      if (retryAfter > 0) {
-        throw new AppError(`Too many verification attempts `, 429, { retryAfter:retryAfter / 60 });
-      }
+      throw new AppError(
+        "Too many verification attempts, please request a new OTP",
+        429,
+        { remainingAttempts: 0, requestNewOtp: true }
+      );
     }
   }
-
 
   /**
    * Increment the verification attempt count
@@ -99,16 +87,15 @@ export default class RateLimitService extends Service {
    * @param {string} phone - User's phone number
    * @returns {Promise<{attempts: number, remaining: number, blocked: boolean}>} Current rate limit status
    */
-  async incrementVerify(phone) {
-    const record = await this.#repository.incrementVerify(phone);
+  async incrementVerify(phone, method) {
+    const record = await this.#repository.incrementVerify(phone, method);
 
     return {
-      attempts:  record.attempts,
+      attempts: record.attempts,
       remaining: Math.max(0, MAX_VERIFY_ATTEMPTS - record.attempts),
-      blocked:   record.attempts >= MAX_VERIFY_ATTEMPTS,
+      blocked: record.attempts >= MAX_VERIFY_ATTEMPTS,
     };
   }
-
 
   /**
    * Reset rate limits for a phone and device
@@ -118,42 +105,7 @@ export default class RateLimitService extends Service {
    * @param {string} deviceId - Device identifier
    * @returns {Promise<void>}
    */
-  async reset(phone, deviceId) {
-    await this.#repository.reset(phone, deviceId);
-  }
-
-  /**
-   * Check general API rate limit by key (e.g. IP). Throws 429 if over limit.
-   * @param {string} key - Identifier (e.g. IP address)
-   * @param {Object} [options] - Optional custom rate limit config
-   * @param {number} [options.windowMs] - Window size in milliseconds (overrides config)
-   * @param {number} [options.max] - Max requests per window (overrides config)
-   */
-  async checkApi(key, options) {
-    const { windowSeconds, max } = options?.windowMs
-      ? { windowSeconds: options.windowMs / 1000, max: options.max ?? 100 }
-      : this.#apiWindowSeconds();
-    const record = await this.#repository.getApiRecord(key);
-    const now = Date.now();
-    const windowStart = record.windowStart ?? 0;
-    if (now - windowStart >= windowSeconds * 1000) return; // new window
-    const attempts = record.attempts ?? 0;
-    if (attempts >= max) {
-      const retryAfter = Math.ceil(windowSeconds - (now - windowStart) / 1000);
-      throw new AppError("Too many requests", 429, { retryAfter: Math.max(1, retryAfter) });
-    }
-  }
-
-  /**
-   * Increment general API usage for key. Call after checkApi when request is allowed.
-   * @param {string} key - Identifier (e.g. IP address)
-   * @param {Object} [options] - Optional custom rate limit config
-   * @param {number} [options.windowMs] - Window size in milliseconds (overrides config)
-   */
-  async incrementApi(key, options) {
-    const windowSeconds = options?.windowMs
-      ? options.windowMs / 1000
-      : this.#apiWindowSeconds().windowSeconds;
-    return this.#repository.incrementApi(key, windowSeconds);
+  async reset(phone, method, deviceId) {
+    await this.#repository.resetAfterSuccess(phone, method, deviceId);
   }
 }

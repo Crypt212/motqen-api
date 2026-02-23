@@ -30,6 +30,7 @@ export default (err, req, res , next) => {
     return res.status(err.statusCode).json({
       status: err.status,
       message: err.message,
+      error: err.errors || {},
     });
   }
 
@@ -37,5 +38,6 @@ export default (err, req, res , next) => {
   return res.status(500).json({
     status: 'error',
     message: 'Something went wrong',
+
   });
 };

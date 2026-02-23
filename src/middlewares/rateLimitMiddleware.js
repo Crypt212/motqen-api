@@ -7,6 +7,11 @@ import rateLimit from "express-rate-limit";
 import { rateLimitService } from "../state.js";
 import AppError from "../errors/AppError.js";
 import environment from "../configs/environment.js";
+import { asyncHandler } from "../types/asyncHandler.js";
+
+/** @typedef {import("../types/asyncHandler.js").UserPayload} UserPayload */
+/** @template T @typedef {import("../types/asyncHandler.js").RequestHandler<T>} RequestHandler<T> */
+
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -19,38 +24,43 @@ const getDeviceId = (req) =>
 /**
  * Middleware: check OTP send rate limit (phone + device).
  * Controller must call rateLimitService.incrementSend() after sending.
+ * @type {RequestHandler<{}>}
  */
-export const checkSendOtpLimit = async (req, res, next) => {
+export const checkSendOtpLimit = asyncHandler(async (req, res, next) => {
   try {
+
     const phone    = req.body.phoneNumber || req.body.phone;
+    const method   = req.body.method;
     const deviceId = getDeviceId(req);
 
     if (!phone)    return next(new AppError("Phone number is required", 400));
     if (!deviceId) return next(new AppError("X-Device-Fingerprint header is required", 400));
 
-    await rateLimitService.checkSendOtp(phone, deviceId);
+    await rateLimitService.checkSendOtp(phone, method, deviceId);
     next();
   } catch (error) {
     next(error);
   }
-};
+});
 
 /**
  * Middleware: check OTP verify attempt limit (per phone).
  * Controller must call rateLimitService.incrementVerify() on wrong attempt.
+ * @type {RequestHandler<{}>}
  */
-export const checkVerifyLimit = async (req, res, next) => {
+export const checkVerifyLimit = asyncHandler(async (req, res, next) => {
   try {
-    const phone = req.body.phoneNumber || req.body.phone;
+    const phone  = req.body.phoneNumber || req.body.phone;
+    const method = req.body.method;
 
     if (!phone) return next(new AppError("Phone number is required", 400));
 
-    await rateLimitService.checkVerify(phone);
+    await rateLimitService.checkVerify(phone, method);
     next();
   } catch (error) {
     next(error);
   }
-};
+});
 
 // ─── IP Rate Limiter (express-rate-limit) ────────────────────────────────────
 

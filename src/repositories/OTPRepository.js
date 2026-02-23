@@ -1,101 +1,35 @@
-import { $Enums } from '@prisma/client';
-import prisma from '../libs/database.js';
-import { Repository } from './Repository.js';
+import redisClient from '../libs/redis.js';
 
-/**
- * @fileoverview OTP Repository - Handle database operations for OTPs
- * @module repositories/OTPRepository
- * @extends {Repository}
- */
+export default class OtpRepository {
+  #client;
+  #keys;
 
-/** @typedef {import('@prisma/client').Prisma.BatchPayload} BatchPayload */
-/** @typedef {import("./Repository.js").IDType} IDType */
-
-/** @typedef {{ phoneNumber: String, hashedOTP: String, updatedAt: Date, createdAt: Date, method: $Enums.Method }} OTPData */
-/** @typedef {OTPData & {id: IDType}} OTP */
-/** @typedef {import("./Repository.js").FilterArgs<OTP>} OTPFilter */
-
-/**
- * OTP Repository - Handles all database operations for OTPs
- * @class
- * @extends Repository
- */
-export default class OTPRepository extends Repository {
-
-  /**
-   * @async
-   * @method
-   * @param {OTPFilter} where
-   * @returns {Promise<boolean>}
-   */
-  async exists(where) {
-    return (await prisma.oTP.count({ where })) > 0;
+  constructor() {
+    this.#client = redisClient;
+    this.#keys = {
+      otp: (phone, method) => `otp:${phone}:${method}`,
+    };
   }
 
+  async setOtp(phone, method, hashedOtp, ttlSeconds) {
 
-  /**
-   * @async
-   * @method
-   * @param {OTPFilter} where
-   * @returns {Promise<OTP|null>}
-   */
-  async findOne(where) {
-    return await prisma.oTP.findFirst({ where });
-  };
+    await this.#client.set(
+      this.#keys.otp(phone, method),
+      hashedOtp,
+      { EX: ttlSeconds }
+    );
+  }
 
-  /**
-   * @async
-   * @method
-   * @param {OTPFilter} where
-   * @returns {Promise<OTP[]>}
-   */
-  async findMany(where) {
-    return await prisma.oTP.findMany({ where });
-  };
+  async getOtp(phone, method) {
+    return await this.#client.get(this.#keys.otp(phone, method));
+  }
 
-  /**
-   * @async
-   * @method
-   * @param {OTPData} data
-   * @returns {Promise<OTP>}
-   */
-  async create(data) {
-    return await prisma.oTP.create({ data });
-  };
+  async otpExists(phone, method) {
+    const exists = await this.#client.exists(this.#keys.otp(phone, method));
+    return exists === 1;
+  }
 
-  /**
-   * @async
-   * @method
-   * @param {OTPData[]} data
-   * @returns {Promise<BatchPayload>}
-   */
-  async createMany(data) {
-    return await prisma.oTP.createMany({ data });
-  };
-
-  /**
-   * @async
-   * @method
-   * @param {OTPFilter} filter
-   * @param {OTPData} data
-   * @returns {Promise<BatchPayload>}
-   */
-  async update(filter, data) {
-    return await prisma.oTP.updateMany({
-      where: filter,
-      data,
-    });
-  };
-
-  /**
-   * @async
-   * @method
-   * @param {OTPFilter} filter
-   * @returns {Promise<BatchPayload>}
-   */
-  async delete(filter) {
-    return await prisma.oTP.deleteMany({
-      where: filter,
-    });
-  };
+  async deleteOtp(phone, method) {
+    await this.#client.del(this.#keys.otp(phone, method));
+  }
 }
