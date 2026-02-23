@@ -64,6 +64,7 @@ const cloudinary = {
     api_secret: process.env.CLOUDINARY_API_SECRET,
 }
 
+
 const whatsapp = {
   apiKey: process.env.WHATSAPP_API_KEY,
 };

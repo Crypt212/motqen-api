@@ -41,9 +41,8 @@ export default class SessionService extends Service {
   }) {
     // each mobile have only one active session
 
-    if ((await sessionRepository.delete({ deviceFingerprint })).count == 0) {
-      throw new AppError("No session found", 404);
-    }
+ await sessionRepository.delete({ deviceFingerprint });
+      
 
     const unHashedRefreshToken = generateToken({ type: "refresh", userId, role });
     logger.info("Generated Refresh Token:", expiresAt);

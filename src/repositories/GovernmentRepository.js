@@ -44,7 +44,7 @@ export default class GovernmentRepository extends Repository {
    * @async
    * @method
    * @param {GovernmentFilter} where
-   * @returns {Promise<Government|null>}
+   * @returns {Promise<Government |null>}
    */
   async findOne(where) {
     return await this.prismaClient.government.findFirst({ where });
@@ -114,8 +114,8 @@ export default class GovernmentRepository extends Repository {
    * @param {CityFilter} filter
    * @returns {Promise<boolean>}
    */
-  async existsCity(filter) {
-    return (await this.prismaClient.city.count({ where: filter })) > 0;
+  async existsCity(filter ) {
+    return (await this.prismaClient.city.count({ where: filter})) > 0;
   }
 
   /**

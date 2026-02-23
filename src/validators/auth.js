@@ -47,14 +47,13 @@ export const validateVerifyOTP = [
 
 // Validation rules for client registration
 export const validateRegisterClient = [
-  body("registerToken")
+  header("Authorization")
     .trim()
     .notEmpty()
     .withMessage("Register token is required")
-    .isJWT()
+    .matches(/^Bearer\s/)
     .withMessage("Invalid register token format"),
-  body("deviceFingerprint")
-    .optional({ nullable: true, checkFalsy: true })
+  header("x-device-fingerprint")
     .trim()
     .isLength({ min: 8, max: 255 })
     .withMessage("Device fingerprint must be between 8 and 255 characters"),
@@ -75,15 +74,13 @@ export const validateRegisterClient = [
     .matches(/^[a-zA-Z\u0600-\u06FF\s]+$/)
     .withMessage("Last name can only contain letters"),
   body("government")
-    .optional({ nullable: true, checkFalsy: true })
     .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage("Government must be between 2 and 100 characters"),
+    .isUUID("4")
+     .withMessage("government must be a valid UUID"),
   body("city")
-    .optional({ nullable: true, checkFalsy: true })
     .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage("City must be between 2 and 100 characters"),
+    .isUUID("4")
+     .withMessage("City must be a valid UUID"),
   body("bio")
     .optional({ nullable: true, checkFalsy: true })
     .trim()
@@ -93,14 +90,13 @@ export const validateRegisterClient = [
 
 // Validation rules for worker registration
 export const validateRegisterWorker = [
-  body("registerToken")
+  header("Authorization")
     .trim()
     .notEmpty()
     .withMessage("Register token is required")
-    .isJWT()
+    .matches(/^Bearer\s/)
     .withMessage("Invalid register token format"),
-  body("deviceFingerprint")
-    .optional({ nullable: true, checkFalsy: true })
+  header("x-device-fingerprint")
     .trim()
     .isLength({ min: 8, max: 255 })
     .withMessage("Device fingerprint must be between 8 and 255 characters"),
@@ -121,15 +117,13 @@ export const validateRegisterWorker = [
     .matches(/^[a-zA-Z\u0600-\u06FF\s]+$/)
     .withMessage("Last name can only contain letters"),
   body("government")
-    .optional({ nullable: true, checkFalsy: true })
     .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage("Government must be between 2 and 100 characters"),
+    .isUUID("4")
+    .withMessage("Government ID is required"),
   body("city")
-    .optional({ nullable: true, checkFalsy: true })
     .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage("City must be between 2 and 100 characters"),
+    .isUUID("4")
+    .withMessage("City ID is required"),
   body("bio")
     .optional({ nullable: true, checkFalsy: true })
     .trim()
@@ -173,7 +167,7 @@ export const validateRegisterWorker = [
       return true;
     }),
   body("workGovernmentIds")
-    .optional({ nullable: true, checkFalsy: true })
+.optional()
     .isArray()
     .withMessage("Work government names must be an array")
     .custom((value) => {
@@ -194,7 +188,7 @@ export const validateLogin = [
     .trim()
     .notEmpty()
     .withMessage("Login token is required")
-    .isJWT()
+    .matches(/^Bearer\s/)
     .withMessage("Invalid login token format"),
   body("deviceFingerprint")
     .optional({ nullable: true, checkFalsy: true })
@@ -209,7 +203,7 @@ export const validateGenerateAccessToken = [
     .trim()
     .notEmpty()
     .withMessage("Authorization header is required")
-    .matches(/^Bearer\s/.test)
+    .matches(/^Bearer\s/)
     .withMessage("Authorization header must be in format: Bearer <token>")
     .custom((value) => {
       const token = value.replace(/^Bearer\s/, "");

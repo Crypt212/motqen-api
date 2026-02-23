@@ -33,13 +33,14 @@ model User {
   bio          String?
   profileImage String?
   status       AccountStatus @default(SUSPENDED)
-  role          Role           @default(USER)
+  role         Role          @default(USER)
 
   city          City?          @relation(fields: [cityId], references: [id], onDelete: Cascade)
   government    Government?    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
   sessions      Session[]
   workerProfile WorkerProfile?
   clientProfile ClientProfile?
+  verification  Verification?
 
   @@map("users")
 }
@@ -66,6 +67,20 @@ model WorkerProfile {
   governments           GovernmentsForWorkers[]
 
   @@map("worker_profiles")
+}
+
+model Verification {
+  id               String             @id @default(uuid())
+  workerProfileId  String             @unique
+  personalImageUrl String
+  idDocumentUrl    String
+  status           VerificationStatus @default(PENDING)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  reason           String?
+  workerProfile    WorkerProfile      @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+
+  @@map("verifications")
 }
 
 model ChosenSpecialization {
@@ -139,12 +154,12 @@ model Government {
 }
 
 model City {
-  id   String @id @default(uuid())
-  name String
+  id           String  @id @default(uuid())
+  name         String
   governmentId String?
 
-  users        User[]
-  government   Government? @relation(fields: [governmentId], references: [id])
+  users      User[]
+  government Government? @relation(fields: [governmentId], references: [id])
 
   @@map("cities")
 }
@@ -163,4 +178,10 @@ enum Role {
 enum Method {
   SMS
   WhatsApp
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

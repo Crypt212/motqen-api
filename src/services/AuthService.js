@@ -4,6 +4,7 @@
  */
 
 import AppError from "../errors/AppError.js";
+import uploadToCloudinary from "../providers/cloudinaryProvider.js";
 import { governmentRepository, userRepository } from "../state.js";
 import Service, { tryCatch } from "./Service.js";
 
@@ -24,7 +25,7 @@ export default class AuthService extends Service {
    * @param {string} params.lastName - User's last name
    * @param {string} params.government - Government name
    * @param {string} params.city - City name
-   * @param {string} params.profileImage - Profile image URL
+   * @param {Buffer | null} params.profileImage - Profile image URL
    * @param {string} [params.bio] - User's biography
    * @returns {Promise<Object>} Created user object
    * @throws {AppError} If government or city not found
@@ -35,31 +36,25 @@ export default class AuthService extends Service {
     lastName,
     government,
     city,
-    profileImage,
+    profileImage = null,
     bio,
   }) {
     return tryCatch(async () => {
-
       /** @type {import('../types/role.js').Role} */
       const role = 'USER';
-      let governmentId, cityId;
+  
 
-      {
-        if (!government || !city)
-          throw new AppError("Government and city are required", 400);
-
-        const governmentEntity = await governmentRepository.findOne({ name: government });
-        if (!governmentEntity)
-          throw new AppError("Government not found", 400);
-        governmentId = governmentEntity.id;
-
-        const cities = await governmentRepository.findCities({ governmentId, name: city });
-        if (cities.length === 0)
-          throw new AppError("City not found", 400);
-        cityId = cities[0].id;
+      const cityEntity = await governmentRepository.existsCity({id:city , governmentId:government});
+      if(!cityEntity){
+        throw new AppError("Government or City not found", 400);
       }
+      if(profileImage){
+        // it will be user uuid instead of phoneNumber
+        const {url} =await uploadToCloudinary(profileImage ,`${phoneNumber}/profile_image`,"profileMain");
+        profileImage = url
+      }
+      const user = await userRepository.create({ phoneNumber, profileImage , role, firstName, lastName, governmentId:government, cityId:city, bio, status: "ACTIVE" });
 
-      const user = await userRepository.create({ phoneNumber, profileImage, role, firstName, lastName, governmentId, cityId, bio, status: "ACTIVE" });
       return user;
 
     });

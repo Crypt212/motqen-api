@@ -52,6 +52,7 @@ export const verifyAndDecodeToken = (token, expectedType) => {
   const tokenConfig = environment.jwt[expectedType];
 
   try {
+
     const decoded = jwt.verify(token, tokenConfig.secret);
     return /** @type {import('../types/tokens.js').TokenTypeMap[T]} */ (decoded);
   } catch (error) {

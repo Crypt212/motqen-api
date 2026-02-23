@@ -33,12 +33,13 @@ import {
   validateGenerateAccessToken,
   validateLogout,
 } from '../validators/auth.js';
+import { authenticate } from '../middlewares/authMiddleware.js';
 
 const authRouter = Router();
 
 authRouter.post(
   '/otp/request',
-  sensitiveIpRateLimiter,
+ // sensitiveIpRateLimiter,
   ...validateRequestOTP,
   // checkSendOtpLimit,
   validateRequest,
@@ -47,7 +48,7 @@ authRouter.post(
 
 authRouter.post(
   '/otp/verify',
-  sensitiveIpRateLimiter,
+//sensitiveIpRateLimiter,
   ...validateVerifyOTP,
   // checkVerifyLimit,
   validateRequest,
@@ -56,8 +57,8 @@ authRouter.post(
 
 authRouter.post(
   '/register-client',
-  sensitiveIpRateLimiter,
-  cloudinaryConfig,
+ // sensitiveIpRateLimiter,
+  authenticate("register"),
   upload.single("personal_image"),
   ...validateRegisterClient,
   validateRequest,
@@ -66,8 +67,8 @@ authRouter.post(
 
 authRouter.post(
   '/register-worker',
-  sensitiveIpRateLimiter,
-  cloudinaryConfig,
+//  sensitiveIpRateLimiter,
+  authenticate("register"),
   upload.fields([
     { name: "personal_image", maxCount: 1 },
     { name: "id_image", maxCount: 1 },

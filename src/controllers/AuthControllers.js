@@ -14,11 +14,8 @@ import {
 } from '../state.js';
 
 import { generateToken, verifyAndDecodeToken } from '../utils/tokens.js';
-import {
-  asyncHandler,
-} from '../types/asyncHandler.js';
-import { dataUri } from '../configs/multer.js';
-import { uploader } from '../configs/cloudinary.js';
+import { asyncHandler } from '../types/asyncHandler.js';
+
 import { getHeaderValue } from '../utils/HTTTHeaders.js';
 
 /** @typedef {import("../types/asyncHandler.js").UserPayload} UserPayload */
@@ -32,13 +29,14 @@ import { getHeaderValue } from '../utils/HTTTHeaders.js';
  */
 export const requestOTP = asyncHandler(async (req, res) => {
   const { method, phoneNumber } = req.body;
-  const deviceId =
-    getHeaderValue(req.headers['x-device-fingerprint'])?.trim() ||
-    getHeaderValue(req.headers['x-device-id'])?.trim(); // requestOTP
-
+  const deviceId = getHeaderValue(req.headers['x-device-fingerprint']).trim();
 
   await otpService.requestOTP(phoneNumber, method);
-  const { cooldown } = await rateLimitService.incrementSend(phoneNumber, method, deviceId);
+  const { cooldown } = await rateLimitService.incrementSend(
+    phoneNumber,
+    method,
+    deviceId
+  );
 
   new SuccessResponse(
     'OTP sent successfully',
@@ -54,14 +52,15 @@ export const requestOTP = asyncHandler(async (req, res) => {
  */
 export const verifyOTP = asyncHandler(async (req, res) => {
   const { phoneNumber, otp, method } = req.body;
-  const deviceId =
-    getHeaderValue(req.headers['x-device-fingerprint'])?.trim() ||
-    getHeaderValue(req.headers['x-device-id'])?.trim();
+  const deviceId = getHeaderValue(req.headers['x-device-fingerprint']).trim();
 
   const result = await otpService.verifyOTP(phoneNumber, method, otp);
 
   if (!result.ok) {
-    const limitStatus = await rateLimitService.incrementVerify(phoneNumber, method);
+    const limitStatus = await rateLimitService.incrementVerify(
+      phoneNumber,
+      method
+    );
     throw new AppError(result.message, 400, {
       remainingAttempts: limitStatus.remaining,
       requestNewOtp: limitStatus.blocked,
@@ -98,9 +97,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
  * @description Registers a new client user with basic profile information
  */
 export const registerClient = asyncHandler(async (req, res) => {
-  const { registerToken , deviceFingerprint, firstName, lastName, government, city, bio } = req.body;
+  const deviceFingerprint = getHeaderValue(req.headers['x-device-fingerprint']);
+  const { firstName, lastName, government, city, bio } = req.body;
+  const phoneNumber = req.user.phoneNumber;
   const image = req.file;
-  const { phoneNumber } = verifyAndDecodeToken(registerToken, 'register');
 
   const user = await authService.register({
     phoneNumber,
@@ -108,16 +108,13 @@ export const registerClient = asyncHandler(async (req, res) => {
     lastName,
     government,
     city,
-    profileImage: image.path,
+    profileImage: req.file?.buffer || null,
     bio,
   });
 
-  if (image && image.fieldname == "personal_image") {
-    const file = dataUri(req.file).content;
-    const uploadedImage = await uploader.upload(file);
-
-    userService.updateProfileImage(user.id, uploadedImage.secure_url);
-  }
+  const clientProfile = await userService.createClientProfile({
+    userId: user.id,
+  });
 
   const { unHashedRefreshToken } = await sessionService.createSession({
     userId: user.id,
@@ -133,13 +130,11 @@ export const registerClient = asyncHandler(async (req, res) => {
     refreshToken: unHashedRefreshToken,
   });
 
-
-  const clientProfile = await userService.createClientProfile({
-    userId: user.id,
-  });
-
-
-  new SuccessResponse('User created successfully', { user, clientProfile, accessToken, refreshToken: unHashedRefreshToken }, 200).send(res);
+  new SuccessResponse(
+    'User created successfully',
+    { user, clientProfile, accessToken, refreshToken: unHashedRefreshToken },
+    200
+  ).send(res);
 });
 
 /**
@@ -149,8 +144,6 @@ export const registerClient = asyncHandler(async (req, res) => {
  */
 export const registerWorker = asyncHandler(async (req, res) => {
   const {
-    registerToken,
-    deviceFingerprint,
     firstName,
     lastName,
     government,
@@ -160,14 +153,20 @@ export const registerWorker = asyncHandler(async (req, res) => {
     isInTeam,
     acceptsUrgentJobs,
     specializationsTree,
-    workGovernmentIds
+    workGovernmentIds,
   } = req.body;
-
-  const { phoneNumber } = verifyAndDecodeToken(registerToken, 'register');
+  const registerToken = getHeaderValue(req.headers['Authorization']);
+  const deviceFingerprint = getHeaderValue(req.headers['x-device-fingerprint']);
+  const { phoneNumber } = req.user;
   const images = req.files;
 
-  if (!images || !images["personal_image"] || !images["id_image"] || !images["personal_with_id_image"])
-    throw new AppError("Please upload all required images", 400);
+  if (
+    !images ||
+    !images['personal_image'] ||
+    !images['id_image'] ||
+    !images['personal_with_id_image']
+  )
+    throw new AppError('Please upload all required images', 400);
 
   const user = await authService.register({
     phoneNumber,
@@ -175,16 +174,20 @@ export const registerWorker = asyncHandler(async (req, res) => {
     lastName,
     government,
     city,
-    profileImage: images["personal_image"][0].path,
+    profileImage: images['personal_image'][0].buffer,
     bio,
   });
 
   const workerProfile = await userService.createWorkerProfile(user.id, {
-    experienceYears,
-    isInTeam,
-    acceptsUrgentJobs,
+    experienceYears: parseInt(experienceYears),
+    isInTeam: isInTeam == 'true' ? true : false,
+    acceptsUrgentJobs: acceptsUrgentJobs == 'true' ? true : false,
     specializationsTree,
-    governmentIds: workGovernmentIds
+    governmentIds: workGovernmentIds,
+    verificationImages: {
+      id: images['id_image'][0].buffer,
+      personal_with_id_image: images['personal_with_id_image'][0].buffer,
+    },
   });
 
   const { unHashedRefreshToken } = await sessionService.createSession({
@@ -201,16 +204,11 @@ export const registerWorker = asyncHandler(async (req, res) => {
     refreshToken: unHashedRefreshToken,
   });
 
-  for (let imageName of ["personal_image", "id_image", "personal_with_id_image"]) {
-    const file = dataUri(images[imageName]).content;
-    const uploadedImage =await uploader.upload(file);
-    if (imageName == "personal_image") {
-      userService.updateProfileImage(user.id, uploadedImage.secure_url);
-    }
-  }
-
-
-  new SuccessResponse('User created successfully', { user, workerProfile, accessToken }, 200).send(res);
+  new SuccessResponse(
+    'User created successfully',
+    { user, ...workerProfile, accessToken, refreshToken: unHashedRefreshToken },
+    200
+  ).send(res);
 });
 
 /**
@@ -256,7 +254,7 @@ export const logout = asyncHandler(async (req, res) => {
   const fingerprint = req.headers['x-device-fingerprint'];
 
   if (!fingerprint || typeof fingerprint !== 'string') {
-    throw new AppError("Device fingerprint is required", 400);
+    throw new AppError('Device fingerprint is required', 400);
   }
 
   await sessionService.revokeByUserIDAndFingerprint(req.user.id, fingerprint);
@@ -268,22 +266,20 @@ export const logout = asyncHandler(async (req, res) => {
  * @type {RequestHandler<UserPayload>}
  * @description Validates refresh token and generates a new access token
  */
-export const generateAccessToken = asyncHandler(
-  async (req, res) => {
-    const deviceFingerprint = String(req.headers['x-device-fingerprint']);
-    const refreshToken = req.headers['authorization']?.split(' ')[1];
+export const generateAccessToken = asyncHandler(async (req, res) => {
+  const deviceFingerprint = String(req.headers['x-device-fingerprint']);
+  const refreshToken = req.headers['authorization']?.split(' ')[1];
 
-    const { role, userId } = verifyAndDecodeToken(refreshToken, 'refresh');
-    const accessToken = await sessionService.generateAccessToken({
-      deviceFingerprint,
-      userId,
-      role,
-      refreshToken,
-    });
-    new SuccessResponse(
-      'Access token generated successfully',
-      { accessToken },
-      200
-    ).send(res);
-  }
-);
+  const { role, userId } = verifyAndDecodeToken(refreshToken, 'refresh');
+  const accessToken = await sessionService.generateAccessToken({
+    deviceFingerprint,
+    userId,
+    role,
+    refreshToken,
+  });
+  new SuccessResponse(
+    'Access token generated successfully',
+    { accessToken },
+    200
+  ).send(res);
+});
