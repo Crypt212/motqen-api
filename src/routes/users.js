@@ -4,7 +4,7 @@
  */
 
 import { Router } from "express";
-import { updateUser, updateWorkerProfile, updateClientProfile, getUser, getProfileImage, updateProfileImage, deleteProfileImage, createWorkerProfile, createClientProfile, getClientProfile, getWorkerProfile } from "../controllers/UserControllers.js";
+import { updateUser, updateWorkerProfile, updateClientProfile, getUser, getProfileImage, updateProfileImage, deleteProfileImage, createWorkerProfile, createClientProfile, getClientProfile, getWorkerProfile } from "../controllers/DashboardController.js";
 import { authorizeWorker, unAuthorizeWorker } from "../middlewares/workerMiddleware.js";
 import { authorizeClient, unAuthorizeClient } from "../middlewares/clientMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";

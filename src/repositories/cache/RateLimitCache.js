@@ -1,6 +1,6 @@
-import redisClient from '../libs/redis.js';
+import redisClient from '../../libs/redis.js';
 
-export default class RateLimitRepository {
+export default class RateLimitCache {
   #client;
   #keys;
   #incrementSendScript;

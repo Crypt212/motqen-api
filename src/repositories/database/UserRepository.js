@@ -4,113 +4,46 @@
  */
 
 import { Repository } from './Repository.js';
-import prisma from '../libs/database.js';
+import prisma from '../../libs/database.js';
 import { $Enums } from '@prisma/client';
 
 /** @typedef {import("./Repository.js").IDType} IDType */
 /** @typedef {import('@prisma/client').Prisma.BatchPayload} BatchPayload */
-/** @typedef {import('../types/role.js').Role} Role */
+/** @typedef {import('../../types/role.js').Role} Role */
 /** @typedef {$Enums.AccountStatus} AccountStatus */
 
-/** @typedef {{ role: Role, phoneNumber: string, firstName: string, middleName: string, lastName: string, governmentId?: IDType, cityId?: IDType, profileImage?: String, status: AccountStatus }} UserData */
+/** @typedef {{ role: Role, phoneNumber: string, firstName: string, middleName: string, lastName: string, governmentId?: IDType, city?: string, profileImage?: String, status: AccountStatus }} UserData */
 /** @typedef {Partial<UserData>} OptionalUserData */
 /** @typedef { UserData & { id: IDType }} User */
 /** @typedef {import("./Repository.js").FilterArgs<User>} UserFilter */
+/** @typedef {Partial<User>} OptionalUser */
 
 /** @typedef {{ experienceYears: number, isInTeam: Boolean, acceptsUrgentJobs: Boolean, }} WorkerProfileData */
 /** @typedef {Partial<WorkerProfileData>} OptionalWorkerProfileData */
 /** @typedef { WorkerProfileData & { id: IDType, userId: IDType }} WorkerProfile */
-/** @typedef {import("./Repository.js").FilterArgs<User>} WorkerProfileFilter */
+/** @typedef {import("./Repository.js").FilterArgs<WorkerProfile>} WorkerProfileFilter */
+/** @typedef {Partial<WorkerProfile>} OptionalWorkerProfile */
 
 /** @typedef {{ address: string, addressNotes?: string }} ClientProfileData */
 /** @typedef {Partial<ClientProfileData>} OptionalClientProfileData */
 /** @typedef { ClientProfileData & { id: IDType, userId: IDType }} ClientProfile */
-/** @typedef {import("./Repository.js").FilterArgs<User>} ClientProfileFilter */
+/** @typedef {import("./Repository.js").FilterArgs<ClientProfile>} ClientProfileFilter */
+/** @typedef {Partial<ClientProfile>} OptionalClientProfile */
+
+/** @typedef {{ status: $Enums.VerificationStatus, personalImageUrl: string, idDocumentUrl: string, createdAt?: Date, updatedAt?: Date, reason?: string }} VerificationData */
+/** @typedef {Partial<VerificationData>} OptionalVerificationData */
+/** @typedef { VerificationData & { id: IDType, workerProfileId: IDType }} Verification */
+/** @typedef {import("./Repository.js").FilterArgs<Verification>} VerificationFilter */
+/** @typedef {Partial<Verification>} OptionalVerification */
 
 /**
  * User Repository - Handles all database operations for users
  * @class
- * @extends Repository
+ * @extends Repository<UserData, OptionalUserData, UserFilter, UserFilter, OptionalUser>
  */
 export default class UserRepository extends Repository {
   constructor() {
-    super(prisma);
-  }
-
-  /**
-   * @async
-   * @method
-   * @param {UserFilter} where
-   * @returns {Promise<boolean>}
-   */
-  async exists(where) {
-    return (await this.prismaClient.user.count({ where })) > 0;
-  }
-
-  /**
-   * @async
-   * @method
-   * @param {UserFilter} where
-   * @returns {Promise<User|null>}
-   */
-  async findOne(where) {
-    return await this.prismaClient.user.findFirst({ where });
-  }
-
-  /**
-   * @async
-   * @method
-   * @param {UserFilter} where
-   * @returns {Promise<User[]>}
-   */
-  async findMany(where) {
-    return await this.prismaClient.user.findMany({ where });
-  }
-
-  /**
-   * @async
-   * @method
-   * @param {UserData} data
-   * @returns {Promise<User>}
-   */
-  async create(data) {
-    return await this.prismaClient.user.create({ data });
-  }
-
-  /**
-   * @async
-   * @method
-   * @param {UserData[]} data
-   * @returns {Promise<BatchPayload>}
-   */
-  async createMany(data) {
-    return await this.prismaClient.user.createMany({ data });
-  }
-
-  /**
-   * @async
-   * @method
-   * @param {UserFilter} filter
-   * @param {OptionalUserData} data
-   * @returns {Promise<BatchPayload>}
-   */
-  async update(filter, data) {
-    return await this.prismaClient.user.updateMany({
-      where: filter,
-      data,
-    });
-  }
-
-  /**
-   * @async
-   * @method
-   * @param {UserFilter} filter
-   * @returns {Promise<BatchPayload>}
-   */
-  async delete(filter) {
-    return await this.prismaClient.user.deleteMany({
-      where: filter,
-    });
+    super(prisma, "user");
   }
 
   // Handling WorkerProfile ---------------------------------------------------------------------
@@ -363,10 +296,6 @@ export default class UserRepository extends Repository {
    * @returns {Promise<ClientProfile>}
    */
   async createClientProfile(userId, data) {
-    const existingClientProfile =
-      await this.prismaClient.clientProfile.findFirst({ where: { userId } });
-    if (existingClientProfile) return existingClientProfile;
-
     return await this.prismaClient.clientProfile.create({
       data: {
         userId,
@@ -401,9 +330,18 @@ export default class UserRepository extends Repository {
     });
   }
 
-  async createVerification(data) {
+  /**
+   * @async
+   * @method
+   * @param {IDType} workerProfileId
+   * @param {VerificationData} data
+   * @returns {Promise<Verification>}
+   */
+  async createVerification(workerProfileId, data) {
     return await prisma.verification.create({
-      data,
+      data: {
+        ...data, workerProfileId
+      },
     });
   }
 }
