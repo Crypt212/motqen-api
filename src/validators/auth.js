@@ -296,7 +296,7 @@ export const validateRegisterWorker = [
       }
 
       // acceptsUrgentJobs validation
-      if ("accpetsUrgentJobs" in workerProfile) {
+      if (!("acceptsUrgentJobs" in workerProfile)) {
         errors.push('acceptsUrgentJobs is required');
       } else if (typeof workerProfile.acceptsUrgentJobs !== 'boolean') {
         errors.push('acceptsUrgentJobs must be a boolean');
@@ -331,12 +331,7 @@ export const validateRegisterWorker = [
 
 // Validation rules for login
 export const validateLogin = [
-  body("loginToken")
-    .trim()
-    .notEmpty()
-    .withMessage("Login token is required")
-    .matches(/^Bearer\s/)
-    .withMessage("Invalid login token format"),
+  validateToken("login"),
   body("deviceFingerprint")
     .optional({ nullable: true, checkFalsy: true })
     .trim()
@@ -346,19 +341,7 @@ export const validateLogin = [
 
 // Validation rules for generating access token
 export const validateGenerateAccessToken = [
-  header("authorization")
-    .trim()
-    .notEmpty()
-    .withMessage("Authorization header is required")
-    .matches(/^Bearer\s/)
-    .withMessage("Authorization header must be in format: Bearer <token>")
-    .custom((value) => {
-      const token = value.replace(/^Bearer\s/, "");
-      if (!token || token.split(".").length !== 3) {
-        throw new Error("Invalid refresh token format");
-      }
-      return true;
-    }),
+  validateToken("refresh"),
   header("x-device-fingerprint")
     .trim()
     .notEmpty()

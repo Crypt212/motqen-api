@@ -30,12 +30,11 @@ model User {
   middleName   String
   lastName     String
   governmentId String?
-  cityId       String?
+  city         String?
   profileImage String?
   status       AccountStatus @default(SUSPENDED)
   role         Role          @default(USER)
 
-  city          City?          @relation(fields: [cityId], references: [id], onDelete: Cascade)
   government    Government?    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
   sessions      Session[]
   workerProfile WorkerProfile?
@@ -148,22 +147,10 @@ model Government {
   id   String @id @default(uuid())
   name String
 
-  cities  City[]
   workers GovernmentsForWorkers[]
   users   User[]
 
   @@map("governments")
-}
-
-model City {
-  id           String  @id @default(uuid())
-  name         String
-  governmentId String?
-
-  users      User[]
-  government Government? @relation(fields: [governmentId], references: [id])
-
-  @@map("cities")
 }
 
 enum AccountStatus {
