@@ -20,6 +20,7 @@ import { getHeaderValue } from '../utils/HTTTHeaders.js';
 
 /** @typedef {import("../types/asyncHandler.js").UserPayload} UserPayload */
 /** @typedef {import("../types/asyncHandler.js").MulterPayload} MulterPayload */
+/** @typedef {import("../types/asyncHandler.js").PhoneNumberPayload} PhoneNumberPayload */
 /** @template T @typedef {import("../types/asyncHandler.js").RequestHandler<T>} RequestHandler<T> */
 
 /**
@@ -74,7 +75,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
   let tokenType = '';
   if (user) {
     /** @type import("../types/tokens.js").LoginTokenPayload */
-    const payload = { type: 'login', phoneNumber, role: user.role };
+    const payload = { type: 'login', phoneNumber };
     tokenType = 'login';
     token = generateToken(payload);
   } else {
@@ -93,27 +94,38 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
 /**
  * Register a new client user
- * @type {RequestHandler<MulterPayload>}
+ * @type {RequestHandler<MulterPayload & PhoneNumberPayload>}
  * @description Registers a new client user with basic profile information
  */
 export const registerClient = asyncHandler(async (req, res) => {
   const deviceFingerprint = getHeaderValue(req.headers['x-device-fingerprint']);
-  const { firstName, lastName, government, city, bio } = req.body;
-  const phoneNumber = req.user.phoneNumber;
+  const { userData: {
+    firstName,
+    middleName,
+    lastName,
+    governmentId,
+    city,
+  }, clientProfile: {
+    address,
+    addressNotes,
+  }} = req.body;
+  const phoneNumber = req.phoneNumber;
   const image = req.file;
 
   const user = await authService.register({
     phoneNumber,
     firstName,
+    middleName,
     lastName,
-    government,
+    governmentId,
     city,
-    profileImage: req.file?.buffer || null,
-    bio,
+    profileImage: image?.path ?? undefined,
   });
 
   const clientProfile = await userService.createClientProfile({
     userId: user.id,
+    address,
+    addressNotes
   });
 
   const { unHashedRefreshToken } = await sessionService.createSession({
@@ -139,25 +151,29 @@ export const registerClient = asyncHandler(async (req, res) => {
 
 /**
  * Register a new worker user
- * @type {RequestHandler<MulterPayload>}
+ * @type {RequestHandler<MulterPayload & PhoneNumberPayload>}
  * @description Registers a new worker user with professional profile information
  */
 export const registerWorker = asyncHandler(async (req, res) => {
   const {
-    firstName,
-    lastName,
-    government,
-    city,
-    bio,
-    experienceYears,
-    isInTeam,
-    acceptsUrgentJobs,
-    specializationsTree,
-    workGovernmentIds,
+    userData: {
+      firstName,
+      middleName,
+      lastName,
+      governmentId,
+      city
+    },
+    workerProfile: {
+      experienceYears,
+      isInTeam,
+      acceptsUrgentJobs,
+      specializationsTree,
+      workGovernmentIds,
+    }
   } = req.body;
-  const registerToken = getHeaderValue(req.headers['Authorization']);
+
   const deviceFingerprint = getHeaderValue(req.headers['x-device-fingerprint']);
-  const { phoneNumber } = req.user;
+  const { phoneNumber } = req;
   const images = req.files;
 
   if (
@@ -171,11 +187,11 @@ export const registerWorker = asyncHandler(async (req, res) => {
   const user = await authService.register({
     phoneNumber,
     firstName,
+    middleName,
     lastName,
-    government,
+    governmentId,
     city,
-    profileImage: images['personal_image'][0].buffer,
-    bio,
+    profileImage: images['personal_image'][0].path,
   });
 
   const workerProfile = await userService.createWorkerProfile(user.id, {

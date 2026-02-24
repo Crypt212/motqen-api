@@ -33,7 +33,7 @@ import {
   validateGenerateAccessToken,
   validateLogout,
 } from '../validators/auth.js';
-import { authenticate } from '../middlewares/authMiddleware.js';
+import { authenticate, authenticateLogin, authenticateRegister } from '../middlewares/authMiddleware.js';
 
 const authRouter = Router();
 
@@ -58,7 +58,7 @@ authRouter.post(
 authRouter.post(
   '/register-client',
  // sensitiveIpRateLimiter,
-  authenticate("register"),
+  authenticateRegister,
   upload.single("personal_image"),
   ...validateRegisterClient,
   validateRequest,
@@ -68,7 +68,7 @@ authRouter.post(
 authRouter.post(
   '/register-worker',
 //  sensitiveIpRateLimiter,
-  authenticate("register"),
+  authenticateRegister,
   upload.fields([
     { name: "personal_image", maxCount: 1 },
     { name: "id_image", maxCount: 1 },
@@ -81,7 +81,8 @@ authRouter.post(
 
 authRouter.post(
   '/login',
-  sensitiveIpRateLimiter,
+  // sensitiveIpRateLimiter,
+  authenticateLogin,
   ...validateLogin,
   validateRequest,
   login
@@ -89,16 +90,17 @@ authRouter.post(
 
 authRouter.post(
   '/logout',
+  authenticate,
   ...validateLogout,
   validateRequest,
   logout
 );
 
-authRouter.post(
+authRouter.get(
   '/access',
+  authenticate,
   ...validateGenerateAccessToken,
   validateRequest,
   generateAccessToken
 );
-
 export default authRouter;

@@ -90,6 +90,7 @@ export default class UserService extends Service {
    * @param {boolean} data.acceptsUrgentJobs - Whether worker accepts urgent jobs
    * @param {{mainId: IDType, subIds: IDType[]}[]} data.specializationsTree - List of specialization names
    * @param {IDType[]} data.governmentIds - List of government names where worker operates
+   * @param {{id: string, personal_with_id_image: string }} data.verificationImages - List of government names where worker operates
    * @returns {Promise<import("../repositories/UserRepository.js").WorkerProfile>} Created worker profile
    * @throws {AppError} If user not found or invalid data
    */
@@ -124,19 +125,19 @@ export default class UserService extends Service {
 
         return workerProfile;
       }, (reason) => {
-    
+
         throw new AppError("Failed to create worker profile", 500, reason);
       });
         const nationalID = (await uploadToCloudinary(verificationImages.id , `${userId}/verification_info`,"nationalID")).url
         const selfiWithID = (await uploadToCloudinary(verificationImages.personal_with_id_image , `${userId}/verification_info`,"selfiWithID")).url
-        
+
         const vData = await userRepository.createVerification({
-          userId,
+          workerProfileId: workerProfile.id,
           personalImageUrl:selfiWithID,
           idDocumentUrl:nationalID,
           status:"APPROVED"// untill dashboard emplement
         })
-        
+
       return {workerProfile ,vData };
     });
   }
@@ -147,18 +148,22 @@ export default class UserService extends Service {
    * @method createClientProfile
    * @param {Object} params - Client profile parameters
    * @param {import("../repositories/Repository.js").IDType} params.userId - User ID
+   * @param {String} params.address - Address of the client
+   * @param {String} params.addressNotes - Additional address information
    * @returns {Promise<import("../repositories/UserRepository.js").ClientProfile>} Created client profile
    * @throws {AppError} If user not found
    */
   async createClientProfile({
     userId,
+    address,
+    addressNotes
   }) {
     return tryCatch(async () => {
       const user = await userRepository.findOne({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
 
-      const clientProfile = await userRepository.createClientProfile(userId, {});
+      const clientProfile = await userRepository.createClientProfile(userId, {address, addressNotes});
       return clientProfile;
     });
   }
@@ -428,8 +433,8 @@ export default class UserService extends Service {
       if (!user) throw new AppError("User not found", 404);
 //-----------------------------> suspended to v2 <----------------------------
 //for client it is free to change anytime
-//for worker it will be an requset 
-//  1- upload 
+//for worker it will be an requset
+//  1- upload
 //  2 - create request
 //  3- pending untill approve from admin
 //maybe add an profile photo history to select from his old photos
