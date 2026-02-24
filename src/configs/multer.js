@@ -1,17 +1,23 @@
 import multer from "multer";
-import DatauriParser from "datauri/parser.js";
-import path from "path";
-
+import AppError from "../errors/AppError.js";
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
-const parser = new DatauriParser();
-
-/**
-* @description This function converts the buffer to data url
-* @param {import("../types/asyncHandler").MulterFile} file
-* @returns {DatauriParser} The data url from the string buffer
-*/
-export const dataUri = (file) => parser.format(path.extname(file.originalname).toString(), file.buffer);
-
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image/")) {
+    return cb(null, true);
+  }
+  cb(
+    new AppError(
+      `Not an image! Please upload an image.`,
+      400
+    ),
+    false
+  );
+};
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, 
+});
 
 export default upload;
+

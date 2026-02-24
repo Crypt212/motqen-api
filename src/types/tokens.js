@@ -8,7 +8,6 @@
  * @property {"refresh"} type
  * @property {string} userId
  * @property {import("./role").Role} role
- * @property {string} [refreshVersion] - Optional version for refresh tokens
  */
 
 /**
@@ -22,7 +21,6 @@
  * @typedef {Object} LoginTokenPayload
  * @property {"login"} type
  * @property {string} phoneNumber
- * @property {import("./role").Role} role
  */
 
 /**

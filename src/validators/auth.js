@@ -4,6 +4,7 @@
  */
 
 import { body, header } from "express-validator";
+import { validateImageFile, validateJSONField, isValidUUID, validateToken, validateDeviceFingerprint } from "./common.js";
 
 // Validation rules for OTP request
 export const validateRequestOTP = [
@@ -45,147 +46,287 @@ export const validateVerifyOTP = [
     .withMessage("Method must be either SMS or WhatsApp"),
 ];
 
-// Validation rules for client registration
 export const validateRegisterClient = [
-  body("registerToken")
-    .trim()
-    .notEmpty()
-    .withMessage("Register token is required")
-    .isJWT()
-    .withMessage("Invalid register token format"),
-  body("deviceFingerprint")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isLength({ min: 8, max: 255 })
-    .withMessage("Device fingerprint must be between 8 and 255 characters"),
-  body("firstName")
-    .trim()
-    .notEmpty()
-    .withMessage("First name is required")
-    .isLength({ min: 2, max: 50 })
-    .withMessage("First name must be between 2 and 50 characters")
-    .matches(/^[a-zA-Z\u0600-\u06FF\s]+$/)
-    .withMessage("First name can only contain letters"),
-  body("lastName")
-    .trim()
-    .notEmpty()
-    .withMessage("Last name is required")
-    .isLength({ min: 2, max: 50 })
-    .withMessage("Last name must be between 2 and 50 characters")
-    .matches(/^[a-zA-Z\u0600-\u06FF\s]+$/)
-    .withMessage("Last name can only contain letters"),
-  body("government")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage("Government must be between 2 and 100 characters"),
-  body("city")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage("City must be between 2 and 100 characters"),
-  body("bio")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("Bio cannot exceed 500 characters"),
+  validateToken("register"),
+  validateDeviceFingerprint(),
+
+  // Validate file (optional)
+  validateImageFile('personal_image', false),
+
+  // Validate userData JSON
+  validateJSONField('userData', true)
+    .custom((basicInfo) => {
+      const errors = [];
+
+      // firstName validation
+      if (!basicInfo.firstName) {
+        errors.push('firstName is required');
+      } else if (typeof basicInfo.firstName !== 'string') {
+        errors.push('firstName must be a string');
+      } else if (basicInfo.firstName.trim().length < 2) {
+        errors.push('firstName must be at least 2 characters long');
+      }
+
+      // middleName validation
+      if (!basicInfo.middleName) {
+        errors.push('middleName is required');
+      } else if (typeof basicInfo.middleName !== 'string') {
+        errors.push('middleName must be a string');
+      } else if (basicInfo.middleName.trim().length < 2) {
+        errors.push('middleName must be at least 2 characters long');
+      }
+
+      // lastName validation
+      if (!basicInfo.lastName) {
+        errors.push('lastName is required');
+      } else if (typeof basicInfo.lastName !== 'string') {
+        errors.push('lastName must be a string');
+      } else if (basicInfo.lastName.trim().length < 2) {
+        errors.push('lastName must be at least 2 characters long');
+      }
+
+      // governmentId validation (UUID)
+      if (!basicInfo.governmentId) {
+        errors.push('governmentId is required');
+      } else if (!isValidUUID(basicInfo.governmentId)) {
+        errors.push('governmentId must be a valid UUID');
+      }
+
+      // city validation
+      if (!basicInfo.city) {
+        errors.push('city is required');
+      } else if (typeof basicInfo.city !== 'string') {
+        errors.push('city must be a string');
+      } else if (basicInfo.city.trim().length < 2) {
+        errors.push('city must be at least 2 characters long');
+      }
+
+      if (errors.length > 0) {
+        throw new Error(errors.join(', '));
+      }
+
+      return true;
+    }),
+
+  // Validate clientProfile JSON
+  validateJSONField('clientProfile', true)
+    .custom((clientProfile) => {
+      const errors = [];
+
+      // address validation
+      if (!clientProfile.address) {
+        errors.push('address is required');
+      } else if (typeof clientProfile.address !== 'string') {
+        errors.push('address must be a string');
+      } else if (clientProfile.address.trim().length < 1) {
+        errors.push('address must be at least 5 characters long');
+      }
+
+      // addressNotes validation (optional)
+      if (clientProfile.addressNotes !== undefined &&
+          clientProfile.addressNotes !== null &&
+          typeof clientProfile.addressNotes !== 'string') {
+        errors.push('addressNotes must be a string');
+      }
+
+      // Check for extra fields in clientProfile
+      const allowedProfileFields = ['address', 'addressNotes'];
+      const receivedProfileFields = Object.keys(clientProfile);
+      const extraProfileFields = receivedProfileFields.filter(
+        field => !allowedProfileFields.includes(field)
+      );
+
+      if (extraProfileFields.length > 0) {
+        errors.push(`Unexpected fields in clientProfile: ${extraProfileFields.join(', ')}`);
+      }
+
+      if (errors.length > 0) {
+        throw new Error(errors.join(', '));
+      }
+
+      return true;
+    }),
+
+  // Validate that no extra top-level fields are sent
+  body().custom((value, { req }) => {
+    const allowedFields = [
+      'personal_image',
+      'userData',
+      'clientProfile'
+    ];
+
+    const receivedFields = Object.keys(req.body);
+    const extraFields = receivedFields.filter(field => !allowedFields.includes(field));
+
+    if (extraFields.length > 0) {
+      throw new Error(`Unexpected fields: ${extraFields.join(', ')}`);
+    }
+
+    return true;
+  })
 ];
 
-// Validation rules for worker registration
 export const validateRegisterWorker = [
-  body("registerToken")
-    .trim()
-    .notEmpty()
-    .withMessage("Register token is required")
-    .isJWT()
-    .withMessage("Invalid register token format"),
-  body("deviceFingerprint")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isLength({ min: 8, max: 255 })
-    .withMessage("Device fingerprint must be between 8 and 255 characters"),
-  body("firstName")
-    .trim()
-    .notEmpty()
-    .withMessage("First name is required")
-    .isLength({ min: 2, max: 50 })
-    .withMessage("First name must be between 2 and 50 characters")
-    .matches(/^[a-zA-Z\u0600-\u06FF\s]+$/)
-    .withMessage("First name can only contain letters"),
-  body("lastName")
-    .trim()
-    .notEmpty()
-    .withMessage("Last name is required")
-    .isLength({ min: 2, max: 50 })
-    .withMessage("Last name must be between 2 and 50 characters")
-    .matches(/^[a-zA-Z\u0600-\u06FF\s]+$/)
-    .withMessage("Last name can only contain letters"),
-  body("government")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage("Government must be between 2 and 100 characters"),
-  body("city")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage("City must be between 2 and 100 characters"),
-  body("bio")
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("Bio cannot exceed 500 characters"),
-  body("experienceYears")
-    .notEmpty()
-    .withMessage("Experience years is required")
-    .isInt({ min: 0, max: 50 })
-    .withMessage("Experience years must be between 0 and 50"),
-  body("isInTeam")
-    .notEmpty()
-    .withMessage("Team status is required")
-    .isBoolean()
-    .withMessage("isInTeam must be a boolean value"),
-  body("acceptsUrgentJobs")
-    .notEmpty()
-    .withMessage("Urgent jobs acceptance status is required")
-    .isBoolean()
-    .withMessage("acceptsUrgentJobs must be a boolean value"),
-  body("specializationsTree")
-    .optional({ nullable: true, checkFalsy: true })
-    .isArray()
-    .withMessage("specialization tree must be an array of { mainId: string, subIds: string[] }")
-    .custom((value) => {
-      let valid = true;
-      if (!value || value.length == 0) valid = false;
+  validateToken("register"),
+  validateDeviceFingerprint(),
 
-      for (const item of value) {
-        if (!item) { valid = false; break; }
-        if (!("mainId" in Object.keys(item)) || typeof item.mainId !== "string" || item.mainId.trim().length === 0) { valid = false; break; }
+  // Validate files
+  validateImageFile('personal_image', true),
+  validateImageFile('id_image', true),
+  validateImageFile('personal_with_id_image', true),
 
-        if (!("subIds" in Object.keys(item)) || !Array.isArray(item.subIds)) { valid = false; break; }
-        for (const subId of item.subIds) {
-          if (typeof subId !== "string" || subId.trim().length === 0) { valid = false; break; }
-        }
+  // Validate userData JSON
+  validateJSONField('userData', true)
+    .custom((basicInfo) => {
+      const errors = [];
+
+      // firstName validation
+      if (!basicInfo.firstName) {
+        errors.push('firstName is required');
+      } else if (typeof basicInfo.firstName !== 'string') {
+        errors.push('firstName must be a string');
+      } else if (basicInfo.firstName.trim().length < 2) {
+        errors.push('firstName must be at least 2 characters long');
       }
-      if (!valid) {
-        throw new Error("specialization tree must be an array of { mainId: string, subIds: string[] }");
+
+      // middleName validation
+      if (!basicInfo.middleName) {
+        errors.push('middleName is required');
+      } else if (typeof basicInfo.middleName !== 'string') {
+        errors.push('middleName must be a string');
+      } else if (basicInfo.middleName.trim().length < 2) {
+        errors.push('middleName must be at least 2 characters long');
       }
+
+      // lastName validation
+      if (!basicInfo.lastName) {
+        errors.push('lastName is required');
+      } else if (typeof basicInfo.lastName !== 'string') {
+        errors.push('lastName must be a string');
+      } else if (basicInfo.lastName.trim().length < 2) {
+        errors.push('lastName must be at least 2 characters long');
+      }
+
+      // governmentId validation (UUID)
+      if (!basicInfo.governmentId) {
+        errors.push('governmentId is required');
+      } else if (!isValidUUID(basicInfo.governmentId)) {
+        errors.push('governmentId must be a valid UUID');
+      }
+
+      // city validation
+      if (!basicInfo.city) {
+        errors.push('city is required');
+      } else if (typeof basicInfo.city !== 'string') {
+        errors.push('city must be a string');
+      } else if (basicInfo.city.trim().length < 2) {
+        errors.push('city must be at least 2 characters long');
+      }
+
+      if (errors.length > 0) {
+        throw new Error(errors.join(', '));
+      }
+
       return true;
     }),
-  body("workGovernmentIds")
-    .optional({ nullable: true, checkFalsy: true })
-    .isArray()
-    .withMessage("Work government names must be an array")
-    .custom((value) => {
-      if (value && value.length > 0) {
-        for (const item of value) {
-          if (typeof item !== "string" || item.trim().length === 0) {
-            throw new Error("Each government name must be a non-empty string");
+
+  // Validate workerProfile JSON
+  validateJSONField('workerProfile', true)
+    .custom((workerProfile) => {
+      const errors = [];
+
+      // specializationsTree validation
+      if (!workerProfile.specializationsTree) {
+        errors.push('specializationsTree is required');
+      } else if (!Array.isArray(workerProfile.specializationsTree)) {
+        errors.push('specializationsTree must be an array');
+      } else {
+        workerProfile.specializationsTree.forEach((item, index) => {
+          if (!item.mainId) {
+            errors.push(`specializationsTree[${index}].mainId is required`);
+          } else if (!isValidUUID(item.mainId)) {
+            errors.push(`specializationsTree[${index}].mainId must be a valid UUID`);
           }
-        }
+
+          if (item.subIds) {
+            if (!Array.isArray(item.subIds)) {
+              errors.push(`specializationsTree[${index}].subIds must be an array`);
+            } else {
+              item.subIds.forEach((subId, subIndex) => {
+                if (!isValidUUID(subId)) {
+                  errors.push(`specializationsTree[${index}].subIds[${subIndex}] must be a valid UUID`);
+                }
+              });
+            }
+          }
+        });
       }
+
+      // experienceYears validation
+      if (workerProfile.experienceYears === undefined || workerProfile.experienceYears === null) {
+        errors.push('experienceYears is required');
+      } else if (typeof workerProfile.experienceYears !== 'number') {
+        errors.push('experienceYears must be a number');
+      } else if (workerProfile.experienceYears < 0) {
+        errors.push('experienceYears cannot be negative');
+      } else if (workerProfile.experienceYears > 50) {
+        errors.push('experienceYears cannot exceed 50 years');
+      }
+
+      // isInTeam validation
+      if (workerProfile.isInTeam === undefined || workerProfile.isInTeam === null) {
+        errors.push('isInTeam is required');
+      } else if (typeof workerProfile.isInTeam !== 'boolean') {
+        errors.push('isInTeam must be a boolean');
+      }
+
+      // workGovernmentIds validation
+      if (!workerProfile.workGovernmentIds) {
+        errors.push('workGovernmentIds is required');
+      } else if (!Array.isArray(workerProfile.workGovernmentIds)) {
+        errors.push('workGovernmentIds must be an array');
+      } else if (workerProfile.workGovernmentIds.length === 0) {
+        errors.push('workGovernmentIds must contain at least one government ID');
+      } else {
+        workerProfile.workGovernmentIds.forEach((govId, index) => {
+          if (!isValidUUID(govId)) {
+            errors.push(`workGovernmentIds[${index}] must be a valid UUID`);
+          }
+        });
+      }
+
+      // acceptsUrgentJobs validation
+      if ("accpetsUrgentJobs" in workerProfile) {
+        errors.push('acceptsUrgentJobs is required');
+      } else if (typeof workerProfile.acceptsUrgentJobs !== 'boolean') {
+        errors.push('acceptsUrgentJobs must be a boolean');
+      }
+      if (errors.length > 0) {
+        throw new Error(errors.join(', '));
+      }
+
       return true;
     }),
+
+  // Optional: Validate that no extra fields are sent
+  body().custom((value, { req }) => {
+    const allowedFields = [
+      'personal_image',
+      'id_image',
+      'personal_with_id_image',
+      'userData',
+      'workerProfile'
+    ];
+
+    const receivedFields = Object.keys(req.body);
+    const extraFields = receivedFields.filter(field => !allowedFields.includes(field));
+
+    if (extraFields.length > 0) {
+      throw new Error(`Unexpected fields: ${extraFields.join(', ')}`);
+    }
+
+    return true;
+  })
 ];
 
 // Validation rules for login
@@ -194,7 +335,7 @@ export const validateLogin = [
     .trim()
     .notEmpty()
     .withMessage("Login token is required")
-    .isJWT()
+    .matches(/^Bearer\s/)
     .withMessage("Invalid login token format"),
   body("deviceFingerprint")
     .optional({ nullable: true, checkFalsy: true })
@@ -209,7 +350,7 @@ export const validateGenerateAccessToken = [
     .trim()
     .notEmpty()
     .withMessage("Authorization header is required")
-    .matches(/^Bearer\s/.test)
+    .matches(/^Bearer\s/)
     .withMessage("Authorization header must be in format: Bearer <token>")
     .custom((value) => {
       const token = value.replace(/^Bearer\s/, "");

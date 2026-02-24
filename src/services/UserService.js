@@ -8,6 +8,7 @@ import AppError from "../errors/AppError.js";
 import { governmentRepository, userRepository } from "../state.js";
 import Service, { tryCatch } from "./Service.js";
 import { Repository } from "../repositories/Repository.js";
+import uploadToCloudinary from "../providers/cloudinaryProvider.js";
 
 /** @typedef {import("../repositories/UserRepository.js").IDType} IDType */
 
@@ -89,6 +90,7 @@ export default class UserService extends Service {
    * @param {boolean} data.acceptsUrgentJobs - Whether worker accepts urgent jobs
    * @param {{mainId: IDType, subIds: IDType[]}[]} data.specializationsTree - List of specialization names
    * @param {IDType[]} data.governmentIds - List of government names where worker operates
+   * @param {{id: string, personal_with_id_image: string }} data.verificationImages - List of government names where worker operates
    * @returns {Promise<import("../repositories/UserRepository.js").WorkerProfile>} Created worker profile
    * @throws {AppError} If user not found or invalid data
    */
@@ -97,7 +99,8 @@ export default class UserService extends Service {
     isInTeam,
     acceptsUrgentJobs,
     specializationsTree,
-    governmentIds
+    governmentIds,
+    verificationImages
   }) {
     return tryCatch(async () => {
       const user = await userRepository.findOne({ id: userId });
@@ -113,18 +116,29 @@ export default class UserService extends Service {
           acceptsUrgentJobs,
         });
 
-        await userRepository.addWorkerProfileGovernments(workerProfile.id, governmentIds);
-        await userRepository.addWorkerProfileSpecializations(workerProfile.id, specializationsTree.map(({ mainId }) => mainId));
-        for (let { mainId, subIds } of specializationsTree) {
-          await userRepository.addWorkerProfileSubSpecializations(workerProfile.id, mainId, subIds);
-        }
+        // await userRepository.addWorkerProfileGovernments(workerProfile.id, governmentIds);
+        // await userRepository.addWorkerProfileSpecializations(workerProfile.id, specializationsTree.map(({ mainId }) => mainId));
+        // for (let { mainId, subIds } of specializationsTree) {
+        //   await userRepository.addWorkerProfileSubSpecializations(workerProfile.id, mainId, subIds);
+        // }
+
 
         return workerProfile;
       }, (reason) => {
+
         throw new AppError("Failed to create worker profile", 500, reason);
       });
+        const nationalID = (await uploadToCloudinary(verificationImages.id , `${userId}/verification_info`,"nationalID")).url
+        const selfiWithID = (await uploadToCloudinary(verificationImages.personal_with_id_image , `${userId}/verification_info`,"selfiWithID")).url
 
-      return workerProfile;
+        const vData = await userRepository.createVerification({
+          workerProfileId: workerProfile.id,
+          personalImageUrl:selfiWithID,
+          idDocumentUrl:nationalID,
+          status:"APPROVED"// untill dashboard emplement
+        })
+
+      return {workerProfile ,vData };
     });
   }
 
@@ -134,18 +148,22 @@ export default class UserService extends Service {
    * @method createClientProfile
    * @param {Object} params - Client profile parameters
    * @param {import("../repositories/Repository.js").IDType} params.userId - User ID
+   * @param {String} params.address - Address of the client
+   * @param {String} params.addressNotes - Additional address information
    * @returns {Promise<import("../repositories/UserRepository.js").ClientProfile>} Created client profile
    * @throws {AppError} If user not found
    */
   async createClientProfile({
     userId,
+    address,
+    addressNotes
   }) {
     return tryCatch(async () => {
       const user = await userRepository.findOne({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
 
-      const clientProfile = await userRepository.createClientProfile(userId, {});
+      const clientProfile = await userRepository.createClientProfile(userId, {address, addressNotes});
       return clientProfile;
     });
   }
@@ -405,21 +423,25 @@ export default class UserService extends Service {
    * @async
    * @method updateProfileImage
    * @param {import("../repositories/Repository.js").IDType} userId - User ID
-   * @param {string} profileImage - New profile image URL
+   * @param {Buffer} profileImageBuffer - New profile image URL
    * @returns {Promise<import("../repositories/UserRepository.js").User>} Updated user
    * @throws {AppError} If user not found
    */
-  async updateProfileImage(userId, profileImage) {
+  async updateProfileImage(userId, profileImageBuffer) {
     return tryCatch(async () => {
       const user = await userRepository.findOne({ id: userId });
       if (!user) throw new AppError("User not found", 404);
+//-----------------------------> suspended to v2 <----------------------------
+//for client it is free to change anytime
+//for worker it will be an requset
+//  1- upload
+//  2 - create request
+//  3- pending untill approve from admin
+//maybe add an profile photo history to select from his old photos
+//-----------------------------------------------------------------------------
 
-      // Check if user has a worker profile - if so, they cannot update their profile image directly
-      const isWorker = await userRepository.hasWorkerProfile(userId);
-      if (isWorker) {
-        throw new AppError("Worker profile image cannot be updated directly. Contact an admin for approval.", 403);
-      }
-      await userRepository.update({ id: userId }, { profileImage });
+      const {url } =await uploadToCloudinary(profileImageBuffer , `${userId}/profileImage`,"profileImage");
+      await userRepository.update({ id: userId }, { profileImage:url });
       return userRepository.findOne({ id: userId });
     });
   }

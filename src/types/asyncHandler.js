@@ -7,7 +7,17 @@ import { $Enums } from '@prisma/client';
 
 
 /**
+ * @typedef {{ phoneNumber: string }} PhoneNumberPayload
+ */
+
+/**
  * @typedef {{ user: {id: string, role: $Enums.Role, isWorker: Boolean, isClient: Boolean} }} UserPayload
+ */
+
+/**
+ * @typedef {Object} LoginTokenPayload
+ * @property {"login"} type
+ * @property {string} phoneNumber
  */
 
 

@@ -1,4 +1,10 @@
-import cloudinary from 'cloudinary'
+import { v2 as cloudinary } from 'cloudinary';
+import environment from './environment.js';
 
-const { uploader } = cloudinary.v2;
-export { uploader };
+cloudinary.config({
+  ...environment.cloudinary,
+});
+
+console.log('Cloudinary Configured:', cloudinary.config().cloud_name);
+
+export default cloudinary;

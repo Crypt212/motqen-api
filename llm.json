@@ -1,0 +1,43 @@
+// field: "personal_image", type: "File", content-type: "image/[jpeg, png, bmp, gif]", required: true ======================
+// field: "id_image", type: "File", content-type: "image/[jpeg, png, bmp, gif]", required: true ======================
+// field: "personal_with_id_image", type: "File", content-type: "image/[jpeg, png, bmp, gif]", required: true ======================
+
+// field: "basicInformation", type: "Text", content-type: "application/json", required: true ======================
+{
+  "firstName", // type: string, required: true
+  "middleName", // type: string, required: true
+  "lastName", // type: string, required: true
+  "governmentID", // type: UUID, required: true
+  "city" // type: string, required: true
+}
+
+// field: "workerProfile", type: "Text", content-type: "application/json", required: true ======================
+{
+  "specializationTree", // type: {mainId: UUID, subIds: UUID[]}[], required: true
+  "experienceYears", // type: number, required: true
+  "isInTeam", // type: boolean, required: true
+  "workGovernmentIDs", // type: UUID[], required: true
+  "acceptsUrgentJobs" // type: string, required: true
+}
+
+
+
+
+
+
+// field: "personal_image", type: "File", content-type: "image/[jpeg, png, bmp, gif]", required: false ======================
+
+// field: "basicInformation", type: "Text", content-type: "application/json", required: true ======================
+{
+  "firstName", // type: string, required: true
+  "middleName", // type: string, required: true
+  "lastName", // type: string, required: true
+  "governmentID", // type: UUID, required: true
+  "city" // type: string, required: true
+}
+
+field: "clientProfile", type: "Text", content-type: "application/json", required: true ======================
+{
+  "address", // type: string, required: true
+  "addressNotes", // type: string, required: false
+}

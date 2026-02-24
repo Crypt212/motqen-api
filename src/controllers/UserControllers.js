@@ -3,8 +3,7 @@
  * @module controllers/UserControllers
  */
 
-import { uploader } from "../configs/cloudinary.js";
-import { dataUri } from "../configs/multer.js";
+
 import AppError from "../errors/AppError.js";
 import SuccessResponse from "../responses/successResponse.js";
 import { userService } from "../state.js";
@@ -90,8 +89,7 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
     throw new AppError("Please upload all required images", 400);
 
   for (let imageName of ["personal_image", "id_image", "personal_with_id_image"]) {
-    const file = dataUri(images[imageName]).content;
-    await uploader.upload(file);
+// uploading 
   }
 
   new SuccessResponse("created worker profile successfully", { clientProfile }, 200).send(res);
@@ -115,8 +113,8 @@ export const updateWorkerProfile = asyncHandler(async (req, res) => {
     for (let imageName of ["personal_image", "id_image", "personal_with_id_image"]) {
       if (!(imageName in Object.keys(images)))
         continue;
-      const file = dataUri(images[imageName]).content;
-      await uploader.upload(file);
+// to be uploaded
+// creating the verify model
     }
   }
 
@@ -214,10 +212,9 @@ export const updateProfileImage = asyncHandler(async (req, res) => {
   }
 
   // Upload image to cloudinary
-  const fileUri = dataUri(image).content;
-  const uploadedImage = await uploader.upload(fileUri);
 
-  const profileImage = await userService.updateProfileImage(userId, uploadedImage.secure_url);
+
+  const profileImage = await userService.updateProfileImage(userId, image.buffer);
 
   new SuccessResponse("updated profile image successfully", { profileImage }, 200).send(res);
 });

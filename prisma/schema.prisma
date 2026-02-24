@@ -27,13 +27,13 @@ model User {
   id           String        @id @default(uuid())
   phoneNumber  String        @unique
   firstName    String
+  middleName   String
   lastName     String
   governmentId String?
   cityId       String?
-  bio          String?
   profileImage String?
   status       AccountStatus @default(SUSPENDED)
-  role          Role           @default(USER)
+  role         Role          @default(USER)
 
   city          City?          @relation(fields: [cityId], references: [id], onDelete: Cascade)
   government    Government?    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
@@ -45,8 +45,10 @@ model User {
 }
 
 model ClientProfile {
-  id     String @id @default(uuid())
-  userId String @unique
+  id           String  @id @default(uuid())
+  userId       String  @unique
+  address      String
+  addressNotes String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -61,11 +63,26 @@ model WorkerProfile {
   acceptsUrgentJobs Boolean
   isApproved        Boolean @default(false)
 
+  verification          Verification?
   user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   chosenSpecializations ChosenSpecialization[]
   governments           GovernmentsForWorkers[]
 
   @@map("worker_profiles")
+}
+
+model Verification {
+  id               String             @id @default(uuid())
+  workerProfileId  String             @unique
+  personalImageUrl String
+  idDocumentUrl    String
+  status           VerificationStatus @default(PENDING)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  reason           String?
+  workerProfile    WorkerProfile      @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+
+  @@map("verifications")
 }
 
 model ChosenSpecialization {
@@ -139,12 +156,12 @@ model Government {
 }
 
 model City {
-  id   String @id @default(uuid())
-  name String
+  id           String  @id @default(uuid())
+  name         String
   governmentId String?
 
-  users        User[]
-  government   Government? @relation(fields: [governmentId], references: [id])
+  users      User[]
+  government Government? @relation(fields: [governmentId], references: [id])
 
   @@map("cities")
 }
@@ -163,4 +180,10 @@ enum Role {
 enum Method {
   SMS
   WhatsApp
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
