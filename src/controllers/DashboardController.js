@@ -1,12 +1,12 @@
 /**
- * @fileoverview User Controllers - Handle user-related HTTP requests
- * @module controllers/UserControllers
+ * @fileoverview Dashboard Controller - Handle dashboard HTTP requests
+ * @module controllers/DashboardController
  */
 
 
 import AppError from "../errors/AppError.js";
 import SuccessResponse from "../responses/successResponse.js";
-import { userService } from "../state.js";
+import { clientService, userService, workerService } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
 
 /** @typedef {import("../types/asyncHandler.js").UserPayload} UserPayload */
@@ -16,12 +16,12 @@ import { asyncHandler } from '../types/asyncHandler.js';
  * @type {RequestHandler<UserPayload>}
  */
 export const updateUser = asyncHandler(async (req, res) => {
-  const { firstName, lastName, government, city, bio } = req.body;
+  const { firstName, lastName, governmentId, city, bio } = req.body;
   const userId = req.user.id;
 
   // If phoneNumber is provided, update user's phone (need additional verification)
   // For now, update other fields only
-  await userService.updateUser(userId, { firstName, lastName, government, city, bio });
+  await userService.updateUser(userId, { firstName, lastName, governmentId, city, bio });
 
   new SuccessResponse("updated user successfully", {}, 200).send(res);
 });
@@ -30,8 +30,8 @@ export const updateUser = asyncHandler(async (req, res) => {
  * @type {RequestHandler<UserPayload>}
  */
 export const getUser = asyncHandler(async (req, res) => {
-  const { id } = req.user;
-  const user = await userService.getUser({ id });
+  const userId = req.user.id;
+  const user = await userService.getUser(userId);
 
   new SuccessResponse("User retrieved successfully", { user }, 200).send(res);
 });
@@ -40,9 +40,15 @@ export const getUser = asyncHandler(async (req, res) => {
  * @type {RequestHandler<UserPayload>}
  */
 export const createClientProfile = asyncHandler(async (req, res) => {
+  const { address, addressNotes } = req.body;
   const userId = req.user.id;
 
-  const clientProfile = await userService.createClientProfile({ userId });
+  const clientProfile = await clientService.createClientProfile({
+    userId,
+    address,
+    addressNotes,
+    profileImage: null,
+  });
 
   new SuccessResponse("created client profile successfully", { clientProfile }, 200).send(res);
 });
@@ -51,9 +57,10 @@ export const createClientProfile = asyncHandler(async (req, res) => {
  * @type {RequestHandler<UserPayload>}
  */
 export const updateClientProfile = asyncHandler(async (req, res) => {
+  const { address, addressNotes } = req.body;
   const userId = req.user.id;
 
-  const clientProfile = await userService.updateClientProfile(userId, {});
+  const clientProfile = await clientService.updateClientProfile(userId, { address, addressNotes });
 
   new SuccessResponse("updated client profile successfully", { clientProfile }, 200).send(res);
 });
@@ -64,7 +71,7 @@ export const updateClientProfile = asyncHandler(async (req, res) => {
 export const getClientProfile = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
-  const clientProfile = await userService.getClientProfile(userId);
+  const clientProfile = await clientService.getClientProfile(userId);
 
   new SuccessResponse("retrieved client profile successfully", { clientProfile }, 200).send(res);
 });
@@ -77,20 +84,19 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const images = req.files;
 
-  const clientProfile = await userService.createWorkerProfile(userId, {
+  if (!images || !images["personal_image"] || !images["id_image"] || !images["personal_with_id_image"])
+    throw new AppError("Please upload all required images", 400);
+
+  const clientProfile = await workerService.createWorkerProfile(userId, {
     experienceYears,
     isInTeam,
     acceptsUrgentJobs,
     specializationsTree,
-    governmentIds: workGovernmentIds
+    governmentIds: workGovernmentIds,
+    idImage: images["id_image"],
+    profileWithIdImage: images["personal_with_id_image"],
+    profileImage: images["personal_image"],
   });
-
-  if (!images || !images["personal_image"] || !images["id_image"] || !images["personal_with_id_image"])
-    throw new AppError("Please upload all required images", 400);
-
-  for (let imageName of ["personal_image", "id_image", "personal_with_id_image"]) {
-// uploading 
-  }
 
   new SuccessResponse("created worker profile successfully", { clientProfile }, 200).send(res);
 });
@@ -103,20 +109,11 @@ export const updateWorkerProfile = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const images = req.files;
 
-  await userService.updateWorkerProfile(userId, {
+  await workerService.updateWorkerProfile(userId, {
     experienceYears,
     isInTeam,
     acceptsUrgentJobs,
   });
-
-  if (images) { // TODO: they need to be verified later by admins
-    for (let imageName of ["personal_image", "id_image", "personal_with_id_image"]) {
-      if (!(imageName in Object.keys(images)))
-        continue;
-// to be uploaded
-// creating the verify model
-    }
-  }
 
   new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
 });
@@ -127,9 +124,8 @@ export const updateWorkerProfile = asyncHandler(async (req, res) => {
 export const addWorkerGovernments = asyncHandler(async (req, res) => {
   const { governmentIds } = req.body;
   const userId = req.user.id;
-  const images = req.files;
 
-  await userService.deleteWorkerProfileSubSpecializations(userId, governmentIds);
+  await workerService.insertWorkerProfileWorkGovernments(userId, governmentIds);
 
   new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
 });
@@ -140,9 +136,8 @@ export const addWorkerGovernments = asyncHandler(async (req, res) => {
 export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
   const { governmentIds } = req.body;
   const userId = req.user.id;
-  const images = req.files;
 
-  await userService.deleteWorkerProfileSubSpecializations(userId, governmentIds);
+  await workerService.deleteWorkerProfileSubSpecializations(userId, governmentIds);
 
   new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
 });
@@ -154,7 +149,7 @@ export const addWorkerSpecializations = asyncHandler(async (req, res) => {
   const { specializationTree } = req.body;
   const userId = req.user.id;
 
-  await userService.insertWorkerProfileSpecializations(userId, specializationTree);
+  await workerService.insertWorkerProfileSpecializations(userId, specializationTree);
 
   new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
 });
@@ -167,10 +162,10 @@ export const deleteWorkerSpecializations = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
   if (mainSpecializationIds)
-    await userService.deleteWorkerProfileMainSpecializations(userId, mainSpecializationIds);
+    await workerService.deleteWorkerProfileMainSpecializations(userId, mainSpecializationIds);
 
   if (specializationTree)
-    await userService.deleteWorkerProfileSubSpecializations(userId, specializationTree);
+    await workerService.deleteWorkerProfileSubSpecializations(userId, specializationTree);
 
   new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
 });
@@ -181,7 +176,7 @@ export const deleteWorkerSpecializations = asyncHandler(async (req, res) => {
 export const getWorkerProfile = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
-  const workerProfile = await userService.getWorkerProfile(userId);
+  const workerProfile = await workerService.getWorkerProfile(userId);
 
   new SuccessResponse("retrieved worker profile successfully", { workerProfile }, 200).send(res);
 });

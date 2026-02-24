@@ -1,25 +1,25 @@
-import OTPService from './services/OTPService.js';
-import SessionService from './services/SessionService.js';
 import UserService from './services/UserService.js';
-import OTPRepository from './repositories/OTPRepository.js';
-import SessionRepository from './repositories/SessionRepository.js';
-import UserRepository from './repositories/UserRepository.js';
-import RateLimitRepository from './repositories/RateLimitRepository.js';
+import OTPCache from './repositories/cache/OTPCache.js';
+import SessionRepository from './repositories/database/SessionRepository.js';
+import UserRepository from './repositories/database/UserRepository.js';
+import RateLimitCache from './repositories/cache/RateLimitCache.js';
 import RateLimitService from './services/RateLimitService.js';
 import AuthService from './services/AuthService.js';
-import GovernmentRepository from './repositories/GovernmentRepository.js';
-import SpecializationRepository from './repositories/SpecializationRepository.js';
+import GovernmentRepository from './repositories/database/GovernmentRepository.js';
+import SpecializationRepository from './repositories/database/SpecializationRepository.js';
+import ClientService from './services/ClientService.js';
+import WorkerService from './services/WorkerService.js';
 // state.js  (wire it up like your other repos)
 
-export const rateLimitRepository = new RateLimitRepository();
+export const rateLimitCache = new RateLimitCache();
+export const otpCache = new OTPCache();
 export const sessionRepository = new SessionRepository();
-export const otpRepository = new OTPRepository();
 export const userRepository = new UserRepository();
 export const specializationRepository = new SpecializationRepository();
 export const governmentRepository = new GovernmentRepository();
 
-export const rateLimitService = new RateLimitService(rateLimitRepository);
-export const otpService = new OTPService();
-export const userService = new UserService();
-export const sessionService = new SessionService();
-export const authService = new AuthService();
+export const rateLimitService = new RateLimitService(rateLimitCache);
+export const userService = new UserService(userRepository, governmentRepository);
+export const clientService = new ClientService(userRepository);
+export const workerService = new WorkerService(userRepository);
+export const authService = new AuthService(userRepository, otpCache, sessionRepository, rateLimitCache);
