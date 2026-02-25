@@ -90,7 +90,7 @@ export default class UserService extends Service {
       firstName: data.firstName,
       lastName: data.lastName,
       governmentId: data.governmentId,
-      city: data.city,
+      cityName: data.city,
       status: data.status
     }, { id: userId });
     return await this.#userRepository.findOne({ id: userId });
@@ -110,7 +110,7 @@ export default class UserService extends Service {
       const user = await this.#userRepository.findOne({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
-      return user.profileImage;
+      return user.profileImageUrl;
     });
   }
 
@@ -139,7 +139,7 @@ export default class UserService extends Service {
       //-----------------------------------------------------------------------------
 
       const { url } = await uploadToCloudinary(profileImageBuffer, `${userId}/profileImage`, "profileImage");
-      await this.#userRepository.update({ profileImage: url }, { id: userId });
+      await this.#userRepository.update({ profileImageUrl: url }, { id: userId });
       return this.#userRepository.findOne({ id: userId });
     });
   }
@@ -163,7 +163,7 @@ export default class UserService extends Service {
       if (isWorker) {
         throw new AppError("Workers cannot delete their profile image.", 403);
       }
-      await this.#userRepository.update({ profileImage: null, }, { id: userId });
+      await this.#userRepository.update({ profileImageUrl: null, }, { id: userId });
       return this.#userRepository.findOne({ id: userId });
     });
   }

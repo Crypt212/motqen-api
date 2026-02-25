@@ -12,6 +12,7 @@ import {
   login,
   logout,
   generateAccessToken,
+  reviewStatus,
 } from '../controllers/AuthController.js';
 import { validateRequest } from '../middlewares/validateRequest.js';
 import {
@@ -30,6 +31,7 @@ import {
   validateLogin,
   validateGenerateAccessToken,
   validateLogout,
+  validateReviewStatus,
 } from '../validators/auth.js';
 import { authenticate, authenticateLogin, authenticateRegister } from '../middlewares/authMiddleware.js';
 
@@ -100,5 +102,13 @@ authRouter.get(
   ...validateGenerateAccessToken,
   validateRequest,
   generateAccessToken
+);
+
+authRouter.get(
+  '/review-status',
+  authenticate,
+  ...validateReviewStatus,
+  validateRequest,
+  reviewStatus
 );
 export default authRouter;

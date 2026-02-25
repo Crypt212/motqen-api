@@ -4,7 +4,7 @@
  */
 
 import AppError from '../errors/AppError.js';
-import { userService } from '../state.js';
+import { userRepository, userService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { verifyAndDecodeToken } from '../utils/tokens.js';
 
@@ -26,7 +26,11 @@ export const authenticate = asyncHandler(async (req, _, next) => {
   if (!accessToken) throw new AppError("Unauthorized", 401);
 
   const decoded = verifyAndDecodeToken(accessToken, "access");
-  if (!decoded) throw new AppError("Unauthorized", 401,);
+  if (!decoded) throw new AppError("Unauthorized", 401);
+
+  const user = await userRepository.findOne({ id: decoded.userId });
+  if (user.status !== "ACTIVE")
+    throw new AppError("Not Active", 401);
 
   req.user = {
       id: decoded.userId,

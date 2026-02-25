@@ -107,7 +107,6 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
 export const updateWorkerProfile = asyncHandler(async (req, res) => {
   const { experienceYears, isInTeam, acceptsUrgentJobs } = req.body;
   const userId = req.user.id;
-  const images = req.files;
 
   await workerService.updateWorkerProfile(userId, {
     experienceYears,
@@ -137,7 +136,7 @@ export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
   const { governmentIds } = req.body;
   const userId = req.user.id;
 
-  await workerService.deleteWorkerProfileSubSpecializations(userId, governmentIds);
+  await workerService.deleteProfileWorkGovernments(userId, governmentIds);
 
   new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
 });

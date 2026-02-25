@@ -70,17 +70,17 @@ export class Repository {
 
   /**
    * @param {WhereInput | {}} where - Where clause
-   * @param {SelectInput | {}} select - Where clause
+   * @param {SelectInput | undefined} select - Where clause
    * @returns {Promise<OutputData|null>}
    */
-  async findOne(where = {}, select = {}) { return this.prismaClient[this.#modelName].findFirst({ where, select }); }
+  async findOne(where = {}, select = undefined) { return this.prismaClient[this.#modelName].findFirst({ where, select }); }
 
   /**
    * @param {WhereInput | {}} where - Where clause
-   * @param {SelectInput | {}} select - Where clause
+   * @param {SelectInput | undefined} select - Where clause
    * @returns {Promise<BatchPayload>}
    */
-  async findMany(where = {}, select = {}) { return this.prismaClient[this.#modelName].findMany({ where, select }); }
+  async findMany(where = {}, select = undefined) { return this.prismaClient[this.#modelName].findMany({ where, select }); }
 
   /**
    * @param {CreateInput} data - Data to create
@@ -141,10 +141,10 @@ export class Repository {
   // findFirst - Find first matching record
   /**
    * @param {WhereInput | {}} where - Where clause
-   * @param {SelectInput | {}} select - Select clause
+   * @param {SelectInput | undefined} select - Select clause
    * @returns {Promise<OutputData|null>}
    */
-  async findFirst(where = {}, select = {}) {
+  async findFirst(where = {}, select = undefined) {
     return this.prismaClient[this.#modelName].findFirst({ where, select });
   }
 }

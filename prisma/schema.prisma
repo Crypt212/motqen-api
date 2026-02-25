@@ -7,16 +7,16 @@ datasource db {
 }
 
 model Session {
-  id                String   @id @default(uuid())
-  userId            String
-  token             String   @unique
-  isRevoked         Boolean  @default(false)
-  deviceFingerprint String
-  ipAddress         String?
-  userAgent         String?
-  lastUsedAt        DateTime @default(now())
-  createdAt         DateTime @default(now())
-  expiresAt         DateTime
+  id         String   @id @default(uuid())
+  userId     String
+  token      String   @unique
+  isRevoked  Boolean  @default(false)
+  deviceId   String
+  ipAddress  String?
+  userAgent  String?
+  lastUsedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -24,18 +24,20 @@ model Session {
 }
 
 model User {
-  id           String        @id @default(uuid())
-  phoneNumber  String        @unique
-  firstName    String
-  middleName   String
-  lastName     String
-  governmentId String?
-  city         String?
-  profileImage String?
-  status       AccountStatus @default(SUSPENDED)
-  role         Role          @default(USER)
+  id              String        @id @default(uuid())
+  phoneNumber     String        @unique
+  firstName       String
+  middleName      String
+  lastName        String
+  governmentId    String?
+  cityId          String?
+  cityName        String?
+  profileImageUrl String?
+  status          AccountStatus @default(ACTIVE)
+  role            Role          @default(USER)
 
   government    Government?    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  city          City?          @relation(fields: [cityId], references: [id], onDelete: Cascade)
   sessions      Session[]
   workerProfile WorkerProfile?
   clientProfile ClientProfile?
@@ -62,26 +64,44 @@ model WorkerProfile {
   acceptsUrgentJobs Boolean
   isApproved        Boolean @default(false)
 
-  verification          Verification?
-  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  portfolio             PortfolioProject[]
+  verification          WorkerVerification?
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   chosenSpecializations ChosenSpecialization[]
-  governments           GovernmentsForWorkers[]
+  governments           GovernmentForWorkers[]
 
   @@map("worker_profiles")
 }
 
-model Verification {
-  id               String             @id @default(uuid())
-  workerProfileId  String             @unique
-  personalImageUrl String
-  idDocumentUrl    String
-  status           VerificationStatus @default(PENDING)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  reason           String?
-  workerProfile    WorkerProfile      @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+model WorkerVerification {
+  id                     String             @id @default(uuid())
+  workerProfileId        String             @unique
+  idWithPersonalImageUrl String             @map("profileImageUrl")
+  idDocumentUrl          String
+  status                 VerificationStatus @default(PENDING)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  reason                 String?
+  workerProfile          WorkerProfile      @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
 
   @@map("verifications")
+}
+
+model PortfolioProject {
+  id              String  @id @default(uuid())
+  workerProfileId String
+  description     String?
+
+  projectImages ProjectImage[]
+  workerProfile WorkerProfile  @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+}
+
+model ProjectImage {
+  id        String @id @default(uuid())
+  projectId String
+  imageUrl  String
+
+  project PortfolioProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model ChosenSpecialization {
@@ -132,7 +152,7 @@ model SubSpecialization {
   @@map("sub_specializations")
 }
 
-model GovernmentsForWorkers {
+model GovernmentForWorkers {
   workerProfileId String
   governmentId    String
 
@@ -144,13 +164,25 @@ model GovernmentsForWorkers {
 }
 
 model Government {
-  id   String @id @default(uuid())
+  id          String @id @default(uuid())
   name String
 
-  workers GovernmentsForWorkers[]
+  workers GovernmentForWorkers[]
   users   User[]
+  citys   City[]
 
   @@map("governments")
+}
+
+model City {
+  id           String @id @default(uuid())
+  governmentId String
+  name  String
+
+  users      User[]
+  government Government @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+
+  @@map("cities")
 }
 
 enum AccountStatus {
@@ -166,10 +198,16 @@ enum Role {
 
 enum Method {
   SMS
-  WhatsApp
+  WHATSAPP
 }
 
 enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum WorkerProfileStatus {
   PENDING
   APPROVED
   REJECTED

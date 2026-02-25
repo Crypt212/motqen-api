@@ -339,6 +339,17 @@ export const validateLogin = [
     .withMessage("Device fingerprint must be between 8 and 255 characters"),
 ];
 
+// Validation rules for review status
+export const validateReviewStatus = [
+  validateToken("refresh"),
+  header("x-device-fingerprint")
+    .trim()
+    .notEmpty()
+    .withMessage("Device fingerprint header is required")
+    .isLength({ min: 8, max: 255 })
+    .withMessage("Device fingerprint must be between 8 and 255 characters"),
+];
+
 // Validation rules for generating access token
 export const validateGenerateAccessToken = [
   validateToken("refresh"),

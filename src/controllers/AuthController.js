@@ -8,6 +8,7 @@ import SuccessResponse from '../responses/successResponse.js';
 import {
   authService,
   rateLimitService,
+  userRepository,
 } from '../state.js';
 
 import { asyncHandler } from '../types/asyncHandler.js';
@@ -256,6 +257,30 @@ export const generateAccessToken = asyncHandler(async (req, res) => {
   new SuccessResponse(
     'Access token generated successfully',
     { accessToken },
+    200
+  ).send(res);
+});
+
+
+/**
+ * Reviews the status of a user (pending, approved, rejected)
+ * @type {RequestHandler<UserPayload>}
+ */
+export const reviewStatus = asyncHandler(async (req, res) => {
+  const { id: userId } = req.user;
+
+  if (req.user.isClient) {
+    new SuccessResponse('You are a client, you can whatever you want <3', 200);
+  }
+
+  if (req.user.isWorker) {
+    const isApproved = (await userRepository.getWorkerProfile(userId)).isApproved;
+    if (!isApproved) throw new AppError('You are not approved yet', 401);
+    new SuccessResponse('You are approved', 200);
+  }
+
+  new SuccessResponse(
+    'You have been approved by admin',
     200
   ).send(res);
 });

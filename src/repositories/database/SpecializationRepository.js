@@ -73,15 +73,15 @@ export default class SpecializationRepository extends Repository {
    * @async
    * @method
    * @param {IDType} mainSpecializationId
-   * @param {SubSpecializationData} data
+   * @param {SubSpecializationData[]} data
    * @returns {Promise<BatchPayload>}
    */
   async createSubSpecializations(mainSpecializationId, data) {
     return await this.prismaClient.subSpecialization.createMany({
-      data: {
-        ...data,
-        mainSpecializationId
-      },
+      data: data.map((subSpecialization) => ({
+        mainSpecializationId,
+        ...subSpecialization
+      })),
     });
   };
 

@@ -4,6 +4,7 @@
  */
 
 import { body, param } from "express-validator";
+import { isValidUUID } from "./common.js";
 
 // Validation rules for updating user profile
 export const validateUpdateUser = [
@@ -21,11 +22,15 @@ export const validateUpdateUser = [
     .withMessage("Last name must be between 2 and 50 characters")
     .matches(/^[a-zA-Z\u0600-\u06FF\s]+$/)
     .withMessage("Last name can only contain letters"),
-  body("government")
+  body("governmentId")
     .optional({ nullable: true, checkFalsy: true })
     .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage("Government must be between 2 and 100 characters"),
+    .custom((value) => {
+      if (value && !isValidUUID(value)) {
+        throw new Error("governmentId must be a valid UUID");
+      }
+      return true;
+    }),
   body("city")
     .optional({ nullable: true, checkFalsy: true })
     .trim()
@@ -211,4 +216,126 @@ export const validateUserIdParam = [
     .optional({ nullable: true, checkFalsy: true })
     .isUUID()
     .withMessage("Invalid user ID format"),
+];
+
+// Validation rules for creating client profile
+export const validateCreateClientProfile = [
+  body("address")
+    .trim()
+    .notEmpty()
+    .withMessage("Address is required")
+    .isLength({ min: 5, max: 500 })
+    .withMessage("Address must be between 5 and 500 characters"),
+  body("addressNotes")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("Address notes cannot exceed 500 characters"),
+];
+
+// Validation rules for updating client profile
+export const validateUpdateClientProfile = [
+  body("address")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ min: 5, max: 500 })
+    .withMessage("Address must be between 5 and 500 characters"),
+  body("addressNotes")
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("Address notes cannot exceed 500 characters"),
+];
+
+// Validation rules for adding worker governments
+export const validateAddWorkerGovernments = [
+  body("governmentIds")
+    .isArray({ min: 1 })
+    .withMessage("governmentIds must be a non-empty array")
+    .custom((value) => {
+      for (let i = 0; i < value.length; i++) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value[i])) {
+          throw new Error(`governmentIds[${i}] must be a valid UUID`);
+        }
+      }
+      return true;
+    }),
+];
+
+// Validation rules for deleting worker governments
+export const validateDeleteWorkerGovernments = validateAddWorkerGovernments;
+
+// Validation rules for adding worker specializations
+export const validateAddWorkerSpecializations = [
+  body("specializationTree")
+    .isArray({ min: 1 })
+    .withMessage("specializationTree must be a non-empty array")
+    .custom((value) => {
+      for (let i = 0; i < value.length; i++) {
+        const item = value[i];
+        if (!item || typeof item !== 'object') {
+          throw new Error(`specializationTree[${i}] must be an object`);
+        }
+        if (!item.mainId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.mainId)) {
+          throw new Error(`specializationTree[${i}].mainId must be a valid UUID`);
+        }
+        if (item.subIds) {
+          if (!Array.isArray(item.subIds)) {
+            throw new Error(`specializationTree[${i}].subIds must be an array`);
+          }
+          for (let j = 0; j < item.subIds.length; j++) {
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.subIds[j])) {
+              throw new Error(`specializationTree[${i}].subIds[${j}] must be a valid UUID`);
+            }
+          }
+        }
+      }
+      return true;
+    }),
+];
+
+// Validation rules for deleting worker specializations
+export const validateDeleteWorkerSpecializations = [
+  body("mainSpecializationIds")
+    .optional({ nullable: true, checkFalsy: true })
+    .isArray()
+    .withMessage("mainSpecializationIds must be an array")
+    .custom((value) => {
+      if (value) {
+        for (let i = 0; i < value.length; i++) {
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value[i])) {
+            throw new Error(`mainSpecializationIds[${i}] must be a valid UUID`);
+          }
+        }
+      }
+      return true;
+    }),
+  body("specializationTree")
+    .optional({ nullable: true, checkFalsy: true })
+    .isArray()
+    .withMessage("specializationTree must be an array")
+    .custom((value) => {
+      if (value) {
+        for (let i = 0; i < value.length; i++) {
+          const item = value[i];
+          if (!item || typeof item !== 'object') {
+            throw new Error(`specializationTree[${i}] must be an object`);
+          }
+          if (!item.mainId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.mainId)) {
+            throw new Error(`specializationTree[${i}].mainId must be a valid UUID`);
+          }
+          if (item.subIds) {
+            if (!Array.isArray(item.subIds)) {
+              throw new Error(`specializationTree[${i}].subIds must be an array`);
+            }
+            for (let j = 0; j < item.subIds.length; j++) {
+              if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.subIds[j])) {
+                throw new Error(`specializationTree[${i}].subIds[${j}] must be a valid UUID`);
+              }
+            }
+          }
+        }
+      }
+      return true;
+    }),
 ];

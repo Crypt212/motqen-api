@@ -105,7 +105,7 @@ export default class AuthService extends Service {
         //   throw new AppError("Government or City not found", 400);
         // }
 
-        const user = await this.#userRepository.create({ phoneNumber, role, firstName, middleName, lastName, governmentId, city, status: "ACTIVE" });
+        const user = await this.#userRepository.create({ phoneNumber, role, firstName, middleName, lastName, governmentId, cityName: city, status: "ACTIVE" });
 
         const workerProfile = await this.#userRepository.createWorkerProfile(user.id, {
           experienceYears,
@@ -126,12 +126,12 @@ export default class AuthService extends Service {
 
         await this.#userRepository.createVerification(
           workerProfile.id, {
-          personalImageUrl: nationalID,
+          idWithPersonalImageUrl: nationalID,
           idDocumentUrl: selfiWithID,
           status: "APPROVED"// until dashboard emplement
         });
 
-        await this.#userRepository.update({ profileImage: (await uploadToCloudinary(profileImage, `${phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
+        await this.#userRepository.update({ profileImageUrl: (await uploadToCloudinary(profileImage, `${phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
 
         return workerProfile;
       }, (reason) => {
@@ -182,13 +182,13 @@ export default class AuthService extends Service {
         //   throw new AppError("Government or City not found", 400);
         // }
 
-        const user = await this.#userRepository.create({ phoneNumber, role, firstName, middleName, lastName, governmentId, city, status: "ACTIVE" });
+        const user = await this.#userRepository.create({ phoneNumber, role, firstName, middleName, lastName, governmentId, cityName: city, status: "ACTIVE" });
         const clientProfile = await this.#userRepository.createClientProfile(user.id, { address, addressNotes });
 
         if (profileImage) {
           // it will be user uuid instead of phoneNumber
           const { url } = await uploadToCloudinary(profileImage, `${phoneNumber}/profile_image`, "profileMain");
-          await this.#userRepository.update({ profileImage: (await uploadToCloudinary(profileImage, `${phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
+          await this.#userRepository.update({ profileImageUrl: (await uploadToCloudinary(profileImage, `${phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
           profileImage = url
         }
 

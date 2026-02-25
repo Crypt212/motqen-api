@@ -12,13 +12,13 @@ import { $Enums } from '@prisma/client';
 /** @typedef {import('../../types/role.js').Role} Role */
 /** @typedef {$Enums.AccountStatus} AccountStatus */
 
-/** @typedef {{ role: Role, phoneNumber: string, firstName: string, middleName: string, lastName: string, governmentId?: IDType, city?: string, profileImage?: String, status: AccountStatus }} UserData */
+/** @typedef {{ role: Role, phoneNumber: string, firstName: string, middleName: string, lastName: string, governmentId?: IDType, cityId?: IDType, cityName?: string, profileImageUrl?: String, status: AccountStatus }} UserData */
 /** @typedef {Partial<UserData>} OptionalUserData */
 /** @typedef { UserData & { id: IDType }} User */
 /** @typedef {import("./Repository.js").FilterArgs<User>} UserFilter */
 /** @typedef {Partial<User>} OptionalUser */
 
-/** @typedef {{ experienceYears: number, isInTeam: Boolean, acceptsUrgentJobs: Boolean, }} WorkerProfileData */
+/** @typedef {{ experienceYears: number, isInTeam: Boolean, acceptsUrgentJobs: Boolean, isApproved?: Boolean }} WorkerProfileData */
 /** @typedef {Partial<WorkerProfileData>} OptionalWorkerProfileData */
 /** @typedef { WorkerProfileData & { id: IDType, userId: IDType }} WorkerProfile */
 /** @typedef {import("./Repository.js").FilterArgs<WorkerProfile>} WorkerProfileFilter */
@@ -30,11 +30,11 @@ import { $Enums } from '@prisma/client';
 /** @typedef {import("./Repository.js").FilterArgs<ClientProfile>} ClientProfileFilter */
 /** @typedef {Partial<ClientProfile>} OptionalClientProfile */
 
-/** @typedef {{ status: $Enums.VerificationStatus, personalImageUrl: string, idDocumentUrl: string, createdAt?: Date, updatedAt?: Date, reason?: string }} VerificationData */
-/** @typedef {Partial<VerificationData>} OptionalVerificationData */
-/** @typedef { VerificationData & { id: IDType, workerProfileId: IDType }} Verification */
-/** @typedef {import("./Repository.js").FilterArgs<Verification>} VerificationFilter */
-/** @typedef {Partial<Verification>} OptionalVerification */
+/** @typedef {{ status: $Enums.VerificationStatus, idWithPersonalImageUrl: string, idDocumentUrl: string, createdAt?: Date, updatedAt?: Date, reason?: string }} WorkerVerificationData */
+/** @typedef {Partial<WorkerVerificationData>} OptionalWorkerVerificationData */
+/** @typedef { WorkerVerificationData & { id: IDType, workerProfileId: IDType }} WorkerVerification */
+/** @typedef {import("./Repository.js").FilterArgs<WorkerVerification>} WorkerVerificationFilter */
+/** @typedef {Partial<WorkerVerification>} OptionalWorkerVerification */
 
 /**
  * User Repository - Handles all database operations for users
@@ -122,7 +122,7 @@ export default class UserRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async addWorkerProfileGovernments(workerProfileId, governmentIds) {
-    return await this.prismaClient.governmentsForWorkers.createMany({
+    return await this.prismaClient.governmentForWorkers.createMany({
       data: governmentIds.map((governmentId) => ({
         workerProfileId,
         governmentId,
@@ -138,7 +138,7 @@ export default class UserRepository extends Repository {
    * @returns {Promise<BatchPayload>}
    */
   async deleteWorkerProfileGovernments(workerProfileId, governmentIds) {
-    return await this.prismaClient.governmentsForWorkers.deleteMany({
+    return await this.prismaClient.governmentForWorkers.deleteMany({
       where: { workerProfileId, governmentId: { in: governmentIds } },
     });
   }
@@ -150,7 +150,7 @@ export default class UserRepository extends Repository {
    * @returns {Promise<IDType[]>}
    */
   async getWorkerProfileGovernments(workerProfileId) {
-    const governments = await this.prismaClient.governmentsForWorkers.findMany({
+    const governments = await this.prismaClient.governmentForWorkers.findMany({
       where: { workerProfileId },
       select: { governmentId: true },
     });
@@ -334,11 +334,11 @@ export default class UserRepository extends Repository {
    * @async
    * @method
    * @param {IDType} workerProfileId
-   * @param {VerificationData} data
-   * @returns {Promise<Verification>}
+   * @param {WorkerVerificationData} data
+   * @returns {Promise<WorkerVerification>}
    */
   async createVerification(workerProfileId, data) {
-    return await prisma.verification.create({
+    return await prisma.workerVerification.create({
       data: {
         ...data, workerProfileId
       },
