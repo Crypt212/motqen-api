@@ -103,3 +103,20 @@ export const deleteGovernment = asyncHandler(async (req, res) => {
     200
   ).send(res);
 });
+
+/**
+ * Get all cities under a specific government
+ * @type {RequestHandler<UserPayload>}
+ */
+export const getCitiesByGovernment = asyncHandler(async (req, res) => {
+    const governmentId = String(req.params.governmentId);
+
+    const government = await governmentRepository.findOne({ id: governmentId });
+    if (!government) {
+        throw new AppError('Government not found', 404);
+    }
+
+    const cities = await governmentRepository.findCities({ governmentId });
+
+    new SuccessResponse('Cities retrieved', { cities }).send(res);
+});

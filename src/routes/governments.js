@@ -10,6 +10,7 @@ import {
   createGovernment,
   updateGovernment,
   deleteGovernment,
+  getCitiesByGovernment,
 } from "../controllers/GovernmentController.js";
 import { authenticate, authorizeAdmin } from "../middlewares/authMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
@@ -73,6 +74,13 @@ governmentRouter.delete(
     .withMessage("Invalid government ID format"),
   validateRequest,
   deleteGovernment
+);
+
+governmentRouter.get(
+    '/:governmentId/cities',
+    authenticate,
+    validateRequest,
+    getCitiesByGovernment
 );
 
 export default governmentRouter;
