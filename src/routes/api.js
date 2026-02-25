@@ -6,13 +6,15 @@
 import { Router } from "express";
 import authRouter from "./auth.js";
 import usersRouter from "./users.js";
+import governmentRouter from "./governments.js";
+import specializationRouter from "./specializations.js";
 import { authenticate } from "../middlewares/authMiddleware.js";
-import govRouter from "./gov.js";
 
 const mainRouter = Router();
 
 mainRouter.use("/auth", authRouter);
 mainRouter.use("/users", authenticate, usersRouter);
-mainRouter.use("/gov", govRouter);
+mainRouter.use("/governments", governmentRouter);
+mainRouter.use("/specializations", specializationRouter);
 
 export default mainRouter;

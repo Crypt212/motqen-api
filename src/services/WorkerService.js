@@ -80,12 +80,12 @@ export default class WorkerService extends Service {
         const selfiWithID = (await uploadToCloudinary(profileWithIdImage, `${userId}/verification_info`, "selfiWithID")).url
 
         await this.#userRepository.createVerification(workerProfile.id, {
-          personalImageUrl: selfiWithID,
+          idWithPersonalImageUrl: selfiWithID,
           idDocumentUrl: nationalID,
           status: "APPROVED"// untill dashboard emplement
         })
 
-        await this.#userRepository.update({ profileImage: (await uploadToCloudinary(profileImage, `${user.phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
+        await this.#userRepository.update({ profileImageUrl: (await uploadToCloudinary(profileImage, `${user.phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
 
         return workerProfile;
       }, (reason) => {
