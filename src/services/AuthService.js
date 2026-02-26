@@ -95,7 +95,7 @@ export default class AuthService extends Service {
       const role = 'USER';
 
 
-      return await Repository.createTransaction([this.#userRepository], async () => {
+      const  { profile, user, verification } = await Repository.createTransaction([this.#userRepository], async () => {
 
         // const cityEntity = await governmentRepository.existsCity({ name: city, governmentId });
         // const cityEntities = await governmentRepository.findCities({});
@@ -117,15 +117,18 @@ export default class AuthService extends Service {
           },
           {
             experienceYears,
-            isInTeam,
-            acceptsUrgentJobs,
+            isInTeam:Boolean(isInTeam),
+            acceptsUrgentJobs:Boolean(acceptsUrgentJobs),
           });
-
+          
+          /** @type {string} */
+          
+        const nationalID = (await uploadToCloudinary(idImage[0].buffer, `${user.id}/verification_info`, "nationalID")).url;
         /** @type {string} */
-        const nationalID = (await uploadToCloudinary(idImage, `${user.id}/verification_info`, "nationalID")).url;
-        /** @type {string} */
-        const selfiWithID = (await uploadToCloudinary(profileWithIdImage, `${user.id}/verification_info`, "selfiWithID")).url;
+          
 
+        const selfiWithID = (await uploadToCloudinary(profileWithIdImage[0].buffer, `${user.id}/verification_info`, "selfiWithID")).url;
+        
         const verification = await this.#userRepository.addVerificationInfo(user.id, {
           idWithPersonalImageUrl: nationalID,
           idDocumentUrl: selfiWithID,
@@ -137,14 +140,15 @@ export default class AuthService extends Service {
         for (let { mainId, subIds } of specializationsTree) {
           await this.#userRepository.addWorkerProfileSubSpecializations(profile.id, mainId, subIds);
         }
-
-        await this.#userRepository.update({ profileImageUrl: (await uploadToCloudinary(profileImage, `${phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
-
         return { profile, user, verification };
       }, (reason) => {
-
+        console.log(reason)
         throw new AppError("Failed to create worker profile", 500, reason);
       });
+      const {url} = (await uploadToCloudinary(profileImage.buffer, `${phoneNumber}/profile_image`, "profileMain"))
+        await this.#userRepository.update({ profileImageUrl: url }, { id: user.id });
+        user.profileImageUrl = url;
+        return { profile, user, verification }
     });
   }
 
@@ -180,7 +184,8 @@ export default class AuthService extends Service {
       /** @type {import('../types/role.js').Role} */
       const role = 'USER';
 
-      return await Repository.createTransaction([this.#userRepository], async () => {
+
+      const { profile, user } =  await Repository.createTransaction([this.#userRepository], async () => {
 
         // const cityEntity = await governmentRepository.existsCity({ name: city, governmentId });
         // const cityEntities = await governmentRepository.findCities({});
@@ -205,20 +210,20 @@ export default class AuthService extends Service {
             addressNotes
           });
 
-        if (profileImage) {
-          // it will be user uuid instead of phoneNumber
-          const { url } = await uploadToCloudinary(profileImage, `${phoneNumber}/profile_image`, "profileMain");
-          await this.#userRepository.update({ profileImageUrl: (await uploadToCloudinary(profileImage, `${phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
-          profileImage = url
-        }
-
 
         return { profile, user };
       }, (reason) => {
+        console.log(reason)
         throw new AppError("Failed to create client profile", 500, reason);
       });
+      if (profileImage) {
+      
+        const  {url}  = await uploadToCloudinary(profileImage.buffer, `${user.id}/profile_image`, "profileMain");
 
-
+        await this.#userRepository.update({ profileImageUrl: url }, { id: user.id });
+        user.profileImageUrl = url
+      }
+      return { profile, user }
     });
   }
 
@@ -271,7 +276,7 @@ export default class AuthService extends Service {
 
 
       if (!otp || hashedOTP !== otp)
-        throw new AppError("OTP is not provided", 400), { type: "OTP" };
+        throw new AppError("OTP is not provided", 400, { type: "OTP" });
 
       await this.#otpCache.deleteOtp(phoneNumber, method);
 
@@ -300,7 +305,6 @@ export default class AuthService extends Service {
     }, async (error) => {
       if (!(error instanceof AppError && error.errors.type === "OTP"))
         throw error;
-
       const record = await this.#rateLimitCache.incrementVerify(phoneNumber, method);
 
       const limitStatus = {

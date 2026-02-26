@@ -153,10 +153,6 @@ export default class RateLimitCache {
 
   async resetAfterSuccess(phone, method, deviceId) {
     await Promise.all([
-      this.#deleteKey(this.#keys.sendCount(phone, method)),
-      this.#deleteKey(this.#keys.sendCooldown(phone, method)),
-      this.#deleteKey(this.#keys.sendDeviceCount(deviceId)),
-      this.#deleteKey(this.#keys.sendDeviceCooldown(deviceId)),
       this.#deleteKey(this.#keys.verify(phone, method)),
     ]);
   }

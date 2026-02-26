@@ -15,15 +15,26 @@ const initApp = async () => {
   const app = express();
 
   app.use(helmet());
-  app.use(
-    cors({
-      origin: function (origin, callback) {
-        callback(null, environment.frontend.url);
-      },
-    }),
-  );
+  // app.use(
+  //   cors({
+  //     origin: function (origin, callback) {
+  //       callback(null, environment.frontend.url);
+  //     },
+  //   }),
+  // );
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
+
+    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: "Motqen API Documentation",
+    customfavIcon: "/favicon.ico",
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+    },
+  }));
+  
   app.use(verifyDeviceId);
 
   app.use("/api", ipRateLimiter, mainRouter);
@@ -38,16 +49,8 @@ const initApp = async () => {
     });
   });
 
-  // Swagger API Documentation
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: "Motqen API Documentation",
-    customfavIcon: "/favicon.ico",
-    swaggerOptions: {
-      persistAuthorization: true,
-      displayRequestDuration: true,
-    },
-  }));
+
+
 
   // API JSON documentation endpoint
   app.get("/api-docs.json", (req, res) => {

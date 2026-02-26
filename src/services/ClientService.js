@@ -75,12 +75,11 @@ export default class ClientService extends Service {
       return await Repository.createTransaction([this.#userRepository], async () => {
 
         const clientProfile = await this.#userRepository.addClientProfile(user.id, { address, addressNotes });
-        await this.#userRepository.update({ profileImageUrl: (await uploadToCloudinary(profileImage, `${user.phoneNumber}/profile_image`, "profileMain")).url }, { id: userId });
-
+        
         if (profileImage) {
-          // it will be user uuid instead of phoneNumber
-          const { url } = await uploadToCloudinary(profileImage, `${user.phoneNumber}/profile_image`, "profileMain");
-          profileImage = url
+          const { url } = await uploadToCloudinary(profileImage.buffer, `${userId}/profile_image`, "profileMain");
+          await this.#userRepository.update({ profileImageUrl: url }, { id: userId });
+ 
         }
 
 

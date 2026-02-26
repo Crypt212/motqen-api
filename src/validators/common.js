@@ -65,8 +65,9 @@ export const validateJSONField = (fieldName, required = true) => {
           const parsed = typeof fieldValue === 'string'
             ? JSON.parse(fieldValue)
             : fieldValue;
-          return parsed;
+          return true;
         } catch (error) {
+          console.log(error)
           throw new Error(`${fieldName} must be a valid JSON string`);
         }
       }

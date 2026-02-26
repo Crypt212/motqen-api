@@ -67,10 +67,10 @@ export const authenticateTokens = (tokenTypes) => {
  * @throws {AppError} 401 if user has not verified access or refresh token or is not active
  */
 export const authenticateActive = asyncHandler(async (req, _, next) => {
-  if ("access" in Object.keys(req)) {
+  if (req.access) {
     if (!req.access.isActive)
       throw new AppError("Not Active", 401);
-  } else if ("refresh" in Object.keys(req)) {
+  } else if (req.refresh) {
     if (!req.refresh.isActive)
       throw new AppError("Not Active", 401);
   } else

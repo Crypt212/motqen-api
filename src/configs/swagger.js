@@ -20,7 +20,7 @@ const options = {
     },
     servers: [
       {
-        url: `http://localhost:${environment.port || 3000}`,
+        url: `http://localhost:${environment.backend.port || 3000}/api`,
         description: 'Development server',
       },
     ],
@@ -30,14 +30,77 @@ const options = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          description: 'Enter JWT token received from /auth/login or /auth/access endpoints',
+          description: 'JWT token — use the token returned by /auth/otp/verify, /auth/login, or /auth/access depending on the endpoint',
+        },
+      },
+      parameters: {
+        DeviceFingerprint: {
+          in: 'header',
+          name: 'x-device-fingerprint',
+          required: true,
+          schema: {
+            type: 'string',
+            example: 'fp_abc123',
+          },
+          description: 'Device fingerprint for session/device identification',
+        },
+        UUIDPathId: {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: {
+            type: 'string',
+            format: 'uuid',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          description: 'Resource UUID',
+        },
+        RegisterToken: {
+          in: 'header',
+          name: 'Authorization',
+          required: true,
+          schema: {
+            type: 'string',
+            example: 'Bearer <register_token_from_otp_verify>',
+          },
+          description: 'Register token from /auth/otp/verify (tokenType: "register"). Format: Bearer <token>',
+        },
+        LoginToken: {
+          in: 'header',
+          name: 'Authorization',
+          required: true,
+          schema: {
+            type: 'string',
+            example: 'Bearer <login_token_from_otp_verify>',
+          },
+          description: 'Login token from /auth/otp/verify (tokenType: "login"). Format: Bearer <token>',
+        },
+        AccessToken: {
+          in: 'header',
+          name: 'Authorization',
+          required: true,
+          schema: {
+            type: 'string',
+            example: 'Bearer <access_token>',
+          },
+          description: 'Access token from /auth/login or /auth/access. Format: Bearer <token>',
+        },
+        RefreshToken: {
+          in: 'header',
+          name: 'Authorization',
+          required: true,
+          schema: {
+            type: 'string',
+            example: 'Bearer <refresh_token>',
+          },
+          description: 'Refresh token from /auth/login. Format: Bearer <token>',
         },
       },
       schemas: {
-        // Auth Schemas
+        // ─── Auth Request Schemas ───────────────────────────────
         OTPRequest: {
           type: 'object',
-          required: ['phoneNumber'],
+          required: ['phoneNumber', 'method'],
           properties: {
             phoneNumber: {
               type: 'string',
@@ -76,24 +139,47 @@ const options = {
         },
         RegisterClient: {
           type: 'object',
-          required: ['registerToken', 'firstName', 'lastName', 'government', 'city'],
+          description:
+            'Multipart form-data. Fields `userData` and `clientProfile` are JSON strings.',
           properties: {
-            registerToken: {
+            personal_image: {
               type: 'string',
-              example: 'reg_token_xxx',
-              description: 'Registration token from OTP verification',
+              format: 'binary',
+              description: 'Profile image file (optional)',
             },
+            userData: {
+              type: 'string',
+              description: 'JSON string containing user data',
+              example:
+                '{"firstName":"أحمد","middleName":"علي","lastName":"محمد","governmentId":"uuid","city":"المنصورة"}',
+            },
+            clientProfile: {
+              type: 'string',
+              description: 'JSON string containing client profile data',
+              example: '{"address":"123 Main St","addressNotes":"Near the park"}',
+            },
+          },
+        },
+        RegisterClientUserData: {
+          type: 'object',
+          required: ['firstName', 'middleName', 'lastName', 'governmentId', 'city'],
+          properties: {
             firstName: {
               type: 'string',
               example: 'أحمد',
-              description: 'User first name (Arabic or English)',
+              description: 'First name (2-50 chars)',
+            },
+            middleName: {
+              type: 'string',
+              example: 'علي',
+              description: 'Middle name (2-50 chars)',
             },
             lastName: {
               type: 'string',
               example: 'محمد',
-              description: 'User last name (Arabic or English)',
+              description: 'Last name (2-50 chars)',
             },
-            government: {
+            governmentId: {
               type: 'string',
               format: 'uuid',
               example: '123e4567-e89b-12d3-a456-426614174000',
@@ -101,64 +187,71 @@ const options = {
             },
             city: {
               type: 'string',
-              format: 'uuid',
-              example: '123e4567-e89b-12d3-a456-426614174001',
-              description: 'City UUID',
+              example: 'المنصورة',
+              description: 'City name (2-50 chars)',
             },
-            bio: {
+          },
+        },
+        RegisterClientProfile: {
+          type: 'object',
+          required: ['address'],
+          properties: {
+            address: {
               type: 'string',
-              example: 'مستخدم جديد',
-              description: 'Optional bio (max 500 characters)',
+              example: '123 Main Street',
+              description: 'Client address (required)',
+            },
+            addressNotes: {
+              type: 'string',
+              example: 'Near the park',
+              description: 'Optional address notes',
             },
           },
         },
         RegisterWorker: {
           type: 'object',
+          description:
+            'Multipart form-data. Fields `userData` and `workerProfile` are JSON strings. Three image files are required.',
+          properties: {
+            personal_image: {
+              type: 'string',
+              format: 'binary',
+              description: 'Personal photo (required)',
+            },
+            id_image: {
+              type: 'string',
+              format: 'binary',
+              description: 'National ID image (required)',
+            },
+            personal_with_id_image: {
+              type: 'string',
+              format: 'binary',
+              description: 'Photo holding national ID (required)',
+            },
+            userData: {
+              type: 'string',
+              description: 'JSON string containing user data',
+              example:
+                '{"firstName":"أحمد","middleName":"علي","lastName":"محمد","governmentId":"uuid","city":"المنصورة"}',
+            },
+            workerProfile: {
+              type: 'string',
+              description: 'JSON string containing worker profile data',
+              example:
+                '{"experienceYears":5,"isInTeam":false,"acceptsUrgentJobs":true,"specializationsTree":[{"mainId":"uuid","subIds":["uuid"]}],"workGovernmentIds":["uuid"]}',
+            },
+          },
+        },
+        RegisterWorkerProfile: {
+          type: 'object',
           required: [
-            'registerToken',
-            'firstName',
-            'lastName',
-            'government',
-            'city',
             'experienceYears',
             'isInTeam',
             'acceptsUrgentJobs',
-            'specializationNames',
-            'workGovernmentNames',
+            'specializationsTree',
+            'workGovernmentIds',
           ],
           properties: {
-            registerToken: {
-              type: 'string',
-              example: 'reg_token_xxx',
-              description: 'Registration token from OTP verification',
-            },
-            firstName: {
-              type: 'string',
-              example: 'أحمد',
-              description: 'Worker first name (Arabic or English)',
-            },
-            lastName: {
-              type: 'string',
-              example: 'محمد',
-              description: 'Worker last name (Arabic or English)',
-            },
-            government: {
-              type: 'string',
-              format: 'uuid',
-              example: '123e4567-e89b-12d3-a456-426614174000',
-              description: 'Government UUID (residence)',
-            },
-            city: {
-              type: 'string',
-              format: 'uuid',
-              example: '123e4567-e89b-12d3-a456-426614174001',
-              description: 'City UUID (residence)',
-            },
-            bio: {
-              type: 'string',
-              example: 'فني خبرة 10 سنوات',
-              description: 'Optional bio (max 500 characters)',
-            },
             experienceYears: {
               type: 'integer',
               example: 5,
@@ -174,88 +267,81 @@ const options = {
               example: true,
               description: 'Whether the worker accepts urgent jobs',
             },
-            specializationNames: {
+            specializationsTree: {
               type: 'array',
-              items: { type: 'string' },
-              example: [' plumbing', 'electrical'],
-              description: 'List of specialization names',
+              items: {
+                type: 'object',
+                required: ['mainId'],
+                properties: {
+                  mainId: {
+                    type: 'string',
+                    format: 'uuid',
+                    description: 'Main specialization UUID',
+                  },
+                  subIds: {
+                    type: 'array',
+                    items: { type: 'string', format: 'uuid' },
+                    description: 'Sub-specialization UUIDs',
+                  },
+                },
+              },
+              description: 'Specialization tree with main and sub specializations',
             },
-            subSpecializationNames: {
+            workGovernmentIds: {
               type: 'array',
-              items: { type: 'string' },
-              example: ['installation', 'repair'],
-              description: 'List of sub-specialization names (optional)',
-            },
-            workGovernmentNames: {
-              type: 'array',
-              items: { type: 'string' },
-              example: ['Cairo', 'Giza'],
-              description: 'List of governments where worker can work',
+              items: { type: 'string', format: 'uuid' },
+              example: ['123e4567-e89b-12d3-a456-426614174000'],
+              description: 'Government UUIDs where worker can work',
             },
           },
         },
         Login: {
           type: 'object',
-          required: ['loginToken'],
-          properties: {
-            loginToken: {
-              type: 'string',
-              example: 'login_token_xxx',
-              description: 'Login token from OTP verification',
-            },
-            deviceFingerprint: {
-              type: 'string',
-              example: 'fp_abc123',
-              description: 'Optional device fingerprint',
-            },
-          },
-        },
-        GenerateAccessToken: {
-          type: 'object',
+          description: 'Login token is sent via Authorization header. Device fingerprint via x-device-fingerprint header.',
           properties: {},
-          required: [],
         },
-        // User Schemas
-        UpdateUserBasicInfo: {
+        // ─── User Request Schemas ───────────────────────────────
+        UpdateUser: {
           type: 'object',
+          description: 'All fields are optional — only provide fields to update',
           properties: {
+            firstName: {
+              type: 'string',
+              example: 'أحمد',
+              description: 'First name (2-50 characters, letters only)',
+            },
+            lastName: {
+              type: 'string',
+              example: 'محمد',
+              description: 'Last name (2-50 characters, letters only)',
+            },
+            governmentId: {
+              type: 'string',
+              format: 'uuid',
+              example: '123e4567-e89b-12d3-a456-426614174000',
+              description: 'Government UUID',
+            },
+            city: {
+              type: 'string',
+              example: 'المنصورة',
+              description: 'City name (2-100 characters)',
+            },
+            bio: {
+              type: 'string',
+              example: 'مستخدم نشط',
+              description: 'Bio (max 500 characters)',
+            },
             role: {
               type: 'string',
               enum: ['USER', 'ADMIN'],
               example: 'USER',
               description: 'User role',
             },
-            firstName: {
-              type: 'string',
-              example: 'أحمد',
-              description: 'User first name (optional - only provide fields to update)',
-            },
-            lastName: {
-              type: 'string',
-              example: 'محمد',
-              description: 'User last name',
-            },
-            government: {
-              type: 'string',
-              format: 'uuid',
-              example: '123e4567-e89b-12d3-a456-426614174000',
-              description: 'Government UUID',
-            },
-            city: {
-              type: 'string',
-              format: 'uuid',
-              example: '123e4567-e89b-12d3-a456-426614174001',
-              description: 'City UUID',
-            },
-            bio: {
-              type: 'string',
-              example: 'مستخدم نشط',
-              description: 'Optional bio (max 500 characters)',
-            },
           },
         },
-        UpdateWorkerInfo: {
+        UpdateWorkerProfile: {
           type: 'object',
+          description: 'All fields are optional — only provide fields to update',
           properties: {
             experienceYears: {
               type: 'integer',
@@ -272,9 +358,146 @@ const options = {
               example: true,
               description: 'Whether the worker accepts urgent jobs',
             },
+            specializationsTree: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  mainId: { type: 'string', format: 'uuid' },
+                  subIds: {
+                    type: 'array',
+                    items: { type: 'string', format: 'uuid' },
+                  },
+                },
+              },
+              description: 'Specialization tree (optional)',
+            },
+            workGovernmentIds: {
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
+              description: 'Government UUIDs where worker can work (optional)',
+            },
           },
         },
-        // User Schema
+        CreateWorkerProfile: {
+          type: 'object',
+          description:
+            'Multipart form-data. Three image files required: personal_image, id_image, personal_with_id_image.',
+          properties: {
+            personal_image: {
+              type: 'string',
+              format: 'binary',
+              description: 'Personal photo (required)',
+            },
+            id_image: {
+              type: 'string',
+              format: 'binary',
+              description: 'National ID image (required)',
+            },
+            personal_with_id_image: {
+              type: 'string',
+              format: 'binary',
+              description: 'Photo holding national ID (required)',
+            },
+            experienceYears: {
+              type: 'integer',
+              example: 5,
+              description: 'Years of experience (0-50)',
+            },
+            isInTeam: {
+              type: 'boolean',
+              example: false,
+            },
+            acceptsUrgentJobs: {
+              type: 'boolean',
+              example: true,
+            },
+            specializationsTree: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  mainId: { type: 'string', format: 'uuid' },
+                  subIds: {
+                    type: 'array',
+                    items: { type: 'string', format: 'uuid' },
+                  },
+                },
+              },
+            },
+            workGovernmentIds: {
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
+            },
+          },
+        },
+        UpdateClientProfile: {
+          type: 'object',
+          description: 'All fields are optional — only provide fields to update',
+          properties: {
+            address: {
+              type: 'string',
+              example: '123 Main Street',
+              description: 'Client address (5-500 characters)',
+            },
+            addressNotes: {
+              type: 'string',
+              example: 'Near the park',
+              description: 'Address notes (max 500 characters)',
+            },
+          },
+        },
+        CreateClientProfile: {
+          type: 'object',
+          required: ['address'],
+          properties: {
+            address: {
+              type: 'string',
+              example: '123 Main Street',
+              description: 'Client address (5-500 characters, required)',
+            },
+            addressNotes: {
+              type: 'string',
+              example: 'Near the park',
+              description: 'Optional address notes (max 500 characters)',
+            },
+          },
+        },
+        // ─── Government / Specialization Request Schemas ────────
+        GovernmentInput: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: {
+              type: 'string',
+              example: 'القاهرة',
+              description: 'Government name (2-100 characters)',
+            },
+          },
+        },
+        SpecializationInput: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: {
+              type: 'string',
+              example: 'سباكة',
+              description: 'Specialization name (2-100 characters)',
+            },
+          },
+        },
+        SubSpecializationInput: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: {
+              type: 'string',
+              example: 'تركيب',
+              description: 'Sub-specialization name (2-100 characters)',
+            },
+          },
+        },
+        // ─── Response Data Models ───────────────────────────────
         User: {
           type: 'object',
           properties: {
@@ -282,58 +505,52 @@ const options = {
               type: 'string',
               format: 'uuid',
               example: '123e4567-e89b-12d3-a456-426614174000',
-              description: 'User unique identifier',
             },
             phoneNumber: {
               type: 'string',
               example: '+201234567890',
-              description: 'Egyptian phone number',
             },
             firstName: {
               type: 'string',
               example: 'أحمد',
-              description: 'User first name',
+            },
+            middleName: {
+              type: 'string',
+              example: 'علي',
             },
             lastName: {
               type: 'string',
               example: 'محمد',
-              description: 'User last name',
             },
             governmentId: {
               type: 'string',
               format: 'uuid',
               nullable: true,
-              description: 'Government UUID',
             },
             cityId: {
               type: 'string',
               format: 'uuid',
               nullable: true,
-              description: 'City UUID',
             },
-            bio: {
+            cityName: {
               type: 'string',
               nullable: true,
-              example: 'مستخدم نشط',
-              description: 'User bio (max 500 characters)',
+              example: 'المنصورة',
             },
-            profileImage: {
+            profileImageUrl: {
               type: 'string',
               nullable: true,
               example: 'https://res.cloudinary.com/.../image.jpg',
-              description: 'Profile image URL',
             },
             status: {
               type: 'string',
               enum: ['ACTIVE', 'SUSPENDED', 'BANNED'],
               example: 'ACTIVE',
-              description: 'Account status',
             },
             role: {
               type: 'string',
               enum: ['USER', 'ADMIN'],
               example: 'USER',
-              description: 'User role',
             },
           },
         },
@@ -343,28 +560,27 @@ const options = {
             id: {
               type: 'string',
               format: 'uuid',
-              example: '123e4567-e89b-12d3-a456-426614174002',
-              description: 'Worker profile unique identifier',
             },
             userId: {
               type: 'string',
               format: 'uuid',
-              description: 'User ID',
             },
             experienceYears: {
               type: 'integer',
               example: 5,
-              description: 'Years of experience',
             },
             isInTeam: {
               type: 'boolean',
               example: false,
-              description: 'Whether the worker works in a team',
             },
             acceptsUrgentJobs: {
               type: 'boolean',
               example: true,
-              description: 'Whether the worker accepts urgent jobs',
+            },
+            isApproved: {
+              type: 'boolean',
+              example: false,
+              description: 'Admin approval status',
             },
           },
         },
@@ -374,17 +590,121 @@ const options = {
             id: {
               type: 'string',
               format: 'uuid',
-              example: '123e4567-e89b-12d3-a456-426614174003',
-              description: 'Client profile unique identifier',
             },
             userId: {
               type: 'string',
               format: 'uuid',
-              description: 'User ID',
+            },
+            address: {
+              type: 'string',
+              example: '123 Main Street',
+            },
+            addressNotes: {
+              type: 'string',
+              nullable: true,
+              example: 'Near the park',
             },
           },
         },
-        // Response Schemas
+        Government: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            name: {
+              type: 'string',
+              example: 'القاهرة',
+            },
+          },
+        },
+        City: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            governmentId: {
+              type: 'string',
+              format: 'uuid',
+            },
+            name: {
+              type: 'string',
+              example: 'المنصورة',
+            },
+          },
+        },
+        Specialization: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            name: {
+              type: 'string',
+              example: 'سباكة',
+            },
+          },
+        },
+        SubSpecialization: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            name: {
+              type: 'string',
+              example: 'تركيب',
+            },
+            mainSpecializationId: {
+              type: 'string',
+              format: 'uuid',
+            },
+          },
+        },
+        WorkerVerification: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            workerProfileId: {
+              type: 'string',
+              format: 'uuid',
+            },
+            idWithPersonalImageUrl: {
+              type: 'string',
+              example: 'https://res.cloudinary.com/.../id_selfie.jpg',
+            },
+            idDocumentUrl: {
+              type: 'string',
+              example: 'https://res.cloudinary.com/.../id_doc.jpg',
+            },
+            status: {
+              type: 'string',
+              enum: ['PENDING', 'APPROVED', 'REJECTED'],
+              example: 'PENDING',
+            },
+            reason: {
+              type: 'string',
+              nullable: true,
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+          },
+        },
+        // ─── Generic Response Schemas ───────────────────────────
         SuccessResponse: {
           type: 'object',
           properties: {
@@ -519,7 +839,7 @@ const options = {
               },
               example: {
                 status: 'fail',
-                message: 'User not found',
+                message: 'Resource not found',
               },
             },
           },
@@ -580,11 +900,19 @@ const options = {
     tags: [
       {
         name: 'Auth',
-        description: 'Authentication endpoints',
+        description: 'Authentication endpoints (OTP, registration, login, logout, token refresh)',
       },
       {
         name: 'Users',
-        description: 'User management endpoints',
+        description: 'User profile management (basic info, profile image, client/worker profiles)',
+      },
+      {
+        name: 'Governments',
+        description: 'Government & city lookup and management',
+      },
+      {
+        name: 'Specializations',
+        description: 'Specialization & sub-specialization lookup and management',
       },
     ],
   },

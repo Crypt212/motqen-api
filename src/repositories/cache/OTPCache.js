@@ -12,16 +12,18 @@ export default class OtpCache {
   }
 
   async setOtp(phone, method, hashedOtp, ttlSeconds) {
-
+const key = this.#keys.otp(phone, method)
     await this.#client.set(
-      this.#keys.otp(phone, method),
+      key,
       hashedOtp,
       { EX: ttlSeconds }
     );
   }
 
   async getOtp(phone, method) {
-    return await this.#client.get(this.#keys.otp(phone, method));
+    const key = this.#keys.otp(phone, method);
+    const value =  await this.#client.get(key);
+    return value
   }
 
   async otpExists(phone, method) {

@@ -78,7 +78,7 @@ export default class UserService extends Service {
    * @throws {AppError} If government or city not found
    */
   async updateUser(userId, data) {
-    const government = await this.#governmentRepository.findOne({ name: data.governmentId });
+    const government = await this.#governmentRepository.findOne({ id: data.governmentId });
     if (!government) throw new AppError("Government not found", 400);
 
     // let cityId = undefined;

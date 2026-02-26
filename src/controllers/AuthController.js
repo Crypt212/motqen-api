@@ -67,7 +67,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
  */
 export const registerClient = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
-  const { userData: {
+   const { userData: {
     firstName,
     middleName,
     lastName,
@@ -78,6 +78,7 @@ export const registerClient = asyncHandler(async (req, res) => {
     addressNotes,
   } } = matchedData(req, { includeOptionals: true });
 
+  
   const phoneNumber = req.register.phoneNumber;
   const image = req.file;
 
@@ -149,7 +150,7 @@ export const registerWorker = asyncHandler(async (req, res) => {
   )
     throw new AppError('Please upload all required images', 400);
 
-  const { user, profile: workerProfile } = await authService.registerWorker({
+  const { user, profile: workerProfile  } = await authService.registerWorker({
     phoneNumber,
     firstName,
     middleName,
@@ -264,7 +265,7 @@ export const reviewStatus = asyncHandler(async (req, res) => {
 
   if (req.access.isWorker) {
     const isApproved = (await userRepository.getWorkerProfile(userId)).isApproved;
-    if (!isApproved) throw new AppError('You are not approved yet', 401);
+    if (!isApproved) throw new AppError('You are not approved yet', 401 ,);
     new SuccessResponse('You are approved', 200);
   }
 
