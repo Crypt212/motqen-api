@@ -42,7 +42,9 @@ export default class UserService extends Service {
    * @returns {Promise<import("../repositories/database/UserRepository.js").OptionalUser>} user
    */
   async getUser(userId) {
+    console.log("bla bla bla");
     const user = await this.#userRepository.findOne({ id: userId });
+    console.log("alb alb alb");
     return user;
   }
 

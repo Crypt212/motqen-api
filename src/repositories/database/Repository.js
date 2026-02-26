@@ -47,7 +47,7 @@ export class Repository {
   /**
    * @param {Repository[]} repositories
    * @param {function(): Promise<T>} transactionHandler
-   * @param {function(any): void} catchHandler
+   * @param {function(any): Promise<void>} catchHandler
    * @returns {Promise<T | undefined>}
    * @template T
    */
@@ -63,8 +63,7 @@ export class Repository {
       return result;
     } catch (error) {
       repositories.forEach(repository => repository.resetPrismaClient());
-      catchHandler(error);
-      return undefined;
+      await catchHandler(error);
     }
   }
 

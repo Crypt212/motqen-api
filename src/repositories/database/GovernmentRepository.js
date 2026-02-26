@@ -4,7 +4,7 @@
  */
 
 import { Repository } from "./Repository.js";
-import prisma from "../../libs/database.js";
+import { PrismaClient } from "@prisma/client";
 
 /** @typedef {import('@prisma/client').Prisma.BatchPayload} BatchPayload */
 /** @typedef {import("./Repository.js").IDType} IDType */
@@ -26,7 +26,8 @@ import prisma from "../../libs/database.js";
  */
 export default class GovernmentRepository extends Repository {
 
-  constructor() {
+  /** @param {PrismaClient} prisma */
+  constructor(prisma) {
     super(prisma, "government");
   }
 
@@ -37,8 +38,8 @@ export default class GovernmentRepository extends Repository {
    * @param {CityFilter} filter
    * @returns {Promise<boolean>}
    */
-  async existsCity(filter ) {
-    return (await this.prismaClient.city.count({ where: filter})) > 0;
+  async existsCity(filter) {
+    return (await this.prismaClient.city.count({ where: filter })) > 0;
   }
 
   /**

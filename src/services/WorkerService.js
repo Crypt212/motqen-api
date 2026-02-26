@@ -64,7 +64,7 @@ export default class WorkerService extends Service {
       let workerProfile;
 
       await Repository.createTransaction([this.#userRepository], async () => {
-        workerProfile = await this.#userRepository.createWorkerProfile(userId, {
+        workerProfile = await this.#userRepository.addWorkerProfile(userId, {
           experienceYears,
           isInTeam,
           acceptsUrgentJobs,
@@ -79,7 +79,7 @@ export default class WorkerService extends Service {
         const nationalID = (await uploadToCloudinary(idImage, `${userId}/verification_info`, "nationalID")).url
         const selfiWithID = (await uploadToCloudinary(profileWithIdImage, `${userId}/verification_info`, "selfiWithID")).url
 
-        await this.#userRepository.createVerification(workerProfile.id, {
+        await this.#userRepository.addVerificationInfo(workerProfile.id, {
           idWithPersonalImageUrl: selfiWithID,
           idDocumentUrl: nationalID,
           status: "APPROVED"// untill dashboard emplement
@@ -133,7 +133,7 @@ export default class WorkerService extends Service {
    * @param {IDType[]} governmentIds - Ids of working governments
    * @returns {Promise<Number>} Number of inserted governments
    */
-  async insertWorkerProfileWorkGovernments(userId, governmentIds) {
+  async addWorkerProfileWorkGovernments(userId, governmentIds) {
     return tryCatch(async () => {
 
       const user = await this.#userRepository.findOne({ id: userId });
@@ -188,7 +188,7 @@ export default class WorkerService extends Service {
    * @param {IDType} userId - User ID
    * @param {{mainId: IDType, subIds: IDType[]}[]} specializationsTree - Tree of main and sub specializations
    */
-  async insertWorkerProfileSpecializations(userId, specializationsTree) {
+  async addWorkerProfileSpecializations(userId, specializationsTree) {
     return tryCatch(async () => {
 
       const user = await this.#userRepository.findOne({ id: userId });

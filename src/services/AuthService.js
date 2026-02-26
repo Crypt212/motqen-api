@@ -8,7 +8,6 @@ import { generateOTP, hashOTP } from "../utils/OTP.js";
 import crypto from "crypto";
 import AppError from "../errors/AppError.js";
 import uploadToCloudinary from "../providers/cloudinaryProvider.js";
-import { userRepository } from "../state.js";
 import Service, { tryCatch } from "./Service.js";
 import OtpCache from "../repositories/cache/OTPCache.js";
 import SessionRepository from "../repositories/database/SessionRepository.js";
@@ -105,35 +104,43 @@ export default class AuthService extends Service {
         //   throw new AppError("Government or City not found", 400);
         // }
 
-        const user = await this.#userRepository.create({ phoneNumber, role, firstName, middleName, lastName, governmentId, cityName: city, status: "ACTIVE" });
-
-        const workerProfile = await this.#userRepository.createWorkerProfile(user.id, {
-          experienceYears,
-          isInTeam,
-          acceptsUrgentJobs,
-        });
-
-        await this.#userRepository.addWorkerProfileGovernments(workerProfile.id, workGovernmentIds);
-        await this.#userRepository.addWorkerProfileSpecializations(workerProfile.id, specializationsTree.map(({ mainId }) => mainId));
-        for (let { mainId, subIds } of specializationsTree) {
-          await userRepository.addWorkerProfileSubSpecializations(workerProfile.id, mainId, subIds);
-        }
+        const { user, profile } = await this.#userRepository.createWorker(
+          {
+            phoneNumber,
+            role,
+            firstName,
+            middleName,
+            lastName,
+            governmentId,
+            cityName: city,
+            status: "ACTIVE"
+          },
+          {
+            experienceYears,
+            isInTeam,
+            acceptsUrgentJobs,
+          });
 
         /** @type {string} */
         const nationalID = (await uploadToCloudinary(idImage, `${user.id}/verification_info`, "nationalID")).url;
         /** @type {string} */
         const selfiWithID = (await uploadToCloudinary(profileWithIdImage, `${user.id}/verification_info`, "selfiWithID")).url;
 
-        await this.#userRepository.createVerification(
-          workerProfile.id, {
+        const verification = await this.#userRepository.addVerificationInfo(user.id, {
           idWithPersonalImageUrl: nationalID,
           idDocumentUrl: selfiWithID,
           status: "APPROVED"// until dashboard emplement
         });
 
+        await this.#userRepository.addWorkerProfileGovernments(profile.id, workGovernmentIds);
+        await this.#userRepository.addWorkerProfileSpecializations(profile.id, specializationsTree.map(({ mainId }) => mainId));
+        for (let { mainId, subIds } of specializationsTree) {
+          await this.#userRepository.addWorkerProfileSubSpecializations(profile.id, mainId, subIds);
+        }
+
         await this.#userRepository.update({ profileImageUrl: (await uploadToCloudinary(profileImage, `${phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
 
-        return workerProfile;
+        return { profile, user, verification };
       }, (reason) => {
 
         throw new AppError("Failed to create worker profile", 500, reason);
@@ -182,8 +189,21 @@ export default class AuthService extends Service {
         //   throw new AppError("Government or City not found", 400);
         // }
 
-        const user = await this.#userRepository.create({ phoneNumber, role, firstName, middleName, lastName, governmentId, cityName: city, status: "ACTIVE" });
-        const clientProfile = await this.#userRepository.createClientProfile(user.id, { address, addressNotes });
+        const { user, profile } = await this.#userRepository.createClient(
+          {
+            phoneNumber,
+            role,
+            firstName,
+            middleName,
+            lastName,
+            governmentId,
+            cityName: city,
+            status: "ACTIVE"
+          },
+          {
+            address,
+            addressNotes
+          });
 
         if (profileImage) {
           // it will be user uuid instead of phoneNumber
@@ -193,9 +213,9 @@ export default class AuthService extends Service {
         }
 
 
-        return clientProfile;
+        return { profile, user };
       }, (reason) => {
-        throw new AppError("Failed to create worker profile", 500, reason);
+        throw new AppError("Failed to create client profile", 500, reason);
       });
 
 
@@ -294,7 +314,6 @@ export default class AuthService extends Service {
         requestNewOtp: limitStatus.blocked,
       });
     });
-
   }
 
   /**
@@ -317,7 +336,7 @@ export default class AuthService extends Service {
 
     const session = await this.#sessionRepository.findOne({
       userId,
-      deviceFingerprint: deviceId,
+      deviceId: deviceId,
       token: hashedToken,
     });
 
@@ -332,8 +351,19 @@ export default class AuthService extends Service {
       throw new AppError("Refresh token has expired", 400);
     }
 
+    const user = await this.#userRepository.findOne({ id: userId });
+    const isWorker = await this.#userRepository.hasWorkerProfile(userId);
+    const isClient = await this.#userRepository.hasClientProfile(userId);
 
-    const accessToken = generateToken({ type: "access", userId, role: role });
+    const accessToken = generateToken({
+      type: "access",
+      userId,
+      role: role,
+      phoneNumber: user.phoneNumber,
+      isWorker,
+      isClient,
+      isActive: user.status == "ACTIVE",
+    });
     return accessToken;
   }
 
@@ -355,10 +385,21 @@ export default class AuthService extends Service {
     deviceId: deviceFingerprint,
     expiresAt,
   }) {
-    await this.#sessionRepository.delete({ deviceFingerprint });
+    await this.#sessionRepository.delete({ deviceId: deviceFingerprint });
     const user = await this.#userRepository.findOne({ phoneNumber });
 
-    const unHashedRefreshToken = generateToken({ type: "refresh", userId: user.id, role: user.role });
+    const isWorker = await this.#userRepository.hasWorkerProfile(user.id);
+    const isClient = await this.#userRepository.hasClientProfile(user.id);
+    const unHashedRefreshToken = generateToken({
+      type: "refresh",
+      userId: user.id,
+      phoneNumber: user.phoneNumber,
+      role: user.role,
+      isWorker,
+      isClient,
+      isActive: user.status == "ACTIVE"
+    });
+
     logger.info("Generated Refresh Token:", expiresAt);
 
     const hashedToken = crypto.createHash("sha256").update(unHashedRefreshToken).digest("hex");
@@ -368,7 +409,7 @@ export default class AuthService extends Service {
       lastUsedAt: new Date(Date.now()),
       createdAt: new Date(Date.now()),
       userId: user.id,
-      deviceFingerprint,
+      deviceId: deviceFingerprint,
       expiresAt,
       token: hashedToken,
     });
@@ -387,7 +428,7 @@ export default class AuthService extends Service {
     try {
       await this.#sessionRepository.delete({
         userId,
-        deviceFingerprint,
+        deviceId: deviceFingerprint,
       });
     } catch (err) {
       logger.error("Failed to revoke session:", err);

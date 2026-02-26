@@ -3,17 +3,14 @@
  * @module controllers/GovernmentController
  */
 
+import { matchedData } from "express-validator";
 import AppError from "../errors/AppError.js";
 import SuccessResponse from "../responses/successResponse.js";
 import { governmentRepository } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
 
-/** @typedef {import("../types/asyncHandler.js").UserPayload} UserPayload */
-/** @template T @typedef {import("../types/asyncHandler.js").RequestHandler<T>} RequestHandler<T> */
-
 /**
  * Get all governments
- * @type {RequestHandler<{}>}
  */
 export const getGovernments = asyncHandler(async (_, res) => {
   const governments = await governmentRepository.findMany();
@@ -27,7 +24,6 @@ export const getGovernments = asyncHandler(async (_, res) => {
 
 /**
  * Get government by ID
- * @type {RequestHandler<{}>}
  */
 export const getGovernmentById = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -46,10 +42,9 @@ export const getGovernmentById = asyncHandler(async (req, res) => {
 
 /**
  * Create a new government (Admin only)
- * @type {RequestHandler<UserPayload>}
  */
 export const createGovernment = asyncHandler(async (req, res) => {
-  const { name } = req.body;
+  const { name } = matchedData(req, { includeOptionals: true });
 
   const government = await governmentRepository.create({ name });
 
@@ -62,11 +57,10 @@ export const createGovernment = asyncHandler(async (req, res) => {
 
 /**
  * Update government (Admin only)
- * @type {RequestHandler<UserPayload>}
  */
 export const updateGovernment = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name } = req.body;
+  const { name } = matchedData(req, { includeOptionals: true });
 
   const existing = await governmentRepository.findOne({ id });
   if (!existing) {
@@ -85,7 +79,6 @@ export const updateGovernment = asyncHandler(async (req, res) => {
 
 /**
  * Delete government (Admin only)
- * @type {RequestHandler<UserPayload>}
  */
 export const deleteGovernment = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -106,7 +99,6 @@ export const deleteGovernment = asyncHandler(async (req, res) => {
 
 /**
  * Get all cities under a specific government
- * @type {RequestHandler<UserPayload>}
  */
 export const getCitiesByGovernment = asyncHandler(async (req, res) => {
     const governmentId = String(req.params.governmentId);

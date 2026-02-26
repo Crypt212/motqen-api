@@ -3,6 +3,8 @@
  * @module middlewares/errorMiddleware
  */
 
+import { logger } from "../libs/winston.js";
+
 /**
  * Error handler middleware
  * @type {import("express").ErrorRequestHandler}
@@ -17,6 +19,7 @@ export default (err, req, res , next) => {
   }
 
   if (process.env.NODE_ENV === 'development') {
+    logger.error(err);
     return res.status(err.statusCode).json({
       status: err.status,
       message: err.message,
@@ -27,6 +30,7 @@ export default (err, req, res , next) => {
 
   // production
   if (err.isOperational) {
+    logger.error(err);
     return res.status(err.statusCode).json({
       status: err.status,
       message: err.message,

@@ -14,7 +14,7 @@ import {
   createSubSpecialization,
   deleteSubSpecialization,
 } from "../controllers/SpecializationController.js";
-import { authenticate, authorizeAdmin } from "../middlewares/authMiddleware.js";
+import { authenticateActive, authorizeAdmin } from "../middlewares/authMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 import { body, param } from "express-validator";
 
@@ -47,7 +47,7 @@ specializationRouter.get(
 // Admin endpoints
 specializationRouter.post(
   "/",
-  authenticate,
+  authenticateActive,
   authorizeAdmin,
   body("name")
     .trim()
@@ -61,7 +61,7 @@ specializationRouter.post(
 
 specializationRouter.put(
   "/:id",
-  authenticate,
+  authenticateActive,
   authorizeAdmin,
   param("id")
     .matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
@@ -78,7 +78,7 @@ specializationRouter.put(
 
 specializationRouter.delete(
   "/:id",
-  authenticate,
+  authenticateActive,
   authorizeAdmin,
   param("id")
     .matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
@@ -90,7 +90,7 @@ specializationRouter.delete(
 // Sub-specialization admin endpoints
 specializationRouter.post(
   "/:id/sub-specializations",
-  authenticate,
+  authenticateActive,
   authorizeAdmin,
   param("id")
     .matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
@@ -107,7 +107,7 @@ specializationRouter.post(
 
 specializationRouter.delete(
   "/:id/sub-specializations/:subId",
-  authenticate,
+  authenticateActive,
   authorizeAdmin,
   param("id")
     .matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)

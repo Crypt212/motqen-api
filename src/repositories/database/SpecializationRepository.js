@@ -4,7 +4,7 @@
  */
 
 import { Repository } from "./Repository.js";
-import prisma from "../../libs/database.js";
+import { PrismaClient } from "@prisma/client";
 
 
 /** @typedef {import("./Repository.js").IDType} IDType */
@@ -27,7 +27,8 @@ import prisma from "../../libs/database.js";
  */
 export default class SpecializationRepository extends Repository {
 
-  constructor() {
+  /** @param {PrismaClient} prisma */
+  constructor(prisma) {
     super(prisma, "specialization");
   }
 

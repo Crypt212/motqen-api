@@ -76,13 +76,14 @@ model WorkerProfile {
 model WorkerVerification {
   id                     String             @id @default(uuid())
   workerProfileId        String             @unique
-  idWithPersonalImageUrl String             @map("profileImageUrl")
+  idWithPersonalImageUrl String
   idDocumentUrl          String
   status                 VerificationStatus @default(PENDING)
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
   reason                 String?
-  workerProfile          WorkerProfile      @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
 
   @@map("verifications")
 }
@@ -134,7 +135,7 @@ model Specialization {
   name String
 
   subSpecializations SubSpecialization[]
-  chosenByWorker     ChosenSpecialization[]
+  choosingWorkers    ChosenSpecialization[]
 
   @@index([name])
   @@map("specializations")
@@ -145,7 +146,7 @@ model SubSpecialization {
   name                 String
   mainSpecializationId String
 
-  chosenByWorker     ChosenSubSpecialization[]
+  choosingWorkers     ChosenSubSpecialization[]
   mainSpecialization Specialization            @relation(fields: [mainSpecializationId], references: [id], onDelete: Cascade)
 
   @@index([name])
@@ -164,7 +165,7 @@ model GovernmentForWorkers {
 }
 
 model Government {
-  id          String @id @default(uuid())
+  id   String @id @default(uuid())
   name String
 
   workers GovernmentForWorkers[]
@@ -177,7 +178,7 @@ model Government {
 model City {
   id           String @id @default(uuid())
   governmentId String
-  name  String
+  name         String
 
   users      User[]
   government Government @relation(fields: [governmentId], references: [id], onDelete: Cascade)

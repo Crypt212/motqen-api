@@ -3,17 +3,14 @@
  * @module controllers/SpecializationController
  */
 
+import { matchedData } from "express-validator";
 import AppError from "../errors/AppError.js";
 import SuccessResponse from "../responses/successResponse.js";
 import { specializationRepository } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
 
-/** @typedef {import("../types/asyncHandler.js").UserPayload} UserPayload */
-/** @template T @typedef {import("../types/asyncHandler.js").RequestHandler<T>} RequestHandler<T> */
-
 /**
  * Get all specializations
- * @type {RequestHandler<{}>}
  */
 export const getSpecializations = asyncHandler(async (_, res) => {
   const specializations = await specializationRepository.findMany();
@@ -27,7 +24,6 @@ export const getSpecializations = asyncHandler(async (_, res) => {
 
 /**
  * Get specialization by ID
- * @type {RequestHandler<{}>}
  */
 export const getSpecializationById = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
@@ -46,7 +42,6 @@ export const getSpecializationById = asyncHandler(async (req, res) => {
 
 /**
  * Get sub-specializations by parent ID
- * @type {RequestHandler<{}>}
  */
 export const getSubSpecializations = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
@@ -67,10 +62,9 @@ export const getSubSpecializations = asyncHandler(async (req, res) => {
 
 /**
  * Create a new specialization (Admin only)
- * @type {RequestHandler<UserPayload>}
  */
 export const createSpecialization = asyncHandler(async (req, res) => {
-  const { name } = req.body;
+  const { name } = matchedData(req, { includeOptionals: true });
 
   const specialization = await specializationRepository.create({ name });
 
@@ -83,11 +77,10 @@ export const createSpecialization = asyncHandler(async (req, res) => {
 
 /**
  * Update specialization (Admin only)
- * @type {RequestHandler<UserPayload>}
  */
 export const updateSpecialization = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
-  const { name } = req.body;
+  const { name } = matchedData(req, { includeOptionals: true });
 
   const existing = await specializationRepository.findOne({ id });
   if (!existing) {
@@ -105,7 +98,6 @@ export const updateSpecialization = asyncHandler(async (req, res) => {
 
 /**
  * Delete specialization (Admin only)
- * @type {RequestHandler<UserPayload>}
  */
 export const deleteSpecialization = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
@@ -126,11 +118,10 @@ export const deleteSpecialization = asyncHandler(async (req, res) => {
 
 /**
  * Create a new sub-specialization (Admin only)
- * @type {RequestHandler<UserPayload>}
  */
 export const createSubSpecialization = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
-  const { name } = req.body;
+  const { name } = matchedData(req, { includeOptionals: true });
 
   const parent = await specializationRepository.findOne({ id });
   if (!parent) {
@@ -148,7 +139,6 @@ export const createSubSpecialization = asyncHandler(async (req, res) => {
 
 /**
  * Delete sub-specialization (Admin only)
- * @type {RequestHandler<UserPayload>}
  */
 export const deleteSubSpecialization = asyncHandler(async (req, res) => {
   const id = String(req.params.id);

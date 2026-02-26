@@ -7,14 +7,22 @@
  * @typedef {Object} RefreshTokenPayload
  * @property {"refresh"} type
  * @property {string} userId
+ * @property {string} phoneNumber
  * @property {import("./role").Role} role
+ * @property {boolean} isWorker
+ * @property {boolean} isClient
+ * @property {boolean} isActive
  */
 
 /**
  * @typedef {Object} AccessTokenPayload
  * @property {"access"} type
  * @property {string} userId
+ * @property {string} phoneNumber
  * @property {import("./role").Role} role
+ * @property {boolean} isWorker
+ * @property {boolean} isClient
+ * @property {boolean} isActive
  */
 
 /**

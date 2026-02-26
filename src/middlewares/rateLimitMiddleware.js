@@ -9,29 +9,19 @@ import AppError from "../errors/AppError.js";
 import environment from "../configs/environment.js";
 import { asyncHandler } from "../types/asyncHandler.js";
 
-/** @typedef {import("../types/asyncHandler.js").UserPayload} UserPayload */
-/** @template T @typedef {import("../types/asyncHandler.js").RequestHandler<T>} RequestHandler<T> */
-
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-const getDeviceId = (req) =>
-  req.headers["x-device-fingerprint"]?.trim() || req.headers["x-device-id"]?.trim();
-
 
 // ─── OTP Middlewares ─────────────────────────────────────────────────────────
 
 /**
  * Middleware: check OTP send rate limit (phone + device).
  * Controller must call rateLimitService.incrementSend() after sending.
- * @type {RequestHandler<{}>}
  */
 export const checkSendOtpLimit = asyncHandler(async (req, res, next) => {
   try {
 
-    const phone    = req.body.phoneNumber || req.body.phone;
+    const phone    = req.body.phoneNumber;
     const method   = req.body.method;
-    const deviceId = getDeviceId(req);
+    const deviceId = req.deviceId;
 
     if (!phone)    return next(new AppError("Phone number is required", 400));
     if (!deviceId) return next(new AppError("X-Device-Fingerprint header is required", 400));
@@ -46,11 +36,10 @@ export const checkSendOtpLimit = asyncHandler(async (req, res, next) => {
 /**
  * Middleware: check OTP verify attempt limit (per phone).
  * Controller must call rateLimitService.incrementVerify() on wrong attempt.
- * @type {RequestHandler<{}>}
  */
 export const checkVerifyLimit = asyncHandler(async (req, res, next) => {
   try {
-    const phone  = req.body.phoneNumber || req.body.phone;
+    const phone  = req.body.phoneNumber;
     const method = req.body.method;
 
     if (!phone) return next(new AppError("Phone number is required", 400));

@@ -5,6 +5,4 @@ cloudinary.config({
   ...environment.cloudinary,
 });
 
-console.log('Cloudinary Configured:', cloudinary.config().cloud_name);
-
 export default cloudinary;

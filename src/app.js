@@ -9,6 +9,7 @@ import environment from "./configs/environment.js";
 import prismaClient from "./libs/database.js";
 import swaggerSpec from "./configs/swagger.js";
 import swaggerUi from "swagger-ui-express";
+import { verifyDeviceId } from "./middlewares/authMiddleware.js";
 
 const initApp = async () => {
   const app = express();
@@ -23,6 +24,7 @@ const initApp = async () => {
   );
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
+  app.use(verifyDeviceId);
 
   app.use("/api", ipRateLimiter, mainRouter);
 

@@ -591,6 +591,95 @@ async function main() {
   console.log((await prisma.government.findFirst({
 
   })));
+  const tree = [];
+
+  const mainSs = await prisma.specialization.findMany({ take: 3, skip: 5 });
+  for (let { id: mainId } of mainSs) {
+    const subIds = (await prisma.subSpecialization.findMany({ where: { mainSpecializationId: mainId }, take: 3 })).map(({ id }) => id);
+    tree.push({
+      mainId,
+      subIds
+    })
+  }
+
+  console.log(JSON.stringify(tree));
+
+
+
+  // await prisma.user.deleteMany({});
+
+
+
+  // console.log("Starting database seeding...");
+  //
+  // try {
+  //   // 1. Seed Specializations and Sub-specializations
+  //   console.log("\n--- Seeding Specializations and Sub-specializations ---");
+  //
+  //   for (const spec of specializations) {
+  //     // Check if specialization already exists
+  //     const existingSpec = await prisma.specialization.findFirst({
+  //       where: { name: spec.name },
+  //     });
+  //
+  //     if (!existingSpec) {
+  //       const createdSpec = await prisma.specialization.create({
+  //         data: { name: spec.name },
+  //       });
+  //       console.log(`Created specialization: ${createdSpec.name}`);
+  //
+  //       // Create sub-specializations
+  //       for (const subSpecName of spec.subSpecializations) {
+  //         await prisma.subSpecialization.create({
+  //           data: {
+  //             name: subSpecName,
+  //             mainSpecializationId: createdSpec.id,
+  //           },
+  //         });
+  //         console.log(`  - Created sub-specialization: ${subSpecName}`);
+  //       }
+  //     } else {
+  //       console.log(`Specialization already exists: ${spec.name}`);
+  //     }
+  //   }
+  //
+  //   // 2. Seed Governments and Cities
+  //   console.log("\n--- Seeding Governments and Cities ---");
+  //
+  //   for (const gov of egyptData) {
+  //     // Check if government already exists
+  //     const existingGov = await prisma.government.findFirst({
+  //       where: { name: gov.name },
+  //     });
+  //
+  //     if (!existingGov) {
+  //       const createdGov = await prisma.government.create({
+  //         data: { name: gov.name },
+  //       });
+  //       console.log(`Created government: ${createdGov.name}`);
+  //
+  //       // Create cities
+  //       for (const cityName of gov.cities) {
+  //         await prisma.city.create({
+  //           data: {
+  //             name: cityName,
+  //             governmentId: createdGov.id,
+  //           },
+  //         });
+  //         console.log(`  - Created city: ${cityName}`);
+  //       }
+  //     } else {
+  //       console.log(`Government already exists: ${gov.name}`);
+  //     }
+  //   }
+  //
+  //   console.log("\n--- Database seeding completed successfully! ---");
+  // } catch (error) {
+  //   console.error("Error seeding database:", error);
+  //   throw error;
+  // } finally {
+  //   await prisma.$disconnect();
+  // }
 }
 
 main();

@@ -13,8 +13,6 @@ export const validateToken = (type) =>  {
 export const validateDeviceFingerprint = () => {
   return header("x-device-fingerprint")
     .trim()
-    .isLength({ min: 8, max: 255 })
-    .withMessage("Device fingerprint must be between 8 and 255 characters");
 }
 
 export const isValidUUID = (value) => {

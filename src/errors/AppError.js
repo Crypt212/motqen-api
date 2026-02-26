@@ -3,6 +3,8 @@
  * @module errors/AppError
  */
 
+import { logger } from "../libs/winston.js";
+
 /**
  * Custom error class for operational errors
  * @class

@@ -1,4 +1,4 @@
-import prisma from "../../libs/database.js";
+import { PrismaClient } from "@prisma/client";
 import { Repository } from "./Repository.js";
 
 /**
@@ -10,7 +10,7 @@ import { Repository } from "./Repository.js";
 /** @typedef {import('@prisma/client').Prisma.BatchPayload} BatchPayload */
 /** @typedef {import("./Repository.js").IDType} IDType */
 
-/** @typedef {{userId: IDType, token: String, isRevoked: boolean, deviceFingerprint: String, lastUsedAt: Date, createdAt: Date, expiresAt: Date}} SessionData */
+/** @typedef {{userId: IDType, token: String, isRevoked: boolean, deviceId: String, lastUsedAt: Date, createdAt: Date, expiresAt: Date}} SessionData */
 /** @typedef {SessionData & {id: IDType}} Session */
 /** @typedef {Partial<SessionData>} OptionalSessionData */
 /** @typedef {import("./Repository.js").FilterArgs<Session>} SessionFilter */
@@ -23,7 +23,8 @@ import { Repository } from "./Repository.js";
  */
 export default class SessionRepository extends Repository {
 
-  constructor() {
+  /** @param {PrismaClient} prisma */
+  constructor(prisma) {
     super(prisma, "session");
   }
 }

@@ -3,6 +3,7 @@
  * @module controllers/AuthController
  */
 
+import { matchedData } from 'express-validator';
 import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
 import {
@@ -13,21 +14,15 @@ import {
 
 import { asyncHandler } from '../types/asyncHandler.js';
 
-import { getHeaderValue } from '../utils/HTTTHeaders.js';
-
-/** @typedef {import("../types/asyncHandler.js").UserPayload} UserPayload */
-/** @typedef {import("../types/asyncHandler.js").MulterPayload} MulterPayload */
-/** @typedef {import("../types/asyncHandler.js").PhoneNumberPayload} PhoneNumberPayload */
-/** @template T @typedef {import("../types/asyncHandler.js").RequestHandler<T>} RequestHandler<T> */
+/** @template T @typedef {import("../types/asyncHandler.js").RequestHandler} RequestHandler */
 
 /**
  * Request OTP for phone number verification
- * @type {RequestHandler<{}>}
  * @description Initiates OTP request by generating and sending OTP to the provided phone number
  */
 export const requestOTP = asyncHandler(async (req, res) => {
-  const { method, phoneNumber } = req.body;
-  const deviceId = getHeaderValue(req.headers['x-device-fingerprint']).trim();
+  const { method, phoneNumber } = matchedData(req, { includeOptionals: true });
+  const deviceId = req.deviceId;
 
   await authService.requestOTP(phoneNumber, method);
 
@@ -46,12 +41,11 @@ export const requestOTP = asyncHandler(async (req, res) => {
 
 /**
  * Verify OTP and return login or register token
- * @type {RequestHandler<{}>}
  * @description Verifies the OTP and returns either a login or register token based on user existence
  */
 export const verifyOTP = asyncHandler(async (req, res) => {
-  const { phoneNumber, otp, method } = req.body;
-  const deviceId = getHeaderValue(req.headers['x-device-fingerprint']).trim();
+  const { phoneNumber, otp, method } = matchedData(req, { includeOptionals: true });
+  const deviceId = req.deviceId;
 
   const { tokenType, token } = await authService.verifyOTP(
     phoneNumber,
@@ -69,11 +63,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
 /**
  * Register a new client user
- * @type {RequestHandler<MulterPayload & PhoneNumberPayload>}
  * @description Registers a new client user with basic profile information
  */
 export const registerClient = asyncHandler(async (req, res) => {
-  const deviceId = getHeaderValue(req.headers['x-device-fingerprint']);
+  const deviceId = req.deviceId;
   const { userData: {
     firstName,
     middleName,
@@ -83,8 +76,9 @@ export const registerClient = asyncHandler(async (req, res) => {
   }, clientProfile: {
     address,
     addressNotes,
-  } } = req.body;
-  const phoneNumber = req.phoneNumber;
+  } } = matchedData(req, { includeOptionals: true });
+
+  const phoneNumber = req.register.phoneNumber;
   const image = req.file;
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -123,7 +117,6 @@ export const registerClient = asyncHandler(async (req, res) => {
 
 /**
  * Register a new worker user
- * @type {RequestHandler<MulterPayload & PhoneNumberPayload>}
  * @description Registers a new worker user with professional profile information
  */
 export const registerWorker = asyncHandler(async (req, res) => {
@@ -142,10 +135,10 @@ export const registerWorker = asyncHandler(async (req, res) => {
       specializationsTree,
       workGovernmentIds,
     }
-  } = req.body;
+  } = matchedData(req, { includeOptionals: true });
 
-  const deviceId = getHeaderValue(req.headers['x-device-fingerprint']);
-  const { phoneNumber } = req;
+  const deviceId = req.deviceId;
+  const phoneNumber = req.register.phoneNumber;
   const images = req.files;
 
   if (
@@ -195,13 +188,12 @@ export const registerWorker = asyncHandler(async (req, res) => {
 
 /**
  * Login an existing user and create session
- * @type {RequestHandler<PhoneNumberPayload>}
  * @description Authenticates user with login token and creates a new session
  */
 export const login = asyncHandler(async (req, res) => {
 
-  const deviceId = getHeaderValue(req.headers['x-device-fingerprint']);
-  const phoneNumber = req.phoneNumber;
+  const deviceId = req.deviceId;
+  const phoneNumber = req.login.phoneNumber;
 
   const { unHashedRefreshToken, user } = await authService.login({
     phoneNumber,
@@ -225,25 +217,23 @@ export const login = asyncHandler(async (req, res) => {
 
 /**
  * Logout user and revoke session
- * @type {RequestHandler<UserPayload>}
  * @description Revokes the user's session based on device fingerprint
  */
 export const logout = asyncHandler(async (req, res) => {
-  const deviceId = getHeaderValue(req.headers['x-device-fingerprint']);
+  const deviceId = req.deviceId;
 
-  await authService.logout(req.user.id, deviceId);
+  await authService.logout(req.access.userId, deviceId);
 
   new SuccessResponse('Logged out successfully', null, 200).send(res);
 });
 
 /**
  * Generate new access token using refresh token
- * @type {RequestHandler<UserPayload>}
  * @description Validates refresh token and generates a new access token
  */
 export const generateAccessToken = asyncHandler(async (req, res) => {
   const deviceId = String(req.headers['x-device-fingerprint']);
-  const { id: userId, role } = req.user;
+  const { userId, role } = req.access;
 
   const refreshToken = req.headers['authorization']?.split(' ')[1];
 
@@ -264,16 +254,15 @@ export const generateAccessToken = asyncHandler(async (req, res) => {
 
 /**
  * Reviews the status of a user (pending, approved, rejected)
- * @type {RequestHandler<UserPayload>}
  */
 export const reviewStatus = asyncHandler(async (req, res) => {
-  const { id: userId } = req.user;
+  const { userId } = req.access;
 
-  if (req.user.isClient) {
+  if (req.access.isClient) {
     new SuccessResponse('You are a client, you can whatever you want <3', 200);
   }
 
-  if (req.user.isWorker) {
+  if (req.access.isWorker) {
     const isApproved = (await userRepository.getWorkerProfile(userId)).isApproved;
     if (!isApproved) throw new AppError('You are not approved yet', 401);
     new SuccessResponse('You are approved', 200);

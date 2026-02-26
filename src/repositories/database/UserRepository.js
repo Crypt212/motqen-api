@@ -4,8 +4,7 @@
  */
 
 import { Repository } from './Repository.js';
-import prisma from '../../libs/database.js';
-import { $Enums } from '@prisma/client';
+import { $Enums, PrismaClient } from '@prisma/client';
 
 /** @typedef {import("./Repository.js").IDType} IDType */
 /** @typedef {import('@prisma/client').Prisma.BatchPayload} BatchPayload */
@@ -42,7 +41,8 @@ import { $Enums } from '@prisma/client';
  * @extends Repository<UserData, OptionalUserData, UserFilter, UserFilter, OptionalUser>
  */
 export default class UserRepository extends Repository {
-  constructor() {
+  /** @param {PrismaClient} prisma */
+  constructor(prisma) {
     super(prisma, "user");
   }
 
@@ -75,15 +75,45 @@ export default class UserRepository extends Repository {
   /**
    * @async
    * @method
+   * @param {UserData} userData
+   * @param {WorkerProfileData} workerProfileData
+   * @param {WorkerVerificationData | undefined} verificationData
+   * @returns {Promise<{ user: User, profile: WorkerProfile }>}
+   */
+  async createWorker(userData, workerProfileData, verificationData = undefined) {
+    const user = await this.prismaClient.user.create({
+      data: {
+        ...userData,
+        workerProfile: {
+          create: {
+            ...workerProfileData,
+            verification: {
+              create: (verificationData !== undefined) ? verificationData : undefined
+            }
+          }
+        }
+      }
+    });
+    const profile = await this.getWorkerProfile(user.id);
+    return { user, profile };
+  }
+
+  /**
+   * @async
+   * @method
    * @param {IDType} userId
    * @param {WorkerProfileData} data
+   * @param {WorkerVerificationData | undefined} verificationData
    * @returns {Promise<WorkerProfile>}
    */
-  async createWorkerProfile(userId, data) {
+  async addWorkerProfile(userId, data, verificationData = undefined) {
     return await this.prismaClient.workerProfile.create({
       data: {
         userId,
         ...data,
+        verification: {
+          create: (verificationData !== undefined) ? verificationData : undefined
+        }
       },
     });
   }
@@ -93,12 +123,18 @@ export default class UserRepository extends Repository {
    * @method
    * @param {IDType} userId
    * @param {OptionalWorkerProfileData} data
+   * @param {WorkerVerificationData | undefined} verificationData
    * @returns {Promise<WorkerProfile>}
    */
-  async updateWorkerProfile(userId, data) {
+  async updateWorkerProfile(userId, data, verificationData = undefined) {
     return await this.prismaClient.workerProfile.update({
       where: { userId },
-      data,
+      data: {
+        ...data,
+        verification: {
+          create: (verificationData !== undefined) ? verificationData : undefined
+        }
+      }
     });
   }
 
@@ -111,6 +147,24 @@ export default class UserRepository extends Repository {
   async deleteWorkerProfile(userId) {
     return await this.prismaClient.workerProfile.delete({
       where: { userId },
+    });
+  }
+
+  /**
+   * @async
+   * @method
+   * @param {IDType} userId
+   * @param {WorkerVerificationData} verificationData
+   * @returns {Promise<WorkerVerification>}
+   */
+  async addVerificationInfo(userId, verificationData) {
+    return await this.prismaClient.workerVerification.create({
+      data: {
+        ...verificationData,
+        workerProfile: {
+          connect: { userId }
+        }
+      }
     });
   }
 
@@ -291,11 +345,31 @@ export default class UserRepository extends Repository {
   /**
    * @async
    * @method
+   * @param {UserData} userData
+   * @param {ClientProfileData} clientProfileData
+   * @returns {Promise<{user: User, profile: ClientProfile}>}
+   */
+  async createClient(userData, clientProfileData) {
+    const user = await this.prismaClient.user.create({
+      data: {
+        ...userData,
+        clientProfile: {
+          create: clientProfileData,
+        }
+      }
+    });
+    const profile = await this.getClientProfile(user.id);
+    return { user, profile };
+  }
+
+  /**
+   * @async
+   * @method
    * @param {IDType} userId
    * @param {ClientProfileData} data
    * @returns {Promise<ClientProfile>}
    */
-  async createClientProfile(userId, data) {
+  async addClientProfile(userId, data) {
     return await this.prismaClient.clientProfile.create({
       data: {
         userId,
@@ -338,7 +412,7 @@ export default class UserRepository extends Repository {
    * @returns {Promise<WorkerVerification>}
    */
   async createVerification(workerProfileId, data) {
-    return await prisma.workerVerification.create({
+    return await this.prismaClient.workerVerification.create({
       data: {
         ...data, workerProfileId
       },

@@ -20,7 +20,6 @@ import {
   checkVerifyLimit,
 } from '../middlewares/rateLimitMiddleware.js';
 
-import { sensitiveIpRateLimiter } from '../middlewares/rateLimitMiddleware.js';
 import upload from '../configs/multer.js';
 
 import {
@@ -33,42 +32,37 @@ import {
   validateLogout,
   validateReviewStatus,
 } from '../validators/auth.js';
-import { authenticate, authenticateLogin, authenticateRegister } from '../middlewares/authMiddleware.js';
+import { authenticateActive, authenticateTokens } from '../middlewares/authMiddleware.js';
 
 const authRouter = Router();
 
 authRouter.post(
   '/otp/request',
-  sensitiveIpRateLimiter,
   ...validateRequestOTP,
-  checkSendOtpLimit,
   validateRequest,
+  checkSendOtpLimit,
   requestOTP
 );
 
 authRouter.post(
   '/otp/verify',
-  sensitiveIpRateLimiter,
   ...validateVerifyOTP,
-  checkVerifyLimit,
   validateRequest,
+  checkVerifyLimit,
   verifyOTP
 );
 
 authRouter.post(
   '/register-client',
-  sensitiveIpRateLimiter,
-  authenticateRegister,
   upload.single("personal_image"),
   ...validateRegisterClient,
   validateRequest,
+  authenticateTokens(["register"]),
   registerClient
 );
 
 authRouter.post(
   '/register-worker',
-  sensitiveIpRateLimiter,
-  authenticateRegister,
   upload.fields([
     { name: "personal_image", maxCount: 1 },
     { name: "id_image", maxCount: 1 },
@@ -76,39 +70,41 @@ authRouter.post(
   ]),
   ...validateRegisterWorker,
   validateRequest,
+  authenticateTokens(["register"]),
   registerWorker
 );
 
 authRouter.post(
   '/login',
-  sensitiveIpRateLimiter,
-  authenticateLogin,
   ...validateLogin,
   validateRequest,
+  authenticateTokens(["login"]),
   login
 );
 
 authRouter.post(
   '/logout',
-  authenticate,
   ...validateLogout,
   validateRequest,
+  authenticateTokens(["access"]),
+  authenticateActive,
   logout
 );
 
 authRouter.get(
   '/access',
-  authenticate,
   ...validateGenerateAccessToken,
   validateRequest,
+  authenticateTokens(["refresh"]),
+  authenticateActive,
   generateAccessToken
 );
 
 authRouter.get(
   '/review-status',
-  authenticate,
   ...validateReviewStatus,
   validateRequest,
+  authenticateTokens(["access"]),
   reviewStatus
 );
 export default authRouter;

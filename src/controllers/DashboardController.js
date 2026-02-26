@@ -4,20 +4,19 @@
  */
 
 
+import { matchedData } from "express-validator";
 import AppError from "../errors/AppError.js";
 import SuccessResponse from "../responses/successResponse.js";
 import { clientService, userService, workerService } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
 
-/** @typedef {import("../types/asyncHandler.js").UserPayload} UserPayload */
-/** @template T @typedef {import("../types/asyncHandler.js").RequestHandler<T>} RequestHandler<T> */
+/** @template T @typedef {import("../types/asyncHandler.js").RequestHandler} RequestHandler */
 
 /**
- * @type {RequestHandler<UserPayload>}
  */
 export const updateUser = asyncHandler(async (req, res) => {
-  const { firstName, lastName, governmentId, city, bio } = req.body;
-  const userId = req.user.id;
+  const { firstName, lastName, governmentId, city, bio } = matchedData(req, { includeOptionals: true });
+  const userId = req.access.userId;
 
   // If phoneNumber is provided, update user's phone (need additional verification)
   // For now, update other fields only
@@ -27,21 +26,19 @@ export const updateUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @type {RequestHandler<UserPayload>}
  */
 export const getUser = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.access.userId;
   const user = await userService.getUser(userId);
 
   new SuccessResponse("User retrieved successfully", { user }, 200).send(res);
 });
 
 /**
- * @type {RequestHandler<UserPayload>}
  */
 export const createClientProfile = asyncHandler(async (req, res) => {
-  const { address, addressNotes } = req.body;
-  const userId = req.user.id;
+  const { address, addressNotes } = matchedData(req, { includeOptionals: true });
+  const userId = req.access.userId;
 
   const clientProfile = await clientService.createClientProfile({
     userId,
@@ -54,11 +51,10 @@ export const createClientProfile = asyncHandler(async (req, res) => {
 });
 
 /**
- * @type {RequestHandler<UserPayload>}
  */
 export const updateClientProfile = asyncHandler(async (req, res) => {
-  const { address, addressNotes } = req.body;
-  const userId = req.user.id;
+  const { address, addressNotes } = matchedData(req, { includeOptionals: true });
+  const userId = req.access.userId;
 
   const clientProfile = await clientService.updateClientProfile(userId, { address, addressNotes });
 
@@ -66,10 +62,9 @@ export const updateClientProfile = asyncHandler(async (req, res) => {
 });
 
 /**
- * @type {RequestHandler<UserPayload>}
  */
 export const getClientProfile = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.access.userId;
 
   const clientProfile = await clientService.getClientProfile(userId);
 
@@ -77,11 +72,10 @@ export const getClientProfile = asyncHandler(async (req, res) => {
 });
 
 /**
- * @type {RequestHandler<UserPayload & import("../types/asyncHandler.js").MulterPayload>}
  */
 export const createWorkerProfile = asyncHandler(async (req, res) => {
-  const { experienceYears, isInTeam, acceptsUrgentJobs, specializationTree: specializationsTree, workGovernmentIds } = req.body;
-  const userId = req.user.id;
+  const { experienceYears, isInTeam, acceptsUrgentJobs, specializationTree: specializationsTree, workGovernmentIds } = matchedData(req, { includeOptionals: true });
+  const userId = req.access.userId;
   const images = req.files;
 
   if (!images || !images["personal_image"] || !images["id_image"] || !images["personal_with_id_image"])
@@ -102,11 +96,10 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
 });
 
 /**
- * @type {RequestHandler<UserPayload>}
  */
 export const updateWorkerProfile = asyncHandler(async (req, res) => {
-  const { experienceYears, isInTeam, acceptsUrgentJobs } = req.body;
-  const userId = req.user.id;
+  const { experienceYears, isInTeam, acceptsUrgentJobs } = matchedData(req, { includeOptionals: true });
+  const userId = req.access.userId;
 
   await workerService.updateWorkerProfile(userId, {
     experienceYears,
@@ -118,23 +111,21 @@ export const updateWorkerProfile = asyncHandler(async (req, res) => {
 });
 
 /**
- * @type {RequestHandler<UserPayload>}
  */
 export const addWorkerGovernments = asyncHandler(async (req, res) => {
-  const { governmentIds } = req.body;
-  const userId = req.user.id;
+  const { governmentIds } = matchedData(req, { includeOptionals: true });
+  const userId = req.access.userId;
 
-  await workerService.insertWorkerProfileWorkGovernments(userId, governmentIds);
+  await workerService.addWorkerProfileWorkGovernments(userId, governmentIds);
 
   new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
 });
 
 /**
- * @type {RequestHandler<UserPayload>}
  */
 export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
-  const { governmentIds } = req.body;
-  const userId = req.user.id;
+  const { governmentIds } = matchedData(req, { includeOptionals: true });
+  const userId = req.access.userId;
 
   await workerService.deleteProfileWorkGovernments(userId, governmentIds);
 
@@ -142,23 +133,21 @@ export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
 });
 
 /**
- * @type {RequestHandler<UserPayload>}
  */
 export const addWorkerSpecializations = asyncHandler(async (req, res) => {
-  const { specializationTree } = req.body;
-  const userId = req.user.id;
+  const { specializationTree } = matchedData(req, { includeOptionals: true });
+  const userId = req.access.userId;
 
-  await workerService.insertWorkerProfileSpecializations(userId, specializationTree);
+  await workerService.addWorkerProfileSpecializations(userId, specializationTree);
 
   new SuccessResponse("updated worker profile successfully", { userId }, 200).send(res);
 });
 
 /**
- * @type {RequestHandler<UserPayload>}
  */
 export const deleteWorkerSpecializations = asyncHandler(async (req, res) => {
-  const { mainSpecializationIds, specializationTree } = req.body;
-  const userId = req.user.id;
+  const { mainSpecializationIds, specializationTree } = matchedData(req, { includeOptionals: true });
+  const userId = req.access.userId;
 
   if (mainSpecializationIds)
     await workerService.deleteWorkerProfileMainSpecializations(userId, mainSpecializationIds);
@@ -170,10 +159,9 @@ export const deleteWorkerSpecializations = asyncHandler(async (req, res) => {
 });
 
 /**
- * @type {RequestHandler<UserPayload>}
  */
 export const getWorkerProfile = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.access.userId;
 
   const workerProfile = await workerService.getWorkerProfile(userId);
 
@@ -182,10 +170,9 @@ export const getWorkerProfile = asyncHandler(async (req, res) => {
 
 /**
  * Get user's profile image
- * @type {RequestHandler<UserPayload>}
  */
 export const getProfileImage = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.access.userId;
 
   const profileImage = await userService.getProfileImage(userId);
 
@@ -194,11 +181,10 @@ export const getProfileImage = asyncHandler(async (req, res) => {
 
 /**
  * Update user's profile image
- * @type {RequestHandler<UserPayload & import("../types/asyncHandler.js").MulterPayload>}
  * if user is a worker, the image will not be updated until it gets approved by an admin
  */
 export const updateProfileImage = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.access.userId;
   const image = req.file;
 
   if (!image) {
@@ -215,11 +201,10 @@ export const updateProfileImage = asyncHandler(async (req, res) => {
 
 /**
  * Delete user's profile image
- * @type {RequestHandler<UserPayload>}
  * worker can not use that route, they will not delete their profile image
  */
 export const deleteProfileImage = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.access.userId;
 
   await userService.deleteProfileImage(userId);
 
