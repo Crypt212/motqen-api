@@ -200,6 +200,36 @@ const egyptData = [
     ],
   },
   {
+    name: "Beheira",
+    cities: [
+      "Damanhour",
+      "Kafr El Dawar",
+      "Rosetta",
+      "Kom Hamada",
+      "Hosh Issa",
+      "Edku",
+      "Abou El Matamir",
+      "El Rahmaniya",
+      "Itay El Barud",
+      "Shubrakhit",
+    ],
+  },
+  {
+    name: "Qalyubia",
+    cities: [
+      "Banha",
+      "Qalyub",
+      "Shubra El Kheima",
+      "Al Qanater",
+      "Khanka",
+      "Kafr Shukr",
+      "Tiba",
+      "Sinsin",
+      "Al-Masjid",
+      "Sheikh Hammad",
+    ],
+  },
+  {
     name: "Sharqia",
     cities: [
       "Zagazig",
@@ -316,6 +346,21 @@ const egyptData = [
     ],
   },
   {
+    name: "Fayoum",
+    cities: [
+      "Fayoum",
+      "Tamiya",
+      "Ibshway",
+      "Sinnuris",
+      "Yusuf El-Saddik",
+      "Abshway",
+      "Fayoum El-Gedida",
+      "Al-Qasr",
+      "Al-Hawatka",
+      "Al-Rawda",
+    ],
+  },
+  {
     name: "Red Sea",
     cities: [
       "Hurghada",
@@ -368,6 +413,21 @@ const egyptData = [
       "Madinat El Fath",
       "Ain Shams",
       "Qasr Al Fath",
+    ],
+  },
+  {
+    name: "Damietta",
+    cities: [
+      "Damietta",
+      "Kafr El Batikh",
+      "Ezbet El Borg",
+      "Fareskou",
+      "Al-Matariya",
+      "Al-Saff",
+      "Al-Zarqa",
+      "Kafr Saad",
+      "Bani Ebeid",
+      "Al-Sahel",
     ],
   },
   {
