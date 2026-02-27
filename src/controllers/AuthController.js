@@ -9,10 +9,12 @@ import SuccessResponse from '../responses/successResponse.js';
 import {
   authService,
   rateLimitService,
-  userRepository,
+  userService,
+  workerService,
 } from '../state.js';
 
 import { asyncHandler } from '../types/asyncHandler.js';
+import { verifyAndDecodeToken } from '../utils/tokens.js';
 
 /** @template T @typedef {import("../types/asyncHandler.js").RequestHandler} RequestHandler */
 
@@ -54,9 +56,22 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     deviceId
   );
 
+  let workerShit = {};
+  if (tokenType === 'login') {
+    const user = await userService.get({ phoneNumber, userId: undefined });
+    const workProfile = await workerService.get({ userId: user.id });
+    console.log(user, workProfile);
+    workerShit.isWorker = workProfile ? true : false;
+    if (workerShit.isWorker)
+      workerShit.isWorkerSignedUp = (await workerService.getVerification({ workerProfileId: workProfile.id })).status === "APPROVED";
+  } else {
+    workerShit.isWorker = false;
+    workerShit.isWorkerSignedUp = false;
+  }
+
   new SuccessResponse(
     'OTP verified successfully',
-    { tokenType, token },
+    { tokenType, token, ...workerShit },
     200
   ).send(res);
 });
@@ -67,7 +82,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
  */
 export const registerClient = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
-   const { userData: {
+  const { userData: {
     firstName,
     middleName,
     lastName,
@@ -78,22 +93,27 @@ export const registerClient = asyncHandler(async (req, res) => {
     addressNotes,
   } } = matchedData(req, { includeOptionals: true });
 
-  
-  const phoneNumber = req.register.phoneNumber;
+
+  const phoneNumber = verifyAndDecodeToken(req.headers['authorization'].split(' ')[1], "register").phoneNumber;
   const image = req.file;
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   const { user, profile } = await authService.registerClient({
-    phoneNumber,
-    firstName,
-    middleName,
-    lastName,
-    governmentId,
-    city,
-    address,
-    addressNotes,
-    profileImage: image,
+    userData: {
+      phoneNumber,
+      firstName,
+      middleName,
+      lastName,
+      governmentId,
+      role: "USER",
+      city,
+      profileImage: image,
+    },
+    clientProfileData: {
+      address,
+      addressNotes,
+    }
   });
 
   const { unHashedRefreshToken } = await authService.login({
@@ -139,7 +159,7 @@ export const registerWorker = asyncHandler(async (req, res) => {
   } = matchedData(req, { includeOptionals: true });
 
   const deviceId = req.deviceId;
-  const phoneNumber = req.register.phoneNumber;
+  const phoneNumber = verifyAndDecodeToken(req.headers['authorization'].split(' ')[1], "register").phoneNumber;
   const images = req.files;
 
   if (
@@ -150,21 +170,26 @@ export const registerWorker = asyncHandler(async (req, res) => {
   )
     throw new AppError('Please upload all required images', 400);
 
-  const { user, profile: workerProfile  } = await authService.registerWorker({
-    phoneNumber,
-    firstName,
-    middleName,
-    lastName,
-    governmentId,
-    city,
-    profileImage: images['personal_image'][0],
-    idImage: images['id_image'],
-    profileWithIdImage: images['personal_with_id_image'],
-    experienceYears,
-    isInTeam,
-    acceptsUrgentJobs,
-    specializationsTree,
-    workGovernmentIds,
+  const { user, profile: workerProfile } = await authService.registerWorker({
+    userData: {
+      phoneNumber,
+      firstName,
+      middleName,
+      lastName,
+      governmentId,
+      city,
+      role: "USER",
+      profileImage: images['personal_image'][0],
+    },
+    workerProfileData: {
+      idImage: images['id_image'][0],
+      profileWithIdImage: images['personal_with_id_image'][0],
+      experienceYears,
+      isInTeam,
+      acceptsUrgentJobs,
+      specializationsTree,
+      workGovernmentIds,
+    }
   });
 
   const { unHashedRefreshToken } = await authService.login({
@@ -194,7 +219,7 @@ export const registerWorker = asyncHandler(async (req, res) => {
 export const login = asyncHandler(async (req, res) => {
 
   const deviceId = req.deviceId;
-  const phoneNumber = req.login.phoneNumber;
+  const phoneNumber = verifyAndDecodeToken(req.headers['authorization'].split(' ')[1], "login").phoneNumber;
 
   const { unHashedRefreshToken, user } = await authService.login({
     phoneNumber,
@@ -223,7 +248,7 @@ export const login = asyncHandler(async (req, res) => {
 export const logout = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
 
-  await authService.logout(req.access.userId, deviceId);
+  await authService.logout(req.userState.userId, deviceId);
 
   new SuccessResponse('Logged out successfully', null, 200).send(res);
 });
@@ -234,7 +259,7 @@ export const logout = asyncHandler(async (req, res) => {
  */
 export const generateAccessToken = asyncHandler(async (req, res) => {
   const deviceId = String(req.headers['x-device-fingerprint']);
-  const { userId, role } = req.access;
+  const { userId, role } = req.userState;
 
   const refreshToken = req.headers['authorization']?.split(' ')[1];
 
@@ -257,20 +282,23 @@ export const generateAccessToken = asyncHandler(async (req, res) => {
  * Reviews the status of a user (pending, approved, rejected)
  */
 export const reviewStatus = asyncHandler(async (req, res) => {
-  const { userId } = req.access;
-
-  if (req.access.isClient) {
-    new SuccessResponse('You are a client, you can whatever you want <3', 200);
+  if (req.userState.client) {
+    new SuccessResponse('You are a client, you can whatever you want <3', {}, 200).send(res);
+    return;
   }
 
-  if (req.access.isWorker) {
-    const isApproved = (await userRepository.getWorkerProfile(userId)).isApproved;
-    if (!isApproved) throw new AppError('You are not approved yet', 401 ,);
-    new SuccessResponse('You are approved', 200);
+  if (req.userState.worker) {
+    const isApproved = req.userState.worker.verification.status === "APPROVED";
+    const reason = req.userState.worker.verification.reason;
+    const status = req.userState.worker.verification.status;
+    if (!isApproved) {
+      new SuccessResponse('You are not approved yet', { reason, status }, 200).send(res);
+      return
+    }
+    new SuccessResponse('You have been approved by admin', { status }, 200).send(res);
+    return;
   }
 
-  new SuccessResponse(
-    'You have been approved by admin',
-    200
-  ).send(res);
+
+  throw new AppError('Who the hell are you?!', 401);
 });

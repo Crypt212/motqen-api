@@ -6,6 +6,7 @@
 import { $Enums } from "@prisma/client";
 import AppError from "../errors/AppError.js";
 import Service from "./Service.js";
+import RateLimitCache from "../repositories/cache/RateLimitCache.js";
 
 const MAX_VERIFY_ATTEMPTS = 5;
 
@@ -17,9 +18,14 @@ const MAX_VERIFY_ATTEMPTS = 5;
 export default class RateLimitService extends Service {
   #repository;
 
-  constructor(rateLimitRepository) {
+  /**
+   * @
+   * @param {Object} params
+   * @param {RateLimitCache} params.rateLimitCache
+   */
+  constructor({ rateLimitCache }) {
     super();
-    this.#repository = rateLimitRepository;
+    this.#repository = rateLimitCache;
   }
 
   /**

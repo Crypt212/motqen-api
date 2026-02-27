@@ -8,12 +8,7 @@ import { $Enums } from '@prisma/client';
 /** @typedef {import('../repositories/database/Repository').IDType} IDType */
 // Map token types to the payload that should be attached to request
 
-/**
- * @typedef {import('./tokens.js').RefreshTokenPayload} RefreshTokenPayload
- * @typedef {import('./tokens.js').AccessTokenPayload} AccessTokenPayload
- * @typedef {import('./tokens.js').LoginTokenPayload} LoginTokenPayload
- * @typedef {import('./tokens.js').RegisterTokenPayload} RegisterTokenPayload
- */
+/** @typedef {{ userId: IDType, phoneNumber: string, role: $Enums.Role, accountStatus: $Enums.AccountStatus, worker?: { id: IDType, verification: { status: $Enums.VerificationStatus, reason: string } }, client?: { id: IDType } }} UserState */
 
 /**
  * @typedef {{fieldname: string, originalname: string, encoding: string, mimetype: string, buffer: Buffer, size: number}} MulterFile
@@ -24,7 +19,7 @@ import { $Enums } from '@prisma/client';
 
 
 /**
- * @typedef {(import('express').Request & { deviceId: DeviceID? } & { refresh: RefreshTokenPayload? } & { access: AccessTokenPayload? } & { register: RegisterTokenPayload? } & { login: LoginTokenPayload? }) & Partial<MulterPayload>} Request
+ * @typedef {(import('express').Request & { deviceId?: DeviceID } & { userState?: UserState}) & Partial<MulterPayload>} Request
  * @typedef {import('express').Response} Response
  * @typedef {import('express').NextFunction} NextFunction
  */

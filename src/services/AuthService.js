@@ -16,11 +16,20 @@ import environment from "../configs/environment.js";
 import SendOTPProvider from "../providers/SendOTPProvider.js";
 import { $Enums } from "@prisma/client";
 import RateLimitCache from "../repositories/cache/RateLimitCache.js";
-import { Repository } from "../repositories/database/Repository.js";
 import { generateToken } from "../utils/tokens.js";
 import { logger } from "../libs/winston.js";
+import GovernmentRepository from "../repositories/database/GovernmentRepository.js";
 
 const MAX_VERIFY_ATTEMPTS = 5;
+
+/** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
+/** @typedef {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} File */
+
+/** @typedef {{ phoneNumber: string, role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, city: string, profileImage: File }} InputUserData */
+/** @typedef {{ isInTeam: Boolean, experienceYears: number, acceptsUrgentJobs: Boolean, workGovernmentIds: IDType[], specializationsTree: { mainId: IDType, subIds: IDType[]}[], idImage: File, profileWithIdImage: File  }} InputWorkerData */
+/** @typedef {{ address: string, addressNotes?: string  }} InputClientData */
+
+/** @typedef {{ phoneNumber: string, role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, city: string, status: $Enums.AccountStatus }} ReturnUserData */
 
 /**
  * Auth Service
@@ -35,21 +44,26 @@ export default class AuthService extends Service {
   #otpCache;
   /** @type {SessionRepository} */
   #sessionRepository;
+  /** @type {GovernmentRepository} */
+  #governmentRepository;
   /** @type {RateLimitCache} */
   #rateLimitCache;
 
   /**
-   * @param {UserRepository} userRepository
-   * @param {OtpCache} otpCache
-   * @param {SessionRepository} sessionCache
-   * @param {RateLimitCache} rateLimitCache
+   * @param {Object} params
+   * @param {UserRepository} params.userRepository
+   * @param {GovernmentRepository} params.governmentRepository
+   * @param {OtpCache} params.otpCache
+   * @param {SessionRepository} params.sessionRepository
+   * @param {RateLimitCache} params.rateLimitCache
    */
-  constructor(userRepository, otpCache, sessionCache, rateLimitCache) {
+  constructor({ userRepository, governmentRepository, otpCache, sessionRepository, rateLimitCache }) {
     super();
     this.#userRepository = userRepository;
-    this.#otpCache = otpCache;
-    this.#sessionRepository = sessionCache;
+    this.#governmentRepository = governmentRepository;
+    this.#sessionRepository = sessionRepository;
     this.#rateLimitCache = rateLimitCache;
+    this.#otpCache = otpCache;
   }
 
   /**
@@ -57,98 +71,89 @@ export default class AuthService extends Service {
    * @async
    * @method registerWorker
    * @param {Object} params - User registration data
-   * @param {string} params.phoneNumber - User's phone number
-   * @param {string} params.firstName - User's first name
-   * @param {string} params.middleName - User's middle name
-   * @param {string} params.lastName - User's last name
-   * @param {string} params.governmentId - Government ID
-   * @param {string} params.city - City name
-   * @param {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} params.profileImage - Profile image URL
-   * @param {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} params.idImage - ID image URL
-   * @param {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} params.profileWithIdImage - Profile with ID image URL
-   * @param {boolean} params.isInTeam - Whether the worker is in a team
-   * @param {number} params.experienceYears - Experience years
-   * @param {boolean} params.acceptsUrgentJobs - Whether the worker accepts urgent jobs
-   * @param {{ mainId: string, subIds: string[] }[]} params.specializationsTree - Tree of main specialization and sub specializations
-   * @param {string[]} params.workGovernmentIds - Government IDs that the worker works in
+   * @param {InputUserData} params.userData
+   * @param {InputWorkerData} params.workerProfileData
    * @returns {Promise<Object>} Created user object
    * @throws {AppError} If government or city not found
    */
   async registerWorker({
-    phoneNumber,
-    firstName,
-    middleName,
-    lastName,
-    governmentId,
-    city,
-    profileImage,
-    idImage,
-    profileWithIdImage,
-    experienceYears,
-    isInTeam,
-    acceptsUrgentJobs,
-    specializationsTree,
-    workGovernmentIds,
+    userData: {
+      phoneNumber,
+      firstName,
+      middleName,
+      lastName,
+      governmentId,
+      city,
+      role,
+      profileImage,
+    },
+    workerProfileData: {
+      idImage,
+      profileWithIdImage,
+      experienceYears,
+      isInTeam,
+      acceptsUrgentJobs,
+      specializationsTree,
+      workGovernmentIds,
+    }
   }) {
     return tryCatch(async () => {
-      /** @type {import('../types/role.js').Role} */
-      const role = 'USER';
+      try {
 
+        let cityId = undefined;
+        const cities = await this.#governmentRepository.findCities({ name: city, governmentId });
+        if (cities && cities.length !== 0) {
+          cityId = cities[0].id;
+        }
 
-      const  { profile, user, verification } = await Repository.createTransaction([this.#userRepository], async () => {
-
-        // const cityEntity = await governmentRepository.existsCity({ name: city, governmentId });
-        // const cityEntities = await governmentRepository.findCities({});
-        // const cityId = cityEntities[0].id;
-        // if(!cityEntity){
-        //   throw new AppError("Government or City not found", 400);
-        // }
-
-        const { user, profile } = await this.#userRepository.createWorker(
-          {
+        const { user, profile } = await this.#userRepository.createWorker({
+          userData: {
             phoneNumber,
             role,
             firstName,
             middleName,
             lastName,
             governmentId,
+            cityId,
             cityName: city,
             status: "ACTIVE"
           },
-          {
+          workerProfileData: {
             experienceYears,
-            isInTeam:Boolean(isInTeam),
-            acceptsUrgentJobs:Boolean(acceptsUrgentJobs),
-          });
-          
-          /** @type {string} */
-          
-        const nationalID = (await uploadToCloudinary(idImage[0].buffer, `${user.id}/verification_info`, "nationalID")).url;
-        /** @type {string} */
-          
-
-        const selfiWithID = (await uploadToCloudinary(profileWithIdImage[0].buffer, `${user.id}/verification_info`, "selfiWithID")).url;
-        
-        const verification = await this.#userRepository.addVerificationInfo(user.id, {
-          idWithPersonalImageUrl: nationalID,
-          idDocumentUrl: selfiWithID,
-          status: "APPROVED"// until dashboard emplement
+            isInTeam: Boolean(isInTeam),
+            acceptsUrgentJobs: Boolean(acceptsUrgentJobs),
+          },
+          verificationData: undefined
         });
 
-        await this.#userRepository.addWorkerProfileGovernments(profile.id, workGovernmentIds);
-        await this.#userRepository.addWorkerProfileSpecializations(profile.id, specializationsTree.map(({ mainId }) => mainId));
-        for (let { mainId, subIds } of specializationsTree) {
-          await this.#userRepository.addWorkerProfileSubSpecializations(profile.id, mainId, subIds);
-        }
-        return { profile, user, verification };
-      }, (reason) => {
-        console.log(reason)
-        throw new AppError("Failed to create worker profile", 500, reason);
-      });
-      const {url} = (await uploadToCloudinary(profileImage.buffer, `${phoneNumber}/profile_image`, "profileMain"))
+        /** @type {string} */
+        const nationalID = (await uploadToCloudinary(idImage.buffer, `${user.id}/verification_info`, "nationalID")).url;
+
+        /** @type {string} */
+        const selfiWithID = (await uploadToCloudinary(profileWithIdImage.buffer, `${user.id}/verification_info`, "selfiWithID")).url;
+
+        const verification = await this.#userRepository.upsertWorkerProfileVerification({
+          workerProfileId: profile.id,
+          verificationData: {
+            idWithPersonalImageUrl: nationalID,
+            idDocumentUrl: selfiWithID,
+            status: "PENDING",
+            reason: "Waiting for verification"
+          }
+        });
+
+        await this.#userRepository.insertWorkerProfileGovernments({ workerProfileId: profile.id, governmentIds: workGovernmentIds});
+        await this.#userRepository.insertWorkerProfileSpecializations({ workerProfileId: profile.id, specializationsTree });
+
+        const { url } = (await uploadToCloudinary(profileImage.buffer, `${phoneNumber}/profile_image`, "profileMain"))
         await this.#userRepository.update({ profileImageUrl: url }, { id: user.id });
         user.profileImageUrl = url;
-        return { profile, user, verification }
+
+        return { profile, user, verification };
+      } catch (reason) {
+        console.log(reason)
+        throw new AppError("Failed to create worker profile", 500, reason);
+      }
     });
   }
 
@@ -157,73 +162,66 @@ export default class AuthService extends Service {
    * @async
    * @method registerClient
    * @param {Object} params - User registration data
-   * @param {string} params.phoneNumber - User's phone number
-   * @param {string} params.firstName - User's first name
-   * @param {string} params.middleName - User's middle name
-   * @param {string} params.lastName - User's last name
-   * @param {string} params.city - City name
-   * @param {string} params.governmentId - Government ID
-   * @param {string} params.address - Address of user
-   * @param {string | undefined} params.addressNotes - Additional address information
-   * @param {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} params.profileImage - Profile image URL
+   * @param {InputUserData} params.userData
+   * @param {InputClientData} params.clientProfileData
    * @returns {Promise<{ user: import("@prisma/client").User, profile: import("@prisma/client").ClientProfile }>} Created user object
    * @throws {AppError} If government or city not found
    */
   async registerClient({
-    phoneNumber,
-    firstName,
-    middleName,
-    lastName,
-    city,
-    governmentId,
-    address,
-    addressNotes,
-    profileImage = null,
+    userData: {
+      firstName,
+      middleName,
+      lastName,
+      phoneNumber,
+      governmentId,
+      role,
+      city,
+      profileImage,
+    },
+    clientProfileData: {
+      address,
+      addressNotes
+    },
   }) {
     return tryCatch(async () => {
-      /** @type {import('../types/role.js').Role} */
-      const role = 'USER';
+      try {
 
+        let cityId = undefined;
+        const cities = await this.#governmentRepository.findCities({ name: city, governmentId });
+        if (cities && cities.length !== 0) {
+          cityId = cities[0].id;
+        }
 
-      const { profile, user } =  await Repository.createTransaction([this.#userRepository], async () => {
-
-        // const cityEntity = await governmentRepository.existsCity({ name: city, governmentId });
-        // const cityEntities = await governmentRepository.findCities({});
-        // const cityId = cityEntities[0].id;
-        // if(!cityEntity){
-        //   throw new AppError("Government or City not found", 400);
-        // }
-
-        const { user, profile } = await this.#userRepository.createClient(
-          {
+        const { user, profile } = await this.#userRepository.createClient({
+          userData: {
             phoneNumber,
             role,
             firstName,
             middleName,
             lastName,
             governmentId,
+            cityId,
             cityName: city,
             status: "ACTIVE"
           },
-          {
+          clientProfileData: {
             address,
             addressNotes
-          });
+          }
+        });
 
+        if (profileImage) {
+          const { url } = await uploadToCloudinary(profileImage.buffer, `${user.id}/profile_image`, "profileMain");
+
+          await this.#userRepository.update({ profileImageUrl: url }, { id: user.id });
+          user.profileImageUrl = url
+        }
 
         return { profile, user };
-      }, (reason) => {
-        console.log(reason)
-        throw new AppError("Failed to create client profile", 500, reason);
-      });
-      if (profileImage) {
-      
-        const  {url}  = await uploadToCloudinary(profileImage.buffer, `${user.id}/profile_image`, "profileMain");
-
-        await this.#userRepository.update({ profileImageUrl: url }, { id: user.id });
-        user.profileImageUrl = url
+      } catch (error) {
+        console.log(error)
+        throw new AppError("Failed to create client profile", 500, error);
       }
-      return { profile, user }
     });
   }
 
@@ -247,7 +245,7 @@ export default class AuthService extends Service {
     await SendOTPProvider(method, OTP, phoneNumber);
 
     // Reset verify attempts so user gets 5 fresh attempts on the new code
-    await this.#rateLimitCache.resetVerifyAttempts(phoneNumber, method);
+    if (environment.nodeEnv !== "development") await this.#rateLimitCache.resetVerifyAttempts(phoneNumber, method);
 
     return true;
   };
@@ -266,7 +264,7 @@ export default class AuthService extends Service {
   async verifyOTP(phoneNumber, method, OTP, deviceId) {
     // in production -> Invalid or expired OTP only
 
-    return await Repository.createTransaction([this.#userRepository], async () => {
+    try {
       const hashedOTP = hashOTP(OTP);
 
       if (!OTP)
@@ -276,7 +274,7 @@ export default class AuthService extends Service {
 
 
       if (!otp || hashedOTP !== otp)
-        throw new AppError("OTP is not provided", 400, { type: "OTP" });
+        throw new AppError("OTP is expired or doesn't match", 400, { type: "OTP" });
 
       await this.#otpCache.deleteOtp(phoneNumber, method);
 
@@ -302,7 +300,7 @@ export default class AuthService extends Service {
       }
       return { tokenType, token };
 
-    }, async (error) => {
+    } catch (error) {
       if (!(error instanceof AppError && error.errors.type === "OTP"))
         throw error;
       const record = await this.#rateLimitCache.incrementVerify(phoneNumber, method);
@@ -317,7 +315,7 @@ export default class AuthService extends Service {
         remainingAttempts: limitStatus.remaining,
         requestNewOtp: limitStatus.blocked,
       });
-    });
+    }
   }
 
   /**
@@ -356,17 +354,12 @@ export default class AuthService extends Service {
     }
 
     const user = await this.#userRepository.findOne({ id: userId });
-    const isWorker = await this.#userRepository.hasWorkerProfile(userId);
-    const isClient = await this.#userRepository.hasClientProfile(userId);
 
     const accessToken = generateToken({
       type: "access",
       userId,
       role: role,
       phoneNumber: user.phoneNumber,
-      isWorker,
-      isClient,
-      isActive: user.status == "ACTIVE",
     });
     return accessToken;
   }
@@ -391,17 +384,11 @@ export default class AuthService extends Service {
   }) {
     await this.#sessionRepository.delete({ deviceId: deviceFingerprint });
     const user = await this.#userRepository.findOne({ phoneNumber });
-
-    const isWorker = await this.#userRepository.hasWorkerProfile(user.id);
-    const isClient = await this.#userRepository.hasClientProfile(user.id);
     const unHashedRefreshToken = generateToken({
       type: "refresh",
       userId: user.id,
       phoneNumber: user.phoneNumber,
       role: user.role,
-      isWorker,
-      isClient,
-      isActive: user.status == "ACTIVE"
     });
 
     logger.info("Generated Refresh Token:", expiresAt);

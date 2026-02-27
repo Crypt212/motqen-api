@@ -12,7 +12,7 @@ export default class OtpCache {
   }
 
   async setOtp(phone, method, hashedOtp, ttlSeconds) {
-const key = this.#keys.otp(phone, method)
+    const key = this.#keys.otp(phone, method)
     await this.#client.set(
       key,
       hashedOtp,
@@ -22,7 +22,7 @@ const key = this.#keys.otp(phone, method)
 
   async getOtp(phone, method) {
     const key = this.#keys.otp(phone, method);
-    const value =  await this.#client.get(key);
+    const value = await this.#client.get(key);
     return value
   }
 

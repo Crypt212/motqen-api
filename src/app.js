@@ -15,13 +15,13 @@ const initApp = async () => {
   const app = express();
 
   app.use(helmet());
-  // app.use(
-  //   cors({
-  //     origin: function (origin, callback) {
-  //       callback(null, environment.frontend.url);
-  //     },
-  //   }),
-  // );
+  app.use(
+    cors({
+      origin: function (origin, callback) {
+        callback(null, environment.frontend.url);
+      },
+    }),
+  );
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
 
@@ -34,10 +34,11 @@ const initApp = async () => {
       displayRequestDuration: true,
     },
   }));
-  
-  app.use(verifyDeviceId);
 
-  app.use("/api", ipRateLimiter, mainRouter);
+  app.use("/api",
+    verifyDeviceId,
+    // ipRateLimiter,
+    mainRouter);
 
   // Health check
   app.get("/health", (req, res) => {

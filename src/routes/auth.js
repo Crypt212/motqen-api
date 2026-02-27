@@ -32,7 +32,7 @@ import {
   validateLogout,
   validateReviewStatus,
 } from '../validators/auth.js';
-import { authenticateActive, authenticateTokens } from '../middlewares/authMiddleware.js';
+import { authenticateAccess, authenticateLogin, authenticateRefresh, authenticateRegister, isActive } from '../middlewares/authMiddleware.js';
 import { validateJSONField } from '../validators/common.js';
 
 const authRouter = Router();
@@ -224,11 +224,11 @@ authRouter.post(
 authRouter.post(
   '/register-client',
   upload.single("personal_image"),
+  authenticateRegister,
   validateJSONField("userData"),
   validateJSONField("clientProfile"),
   ...validateRegisterClient,
   validateRequest,
-  authenticateTokens(["register"]),
   registerClient
 );
 /**
@@ -335,7 +335,7 @@ authRouter.post(
   validateJSONField("workerProfile"),
   ...validateRegisterWorker,
   validateRequest,
-  authenticateTokens(["register"]),
+  authenticateRegister,
   registerWorker
 );
 /**
@@ -379,9 +379,9 @@ authRouter.post(
  */
 authRouter.post(
   '/login',
+  authenticateLogin,
   ...validateLogin,
   validateRequest,
-  authenticateTokens(["login"]),
   login
 );
 /**
@@ -416,10 +416,10 @@ authRouter.post(
  */
 authRouter.post(
   '/logout',
+  authenticateAccess,
   ...validateLogout,
   validateRequest,
-  authenticateTokens(["access"]),
-  authenticateActive,
+  isActive,
   logout
 );
 /**
@@ -457,10 +457,10 @@ authRouter.post(
  */
 authRouter.get(
   '/access',
+  authenticateRefresh,
   ...validateGenerateAccessToken,
   validateRequest,
-  authenticateTokens(["refresh"]),
-  authenticateActive,
+  isActive,
   generateAccessToken
 );
 /**
@@ -488,9 +488,9 @@ authRouter.get(
  */
 authRouter.get(
   '/review-status',
+  authenticateAccess,
   ...validateReviewStatus,
   validateRequest,
-  authenticateTokens(["access"]),
   reviewStatus
 );
 export default authRouter;

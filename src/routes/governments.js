@@ -12,7 +12,7 @@ import {
   deleteGovernment,
   getCitiesByGovernment,
 } from "../controllers/GovernmentController.js";
-import { authenticateActive, authorizeAdmin } from "../middlewares/authMiddleware.js";
+import { isActive, authorizeAdmin } from "../middlewares/authMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 import { body, param } from "express-validator";
 
@@ -136,7 +136,7 @@ governmentRouter.get(
  */
 governmentRouter.post(
   "/",
-  authenticateActive,
+  isActive,
   authorizeAdmin,
   body("name")
     .trim()
@@ -194,7 +194,7 @@ governmentRouter.post(
  */
 governmentRouter.put(
   "/:id",
-  authenticateActive,
+  isActive,
   authorizeAdmin,
   param("id")
     .matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
@@ -239,7 +239,7 @@ governmentRouter.put(
  */
 governmentRouter.delete(
   "/:id",
-  authenticateActive,
+  isActive,
   authorizeAdmin,
   param("id")
     .matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
@@ -292,7 +292,6 @@ governmentRouter.delete(
  */
 governmentRouter.get(
     '/:governmentId/cities',
-    authenticateActive,
     validateRequest,
     getCitiesByGovernment
 );

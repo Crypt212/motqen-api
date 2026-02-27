@@ -5,12 +5,18 @@
 
 import { $Enums } from "@prisma/client";
 import AppError from "../errors/AppError.js";
-import Service, { tryCatch } from "./Service.js";
+import Service from "./Service.js";
 import uploadToCloudinary from "../providers/cloudinaryProvider.js";
 import UserRepository from "../repositories/database/UserRepository.js";
 import GovernmentRepository from "../repositories/database/GovernmentRepository.js";
 
 /** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
+/** @typedef {import("../types/asyncHandler.js").UserState} UserState */
+/** @typedef {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} File */
+
+/** @typedef {import("../repositories/database/UserRepository.js").OptionalUser} ReturnUserData */
+
+/** @typedef {Partial<{role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, city: string, bio: string, profileImage: File, status: $Enums.AccountStatus}>} InputUserData */
 
 /**
  * User Service - Manages user-related operations
@@ -25,10 +31,11 @@ export default class UserService extends Service {
   #governmentRepository;
 
   /**
-   * @param {UserRepository} userRepository
-   * @param {GovernmentRepository} governmentRepository
+   * @param {Object} params
+   * @param {UserRepository} params.userRepository
+   * @param {GovernmentRepository} params.governmentRepository
    */
-  constructor(userRepository, governmentRepository) {
+  constructor({ userRepository, governmentRepository }) {
     super();
     this.#userRepository = userRepository;
     this.#governmentRepository = governmentRepository;
@@ -38,54 +45,40 @@ export default class UserService extends Service {
    * Get a user
    * @async
    * @method getUser
-   * @param {import("../repositories/database/UserRepository.js").IDType} userId - User ID
-   * @returns {Promise<import("../repositories/database/UserRepository.js").OptionalUser>} user
+   * @param {Object} params
+   * @param {IDType | undefined} params.userId - User ID
+   * @param {IDType | undefined} params.phoneNumber - Phone number
+   * @returns {Promise<ReturnUserData>} user
    */
-  async getUser(userId) {
-    console.log("bla bla bla");
-    const user = await this.#userRepository.findOne({ id: userId });
-    console.log("alb alb alb");
+  async get({ userId = undefined, phoneNumber = undefined }) {
+    const user = await this.#userRepository.findFirst({ id: userId, phoneNumber: phoneNumber });
     return user;
-  }
-
-  /**
-   * Get all roles of a user
-   * @async
-   * @method getUserRoles
-   * @param {import("../repositories/database/UserRepository.js").IDType} userId - User ID
-   * @returns {Promise<{ isWorker: boolean, isClient: boolean }>} Roles of user
-   */
-  async getUserRoles(userId) {
-    const isWorker = await this.#userRepository.hasWorkerProfile(userId);
-    const isClient = await this.#userRepository.hasClientProfile(userId);
-    return { isWorker, isClient };
   }
 
   /**
    * Update a user's basic information
    * @async
    * @method updateUser
-   * @param {import("../repositories/database/UserRepository.js").IDType} userId - User ID
-   * @param {Object} data - Update data
-   * @param {$Enums.Role} [data.role] - User's role
-   * @param {string} [data.firstName] - First name
-   * @param {string} [data.lastName] - Last name
-   * @param {string} [data.governmentId] - Government ID
-   * @param {string} [data.city] - City name
-   * @param {string} [data.bio] - Biography
-   * @param {$Enums.AccountStatus} [data.status] - Account status
+   * @param {Object} params
+   * @param {IDType} params.userId - User ID
+   * @param {Partial<InputUserData>} params.data - Update data
    * @returns {Promise<import("../repositories/database/UserRepository.js").OptionalUser>} Updated user
    * @throws {AppError} If government or city not found
    */
-  async updateUser(userId, data) {
+  async update({ userId, data }) {
     const government = await this.#governmentRepository.findOne({ id: data.governmentId });
     if (!government) throw new AppError("Government not found", 400);
 
-    // let cityId = undefined;
-    // const cities = await this.#governmentRepository.findCities({ governmentId, name: data.city });
-    // if (!cities || cities.length === 0)
-    //   throw new AppError("City not found", 400);
-    // cityId = cities[0].id;
+    let cityId = undefined;
+    const cities = await this.#governmentRepository.findCities({ governmentId: data.governmentId, name: data.city });
+    if (!cities || cities.length === 0)
+      throw new AppError("City not found", 400);
+    cityId = cities[0].id;
+
+    let url = undefined;
+    if (data.profileImage) {
+      url = (await uploadToCloudinary(data.profileImage.buffer, `${userId}/profile_image`, "profileMain")).url;
+    }
 
     await this.#userRepository.update({
       role: data.role,
@@ -93,80 +86,37 @@ export default class UserService extends Service {
       lastName: data.lastName,
       governmentId: data.governmentId,
       cityName: data.city,
-      status: data.status
+      status: data.status,
+      profileImageUrl: typeof url === "string" ? url : undefined
     }, { id: userId });
     return await this.#userRepository.findOne({ id: userId });
   }
 
-
   /**
-   * Get user's profile image URL
+   * Get all roles of a user
    * @async
-   * @method getProfileImage
-   * @param {import("../repositories/database/Repository.js").IDType} userId - User ID
-   * @returns {Promise<string|null>} Profile image URL or null
-   * @throws {AppError} If user not found
+   * @method getUserRoles
+   * @param {Object} params
+   * @param {IDType} params.userId - User ID
+   * @returns {Promise<UserState>} Roles of user
    */
-  async getProfileImage(userId) {
-    return tryCatch(async () => {
-      const user = await this.#userRepository.findOne({ id: userId });
-      if (!user) throw new AppError("User not found", 404);
+  async getStatus({ userId }) {
 
-      return user.profileImageUrl;
-    });
-  }
+    const user = await this.#userRepository.findOne({ id: userId });
+    const worker = await this.#userRepository.findWorkerProfile({ userId });
+    let verification = null;
+    if (worker) verification = await this.#userRepository.findWorkerProfileVerification({ workerProfileId: worker.id });
+    const client = await this.#userRepository.findClientProfile({ userId });
 
-  /**
-   * Update user's profile image URL
-   * For workers, the image will not be updated until approved by an admin
-   * @async
-   * @method updateProfileImage
-   * @param {import("../repositories/database/Repository.js").IDType} userId - User ID
-   * @param {Buffer} profileImageBuffer - New profile image URL
-   * @returns {Promise<import("../repositories/database/UserRepository.js").User>} Updated user
-   * @throws {AppError} If user not found
-   */
-  async updateProfileImage(userId, profileImageBuffer) {
-    return tryCatch(async () => {
-      const user = await this.#userRepository.findOne({ id: userId });
-      if (!user) throw new AppError("User not found", 404);
+    const userState = {
+      role: user.role,
+      userId: user.id,
+      phoneNumber: user.phoneNumber,
+      accountStatus: user.status,
+      worker: worker ? { id: worker.id, verification: { status: verification.status, reason: verification.reason } } : undefined,
+      client: client ? { id: client.id } : undefined,
+    }
 
-      //-----------------------------> suspended to v2 <----------------------------
-      //for client it is free to change anytime
-      //for worker it will be an requset
-      //  1- upload
-      //  2 - create request
-      //  3- pending untill approve from admin
-      //maybe add an profile photo history to select from his old photos
-      //-----------------------------------------------------------------------------
-
-      const { url } = await uploadToCloudinary(profileImageBuffer, `${userId}/profileImage`, "profileImage");
-      await this.#userRepository.update({ profileImageUrl: url }, { id: userId });
-      return this.#userRepository.findOne({ id: userId });
-    });
-  }
-
-  /**
-   * Delete user's profile image URL
-   * Workers cannot delete their profile image
-   * @async
-   * @method deleteProfileImage
-   * @param {import("../repositories/database/Repository.js").IDType} userId - User ID
-   * @returns {Promise<import("../repositories/database/UserRepository.js").User>} Updated user with null profileImage
-   * @throws {AppError} If user not found or is a worker
-   */
-  async deleteProfileImage(userId) {
-    return tryCatch(async () => {
-      const user = await this.#userRepository.findOne({ id: userId });
-      if (!user) throw new AppError("User not found", 404);
-
-      // Check if user has a worker profile - workers cannot delete their profile image
-      const isWorker = await this.#userRepository.hasWorkerProfile(userId);
-      if (isWorker) {
-        throw new AppError("Workers cannot delete their profile image.", 403);
-      }
-      await this.#userRepository.update({ profileImageUrl: null, }, { id: userId });
-      return this.#userRepository.findOne({ id: userId });
-    });
+    return userState;
   }
 }

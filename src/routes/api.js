@@ -5,16 +5,18 @@
 
 import { Router } from "express";
 import authRouter from "./auth.js";
-import usersRouter from "./users.js";
+import dashboardRouter from "./dashboard.js";
 import governmentRouter from "./governments.js";
 import specializationRouter from "./specializations.js";
-import { authenticateActive, authenticateTokens } from "../middlewares/authMiddleware.js";
+import { isActive, authenticateAccess } from "../middlewares/authMiddleware.js";
 import { sensitiveIpRateLimiter } from "../middlewares/rateLimitMiddleware.js";
 
 const mainRouter = Router();
 
-mainRouter.use("/auth", sensitiveIpRateLimiter, authRouter);
-mainRouter.use("/users", authenticateTokens(["access"]), authenticateActive, usersRouter);
+mainRouter.use("/auth",
+  // sensitiveIpRateLimiter,
+  authRouter);
+mainRouter.use("/me", authenticateAccess, isActive, dashboardRouter);
 mainRouter.use("/governments", governmentRouter);
 mainRouter.use("/specializations", specializationRouter);
 

@@ -7,9 +7,11 @@ import AppError from "../errors/AppError.js";
 import Service, { tryCatch } from "./Service.js";
 import UserRepository from "../repositories/database/UserRepository.js";
 import { Repository } from "../repositories/database/Repository.js";
-import uploadToCloudinary from "../providers/cloudinaryProvider.js";
 
 /** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
+/** @typedef {import("../repositories/database/UserRepository.js").ClientProfile} ReturnClientProfile */
+/** @typedef {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} File */
+/** @typedef {{address: String, addressNotes: String}} InputClientProfileData */
 
 /**
  * Client Service - Manages client-related operations
@@ -22,9 +24,10 @@ export default class ClientService extends Service {
   #userRepository;
 
   /**
-   * @param {UserRepository} userRepository
+   * @param {Object} params
+   * @param {UserRepository} params.userRepository
    */
-  constructor(userRepository) {
+  constructor({ userRepository }) {
     super();
     this.#userRepository = userRepository;
   }
@@ -33,16 +36,17 @@ export default class ClientService extends Service {
    * Get a client's profile for a user
    * @async
    * @method getClientProfile
-   * @param {import("../repositories/database/Repository.js").IDType} userId - User ID
-   * @returns {Promise<import("../repositories/database/UserRepository.js").ClientProfile>} Client profile
+   * @param {Object} params
+   * @param {IDType} params.userId - User ID
+   * @returns {Promise<ReturnClientProfile>} Client profile
    * @throws {AppError} If user not found
    */
-  async getClientProfile(userId) {
+  async get({ userId }) {
     return tryCatch(async () => {
       const user = await this.#userRepository.findOne({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
-      const clientProfile = await this.#userRepository.getClientProfile(userId);
+      const clientProfile = await this.#userRepository.findClientProfile({ userId });
       if (!clientProfile)
         throw new AppError("Client profile not found", 404);
 
@@ -54,19 +58,15 @@ export default class ClientService extends Service {
    * Create a client profile for a user
    * @async
    * @method createClientProfile
-   * @param {Object} params - Client profile parameters
-   * @param {import("../repositories/database/Repository.js").IDType} params.userId - User ID
-   * @param {String} params.address - Address of the client
-   * @param {String} params.addressNotes - Additional address information
-   * @param {Express.Multer.File & import("../types/asyncHandler.js").MulterFile | null} params.profileImage - Profile image URL
-   * @returns {Promise<import("../repositories/database/UserRepository.js").ClientProfile>} Created client profile
+   * @param {Object} params
+   * @param {IDType} params.userId - User ID
+   * @param {InputClientProfileData} params.data
+   * @returns {Promise<ReturnClientProfile>} Created client profile
    * @throws {AppError} If user not found
    */
-  async createClientProfile({
+  async create({
     userId,
-    address,
-    addressNotes,
-    profileImage = null,
+    data,
   }) {
     return tryCatch(async () => {
       const user = await this.#userRepository.findOne({ id: userId });
@@ -74,14 +74,7 @@ export default class ClientService extends Service {
 
       return await Repository.createTransaction([this.#userRepository], async () => {
 
-        const clientProfile = await this.#userRepository.addClientProfile(user.id, { address, addressNotes });
-        
-        if (profileImage) {
-          const { url } = await uploadToCloudinary(profileImage.buffer, `${userId}/profile_image`, "profileMain");
-          await this.#userRepository.update({ profileImageUrl: url }, { id: userId });
- 
-        }
-
+        const clientProfile = await this.#userRepository.createClientProfile({ userId: user.id, data: { address: data.address, addressNotes: data.addressNotes } });
 
         return clientProfile;
       }, (reason) => {
@@ -94,21 +87,30 @@ export default class ClientService extends Service {
    * Update a client's profile for a user
    * @async
    * @method updateClientProfile
-   * @param {import("../repositories/database/Repository.js").IDType} userId - User ID
-   * @param {Object} data - Client profile data to update
-   * @returns {Promise<import("../repositories/database/UserRepository.js").ClientProfile>} Updated client profile
+   * @param {Object} params
+   * @param {IDType} params.clientProfileId - Client Profile ID
+   * @param {Partial<InputClientProfileData>} params.data - Client profile data to update
+   * @returns {Promise<ReturnClientProfile>} Updated client profile
    * @throws {AppError} If user not found or profile not found
    */
-  async updateClientProfile(userId, data = {}) {
+  async update({ clientProfileId, data }) {
     return tryCatch(async () => {
-      const user = await this.#userRepository.findOne({ id: userId });
-      if (!user) throw new AppError("User not found", 404);
+      return await this.#userRepository.updateClientProfile({ clientProfileId, data });
+    });
+  }
 
-      const clientProfile = await this.#userRepository.getClientProfile(userId);
-      if (!clientProfile)
-        throw new AppError("Client profile not found", 404);
-
-      return await this.#userRepository.updateClientProfile(userId, data);
+  /**
+   * Delete a client's profile information
+   * @async
+   * @method deleteClientProfile
+   * @param {Object} params
+   * @param {IDType} params.clientProfileId - Client Profile ID
+   * @returns {Promise<ReturnClientProfile>} Deleted client profile
+   * @throws {AppError} If user not found
+   */
+  async delete({ clientProfileId }) {
+    return tryCatch(async () => {
+      return await this.#userRepository.deleteClientProfile({ clientProfileId });
     });
   }
 }

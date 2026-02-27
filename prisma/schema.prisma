@@ -106,28 +106,36 @@ model ProjectImage {
 }
 
 model ChosenSpecialization {
-  workerProfileId  String
-  specializationId String
+  workerProfileId     String
+  subSpecializationId String @unique
+  specializationId    String
 
-  workerProfile            WorkerProfile             @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
-  specialization           Specialization            @relation(fields: [specializationId], references: [id], onDelete: Cascade)
-  chosenSubSpecializations ChosenSubSpecialization[]
+  tasks             ChosenSpecializationTask[]
+  workerProfile     WorkerProfile              @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  subSpecialization SubSpecialization          @relation(fields: [subSpecializationId], references: [id], onDelete: Cascade)
+  specialization    Specialization             @relation(fields: [specializationId], references: [id])
 
-  @@id([workerProfileId, specializationId])
+  @@id([workerProfileId, subSpecializationId])
   @@map("chosen_specializations")
 }
 
-model ChosenSubSpecialization {
-  workerProfileId        String
-  subSpecializationId    String
-  chosenSpecializationId String
+model ChosenSpecializationTask {
+  taskId              String
+  subSpecializationId String
 
-  subSpecialization    SubSpecialization    @relation(fields: [subSpecializationId], references: [id], onDelete: Cascade)
-  chosenSpecialization ChosenSpecialization @relation(fields: [workerProfileId, chosenSpecializationId], references: [workerProfileId, specializationId], onDelete: Cascade)
+  task                 Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  chosenSpecialization ChosenSpecialization @relation(fields: [subSpecializationId], references: [subSpecializationId], onDelete: Cascade)
 
-  @@id([chosenSpecializationId, subSpecializationId])
-  @@unique([chosenSpecializationId, subSpecializationId])
-  @@map("chosen_sub_specializations")
+  @@id([taskId, subSpecializationId])
+}
+
+model Task {
+  id String @id @default(uuid())
+
+  title String
+
+
+  specializations ChosenSpecializationTask[]
 }
 
 model Specialization {
@@ -146,8 +154,8 @@ model SubSpecialization {
   name                 String
   mainSpecializationId String
 
-  choosingWorkers     ChosenSubSpecialization[]
-  mainSpecialization Specialization            @relation(fields: [mainSpecializationId], references: [id], onDelete: Cascade)
+  choosingWorkers           ChosenSpecialization[]
+  mainSpecialization        Specialization             @relation(fields: [mainSpecializationId], references: [id], onDelete: Cascade)
 
   @@index([name])
   @@map("sub_specializations")

@@ -19,8 +19,8 @@ export const userRepository = new UserRepository(prisma);
 export const specializationRepository = new SpecializationRepository(prisma);
 export const governmentRepository = new GovernmentRepository(prisma);
 
-export const rateLimitService = new RateLimitService(rateLimitCache);
-export const userService = new UserService(userRepository, governmentRepository);
-export const clientService = new ClientService(userRepository);
-export const workerService = new WorkerService(userRepository);
-export const authService = new AuthService(userRepository, otpCache, sessionRepository, rateLimitCache);
+export const rateLimitService = new RateLimitService({ rateLimitCache });
+export const userService = new UserService({ userRepository, governmentRepository });
+export const clientService = new ClientService({ userRepository });
+export const workerService = new WorkerService({ userRepository });
+export const authService = new AuthService({ userRepository, governmentRepository, otpCache, sessionRepository, rateLimitCache });
