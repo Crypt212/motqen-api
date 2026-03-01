@@ -768,6 +768,78 @@ const options = {
             },
           },
         },
+        // ─── Chat Schemas ───────────────────────────────────────
+        SendMessageRequest: {
+          type: 'object',
+          required: ['conversationId', 'content'],
+          properties: {
+            conversationId: {
+              type: 'string',
+              format: 'uuid',
+              example: '550e8400-e29b-41d4-a716-446655440000',
+              description: 'Conversation UUID',
+            },
+            content: {
+              type: 'string',
+              example: 'Hello, are you available today?',
+              description: 'Message text content',
+            },
+            type: {
+              type: 'string',
+              enum: ['TEXT', 'IMAGE'],
+              default: 'TEXT',
+              description: 'Message type',
+            },
+          },
+        },
+        PartnerUser: {
+          type: 'object',
+          description: 'Brief public info about the conversation partner',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            firstName: { type: 'string', example: 'أحمد' },
+            lastName: { type: 'string', example: 'محمد' },
+            profileImageUrl: { type: 'string', nullable: true, example: 'https://res.cloudinary.com/.../avatar.jpg' },
+            lastSeenAt: { type: 'string', format: 'date-time', nullable: true, description: 'Last time the partner was online' },
+          },
+        },
+        Message: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid', example: '3fa85f64-5717-4562-b3fc-2c963f66afa6' },
+            conversationId: { type: 'string', format: 'uuid' },
+            senderId: { type: 'string', format: 'uuid' },
+            messageNumber: { type: 'integer', example: 42, description: 'Per-conversation sequential number — used as cursor' },
+            content: { type: 'string', example: 'Hello, are you available today?' },
+            type: { type: 'string', enum: ['TEXT', 'IMAGE'], example: 'TEXT' },
+            createdAt: { type: 'string', format: 'date-time' },
+            sender: { $ref: '#/components/schemas/PartnerUser' },
+          },
+        },
+        ConversationSummary: {
+          type: 'object',
+          description: 'Conversation list item with unread count derived from counter difference',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            messageCounter: { type: 'integer', example: 42, description: 'Total messages sent in this conversation' },
+            unreadCount: { type: 'integer', example: 5, description: 'messageCounter − lastReadMessageNumber' },
+            lastMessage: { nullable: true, $ref: '#/components/schemas/Message' },
+            partner: { $ref: '#/components/schemas/PartnerUser' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        Conversation: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            workerId: { type: 'string', format: 'uuid' },
+            clientId: { type: 'string', format: 'uuid' },
+            messageCounter: { type: 'integer', example: 0 },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
       },
       responses: {
         BadRequest: {
@@ -898,21 +970,15 @@ const options = {
       },
     },
     tags: [
+      { name: 'Auth',            description: 'Authentication endpoints (OTP, registration, login, logout, token refresh)' },
+      { name: 'Users',           description: 'User profile management (basic info, profile image, client/worker profiles)' },
+      { name: 'Governments',     description: 'Government & city lookup and management' },
+      { name: 'Specializations', description: 'Specialization & sub-specialization lookup and management' },
       {
-        name: 'Auth',
-        description: 'Authentication endpoints (OTP, registration, login, logout, token refresh)',
-      },
-      {
-        name: 'Users',
-        description: 'User profile management (basic info, profile image, client/worker profiles)',
-      },
-      {
-        name: 'Governments',
-        description: 'Government & city lookup and management',
-      },
-      {
-        name: 'Specializations',
-        description: 'Specialization & sub-specialization lookup and management',
+        name: 'Chat',
+        description:
+          'Real-time chat — REST endpoints for conversation bootstrap, message history, and offline sync. ' +
+          'Real-time messaging itself happens over Socket.IO (see Socket Events in the project docs).',
       },
     ],
   },

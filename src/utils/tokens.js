@@ -73,11 +73,12 @@ export const verifyAndDecodeToken = (token, expectedType) => {
  * @returns {TokenTypeMap[T]} decoded payload
  */
 export const verifyHeaderToken = function(tokenString, type) {
+  console.log(tokenString, type);
   if (!tokenString) throw new AppError("Unauthorized 1", 401);
 
   const token = tokenString.split(" ")[1];
   if (!token) throw new AppError("Unauthorized 2", 401);
-
+  
   const decoded = verifyAndDecodeToken(token, type);
   if (!decoded) throw new AppError("Unauthorized 3", 401);
   return decoded;

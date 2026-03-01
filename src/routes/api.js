@@ -8,6 +8,7 @@ import authRouter from "./auth.js";
 import dashboardRouter from "./dashboard.js";
 import governmentRouter from "./governments.js";
 import specializationRouter from "./specializations.js";
+import chatRouter from "./chat.js";
 import { isActive, authenticateAccess } from "../middlewares/authMiddleware.js";
 import { sensitiveIpRateLimiter } from "../middlewares/rateLimitMiddleware.js";
 
@@ -17,6 +18,7 @@ mainRouter.use("/auth",
   // sensitiveIpRateLimiter,
   authRouter);
 mainRouter.use("/me", authenticateAccess, isActive, dashboardRouter);
+mainRouter.use("/chat", authenticateAccess, isActive, chatRouter);
 mainRouter.use("/governments", governmentRouter);
 mainRouter.use("/specializations", specializationRouter);
 

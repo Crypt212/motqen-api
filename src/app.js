@@ -17,9 +17,7 @@ const initApp = async () => {
   app.use(helmet());
   app.use(
     cors({
-      origin: function (origin, callback) {
-        callback(null, environment.frontend.url);
-      },
+      origin: "*",
     }),
   );
   app.use(express.urlencoded({ extended: true }));
