@@ -35,12 +35,17 @@ model User {
   profileImageUrl String?
   status          AccountStatus @default(ACTIVE)
   role            Role          @default(USER)
+  lastSeenAt      DateTime?
 
-  government    Government?    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
-  city          City?          @relation(fields: [cityId], references: [id], onDelete: Cascade)
-  sessions      Session[]
-  workerProfile WorkerProfile?
-  clientProfile ClientProfile?
+  government          Government?               @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  city                City?                     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  sessions            Session[]
+  workerProfile       WorkerProfile?
+  clientProfile       ClientProfile?
+  workerConversations Conversation[]            @relation("WorkerConversations")
+  clientConversations Conversation[]            @relation("ClientConversations")
+  conversations       ConversationParticipant[]
+  sentMessages        Message[]
 
   @@map("users")
 }
@@ -220,4 +225,68 @@ enum WorkerProfileStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+// ─── Chat ────────────────────────────────────────────────────────────────────
+
+enum ConversationRole {
+  WORKER
+  CLIENT
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+}
+
+model Conversation {
+  id             String   @id @default(uuid())
+  workerId       String
+  clientId       String
+  messageCounter Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  worker       User                      @relation("WorkerConversations", fields: [workerId], references: [id])
+  client       User                      @relation("ClientConversations", fields: [clientId], references: [id])
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@unique([workerId, clientId])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id                    String           @id @default(uuid())
+  conversationId        String
+  userId                String
+  role                  ConversationRole
+  lastReadMessageNumber Int              @default(0)
+  createdAt             DateTime         @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@unique([conversationId, role])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String
+  senderId       String
+  messageNumber  Int
+  content        String
+  type           MessageType @default(TEXT)
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id])
+
+  @@unique([conversationId, messageNumber])
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("messages")
 }
