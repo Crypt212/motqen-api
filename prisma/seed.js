@@ -642,6 +642,40 @@ async function main() {
       }
     }
 
+    // 3. Seed Test User
+    console.log("\n--- Seeding Test User ---");
+
+    // Check if test user already exists
+    const existingTestUser = await prisma.user.findFirst({
+      where: { phoneNumber: "+201001234567" },
+    });
+
+    if (!existingTestUser) {
+      const testUser = await prisma.user.create({
+        data: {
+          phoneNumber: "+201001234567",
+          firstName: "محمد",
+          middleName: "أحمد",
+          lastName: "علي",
+          status: "ACTIVE",
+          role: "USER",
+        },
+      });
+      console.log(`Created test user: ${testUser.firstName} ${testUser.lastName}`);
+
+      // Create client profile for test user
+      await prisma.clientProfile.create({
+        data: {
+          userId: testUser.id,
+          address: "القاهرة، شارع النيل",
+          addressNotes: "الشقة 5، العمارة 10",
+        },
+      });
+      console.log(`Created client profile for test user`);
+    } else {
+      console.log("Test user already exists");
+    }
+
     console.log("\n--- Database seeding completed successfully! ---");
   } catch (error) {
     console.error("Error seeding database:", error);

@@ -36,7 +36,7 @@ const initApp = async () => {
   }));
 
   app.use("/api",
-    verifyDeviceId,
+    // verifyDeviceId,
     // ipRateLimiter,
     mainRouter);
 
