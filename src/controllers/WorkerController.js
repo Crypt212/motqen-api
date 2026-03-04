@@ -16,6 +16,9 @@ import { asyncHandler } from '../types/asyncHandler.js';
  */
 export const searchWorkers = asyncHandler(async (req, res) => {
   const {
+    category_id,
+    area,
+    availability,
     subSpecializationId,
     governmentId,
     acceptsUrgentJobs,
@@ -23,20 +26,39 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     limit,
   } = req.query;
 
-  // Safely cast query parameters to appropriate types
-  const subSpecId = typeof subSpecializationId === 'string' ? subSpecializationId : undefined;
-  const govId = typeof governmentId === 'string' ? governmentId : undefined;
-  const urgentJobs = typeof acceptsUrgentJobs === 'string' ? acceptsUrgentJobs === 'true' : undefined;
+  // Support both new API names and legacy names
+  const subSpecId = typeof category_id === 'string'
+    ? category_id
+    : (typeof subSpecializationId === 'string' ? subSpecializationId : undefined);
+
+  const areaFilter = typeof area === 'string'
+    ? area
+    : (typeof governmentId === 'string' ? governmentId : undefined);
+
+  const availabilityRaw = typeof availability === 'string'
+    ? availability
+    : (typeof acceptsUrgentJobs === 'string' ? acceptsUrgentJobs : undefined);
+
+  let isAvailableNow;
+  if (availabilityRaw !== undefined) {
+    const normalized = availabilityRaw.toLowerCase();
+    isAvailableNow = ['true', '1', 'yes', 'available', 'now'].includes(normalized)
+      ? true
+      : (['false', '0', 'no', 'unavailable'].includes(normalized) ? false : undefined);
+  }
+
   const pageNum = typeof page === 'string' ? parseInt(page, 10) : 1;
   const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : 10;
 
   const result = await workerRepository.searchWorkers({
-    subSpecializationId: subSpecId,
-    governmentId: govId,
-    acceptsUrgentJobs: urgentJobs,
+    categoryId: subSpecId,
+    area: areaFilter,
+    availability: isAvailableNow,
     page: pageNum,
     limit: limitNum,
   });
+
+  // Sorting: rating desc, completedServices desc, experienceYears desc (applied in repository)
 
   new SuccessResponse('Workers retrieved successfully', result, 200).send(res);
 });

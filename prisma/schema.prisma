@@ -63,12 +63,19 @@ model WorkerProfile {
   isInTeam          Boolean
   acceptsUrgentJobs Boolean
   isApproved        Boolean @default(false)
+  rating            Float   @default(0) // 0-5 stars
+  servicePrice      Float?  // Price of service
+  isAvailableNow    Boolean @default(true)
+  completedServices Int     @default(0) // Number of completed services
+  bio               String? // Craftsman bio/description
 
   portfolio             PortfolioProject[]
   verification          WorkerVerification?
   user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   chosenSpecializations ChosenSpecialization[]
   governments           GovernmentForWorkers[]
+  badges                WorkerBadge[]
+  reviews               WorkerReview[]
 
   @@map("worker_profiles")
 }
@@ -193,6 +200,30 @@ model City {
   government Government @relation(fields: [governmentId], references: [id], onDelete: Cascade)
 
   @@map("cities")
+}
+
+model WorkerBadge {
+  id              String @id @default(uuid())
+  workerProfileId String
+  badgeType       String // e.g., "VERIFIED", "TOP_RATED", "TRUSTED"
+  createdAt       DateTime @default(now())
+
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([workerProfileId, badgeType])
+  @@map("worker_badges")
+}
+
+model WorkerReview {
+  id              String @id @default(uuid())
+  workerProfileId String
+  rating          Float  // 1-5 stars
+  comment         String?
+  createdAt       DateTime @default(now())
+
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+
+  @@map("worker_reviews")
 }
 
 enum AccountStatus {

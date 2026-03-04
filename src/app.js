@@ -36,8 +36,8 @@ const initApp = async () => {
   }));
 
   app.use("/api",
-    // verifyDeviceId,
-    // ipRateLimiter,
+    verifyDeviceId,
+    ipRateLimiter,
     mainRouter);
 
   // Health check

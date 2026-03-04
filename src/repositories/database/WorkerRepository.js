@@ -23,17 +23,17 @@ export default class WorkerRepository extends Repository {
  * Search for approved workers with pagination, filtering, and sorting
  * @async
  * @param {Object} params
- * @param {IDType} [params.subSpecializationId] - Filter by sub-specialization
- * @param {IDType} [params.governmentId] - Filter by government
- * @param {boolean} [params.acceptsUrgentJobs] - Filter by urgent jobs acceptance
+ * @param {IDType} [params.categoryId] - Filter by category/sub-specialization
+ * @param {string} [params.area] - Filter by area/government (ID or name)
+ * @param {boolean} [params.availability] - Filter by availability status
  * @param {number} [params.page=1] - Page number
  * @param {number} [params.limit=10] - Items per page (max 50)
  * @returns {Promise<{data: Array, meta: {total: number, page: number, limit: number, totalPages: number}}>}
  */
   async searchWorkers({
-    subSpecializationId = undefined,
-    governmentId = undefined,
-    acceptsUrgentJobs = undefined,
+    categoryId = undefined,
+    area = undefined,
+    availability = undefined,
     page = 1,
     limit = 10,
   }) {
@@ -54,22 +54,32 @@ export default class WorkerRepository extends Repository {
     };
 
     // Add optional filters
-    if (acceptsUrgentJobs !== undefined && acceptsUrgentJobs !== null) {
-      whereClause.acceptsUrgentJobs = acceptsUrgentJobs === true;
+    if (availability !== undefined && availability !== null) {
+      whereClause.isAvailableNow = availability === true;
     }
 
-    if (subSpecializationId) {
+    if (categoryId) {
       whereClause.chosenSpecializations = {
         some: {
-          subSpecializationId,
+          subSpecializationId: categoryId,
         },
       };
     }
 
-    if (governmentId) {
+    if (area) {
       whereClause.governments = {
         some: {
-          governmentId,
+          OR: [
+            { governmentId: area },
+            {
+              government: {
+                name: {
+                  equals: area,
+                  mode: 'insensitive',
+                },
+              },
+            },
+          ],
         },
       };
     }
@@ -86,6 +96,9 @@ export default class WorkerRepository extends Repository {
       select: {
         id: true,
         experienceYears: true,
+        rating: true,
+        isAvailableNow: true,
+        completedServices: true,
         acceptsUrgentJobs: true,
         user: {
           select: {
@@ -93,6 +106,7 @@ export default class WorkerRepository extends Repository {
             firstName: true,
             middleName: true,
             lastName: true,
+            profileImageUrl: true,
           },
         },
         governments: {
@@ -115,7 +129,10 @@ export default class WorkerRepository extends Repository {
         },
       },
       orderBy: [
+        { rating: 'desc' },
+        { completedServices: 'desc' },
         { experienceYears: 'desc' },
+        { id: 'desc' },
       ],
       skip,
       take: normalizedLimit,
@@ -124,11 +141,15 @@ export default class WorkerRepository extends Repository {
     // Transform data to response format
     const data = workers.map((worker) => ({
       workerId: worker.id,
-      fullName: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
-      experienceYears: worker.experienceYears,
-      acceptsUrgentJobs: worker.acceptsUrgentJobs,
-      governments: worker.governments.map((g) => g.government.name),
-      specializations: worker.chosenSpecializations.map((s) => s.subSpecialization.name),
+      name: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
+      profileImage: worker.user.profileImageUrl,
+      service_title: worker.chosenSpecializations.length > 0
+        ? worker.chosenSpecializations[0].subSpecialization.name
+        : null,
+      rating: worker.rating,
+      area: worker.governments.length > 0 ? worker.governments[0].government.name : null,
+      isAvailableNow: worker.isAvailableNow,
+      completedServices: worker.completedServices,
     }));
 
     const totalPages = Math.ceil(total / normalizedLimit);
@@ -158,6 +179,11 @@ export default class WorkerRepository extends Repository {
       select: {
         id: true,
         experienceYears: true,
+        rating: true,
+        servicePrice: true,
+        isAvailableNow: true,
+        completedServices: true,
+        bio: true,
         acceptsUrgentJobs: true,
         isApproved: true,
         user: {
@@ -166,6 +192,7 @@ export default class WorkerRepository extends Repository {
             firstName: true,
             middleName: true,
             lastName: true,
+            profileImageUrl: true,
             status: true,
           },
         },
@@ -188,17 +215,28 @@ export default class WorkerRepository extends Repository {
           },
         },
         portfolio: {
-          where: {
-            isApproved: true,
-          },
           select: {
             id: true,
             description: true,
+            isApproved: true,
             projectImages: {
               select: {
                 imageUrl: true,
               },
             },
+          },
+        },
+        verification: {
+          select: {
+            status: true,
+          },
+        },
+        badges: {
+          select: {
+            badgeType: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
           },
         },
       },
@@ -214,19 +252,30 @@ export default class WorkerRepository extends Repository {
     }
 
     // Transform portfolio data
-    const portfolio = worker.portfolio.map((project) => ({
-      id: project.id,
-      description: project.description,
-      images: project.projectImages.map((img) => img.imageUrl),
-    }));
+    const portfolio = worker.portfolio
+      .filter((project) => project.isApproved)
+      .map((project) => ({
+        id: project.id,
+        description: project.description,
+        images: project.projectImages.map((img) => img.imageUrl),
+      }));
 
     return {
       workerId: worker.id,
-      fullName: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
-      experienceYears: worker.experienceYears,
-      acceptsUrgentJobs: worker.acceptsUrgentJobs,
-      governments: worker.governments.map((g) => g.government.name),
+      name: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
+      profileImage: worker.user.profileImageUrl,
       specializations: worker.chosenSpecializations.map((s) => s.subSpecialization.name),
+      rating: worker.rating,
+      fee: worker.servicePrice,
+      isAvailableNow: worker.isAvailableNow,
+      completedServices: worker.completedServices,
+      experienceYears: worker.experienceYears,
+      area: worker.governments.length > 0 ? worker.governments[0].government.name : null,
+      workGovernments: worker.governments.map((g) => g.government.name),
+      badges: worker.badges.map((badge) => badge.badgeType),
+      verificationStatus: worker.verification?.status || 'PENDING',
+      bio: worker.bio,
+      workSamples: portfolio,
       portfolio,
     };
   }
