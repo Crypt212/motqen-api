@@ -92,6 +92,7 @@ model PortfolioProject {
   id              String  @id @default(uuid())
   workerProfileId String
   description     String?
+  isApproved      Boolean @default(false)
 
   projectImages ProjectImage[]
   workerProfile WorkerProfile  @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)

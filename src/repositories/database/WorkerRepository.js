@@ -188,6 +188,9 @@ export default class WorkerRepository extends Repository {
           },
         },
         portfolio: {
+          where: {
+            isApproved: true,
+          },
           select: {
             id: true,
             description: true,
