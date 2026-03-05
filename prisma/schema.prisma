@@ -31,7 +31,6 @@ model User {
   lastName        String
   governmentId    String?
   cityId          String?
-  cityName        String?
   profileImageUrl String?
   status          AccountStatus @default(ACTIVE)
   role            Role          @default(USER)
