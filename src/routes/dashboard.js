@@ -130,6 +130,7 @@ usersRouter.get("/",
  *         $ref: '#/components/responses/InternalServerError'
  */
 usersRouter.put("/",
+  upload.single("personal_image"),
   isActive,
   validateUpdateUser,
   validateRequest,

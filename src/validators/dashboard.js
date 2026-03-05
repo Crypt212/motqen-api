@@ -4,60 +4,75 @@
  */
 
 import { param } from "express-validator";
-import { clientProfileValidation, optionalClientProfileValidation, optionalMainSpecializationValidation, optionalSpecializationsTreeValidation, optionalUserDataValidation, optionalWorkerProfileValidation, optionalWorkGovernmentsValidation, specializationsTreeValidation, workerProfileValidation, workGovernmentsValidation } from "./common.js";
+import { clientProfileValidation, userDataValidation, specializationsTreeValidation, workerProfileValidation, workGovernmentsValidation, mainSpecializationValidation } from "./common.js";
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateGetUser = [];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateUpdateUser = [
-  ...optionalUserDataValidation
+  ...userDataValidation("", false)
 ];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateGetWorkerProfile = [];
 
 export const validateCreateWorkerProfile = [
-  ...workerProfileValidation
+  ...workerProfileValidation("", true)
 ];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateDeleteWorkerProfile = [];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateUpdateWorkerProfile = [
-  ...optionalWorkerProfileValidation
+  ...workerProfileValidation("", false)
 ];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateGetClientProfile = [];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateCreateClientProfile = [
-  ...clientProfileValidation
+  ...clientProfileValidation("", true)
 ];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateUpdateClientProfile = [
-  ...optionalClientProfileValidation
+  ...clientProfileValidation("", false)
 ];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateGetWorkerGovernments = [
 ];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateAddWorkerGovernments = [
-  workGovernmentsValidation()
+  workGovernmentsValidation("", false)
 ];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateDeleteWorkerGovernments = [
   param("all").optional().isBoolean(),
-  optionalWorkGovernmentsValidation()
+  workGovernmentsValidation("", false)
 ];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateDeleteClientProfile = [];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateGetWorkerSpecializations = [
 ];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateAddWorkerSpecializations = [
-  specializationsTreeValidation()
+  specializationsTreeValidation("", false)
 ];
 
+/** @type {import('express-validator').ValidationChain[]} */
 export const validateDeleteWorkerSpecializations = [
   param("all").optional().isBoolean(),
   param("allSub").optional().isBoolean(),
-  optionalMainSpecializationValidation(),
-  optionalSpecializationsTreeValidation(),
+  mainSpecializationValidation("", false),
+  specializationsTreeValidation("", false),
 ];

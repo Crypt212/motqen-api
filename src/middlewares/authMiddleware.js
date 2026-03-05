@@ -21,7 +21,6 @@ export const verifyDeviceId = asyncHandler(async (req, _, next) => {
 
   // TODO: DeviceID needs to be verified here
 
-
   next();
 });
 

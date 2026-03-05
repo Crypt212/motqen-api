@@ -60,7 +60,7 @@ export default class WorkerService extends Service {
     profileWithIdImage
   }) {
     return tryCatch(async () => {
-      const user = await this.#userRepository.findOne({ id: userId });
+      const user = await this.#userRepository.findFirst({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
       /** @type {WorkerProfile} */

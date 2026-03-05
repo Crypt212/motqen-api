@@ -27,7 +27,7 @@ export const getGovernments = asyncHandler(async (_, res) => {
  */
 export const getGovernmentById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const government = await governmentRepository.findOne({ id });
+  const government = await governmentRepository.findFirst({ id });
 
   if (!government) {
     throw new AppError("Government not found", 404);
@@ -62,13 +62,13 @@ export const updateGovernment = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { name } = matchedData(req, { includeOptionals: true });
 
-  const existing = await governmentRepository.findOne({ id });
+  const existing = await governmentRepository.findFirst({ id });
   if (!existing) {
     throw new AppError("Government not found", 404);
   }
 
   await governmentRepository.update({ name: name }, { id });
-  const government = await governmentRepository.findOne({ id });
+  const government = await governmentRepository.findFirst({ id });
 
   new SuccessResponse(
     "Government updated successfully",
@@ -83,7 +83,7 @@ export const updateGovernment = asyncHandler(async (req, res) => {
 export const deleteGovernment = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const existing = await governmentRepository.findOne({ id });
+  const existing = await governmentRepository.findFirst({ id });
   if (!existing) {
     throw new AppError("Government not found", 404);
   }
@@ -103,7 +103,7 @@ export const deleteGovernment = asyncHandler(async (req, res) => {
 export const getCitiesByGovernment = asyncHandler(async (req, res) => {
     const governmentId = String(req.params.governmentId);
 
-    const government = await governmentRepository.findOne({ id: governmentId });
+    const government = await governmentRepository.findFirst({ id: governmentId });
     if (!government) {
         throw new AppError('Government not found', 404);
     }

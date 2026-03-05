@@ -24,12 +24,13 @@ export const getUser = asyncHandler(async (req, res) => {
 /**
  */
 export const updateUser = asyncHandler(async (req, res) => {
-  const { firstName, middleName, lastName, governmentId, city, bio } = matchedData(req, { includeOptionals: true });
+  const { firstName, middleName, lastName, governmentId, cityId, bio } = matchedData(req, { includeOptionals: true });
   const userId = req.userState.userId;
+  const image = req.file;
 
   // If phoneNumber is provided, update user's phone (need additional verification)
   // For now, update other fields only
-  await userService.update({ userId, data: { firstName, middleName, lastName, governmentId, city, bio } });
+  await userService.update({ userId, data: { firstName, middleName, lastName, governmentId, cityId, bio, profileImage: image } });
 
   new SuccessResponse("updated user successfully", {}, 200).send(res);
 });
@@ -39,6 +40,7 @@ export const updateUser = asyncHandler(async (req, res) => {
 export const createClientProfile = asyncHandler(async (req, res) => {
   const { address, addressNotes } = matchedData(req, { includeOptionals: true });
   const userId = req.userState.userId;
+
 
   const clientProfile = await clientService.create({
     userId,
