@@ -33,7 +33,6 @@ import {
   validateReviewStatus,
 } from '../validators/auth.js';
 import { authenticateAccess, authenticateLogin, authenticateRefresh, authenticateRegister, isActive } from '../middlewares/authMiddleware.js';
-import { validateJSONField } from '../validators/common.js';
 
 const authRouter = Router();
 
@@ -225,8 +224,6 @@ authRouter.post(
   '/register-client',
   upload.single("personal_image"),
   authenticateRegister,
-  validateJSONField("userData"),
-  validateJSONField("clientProfile"),
   ...validateRegisterClient,
   validateRequest,
   registerClient
@@ -331,8 +328,6 @@ authRouter.post(
     { name: "id_image", maxCount: 1 },
     { name: "personal_with_id_image", maxCount: 1 }
   ]),
-  validateJSONField("userData"),
-  validateJSONField("workerProfile"),
   ...validateRegisterWorker,
   validateRequest,
   authenticateRegister,

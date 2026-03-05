@@ -16,7 +16,7 @@ import { asyncHandler } from "../types/asyncHandler.js";
  * Middleware: check OTP send rate limit (phone + device).
  * Controller must call rateLimitService.incrementSend() after sending.
  */
-export const checkSendOtpLimit = asyncHandler(async (req, res, next) => {
+export const checkSendOtpLimit = asyncHandler(async (req, _, next) => {
   try {
 
     const phone    = req.body.phoneNumber;
@@ -37,7 +37,7 @@ export const checkSendOtpLimit = asyncHandler(async (req, res, next) => {
  * Middleware: check OTP verify attempt limit (per phone).
  * Controller must call rateLimitService.incrementVerify() on wrong attempt.
  */
-export const checkVerifyLimit = asyncHandler(async (req, res, next) => {
+export const checkVerifyLimit = asyncHandler(async (req, _, next) => {
   try {
     const phone  = req.body.phoneNumber;
     const method = req.body.method;
@@ -64,7 +64,7 @@ export const ipRateLimiter = rateLimit({
   limit:           environment.rateLimit.max      ?? 100,
   standardHeaders: "draft-7", // RateLimit headers (RFC 9110)
   legacyHeaders:   false,
-  handler: (req, res, next, options) => {
+  handler: (_, __, next) => {
     next(new AppError("Too many requests, please try again later", 429));
   },
 });
@@ -80,7 +80,7 @@ export const sensitiveIpRateLimiter = rateLimit({
   limit:           environment.rateLimit.sensitiveMax      ?? 10,
   standardHeaders: "draft-7",
   legacyHeaders:   false,
-  handler: (req, res, next) => {
+  handler: (_, __, next) => {
     next(new AppError("Too many requests on this endpoint, please try again later", 429));
   },
 });
