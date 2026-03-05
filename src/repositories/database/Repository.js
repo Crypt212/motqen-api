@@ -15,7 +15,7 @@ import prisma from '../../libs/database.js';
 
 /**
  * @template CreateInput, UpdateInput, WhereInput, SelectInput, OutputData
- * */
+ */
 export class Repository {
   #defaultPrismaClient;
   #modelName;
@@ -72,7 +72,7 @@ export class Repository {
    * @param {SelectInput | undefined} select - Where clause
    * @returns {Promise<OutputData|null>}
    */
-  async findOne(where = {}, select = undefined) { return this.prismaClient[this.#modelName].findFirst({ where, select }); }
+  async findFirst(where = {}, select = undefined) { return this.prismaClient[this.#modelName].findFirst({ where, select }); }
 
   /**
    * @param {WhereInput | {}} where - Where clause
@@ -136,14 +136,4 @@ export class Repository {
    * @returns {Promise<number>}
    */
   async count(where = {}) { return this.prismaClient[this.#modelName].count({ where }); }
-
-  // findFirst - Find first matching record
-  /**
-   * @param {WhereInput | {}} where - Where clause
-   * @param {SelectInput | undefined} select - Select clause
-   * @returns {Promise<OutputData|null>}
-   */
-  async findFirst(where = {}, select = undefined) {
-    return this.prismaClient[this.#modelName].findFirst({ where, select });
-  }
 }

@@ -27,7 +27,7 @@ export const getSpecializations = asyncHandler(async (_, res) => {
  */
 export const getSpecializationById = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
-  const specialization = await specializationRepository.findOne({ id });
+  const specialization = await specializationRepository.findFirst({ id });
 
   if (!specialization) {
     throw new AppError("Specialization not found", 404);
@@ -46,7 +46,7 @@ export const getSpecializationById = asyncHandler(async (req, res) => {
 export const getSubSpecializations = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
 
-  const specialization = await specializationRepository.findOne({ id });
+  const specialization = await specializationRepository.findFirst({ id });
   if (!specialization) {
     throw new AppError("Specialization not found", 404);
   }
@@ -82,7 +82,7 @@ export const updateSpecialization = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
   const { name } = matchedData(req, { includeOptionals: true });
 
-  const existing = await specializationRepository.findOne({ id });
+  const existing = await specializationRepository.findFirst({ id });
   if (!existing) {
     throw new AppError("Specialization not found", 404);
   }
@@ -102,7 +102,7 @@ export const updateSpecialization = asyncHandler(async (req, res) => {
 export const deleteSpecialization = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
 
-  const existing = await specializationRepository.findOne({ id });
+  const existing = await specializationRepository.findFirst({ id });
   if (!existing) {
     throw new AppError("Specialization not found", 404);
   }
@@ -123,7 +123,7 @@ export const createSubSpecialization = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
   const { name } = matchedData(req, { includeOptionals: true });
 
-  const parent = await specializationRepository.findOne({ id });
+  const parent = await specializationRepository.findFirst({ id });
   if (!parent) {
     throw new AppError("Parent specialization not found", 404);
   }

@@ -51,8 +51,8 @@ export const validateRegisterClient = [
   validateToken("register"),
   validateDeviceFingerprint(),
   validateImageFile('personal_image', false),
-  ...userDataValidation,
-  ...clientProfileValidation,
+  ...userDataValidation("", true),
+  ...clientProfileValidation("", true),
 
 ];
 
@@ -62,8 +62,8 @@ export const validateRegisterWorker = [
   validateImageFile('personal_image', true),
   validateImageFile('id_image', true),
   validateImageFile('personal_with_id_image', true),
-  ...userDataValidation,
-  ...workerProfileValidation,
+  ...userDataValidation("", true),
+  ...workerProfileValidation("", true),
 ];
 
 // Validation rules for login

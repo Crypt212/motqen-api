@@ -43,7 +43,7 @@ export default class ClientService extends Service {
    */
   async get({ userId }) {
     return tryCatch(async () => {
-      const user = await this.#userRepository.findOne({ id: userId });
+      const user = await this.#userRepository.findFirst({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
       const clientProfile = await this.#userRepository.findClientProfile({ userId });
@@ -69,7 +69,7 @@ export default class ClientService extends Service {
     data,
   }) {
     return tryCatch(async () => {
-      const user = await this.#userRepository.findOne({ id: userId });
+      const user = await this.#userRepository.findFirst({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
       return await Repository.createTransaction([this.#userRepository], async () => {

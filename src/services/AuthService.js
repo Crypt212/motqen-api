@@ -273,7 +273,7 @@ export default class AuthService extends Service {
       await this.#rateLimitCache.incrementVerify(phoneNumber, method);
 
       await this.#rateLimitCache.resetAfterSuccess(phoneNumber, method, deviceId);
-      const user = await this.#userRepository.findOne({ phoneNumber });
+      const user = await this.#userRepository.findFirst({ phoneNumber });
 
       /** @type {string} */
       let token;
@@ -328,7 +328,7 @@ export default class AuthService extends Service {
       .update(refreshToken)
       .digest("hex");
 
-    const session = await this.#sessionRepository.findOne({
+    const session = await this.#sessionRepository.findFirst({
       userId,
       deviceId: deviceId,
       token: hashedToken,
@@ -345,7 +345,7 @@ export default class AuthService extends Service {
       throw new AppError("Refresh token has expired", 400);
     }
 
-    const user = await this.#userRepository.findOne({ id: userId });
+    const user = await this.#userRepository.findFirst({ id: userId });
 
     const accessToken = generateToken({
       type: "access",
@@ -375,7 +375,7 @@ export default class AuthService extends Service {
     expiresAt,
   }) {
     await this.#sessionRepository.delete({ deviceId: deviceFingerprint });
-    const user = await this.#userRepository.findOne({ phoneNumber });
+    const user = await this.#userRepository.findFirst({ phoneNumber });
     const unHashedRefreshToken = generateToken({
       type: "refresh",
       userId: user.id,

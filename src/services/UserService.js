@@ -83,7 +83,7 @@ export default class UserService extends Service {
       status: data.status,
       profileImageUrl: typeof url === "string" ? url : undefined
     }, { id: userId });
-    return await this.#userRepository.findOne({ id: userId });
+    return await this.#userRepository.findFirst({ id: userId });
   }
 
   /**
@@ -96,7 +96,7 @@ export default class UserService extends Service {
    */
   async getStatus({ userId }) {
 
-    const user = await this.#userRepository.findOne({ id: userId });
+    const user = await this.#userRepository.findFirst({ id: userId });
     const worker = await this.#userRepository.findWorkerProfile({ userId });
     let verification = null;
     if (worker) verification = await this.#userRepository.findWorkerProfileVerification({ workerProfileId: worker.id });
