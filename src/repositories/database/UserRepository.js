@@ -11,7 +11,7 @@ import { $Enums, PrismaClient } from '@prisma/client';
 /** @typedef {import('../../types/role.js').Role} Role */
 /** @typedef {$Enums.AccountStatus} AccountStatus */
 
-/** @typedef {{ role: Role, phoneNumber: string, firstName: string, middleName: string, lastName: string, governmentId?: IDType, cityId?: IDType, cityName?: string, profileImageUrl?: String, status: AccountStatus }} UserData */
+/** @typedef {{ role: Role, phoneNumber: string, firstName: string, middleName: string, lastName: string, governmentId?: IDType, cityId?: IDType, profileImageUrl?: String, status: AccountStatus }} UserData */
 /** @typedef {Partial<UserData>} OptionalUserData */
 /** @typedef { UserData & { id: IDType }} User */
 /** @typedef {import("./Repository.js").FilterArgs<User>} UserFilter */

@@ -17,8 +17,7 @@ const mainRouter = Router();
 
 mainRouter.use("/auth",
   // sensitiveIpRateLimiter,
-  authRouter
-);
+  authRouter);
 mainRouter.use("/me", authenticateAccess, isActive, dashboardRouter);
 mainRouter.use("/client", clientRouter);
 mainRouter.use("/worker", workerRouter);

@@ -242,11 +242,11 @@ export const optionalUserDataValidation = [
     .withMessage("userData.governmentId must be a valid UUID")
     .isLength({ min: 2, max: 50 })
     .withMessage("userData.governmentId must be at least 2 characters long"),
-  body('userData.city')
+  body('userData.cityId')
     .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage("userData.city must be at least 2 characters long"),
+    .withMessage("userData.cityId must be at least 2 characters long"),
 ];
 
 export const userDataValidation = [
@@ -268,10 +268,10 @@ export const userDataValidation = [
     .withMessage("userData.governmentId is required")
     .isUUID()
     .withMessage("userData.governmentId must be a valid UUID"),
-  body('userData.city')
+  body('userData.cityId')
     .trim()
     .notEmpty()
-    .withMessage("userData.city is required")
+    .withMessage("userData.cityId is required")
 ];
 
 export const optionalClientProfileValidation = [
