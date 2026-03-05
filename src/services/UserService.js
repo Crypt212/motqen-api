@@ -16,7 +16,7 @@ import GovernmentRepository from "../repositories/database/GovernmentRepository.
 
 /** @typedef {import("../repositories/database/UserRepository.js").OptionalUser} ReturnUserData */
 
-/** @typedef {Partial<{role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, city: string, bio: string, profileImage: File, status: $Enums.AccountStatus}>} InputUserData */
+/** @typedef {Partial<{role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: string, bio: string, profileImage: File, status: $Enums.AccountStatus}>} InputUserData */
 
 /**
  * User Service - Manages user-related operations
@@ -66,14 +66,8 @@ export default class UserService extends Service {
    * @throws {AppError} If government or city not found
    */
   async update({ userId, data }) {
-    const government = await this.#governmentRepository.findOne({ id: data.governmentId });
-    if (!government) throw new AppError("Government not found", 400);
-
-    let cityId = undefined;
-    const cities = await this.#governmentRepository.findCities({ governmentId: data.governmentId, name: data.city });
-    if (!cities || cities.length === 0)
-      throw new AppError("City not found", 400);
-    cityId = cities[0].id;
+    const cities = await this.#governmentRepository.findCities({ id: data.cityId, governmentId: data.governmentId });
+    if (!cities || cities.length === 0) throw new AppError("Government or city not found", 400);
 
     let url = undefined;
     if (data.profileImage) {
@@ -85,7 +79,7 @@ export default class UserService extends Service {
       firstName: data.firstName,
       lastName: data.lastName,
       governmentId: data.governmentId,
-      cityName: data.city,
+      cityId: data.cityId,
       status: data.status,
       profileImageUrl: typeof url === "string" ? url : undefined
     }, { id: userId });

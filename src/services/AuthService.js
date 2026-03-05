@@ -25,7 +25,7 @@ const MAX_VERIFY_ATTEMPTS = 5;
 /** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
 /** @typedef {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} File */
 
-/** @typedef {{ phoneNumber: string, role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, city: string, profileImage: File }} InputUserData */
+/** @typedef {{ phoneNumber: string, role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: IDType, profileImage: File }} InputUserData */
 /** @typedef {{ isInTeam: Boolean, experienceYears: number, acceptsUrgentJobs: Boolean, workGovernmentIds: IDType[], specializationsTree: { mainId: IDType, subIds: IDType[]}[], idImage: File, profileWithIdImage: File  }} InputWorkerData */
 /** @typedef {{ address: string, addressNotes?: string  }} InputClientData */
 
@@ -83,7 +83,7 @@ export default class AuthService extends Service {
       middleName,
       lastName,
       governmentId,
-      city,
+      cityId,
       role,
       profileImage,
     },
@@ -100,11 +100,8 @@ export default class AuthService extends Service {
     return tryCatch(async () => {
       try {
 
-        let cityId = undefined;
-        const cities = await this.#governmentRepository.findCities({ name: city, governmentId });
-        if (cities && cities.length !== 0) {
-          cityId = cities[0].id;
-        }
+        const cities = await this.#governmentRepository.findCities({ id: cityId, governmentId });
+        if (!cities || cities.length === 0) throw new AppError("Government or city not found", 400);
 
         const { user, profile } = await this.#userRepository.createWorker({
           userData: {
@@ -115,7 +112,6 @@ export default class AuthService extends Service {
             lastName,
             governmentId,
             cityId,
-            cityName: city,
             status: "ACTIVE"
           },
           workerProfileData: {
@@ -142,7 +138,7 @@ export default class AuthService extends Service {
           }
         });
 
-        await this.#userRepository.insertWorkerProfileGovernments({ workerProfileId: profile.id, governmentIds: workGovernmentIds});
+        await this.#userRepository.insertWorkerProfileGovernments({ workerProfileId: profile.id, governmentIds: workGovernmentIds });
         await this.#userRepository.insertWorkerProfileSpecializations({ workerProfileId: profile.id, specializationsTree });
 
         const { url } = (await uploadToCloudinary(profileImage.buffer, `${phoneNumber}/profile_image`, "profileMain"))
@@ -174,8 +170,8 @@ export default class AuthService extends Service {
       lastName,
       phoneNumber,
       governmentId,
+      cityId,
       role,
-      city,
       profileImage,
     },
     clientProfileData: {
@@ -186,11 +182,8 @@ export default class AuthService extends Service {
     return tryCatch(async () => {
       try {
 
-        let cityId = undefined;
-        const cities = await this.#governmentRepository.findCities({ name: city, governmentId });
-        if (cities && cities.length !== 0) {
-          cityId = cities[0].id;
-        }
+        const cities = await this.#governmentRepository.findCities({ id: cityId, governmentId });
+        if (!cities || cities.length === 0) throw new AppError("Government or city not found", 400);
 
         const { user, profile } = await this.#userRepository.createClient({
           userData: {
@@ -201,7 +194,6 @@ export default class AuthService extends Service {
             lastName,
             governmentId,
             cityId,
-            cityName: city,
             status: "ACTIVE"
           },
           clientProfileData: {
