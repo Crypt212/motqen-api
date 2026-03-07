@@ -1,4 +1,4 @@
-import { body, header } from 'express-validator';
+import { body, header, query } from 'express-validator';
 
 /** @param {string} type */
 export const validateToken = (type) => {
@@ -242,3 +242,27 @@ export const workerProfileValidation = (prefix, required = false) => {
       .isBoolean()
   ]
 }
+
+/**
+ * Pagination validation
+ * @param {string} prefix - Optional prefix for field names
+ */
+export const paginationValidation = (prefix = '') => {
+  return [
+    query(`${prefix}page`)
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage(`${prefix}page must be a positive integer`)
+      .toInt(),
+    query(`${prefix}limit`)
+      .optional()
+      .isInt({ min: 1, max: 100 })
+      .withMessage(`${prefix}limit must be between 1 and 100`)
+      .toInt(),
+    query(`${prefix}offset`)
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage(`${prefix}offset must be a non-negative integer`)
+      .toInt(),
+  ];
+};

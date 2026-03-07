@@ -198,12 +198,46 @@ usersRouter.post("/worker-profile",
  * /me/worker-profile:
  *   get:
  *     summary: Get worker profile
- *     description: Returns the authenticated worker's profile. User must have a worker profile.
+ *     description: Returns the authenticated worker's profile with all related data including governments, specializations, verification status, and portfolio. Supports pagination and field filtering.
  *     tags: [Dashboards]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/DeviceFingerprint'
+ *       - name: page
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Page number for pagination
+ *       - name: limit
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Items per page
+ *       - name: offset
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *         description: Number of items to skip
+ *       - name: fields
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Comma-separated fields to include (e.g., user,governments,specializations)
+ *       - name: include
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Comma-separated related data to include (user,governments,specializations,verification,portfolio)
  *     responses:
  *       200:
  *         description: Worker profile retrieved
@@ -218,7 +252,35 @@ usersRouter.post("/worker-profile",
  *                       type: object
  *                       properties:
  *                         workerProfile:
- *                           $ref: '#/components/schemas/WorkerProfile'
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                               format: uuid
+ *                             experienceYears:
+ *                               type: integer
+ *                             isInTeam:
+ *                               type: boolean
+ *                             acceptsUrgentJobs:
+ *                               type: boolean
+ *                             isApproved:
+ *                               type: boolean
+ *                             user:
+ *                               $ref: '#/components/schemas/User'
+ *                             governments:
+ *                               type: array
+ *                               items:
+ *                                 $ref: '#/components/schemas/Government'
+ *                             specializations:
+ *                               type: array
+ *                               items:
+ *                                 type: object
+ *                             verification:
+ *                               $ref: '#/components/schemas/WorkerVerification'
+ *                             portfolio:
+ *                               type: array
+ *                             pagination:
+ *                               type: object
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       403:

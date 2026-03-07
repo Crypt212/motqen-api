@@ -200,14 +200,22 @@ export default class UserRepository extends Repository {
    * @method
    * @param {Object} params
    * @param {IDType} params.workerProfileId
+   * @param {number} [params.skip]
+   * @param {number} [params.take]
    * @returns {Promise<any>}
    */
-  async findWorkerProfileGovernments({ workerProfileId }) {
+  async findWorkerProfileGovernments({ workerProfileId, skip = 0, take }) {
     const governments = await this.prismaClient.governmentForWorkers.findMany({
-      where: { workerProfileId }
+      where: { workerProfileId },
+      include: { government: true },
+      skip,
+      take
     });
 
-    return governments.map(({ governmentId }) => governmentId);
+    return governments.map(({ government }) => ({
+      id: government.id,
+      name: government.name
+    }));
   }
 
   /**
@@ -216,25 +224,36 @@ export default class UserRepository extends Repository {
    * @param {Object} params
    * @param {IDType} params.workerProfileId
    * @param {IDType[]} params.mainSpecializationIds
+   * @param {number} [params.skip]
+   * @param {number} [params.take]
    * @returns {Promise<SpecializationTree>}
    */
-  async findWorkerProfileSpecializations({ workerProfileId, mainSpecializationIds }) {
+  async findWorkerProfileSpecializations({ workerProfileId, mainSpecializationIds, skip = 0, take }) {
     const query = await this.prismaClient.chosenSpecialization.findMany({
       where: {
         workerProfileId,
-        specializationId: { in: mainSpecializationIds },
-      }
+        specializationId: mainSpecializationIds ? { in: mainSpecializationIds } : undefined,
+      },
+      include: {
+        specialization: true,
+        subSpecialization: true
+      },
+      skip,
+      take
     });
 
     const tree = [];
     const map = new Map();
-    for (let { subSpecializationId, specializationId } of query) {
+    for (let { subSpecializationId, specializationId, specialization, subSpecialization } of query) {
       if (!(specializationId in map)) {
-        const branch = { mainId: specializationId, subIds: [] };
+        const branch = { mainId: specializationId, subIds: [], mainName: specialization.name };
         map.set(specializationId, branch);
       }
 
-      map.get(specializationId).subIds.push(subSpecializationId);
+      map.get(specializationId).subIds.push({
+        id: subSpecializationId,
+        name: subSpecialization.name
+      });
     }
     for (let [_, branch] of map) {
       tree.push(branch);
@@ -399,6 +418,295 @@ export default class UserRepository extends Repository {
    */
   async findWorkerProfileVerification({ workerProfileId }) {
     return await this.prismaClient.workerVerification.findFirst({
+      where: { workerProfileId }
+    });
+  }
+
+  // Worker Profile Dashboard Methods ---------------------------------------------------------
+
+  /**
+   * Find worker profile with user data
+   * @async
+   * @method
+   * @param {Object} params
+   * @param {IDType} params.workerProfileId
+   * @returns {Promise<Object|null>}
+   */
+  async findWorkerProfileWithUser({ workerProfileId }) {
+    return await this.prismaClient.workerProfile.findUnique({
+      where: { id: workerProfileId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            phoneNumber: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            governmentId: true,
+            cityId: true,
+            profileImageUrl: true,
+            status: true,
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Find worker profile with governments (full data)
+   * @async
+   * @method
+   * @param {Object} params
+   * @param {IDType} params.workerProfileId
+   * @returns {Promise<Object|null>}
+   */
+  async findWorkerProfileWithGovernments({ workerProfileId }) {
+    return await this.prismaClient.workerProfile.findUnique({
+      where: { id: workerProfileId },
+      include: {
+        governments: {
+          include: {
+            government: true
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Find worker profile with specializations (full data)
+   * @async
+   * @method
+   * @param {Object} params
+   * @param {IDType} params.workerProfileId
+   * @returns {Promise<Object|null>}
+   */
+  async findWorkerProfileWithSpecializations({ workerProfileId }) {
+    return await this.prismaClient.workerProfile.findUnique({
+      where: { id: workerProfileId },
+      include: {
+        chosenSpecializations: {
+          include: {
+            specialization: {
+              include: {
+                subSpecializations: true
+              }
+            },
+            subSpecialization: true
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Find worker profile with verification
+   * @async
+   * @method
+   * @param {Object} params
+   * @param {IDType} params.workerProfileId
+   * @returns {Promise<Object|null>}
+   */
+  async findWorkerProfileWithVerification({ workerProfileId }) {
+    return await this.prismaClient.workerProfile.findUnique({
+      where: { id: workerProfileId },
+      include: {
+        verification: true
+      }
+    });
+  }
+
+  /**
+   * Find worker profile with portfolio projects
+   * @async
+   * @method
+   * @param {Object} params
+   * @param {IDType} params.workerProfileId
+   * @returns {Promise<Object|null>}
+   */
+  async findWorkerProfileWithPortfolio({ workerProfileId }) {
+    return await this.prismaClient.workerProfile.findUnique({
+      where: { id: workerProfileId },
+      include: {
+        portfolio: {
+          include: {
+            projectImages: true
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Get complete worker dashboard data
+   * @async
+   * @method getWorkerDashboard
+   * @param {Object} params
+   * @param {IDType} params.workerProfileId
+   * @param {string[]} [params.include] - Sections to include
+   * @param {number} [params.skip] - Skip for pagination
+   * @param {number} [params.take] - Limit for pagination
+   * @returns {Promise<Object>} Complete worker dashboard data
+   */
+  async getWorkerDashboard({ workerProfileId, include = ['user', 'governments', 'specializations', 'verification', 'portfolio'], skip = 0, take = 10 }) {
+    // Determine what to include
+    const shouldIncludeUser = include.includes('user');
+    const shouldIncludeGovernments = include.includes('governments');
+    const shouldIncludeSpecializations = include.includes('specializations');
+    const shouldIncludeVerification = include.includes('verification');
+    const shouldIncludePortfolio = include.includes('portfolio');
+
+    // Build include object
+    const includeObj = {};
+    if (shouldIncludeUser) {
+      includeObj.user = {
+        select: {
+          id: true,
+          phoneNumber: true,
+          firstName: true,
+          middleName: true,
+          lastName: true,
+          governmentId: true,
+          cityId: true,
+          profileImageUrl: true,
+          status: true,
+        }
+      };
+    }
+    if (shouldIncludeGovernments) {
+      includeObj.governments = {
+        include: { government: true },
+        skip,
+        take: shouldIncludeGovernments === true ? take : undefined
+      };
+    }
+    if (shouldIncludeSpecializations) {
+      includeObj.chosenSpecializations = {
+        include: {
+          specialization: { include: { subSpecializations: true } },
+          subSpecialization: true
+        },
+        skip,
+        take: shouldIncludeSpecializations === true ? take : undefined
+      };
+    }
+    if (shouldIncludeVerification) {
+      includeObj.verification = true;
+    }
+    if (shouldIncludePortfolio) {
+      includeObj.portfolio = {
+        include: { projectImages: true },
+        skip,
+        take: shouldIncludePortfolio === true ? take : undefined
+      };
+    }
+
+    const profile = await this.prismaClient.workerProfile.findUnique({
+      where: { id: workerProfileId },
+      include: includeObj
+    });
+
+    if (!profile) return null;
+
+    // Transform governments data
+    const governments = shouldIncludeGovernments
+      ? profile.governments?.map(gov => ({
+          id: gov.government.id,
+          name: gov.government.name
+        })) || []
+      : undefined;
+
+    // Transform specializations data
+    let specializations;
+    if (shouldIncludeSpecializations) {
+      const specializationsMap = new Map();
+      if (profile.chosenSpecializations) {
+        for (const chosen of profile.chosenSpecializations) {
+          const specializationId = chosen.specializationId;
+          if (!specializationsMap.has(specializationId)) {
+            specializationsMap.set(specializationId, {
+              id: chosen.specialization.id,
+              name: chosen.specialization.name,
+              subSpecializations: []
+            });
+          }
+          specializationsMap.get(specializationId).subSpecializations.push({
+            id: chosen.subSpecialization.id,
+            name: chosen.subSpecialization.name
+          });
+        }
+      }
+      specializations = Array.from(specializationsMap.values());
+    } else {
+      specializations = undefined;
+    }
+
+    // Transform portfolio data
+    const portfolio = shouldIncludePortfolio
+      ? profile.portfolio?.map(project => ({
+          id: project.id,
+          description: project.description,
+          images: project.projectImages.map(img => img.imageUrl)
+        })) || []
+      : undefined;
+
+    return {
+      // Basic profile info
+      id: profile.id,
+      experienceYears: profile.experienceYears,
+      isInTeam: profile.isInTeam,
+      acceptsUrgentJobs: profile.acceptsUrgentJobs,
+      isApproved: profile.isApproved,
+      // User info
+      user: shouldIncludeUser ? profile.user : undefined,
+      // Related data
+      governments,
+      specializations,
+      verification: shouldIncludeVerification ? profile.verification || null : undefined,
+      portfolio
+    };
+  }
+
+  /**
+   * Count worker governments
+   * @async
+   * @method countWorkerGovernments
+   * @param {Object} params
+   * @param {IDType} params.workerProfileId
+   * @returns {Promise<number>}
+   */
+  async countWorkerGovernments({ workerProfileId }) {
+    return await this.prismaClient.governmentForWorkers.count({
+      where: { workerProfileId }
+    });
+  }
+
+  /**
+   * Count worker specializations
+   * @async
+   * @method countWorkerSpecializations
+   * @param {Object} params
+   * @param {IDType} params.workerProfileId
+   * @returns {Promise<number>}
+   */
+  async countWorkerSpecializations({ workerProfileId }) {
+    return await this.prismaClient.chosenSpecialization.count({
+      where: { workerProfileId },
+      distinct: ['specializationId']
+    });
+  }
+
+  /**
+   * Count worker portfolio projects
+   * @async
+   * @method countWorkerPortfolio
+   * @param {Object} params
+   * @param {IDType} params.workerProfileId
+   * @returns {Promise<number>}
+   */
+  async countWorkerPortfolio({ workerProfileId }) {
+    return await this.prismaClient.portfolioProject.count({
       where: { workerProfileId }
     });
   }

@@ -3,8 +3,8 @@
  * @module validators/user
  */
 
-import { param } from "express-validator";
-import { clientProfileValidation, userDataValidation, specializationsTreeValidation, workerProfileValidation, workGovernmentsValidation, mainSpecializationValidation } from "./common.js";
+import { param, query } from "express-validator";
+import { clientProfileValidation, userDataValidation, specializationsTreeValidation, workerProfileValidation, workGovernmentsValidation, mainSpecializationValidation, paginationValidation } from "./common.js";
 
 /** @type {import('express-validator').ValidationChain[]} */
 export const validateGetUser = [];
@@ -15,7 +15,19 @@ export const validateUpdateUser = [
 ];
 
 /** @type {import('express-validator').ValidationChain[]} */
-export const validateGetWorkerProfile = [];
+export const validateGetWorkerProfile = [
+  ...paginationValidation(),
+  query("fields")
+    .optional()
+    .isString()
+    .withMessage("fields must be a comma-separated string")
+    .customSanitizer((value) => value ? value.split(",").map(f => f.trim()) : undefined),
+  query("include")
+    .optional()
+    .isString()
+    .withMessage("include must be a comma-separated string")
+    .customSanitizer((value) => value ? value.split(",").map(i => i.trim()) : undefined),
+];
 
 export const validateCreateWorkerProfile = [
   ...workerProfileValidation("", true)
@@ -44,6 +56,7 @@ export const validateUpdateClientProfile = [
 
 /** @type {import('express-validator').ValidationChain[]} */
 export const validateGetWorkerGovernments = [
+  ...paginationValidation(),
 ];
 
 /** @type {import('express-validator').ValidationChain[]} */
@@ -62,6 +75,8 @@ export const validateDeleteClientProfile = [];
 
 /** @type {import('express-validator').ValidationChain[]} */
 export const validateGetWorkerSpecializations = [
+  ...paginationValidation(),
+  mainSpecializationValidation("", false),
 ];
 
 /** @type {import('express-validator').ValidationChain[]} */

@@ -160,12 +160,36 @@ export default class WorkerService extends Service {
    * @async
    * @param {Object} params
    * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @returns {Promise<Number>} Number of got governments
+   * @param {Object} [params.pagination] - Pagination options
+   * @param {number} [params.pagination.page=1] - Page number
+   * @param {number} [params.pagination.limit=10] - Items per page
+   * @param {number} [params.pagination.offset] - Offset
+   * @returns {Promise<Object>} Governments with pagination
    */
-  async getWorkGovernments({ workerProfileId }) {
+  async getWorkGovernments({ workerProfileId, pagination = {} }) {
     return tryCatch(async () => {
-      const governments = await this.#userRepository.findWorkerProfileGovernments({ workerProfileId });
-      return governments;
+      const { page = 1, limit = 10, offset } = pagination;
+      const skip = offset !== undefined ? offset : (page - 1) * limit;
+
+      const governments = await this.#userRepository.findWorkerProfileGovernments({
+        workerProfileId,
+        skip,
+        take: limit
+      });
+
+      const total = await this.#userRepository.countWorkerGovernments({ workerProfileId });
+
+      return {
+        data: governments,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasNextPage: page * limit < total,
+          hasPrevPage: page > 1
+        }
+      };
     });
   }
 
@@ -216,12 +240,36 @@ export default class WorkerService extends Service {
    * @param {Object} params
    * @param {IDType} params.workerProfileId - Worker Profile ID
    * @param {IDType[] | undefined} params.mainSpecializationIds - IDs of the main specializations to get retreived
+   * @param {Object} [params.pagination] - Pagination options
+   * @param {number} [params.pagination.page=1] - Page number
+   * @param {number} [params.pagination.limit=10] - Items per page
+   * @param {number} [params.pagination.offset] - Offset
    */
-  async getSpecializations({ workerProfileId, mainSpecializationIds = undefined }) {
+  async getSpecializations({ workerProfileId, mainSpecializationIds = undefined, pagination = {} }) {
     return tryCatch(async () => {
+      const { page = 1, limit = 10, offset } = pagination;
+      const skip = offset !== undefined ? offset : (page - 1) * limit;
 
-      const tree = await this.#userRepository.findWorkerProfileSpecializations({ workerProfileId, mainSpecializationIds });
-      return tree;
+      const tree = await this.#userRepository.findWorkerProfileSpecializations({
+        workerProfileId,
+        mainSpecializationIds,
+        skip,
+        take: limit
+      });
+
+      const total = await this.#userRepository.countWorkerSpecializations({ workerProfileId });
+
+      return {
+        data: tree,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasNextPage: page * limit < total,
+          hasPrevPage: page > 1
+        }
+      };
     });
   }
 
@@ -327,6 +375,83 @@ export default class WorkerService extends Service {
         throw new AppError("Worker profile not found", 404);
 
       return workerProfile;
+    });
+  }
+
+  /**
+   * Get complete worker dashboard data
+   * @async
+   * @method getWorkerDashboard
+   * @param {Object} params
+   * @param {import("../repositories/database/Repository.js").IDType} params.workerProfileId - Worker Profile ID
+   * @param {Object} [params.pagination] - Pagination options
+   * @param {number} [params.pagination.page=1] - Page number
+   * @param {number} [params.pagination.limit=10] - Items per page
+   * @param {number} [params.pagination.offset] - Offset
+   * @param {Object} [params.filters] - Filter options
+   * @param {string[]} [params.filters.fields] - Fields to include
+   * @param {string[]} [params.filters.include] - Related data to include
+   * @returns {Promise<Object>} Worker dashboard data with pagination
+   * @throws {AppError} If worker profile not found
+   */
+  async getDashboard({ workerProfileId, pagination = {}, filters = {} }) {
+    return tryCatch(async () => {
+      const { page = 1, limit = 10, offset } = pagination;
+      const { fields, include } = filters;
+
+      // Default include options
+      const defaultInclude = ['user', 'governments', 'specializations', 'verification', 'portfolio'];
+      const includeSections = include || defaultInclude;
+
+      // Calculate skip for pagination
+      const skip = offset !== undefined ? offset : (page - 1) * limit;
+
+      // Fetch data based on filters
+      const dashboard = await this.#userRepository.getWorkerDashboard({
+        workerProfileId,
+        include: includeSections,
+        skip,
+        take: limit,
+      });
+
+      if (!dashboard)
+        throw new AppError("Worker profile not found", 404);
+
+      // Get total counts for pagination
+      const counts = {};
+      if (includeSections.includes('governments')) {
+        counts.governments = await this.#userRepository.countWorkerGovernments({ workerProfileId });
+      }
+      if (includeSections.includes('specializations')) {
+        counts.specializations = await this.#userRepository.countWorkerSpecializations({ workerProfileId });
+      }
+      if (includeSections.includes('portfolio')) {
+        counts.portfolio = await this.#userRepository.countWorkerPortfolio({ workerProfileId });
+      }
+
+      // Build response with only requested fields
+      let response = {};
+      
+      if (!fields || fields.length === 0) {
+        response = dashboard;
+      } else {
+        for (const field of fields) {
+          if (dashboard[field] !== undefined) {
+            response[field] = dashboard[field];
+          }
+        }
+      }
+
+      // Add pagination metadata
+      const paginationMeta = {
+        page,
+        limit,
+        total: counts,
+        hasNextPage: skip + limit < Object.values(counts).reduce((a, b) => a + b, 0),
+        hasPrevPage: page > 1,
+      };
+
+      return { ...response, pagination: paginationMeta };
     });
   }
 }

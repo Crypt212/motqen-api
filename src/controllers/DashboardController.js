@@ -111,9 +111,14 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
 /**
  */
 export const getWorkerProfile = asyncHandler(async (req, res) => {
-  const userId = req.userState.userId;
+  const workerProfileId = req.userState.worker.id;
+  const { page, limit, offset, fields, include } = matchedData(req, { includeOptionals: true });
 
-  const workerProfile = await workerService.get({ userId });
+  const workerProfile = await workerService.getDashboard({
+    workerProfileId,
+    pagination: { page, limit, offset },
+    filters: { fields, include }
+  });
 
   new SuccessResponse("retrieved worker profile successfully", { workerProfile }, 200).send(res);
 });
@@ -148,9 +153,12 @@ export const deleteWorkerProfile = asyncHandler(async (req, res) => {
 /**
  */
 export const getWorkerGovernments = asyncHandler(async (req, res) => {
-  const { } = matchedData(req, { includeOptionals: true });
+  const { page, limit, offset } = matchedData(req, { includeOptionals: true });
 
-  const governments = await workerService.getWorkGovernments({ workerProfileId: req.userState.worker.id });
+  const governments = await workerService.getWorkGovernments({
+    workerProfileId: req.userState.worker.id,
+    pagination: { page, limit, offset }
+  });
 
   new SuccessResponse("retrieved worker working governments successfully", { governments }, 200).send(res);
 });
@@ -180,9 +188,13 @@ export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
 /**
  */
 export const getWorkerSpecializations = asyncHandler(async (req, res) => {
-  const { specializationIds } = matchedData(req, { includeOptionals: true });
+  const { specializationIds, page, limit, offset } = matchedData(req, { includeOptionals: true });
 
-  const specializationsTree = await workerService.getSpecializations({ workerProfileId: req.userState.worker.id, mainSpecializationIds: specializationIds });
+  const specializationsTree = await workerService.getSpecializations({
+    workerProfileId: req.userState.worker.id,
+    mainSpecializationIds: specializationIds,
+    pagination: { page, limit, offset }
+  });
 
   new SuccessResponse("retrieved worker specialization tree successfully", { specializationsTree }, 200).send(res);
 });
