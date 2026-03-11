@@ -160,7 +160,7 @@ export default class AuthService extends Service {
    * @param {Object} params - User registration data
    * @param {InputUserData} params.userData
    * @param {InputClientData} params.clientProfileData
-   * @returns {Promise<{ user: import("@prisma/client").User, profile: import("@prisma/client").ClientProfile }>} Created user object
+   * @returns {Promise<{ user: import("../repositories/database/UserRepository.js").User & { cityName: string }, profile: import("@prisma/client").ClientProfile }>} Created user object
    * @throws {AppError} If government or city not found
    */
   async registerClient({
@@ -202,6 +202,9 @@ export default class AuthService extends Service {
           }
         });
 
+        /** @type {import("../repositories/database/UserRepository.js").User & { cityName: string }} */
+        const modifiedUser = { ...user, cityName: cities[0].name };
+
         if (profileImage) {
           const { url } = await uploadToCloudinary(profileImage.buffer, `${user.id}/profile_image`, "profileMain");
 
@@ -209,7 +212,7 @@ export default class AuthService extends Service {
           user.profileImageUrl = url
         }
 
-        return { profile, user };
+        return { profile, user: modifiedUser };
       } catch (error) {
         console.log(error)
         throw new AppError("Failed to create client profile", 500, error);

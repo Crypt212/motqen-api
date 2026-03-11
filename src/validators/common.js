@@ -200,7 +200,6 @@ export const userDataValidation = (prefix, required = false) => {
       .withMessage(fieldName + '.governmentId must be a valid UUID'),
     validateField(fieldName + '.cityId', required)
       .trim(),
-    validateImageFile(fieldName + '.profileImage', required),
   ]
 };
 
