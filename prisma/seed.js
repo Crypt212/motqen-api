@@ -686,14 +686,14 @@ async function main() {
     const plumbing = await prisma.specialization.findFirst({ where: { name: "Plumbing" } });
     const electrical = await prisma.specialization.findFirst({ where: { name: "Electrical" } });
 
-    const furnitureMaking = await prisma.subSpecialization.findFirst({ 
-      where: { name: "Furniture Making", mainSpecializationId: carpentry?.id } 
+    const furnitureMaking = await prisma.subSpecialization.findFirst({
+      where: { name: "Furniture Making", mainSpecializationId: carpentry?.id }
     });
-    const waterPiping = await prisma.subSpecialization.findFirst({ 
-      where: { name: "Water Piping", mainSpecializationId: plumbing?.id } 
+    const waterPiping = await prisma.subSpecialization.findFirst({
+      where: { name: "Water Piping", mainSpecializationId: plumbing?.id }
     });
-    const wiring = await prisma.subSpecialization.findFirst({ 
-      where: { name: "Wiring & Rewiring", mainSpecializationId: electrical?.id } 
+    const wiring = await prisma.subSpecialization.findFirst({
+      where: { name: "Wiring & Rewiring", mainSpecializationId: electrical?.id }
     });
 
     // Worker 1: Approved Carpenter
