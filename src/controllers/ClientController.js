@@ -23,8 +23,7 @@ export const getMe = asyncHandler(async (req, res) => {
     select: {
       id: true,
       phoneNumber: true,
-      firstName: true,
-      middleName: true,
+      firstName: true,      middleName: true,
       lastName: true,
       profileImageUrl: true,
       clientProfile: {
