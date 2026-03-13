@@ -87,13 +87,13 @@ export default class ChatService extends Service {
   /**
    * List all conversations for a user with derived unreadCount.
    * @param {{ userId: IDType }} params
-   * @returns {Promise<Array>}
+   * @returns {Promise<{ id: IDType, messageCounter: number, unreadCount: number, lastMessage: import('@prisma/client').Message | null, partner: import('@prisma/client').User | null, createdAt: Date, updatedAt: Date}[]>}
    */
   async getConversations({ userId }) {
     return tryCatch(async () => {
       const convs = await this.#conversationRepository.findAllByUserId({ userId });
 
-      return convs.map((conv) => {
+      const conversations = convs.map((conv) => {
         const myParticipant = conv.participants.find((p) => p.userId === userId);
         const partnerParticipant = conv.participants.find((p) => p.userId !== userId);
         const unreadCount = Math.max(0, conv.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0));
@@ -108,6 +108,8 @@ export default class ChatService extends Service {
           updatedAt: conv.updatedAt,
         };
       });
+
+      return conversations;
     });
   }
 
@@ -185,7 +187,7 @@ export default class ChatService extends Service {
    */
   async markAllAsRead({ conversationId, userId }) {
     return tryCatch(async () => {
-      const conv = await this.#conversationRepository.findOne({ id: conversationId });
+      const conv = await this.#conversationRepository.findFirst({ id: conversationId });
       if (!conv) throw new AppError('Conversation not found', 404);
 
       await this.#conversationRepository.updateLastRead({

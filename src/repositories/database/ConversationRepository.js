@@ -81,10 +81,10 @@ export default class ConversationRepository extends Repository {
    * Find all conversations for a user, including derived unread count.
    * unreadCount = conversation.messageCounter - participant.lastReadMessageNumber
    * @param {{ userId: IDType }} params
-   * @returns {Promise<Array>}
+   * @returns {Promise<(import('@prisma/client').Conversation & { participants: (import('@prisma/client').ConversationParticipant & { user: import('@prisma/client').User })[], messages: import('@prisma/client').Message[] })[] >}
    */
   async findAllByUserId({ userId }) {
-    return this.prismaClient.conversation.findMany({
+    const conversations = await this.prismaClient.conversation.findMany({
       where: {
         participants: { some: { userId } },
       },
@@ -103,6 +103,7 @@ export default class ConversationRepository extends Repository {
       },
       orderBy: { updatedAt: 'desc' },
     });
+    return conversations;
   }
 
   /**
