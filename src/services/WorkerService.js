@@ -94,7 +94,7 @@ export default class WorkerService extends Service {
           }
         })
 
-        await this.#userRepository.update({ profileImageUrl: (await uploadToCloudinary(profileImage.buffer, `${user.phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
+        await this.#userRepository.updateMany({ profileImageUrl: (await uploadToCloudinary(profileImage.buffer, `${user.phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
 
         return workerProfile;
       }, (reason) => {

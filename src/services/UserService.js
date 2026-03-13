@@ -74,7 +74,7 @@ export default class UserService extends Service {
       url = (await uploadToCloudinary(data.profileImage.buffer, `${userId}/profile_image`, "profileMain")).url;
     }
 
-    await this.#userRepository.update({
+    await this.#userRepository.updateMany({
       role: data.role,
       firstName: data.firstName,
       lastName: data.lastName,

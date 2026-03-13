@@ -13,7 +13,8 @@ export const validateRequestOTP = [
     .notEmpty()
     .withMessage("Phone number is required")
     .isMobilePhone("ar-EG")
-    .withMessage("Please provide a valid Egyptian phone number"),
+    .withMessage("Please provide a valid Egyptian phone number")
+    .customSanitizer(value => value.replace(/^\+20/g, '0')),
   body("method")
     .trim()
     .notEmpty()
@@ -29,7 +30,8 @@ export const validateVerifyOTP = [
     .notEmpty()
     .withMessage("Phone number is required")
     .isMobilePhone("ar-EG")
-    .withMessage("Please provide a valid Egyptian phone number"),
+    .withMessage("Please provide a valid Egyptian phone number")
+    .customSanitizer(value => value.replace(/^\+20/g, '0')),
   body("otp")
     .trim()
     .notEmpty()

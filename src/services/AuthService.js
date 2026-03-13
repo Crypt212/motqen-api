@@ -142,7 +142,7 @@ export default class AuthService extends Service {
         await this.#userRepository.insertWorkerProfileSpecializations({ workerProfileId: profile.id, specializationsTree });
 
         const { url } = (await uploadToCloudinary(profileImage.buffer, `${phoneNumber}/profile_image`, "profileMain"))
-        await this.#userRepository.update({ profileImageUrl: url }, { id: user.id });
+        await this.#userRepository.updateMany({ profileImageUrl: url }, { id: user.id });
         user.profileImageUrl = url;
 
         return { profile, user, verification };
@@ -208,7 +208,7 @@ export default class AuthService extends Service {
         if (profileImage) {
           const { url } = await uploadToCloudinary(profileImage.buffer, `${user.id}/profile_image`, "profileMain");
 
-          await this.#userRepository.update({ profileImageUrl: url }, { id: user.id });
+          await this.#userRepository.updateMany({ profileImageUrl: url }, { id: user.id });
           user.profileImageUrl = url
         }
 
@@ -344,7 +344,7 @@ export default class AuthService extends Service {
       throw new AppError("Refresh token has been revoked", 400,);
     }
     if (session.expiresAt.getTime() < Date.now()) {
-      await this.#sessionRepository.delete({ id: session.id });
+      await this.#sessionRepository.deleteMany({ id: session.id });
       throw new AppError("Refresh token has expired", 400);
     }
 
@@ -377,7 +377,7 @@ export default class AuthService extends Service {
     deviceId: deviceFingerprint,
     expiresAt,
   }) {
-    await this.#sessionRepository.delete({ deviceId: deviceFingerprint });
+    await this.#sessionRepository.deleteMany({ deviceId: deviceFingerprint });
     const user = await this.#userRepository.findFirst({ phoneNumber });
     const unHashedRefreshToken = generateToken({
       type: "refresh",
@@ -412,7 +412,7 @@ export default class AuthService extends Service {
    */
   async logout(userId, deviceFingerprint) {
     try {
-      await this.#sessionRepository.delete({
+      await this.#sessionRepository.deleteMany({
         userId,
         deviceId: deviceFingerprint,
       });

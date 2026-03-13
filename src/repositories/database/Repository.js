@@ -97,9 +97,16 @@ export class Repository {
   /**
    * @param {UpdateInput} data - Where clause
    * @param {WhereInput | {}} where - Where clause
+   * @returns {Promise<OutputData>}
+   */
+  async update(data, where = {}) { return this.prismaClient[this.#modelName].update({ where, data }); }
+
+  /**
+   * @param {UpdateInput} data - Where clause
+   * @param {WhereInput | {}} where - Where clause
    * @returns {Promise<BatchPayload>}
    */
-  async update(data, where = {}) { return this.prismaClient[this.#modelName].updateMany({ where, data }); }
+  async updateMany(data, where = {}) { return this.prismaClient[this.#modelName].updateMany({ where, data }); }
 
   // updateById - Update by unique ID
   /**
@@ -112,9 +119,16 @@ export class Repository {
   // delete - Delete records
   /**
    * @param {WhereInput | {}} where - Where clause
+   * @returns {Promise<OutputData>}
+   */
+  async delete(where = {}) { return this.prismaClient[this.#modelName].delete({ where }); }
+
+  // delete - Delete records
+  /**
+   * @param {WhereInput | {}} where - Where clause
    * @returns {Promise<BatchPayload>}
    */
-  async delete(where = {}) { return this.prismaClient[this.#modelName].deleteMany({ where }); }
+  async deleteMany(where = {}) { return this.prismaClient[this.#modelName].deleteMany({ where }); }
 
   // deleteById - Delete by unique ID
   /**

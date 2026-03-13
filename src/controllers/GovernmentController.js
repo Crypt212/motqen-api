@@ -67,7 +67,7 @@ export const updateGovernment = asyncHandler(async (req, res) => {
     throw new AppError("Government not found", 404);
   }
 
-  await governmentRepository.update({ name: name }, { id });
+  await governmentRepository.updateMany({ name: name }, { id });
   const government = await governmentRepository.findFirst({ id });
 
   new SuccessResponse(
@@ -88,7 +88,7 @@ export const deleteGovernment = asyncHandler(async (req, res) => {
     throw new AppError("Government not found", 404);
   }
 
-  await governmentRepository.delete({ id });
+  await governmentRepository.deleteMany({ id });
 
   new SuccessResponse(
     "Government deleted successfully",
