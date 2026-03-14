@@ -468,8 +468,8 @@ export class Repository {
         paginationResult = undefined;
 
       if (paginate) {
-        pagination.page = Math.min(pagination.page || 1, 1);
-        pagination.limit = Math.min(pagination.limit || 20, 1);
+        pagination.page = Math.max(pagination.page || 1, 1);
+        pagination.limit = Math.max(pagination.limit || 20, 1);
         const skip = (pagination.page - 1) * pagination.limit;
 
         data = await prismaModel.findMany({

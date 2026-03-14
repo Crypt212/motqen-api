@@ -20,8 +20,8 @@ const options = {
     },
     servers: [
       {
-        url: `http://localhost:${environment.backend.port || 3000}/api`,
-        description: 'Development server',
+        url: `http://localhost:${environment.backend.port || 3000}/api/v1`,
+        description: 'API version 1',
       },
     ],
     components: {
@@ -916,7 +916,7 @@ const options = {
       },
     ],
   },
-  apis: ['./src/routes/*.js'],
+  apis: ['./src/routes/v1/**/*.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

@@ -25,7 +25,7 @@ const MAX_VERIFY_ATTEMPTS = 5;
 /** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
 /** @typedef {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} File */
 
-/** @typedef {{ phoneNumber: string, role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: IDType, profileImageBuffer: Buffer }} InputUserData */
+/** @typedef {{ phoneNumber: string, role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: IDType, profileImageBuffer: Buffer | undefined }} InputUserData */
 /** @typedef {{ isInTeam: Boolean, experienceYears: number, acceptsUrgentJobs: Boolean, workGovernmentIds: IDType[], specializationsTree: { mainId: IDType, subIds: IDType[]}[], idImageBuffer: Buffer, profileWithIdImageBuffer: Buffer  }} InputWorkerData */
 /** @typedef {{ address: string, addressNotes?: string  }} InputClientData */
 
@@ -73,7 +73,7 @@ export default class AuthService extends Service {
    * @param {Object} params - User registration data
    * @param {InputUserData} params.userData
    * @param {InputWorkerData} params.workerProfileData
-   * @returns {Promise<Object>} Created user object
+   * @returns {Promise<{ user: import("../repositories/database/UserRepository.js").User & { cityName: string }, profile: import("@prisma/client").WorkerProfile }>}
    * @throws {AppError} If government or city not found
    */
   async registerWorker({
@@ -98,57 +98,55 @@ export default class AuthService extends Service {
     }
   }) {
     return tryCatch(async () => {
-      try {
+      const cities = await this.#governmentRepository.findCities({ filter: { id: cityId, governmentId } });
+      if (!cities || cities.data.length === 0) throw new AppError("Government or city not found", 400);
 
-        const cities = await this.#governmentRepository.findCities({ filter: { id: cityId, governmentId }});
-        if (!cities || cities.data.length === 0) throw new AppError("Government or city not found", 400);
+      const { user, profile } = await this.#userRepository.createWorker({
+        userData: {
+          phoneNumber,
+          role,
+          firstName,
+          middleName,
+          lastName,
+          governmentId,
+          cityId,
+          status: "ACTIVE"
+        },
+        workerProfileData: {
+          experienceYears,
+          isInTeam: Boolean(isInTeam),
+          acceptsUrgentJobs: Boolean(acceptsUrgentJobs),
+        },
+        verificationData: undefined
+      });
 
-        const { user, profile } = await this.#userRepository.createWorker({
-          userData: {
-            phoneNumber,
-            role,
-            firstName,
-            middleName,
-            lastName,
-            governmentId,
-            cityId,
-            status: "ACTIVE"
-          },
-          workerProfileData: {
-            experienceYears,
-            isInTeam: Boolean(isInTeam),
-            acceptsUrgentJobs: Boolean(acceptsUrgentJobs),
-          },
-          verificationData: undefined
-        });
+      /** @type {string} */
+      const nationalID = (await uploadToCloudinary(idImageBuffer, `${user.id}/verification_info`, "nationalID")).url;
 
-        /** @type {string} */
-        const nationalID = (await uploadToCloudinary(idImageBuffer, `${user.id}/verification_info`, "nationalID")).url;
+      /** @type {string} */
+      const selfiWithID = (await uploadToCloudinary(profileWithIdImageBuffer, `${user.id}/verification_info`, "selfiWithID")).url;
 
-        /** @type {string} */
-        const selfiWithID = (await uploadToCloudinary(profileWithIdImageBuffer, `${user.id}/verification_info`, "selfiWithID")).url;
+      const verification = await this.#userRepository.upsertWorkerProfileVerification({
+        workerProfileId: profile.id,
+        verificationData: {
+          idWithPersonalImageUrl: nationalID,
+          idDocumentUrl: selfiWithID,
+          status: "PENDING",
+          reason: "Waiting for verification"
+        }
+      });
 
-        const verification = await this.#userRepository.upsertWorkerProfileVerification({
-          workerProfileId: profile.id,
-          verificationData: {
-            idWithPersonalImageUrl: nationalID,
-            idDocumentUrl: selfiWithID,
-            status: "PENDING",
-            reason: "Waiting for verification"
-          }
-        });
+      await this.#userRepository.insertWorkerProfileGovernments({ workerProfileId: profile.id, governmentIds: workGovernmentIds });
+      await this.#userRepository.insertWorkerProfileSpecializations({ workerProfileId: profile.id, specializationsTree });
 
-        await this.#userRepository.insertWorkerProfileGovernments({ workerProfileId: profile.id, governmentIds: workGovernmentIds });
-        await this.#userRepository.insertWorkerProfileSpecializations({ workerProfileId: profile.id, specializationsTree });
+      const { url } = (await uploadToCloudinary(profileImageBuffer, `${phoneNumber}/profile_image`, "profileMain"))
+      await this.#userRepository.updateMany({ profileImageUrl: url }, { id: user.id });
+      user.profileImageUrl = url;
 
-        const { url } = (await uploadToCloudinary(profileImageBuffer, `${phoneNumber}/profile_image`, "profileMain"))
-        await this.#userRepository.updateMany({ profileImageUrl: url }, { id: user.id });
-        user.profileImageUrl = url;
+      /** @type {import("../repositories/database/UserRepository.js").User & { cityName: string }} */
+      const modifiedUser = { ...user, cityName: cities.data[0].name };
 
-        return { profile, user, verification };
-      } catch (reason) {
-        throw new AppError("Failed to create worker profile", 500, reason);
-      }
+      return { profile, user: modifiedUser, verification };
     });
   }
 
@@ -179,42 +177,38 @@ export default class AuthService extends Service {
     },
   }) {
     return tryCatch(async () => {
-      try {
 
-        const cities = await this.#governmentRepository.findCities({ filter: { id: cityId, governmentId } });
-        if (!cities || cities.data.length === 0) throw new AppError("Government or city not found", 400);
+      const cities = await this.#governmentRepository.findCities({ filter: { id: cityId, governmentId } });
+      if (!cities || cities.data.length === 0) throw new AppError("Government or city not found", 400);
 
-        const { user, profile } = await this.#userRepository.createClient({
-          userData: {
-            phoneNumber,
-            role,
-            firstName,
-            middleName,
-            lastName,
-            governmentId,
-            cityId,
-            status: "ACTIVE"
-          },
-          clientProfileData: {
-            address,
-            addressNotes
-          }
-        });
-
-        /** @type {import("../repositories/database/UserRepository.js").User & { cityName: string }} */
-        const modifiedUser = { ...user, cityName: cities.data[0].name };
-
-        if (profileImageBuffer) {
-          const { url } = await uploadToCloudinary(profileImageBuffer, `${user.id}/profile_image`, "profileMain");
-
-          await this.#userRepository.updateMany({ profileImageUrl: url }, { id: user.id });
-          user.profileImageUrl = url
+      const { user, profile } = await this.#userRepository.createClient({
+        userData: {
+          phoneNumber,
+          role,
+          firstName,
+          middleName,
+          lastName,
+          governmentId,
+          cityId,
+          status: "ACTIVE"
+        },
+        clientProfileData: {
+          address,
+          addressNotes
         }
+      });
 
-        return { profile, user: modifiedUser };
-      } catch (error) {
-        throw new AppError("Failed to create client profile", 500, error);
+      /** @type {import("../repositories/database/UserRepository.js").User & { cityName: string }} */
+      const modifiedUser = { ...user, cityName: cities.data[0].name };
+
+      if (profileImageBuffer) {
+        const { url } = await uploadToCloudinary(profileImageBuffer, `${user.id}/profile_image`, "profileMain");
+
+        await this.#userRepository.updateMany({ profileImageUrl: url }, { id: user.id });
+        user.profileImageUrl = url
       }
+
+      return { profile, user: modifiedUser };
     });
   }
 

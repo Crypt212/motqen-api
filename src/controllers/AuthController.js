@@ -107,7 +107,7 @@ export const registerClient = asyncHandler(async (req, res) => {
       governmentId,
       role: "USER",
       cityId,
-      profileImageBuffer: image.buffer,
+      profileImageBuffer: image?.buffer ?? undefined,
     },
     clientProfileData: {
       address,
@@ -168,6 +168,7 @@ export const registerWorker = asyncHandler(async (req, res) => {
     !images['personal_with_id_image']
   )
     throw new AppError('Please upload all required images', 400);
+
 
   const { user, profile: workerProfile } = await authService.registerWorker({
     userData: {

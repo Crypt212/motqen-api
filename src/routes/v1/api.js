@@ -8,10 +8,15 @@ import authRouter from "./auth.js";
 import dashboardRouter from "./dashboard.js";
 import governmentRouter from "./governments.js";
 import specializationRouter from "./specializations.js";
+<<<<<<< Updated upstream
+=======
+import chatRouter from "./chat.js";
+>>>>>>> Stashed changes
 import { isActive, authenticateAccess } from "../../middlewares/authMiddleware.js";
 import { sensitiveIpRateLimiter } from "../../middlewares/rateLimitMiddleware.js";
 
 const mainRouter = Router();
+
 
 mainRouter.use("/auth",
   // sensitiveIpRateLimiter,

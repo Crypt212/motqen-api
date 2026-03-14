@@ -5,15 +5,37 @@ import loadLocalImage from "../utils/imageLoader.js";
 
 
 
-export async function createMains () {
+export async function createMains() {
   const exampleGovernmentIds = await getExampleGovernmentIds();
-  const exampleGovernmentId = await getExampleGovernmentIds(1)[0];
-  const exampleCityId = await getExampleCityIds(await getExampleGovernmentIds(1)[0], 1)[0];
+  const exampleGovernmentId = (await getExampleGovernmentIds(1))[0];
+  const exampleCityId = (await getExampleCityIds(exampleGovernmentId, 1))[0];
   const exampleSpecializationTree = await getExampleSpecializationTree();
 
-  const exampleImage = await loadLocalImage("./src/tests/auth/", "personal-profile.jpg");
+  const exampleImage = await loadLocalImage("./seeds/samples/", "personal-profile.jpg");
 
   await userRepository.deleteMany({});
+
+  console.log({
+    userData: {
+      phoneNumber: "01000000000",
+      firstName: "ahmed",
+      middleName: "mohamed",
+      lastName: "mohamed",
+      governmentId: exampleGovernmentId,
+      cityId: exampleCityId,
+      role: "USER",
+      profileImageBuffer: exampleImage,
+    },
+    workerProfileData: {
+      idImageBuffer: exampleImage,
+      profileWithIdImageBuffer: exampleImage,
+      experienceYears: 1,
+      isInTeam: true,
+      acceptsUrgentJobs: true,
+      workGovernmentIds: exampleGovernmentIds,
+      specializationsTree: exampleSpecializationTree,
+    }
+  });
 
   await authService.registerClient({
     userData: {
@@ -54,3 +76,5 @@ export async function createMains () {
     },
   });
 }
+
+createMains();

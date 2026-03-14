@@ -68,12 +68,19 @@ export default class GovernmentRepository extends Repository {
     orderBy = [],
     paginate = false
   }) {
-    return super.findMany({
-      where: filter,
-      pagination,
-      orderBy,
-      paginate
-    });
+    try {
+      return Repository.performFindManyQuery({
+        prismaModel: this.prismaClient.city,
+        parentQueryParameters: { governmentId: filter.governmentId },
+        orderBy,
+        filter,
+        paginate,
+        pagination,
+        mapFunction: (x) => x,
+      });
+    } catch (error) {
+      throw handlePrismaError(error, 'findMany');
+    }
   }
 
   /**
