@@ -3,7 +3,8 @@
  * @module services/UserService
  */
 
-import { $Enums } from "@prisma/client";
+import pkg from "@prisma/client";
+const { $Enums } = pkg;
 import AppError from "../errors/AppError.js";
 import Service from "./Service.js";
 import uploadToCloudinary from "../providers/cloudinaryProvider.js";
