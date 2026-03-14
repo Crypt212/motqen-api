@@ -1,7 +1,7 @@
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
-import mainRouter from "./routes/api.js";
+import v1Router from "./routes/v1/api.js";
 import errorHandler from "./middlewares/errorMiddleware.js";
 import { ipRateLimiter } from "./middlewares/rateLimitMiddleware.js";
 import redisClient from "./libs/redis.js";
@@ -33,10 +33,10 @@ const initApp = async () => {
     },
   }));
 
-  app.use("/api",
+  app.use("/api/v1",
     verifyDeviceId,
     // ipRateLimiter,
-    mainRouter);
+    v1Router);
 
   // Health check
   app.get("/health", (req, res) => {

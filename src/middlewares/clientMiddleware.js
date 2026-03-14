@@ -6,7 +6,7 @@ import { asyncHandler } from "../types/asyncHandler.js";
  */
 export const unAuthorizeClient = asyncHandler(async (req, _, next) => {
 
-  if (req.userState.client) throw new AppError("Unauthorized access for client users", 401);
+  if (req.userState.client) throw new AppError("Unauthorized access for client users", 403);
 
   next();
 });
@@ -16,7 +16,7 @@ export const unAuthorizeClient = asyncHandler(async (req, _, next) => {
  */
 export const authorizeClient = asyncHandler(async (req, _, next) => {
 
-  if (!req.userState.client) throw new AppError("Unauthorized access for non-client users", 401);
+  if (!req.userState.client) throw new AppError("Unauthorized access for non-client users", 403);
 
   next();
 });

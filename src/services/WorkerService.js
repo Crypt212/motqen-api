@@ -9,9 +9,20 @@ import { Repository } from "../repositories/database/Repository.js";
 import UserRepository from "../repositories/database/UserRepository.js";
 import uploadToCloudinary from "../providers/cloudinaryProvider.js";
 
-/** @typedef {import("../repositories/database/UserRepository.js").WorkerProfile} WorkerProfile */
+/** @template T @typedef {import("../repositories/database/Repository.js").PaginatedResult<T>} PaginatedResult */
+
+/** @typedef {import("../repositories/database/GovernmentRepository.js").Government} Government */
+
+/** @typedef {import("../repositories/database/UserRepository.js").SpecializationTree} SpecializationTree */
+/** @typedef {import("../repositories/database/UserRepository.js").WorkerVerificationData} WorkerVerificationData */
+/** @typedef {import("../repositories/database/UserRepository.js").WorkerVerificationFilter} WorkerVerificationFilter */
+/** @typedef {import("../repositories/database/UserRepository.js").WorkerVerification} WorkerVerification */
+
 /** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
-/** @typedef {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} File */
+/** @typedef {import("../repositories/database/UserRepository.js").WorkerProfile} WorkerProfile */
+/** @typedef {import("../repositories/database/UserRepository.js").WorkerProfileFilter} WorkerProfileFilter */
+/** @typedef {import("../repositories/database/UserRepository.js").PaginationOptions} PaginationOptions */
+/** @typedef {import("../repositories/database/UserRepository.js").OrderingOptions} OrderingOptions */
 
 /**
  * Worker Service - Manages worker-related operations
@@ -43,9 +54,9 @@ export default class WorkerService extends Service {
    * @param {boolean} data.acceptsUrgentJobs - Whether worker accepts urgent jobs
    * @param {{ mainId: string, subIds: string[] }[]} data.specializationsTree - Tree of main specialization and sub specializations
    * @param {IDType[]} data.governmentIds - List of government names where worker operates
-   * @param {File} data.profileImage - Profile image URL
-   * @param {File} data.idImage - ID image URL
-   * @param {File} data.profileWithIdImage - Profile with ID image URL
+   * @param {Buffer} data.profileImageBuffer - Profile image URL
+   * @param {Buffer} data.idImageBuffer - ID image URL
+   * @param {Buffer} data.profileWithIdImageBuffer - Profile with ID image URL
    * @returns {Promise<WorkerProfile>} Created worker profile
    * @throws {AppError} If user not found or invalid data
    */
@@ -55,9 +66,9 @@ export default class WorkerService extends Service {
     acceptsUrgentJobs,
     governmentIds,
     specializationsTree,
-    profileImage,
-    idImage,
-    profileWithIdImage
+    profileImageBuffer,
+    idImageBuffer,
+    profileWithIdImageBuffer
   }) {
     return tryCatch(async () => {
       const user = await this.#userRepository.findFirst({ id: userId });
@@ -80,8 +91,8 @@ export default class WorkerService extends Service {
         await this.#userRepository.insertWorkerProfileGovernments({ workerProfileId: workerProfile.id, governmentIds });
         await this.#userRepository.insertWorkerProfileSpecializations({ workerProfileId: workerProfile.id, specializationsTree });
 
-        const nationalID = (await uploadToCloudinary(idImage.buffer, `${userId}/verification_info`, "nationalID")).url
-        const selfiWithID = (await uploadToCloudinary(profileWithIdImage.buffer, `${userId}/verification_info`, "selfiWithID")).url
+        const nationalID = (await uploadToCloudinary(idImageBuffer, `${userId}/verification_info`, "nationalID")).url
+        const selfiWithID = (await uploadToCloudinary(profileWithIdImageBuffer, `${userId}/verification_info`, "selfiWithID")).url
 
         await this.#userRepository.upsertWorkerProfileVerification({
           workerProfileId: workerProfile.id,
@@ -94,7 +105,7 @@ export default class WorkerService extends Service {
           }
         })
 
-        await this.#userRepository.update({ profileImageUrl: (await uploadToCloudinary(profileImage.buffer, `${user.phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
+        await this.#userRepository.updateMany({ profileImageUrl: (await uploadToCloudinary(profileImageBuffer, `${user.phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
 
         return workerProfile;
       }, (reason) => {
@@ -160,12 +171,22 @@ export default class WorkerService extends Service {
    * @async
    * @param {Object} params
    * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @returns {Promise<Number>} Number of got governments
+   * @param {Object} [params.pagination] - Pagination options { page, limit }
+   * @param {Object} [params.filter] - Filter options
+   * @param {Object[]} [params.orderBy] - OrderBy options [{ field, direction }]
+   * @param {boolean} [params.paginate] - Whether to return paginated results
+   * @returns {Promise<PaginatedResult<Government>>}
    */
-  async getWorkGovernments({ workerProfileId }) {
+  async getWorkGovernments({ workerProfileId, pagination = { page: 1, limit: 20 }, filter = {}, orderBy = [], paginate = false }) {
     return tryCatch(async () => {
-      const governments = await this.#userRepository.findWorkerProfileGovernments({ workerProfileId });
-      return governments;
+      const result = await this.#userRepository.findWorkerProfileGovernments({
+        workerProfileId,
+        pagination,
+        filter,
+        orderBy,
+        paginate
+      });
+      return result;
     });
   }
 
@@ -215,13 +236,24 @@ export default class WorkerService extends Service {
    * @method getWorkerProfileSpecializations
    * @param {Object} params
    * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @param {IDType[] | undefined} params.mainSpecializationIds - IDs of the main specializations to get retreived
+   * @param {IDType[] | undefined} params.mainSpecializationIds - IDs of the main specializations to get retrieved
+   * @param {Object} [params.pagination] - Pagination options { page, limit }
+   * @param {Object} [params.filter] - Filter options
+   * @param {Object[]} [params.orderBy] - OrderBy options [{ field, direction }]
+   * @param {boolean} [params.paginate] - Whether to return paginated results
+   * @returns {Promise<PaginatedResult<SpecializationTree>>}
    */
-  async getSpecializations({ workerProfileId, mainSpecializationIds = undefined }) {
+  async getSpecializations({ workerProfileId, mainSpecializationIds = undefined, pagination = { page: 1, limit: 20 }, filter = {}, orderBy = [], paginate = false }) {
     return tryCatch(async () => {
-
-      const tree = await this.#userRepository.findWorkerProfileSpecializations({ workerProfileId, mainSpecializationIds });
-      return tree;
+      const result = await this.#userRepository.findWorkerProfileSpecializations({
+        workerProfileId,
+        mainSpecializationIds,
+        pagination,
+        filter,
+        orderBy,
+        paginate
+      });
+      return result;
     });
   }
 
@@ -271,7 +303,7 @@ export default class WorkerService extends Service {
   async deleteSubSpecializations({ workerProfileId, specializationsTree }) {
     return tryCatch(async () => {
       Repository.createTransaction([this.#userRepository], async () => {
-        for (let { mainId, subIds } of specializationsTree) {
+        for (const { mainId, subIds } of specializationsTree) {
           await this.#userRepository.deleteWorkerProfileSubSpecializations({ workerProfileId, specializationId: mainId, subSpecializationIds: subIds });
         }
       }, (error) => {
@@ -285,8 +317,8 @@ export default class WorkerService extends Service {
    * @method
    * @param {Object} params
    * @param {IDType} params.workerProfileId
-   * @param {import("../repositories/database/UserRepository.js").WorkerVerificationData} params.data
-   * @returns {Promise<import("../repositories/database/UserRepository.js").WorkerVerificationFilter>}
+   * @param {WorkerVerificationData} params.data
+   * @returns {Promise<WorkerVerificationFilter>}
    */
   async createVerification({ workerProfileId, data }) {
     return tryCatch(async () => {
@@ -300,7 +332,7 @@ export default class WorkerService extends Service {
    * @async
    * @param {Object} params
    * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @returns {Promise<import("../repositories/database/UserRepository.js").WorkerVerification>}
+   * @returns {Promise<WorkerVerification>}
    * @throws {AppError} If user not found
    */
   async getVerification({ workerProfileId }) {
@@ -316,8 +348,8 @@ export default class WorkerService extends Service {
    * @async
    * @method getWorkerProfile
    * @param {Object} params
-   * @param {import("../repositories/database/Repository.js").IDType} params.userId - User ID
-   * @returns {Promise<import("../repositories/database/UserRepository.js").WorkerProfile>} Worker profile
+   * @param {IDType} params.userId - User ID
+   * @returns {Promise<WorkerProfile>} Worker profile
    * @throws {AppError} If user not found
    */
   async get({ userId }) {
@@ -328,5 +360,17 @@ export default class WorkerService extends Service {
 
       return workerProfile;
     });
+  }
+
+  /**
+   * Check if user has a worker profile
+   * @async
+   * @method hasWorkerProfile
+   * @param {Object} params
+   * @param {IDType} params.userId - User ID
+   * @returns {Promise<boolean>}
+   */
+  async hasWorkerProfile({ userId }) {
+    return await this.#userRepository.hasWorkerProfile({ userId });
   }
 }

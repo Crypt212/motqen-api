@@ -19,7 +19,6 @@ export default class RateLimitService extends Service {
   #repository;
 
   /**
-   * @
    * @param {Object} params
    * @param {RateLimitCache} params.rateLimitCache
    */

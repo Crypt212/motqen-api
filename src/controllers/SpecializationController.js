@@ -8,16 +8,50 @@ import AppError from "../errors/AppError.js";
 import SuccessResponse from "../responses/successResponse.js";
 import { specializationRepository } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
+import { parseQueryParams } from '../validators/common.js';
 
 /**
- * Get all specializations
+ * Configuration for specialization query validation
  */
-export const getSpecializations = asyncHandler(async (_, res) => {
-  const specializations = await specializationRepository.findMany();
+const SPECIALIZATION_QUERY_CONFIG = {
+  allowedFilterFields: ['name', 'status'],
+  filterFieldTypes: {
+    name: { type: 'string', minLength: 2, maxLength: 100 },
+    status: { type: 'enum', enumValues: ['ACTIVE', 'INACTIVE', 'PENDING'] }
+  },
+  allowedOrderByFields: ['name', 'createdAt', 'updatedAt'],
+  allowedSearchFields: ['name']
+};
+
+const SUB_SPECIALIZATION_QUERY_CONFIG = {
+  allowedFilterFields: ['name', 'mainSpecializationId'],
+  filterFieldTypes: {
+    name: { type: 'string', minLength: 2, maxLength: 100 },
+    mainSpecializationId: { type: 'uuid' }
+  },
+  allowedOrderByFields: ['name', 'createdAt', 'updatedAt'],
+  allowedSearchFields: ['name']
+};
+
+/**
+ * Get all specializations with pagination, filtering, and ordering
+ */
+export const getSpecializations = asyncHandler(async (req, res) => {
+  const { pagination, filter, orderBy } = parseQueryParams(req.query, SPECIALIZATION_QUERY_CONFIG);
+
+  const result = await specializationRepository.findMany({
+    where: filter,
+    pagination,
+    orderBy,
+    paginate: true
+  });
 
   new SuccessResponse(
     "Specializations retrieved successfully",
-    { specializations },
+    {
+      specializations: result.data,
+      pagination: result.pagination,
+    },
     200
   ).send(res);
 });
@@ -41,21 +75,30 @@ export const getSpecializationById = asyncHandler(async (req, res) => {
 });
 
 /**
- * Get sub-specializations by parent ID
+ * Get sub-specializations by parent ID with pagination
  */
 export const getSubSpecializations = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
+  const { pagination, filter, orderBy } = parseQueryParams(req.query, SUB_SPECIALIZATION_QUERY_CONFIG);
 
   const specialization = await specializationRepository.findFirst({ id });
   if (!specialization) {
     throw new AppError("Specialization not found", 404);
   }
 
-  const subSpecializations = await specializationRepository.findSubSpecializations({ mainSpecializationId: id });
+  const subSpecializationsResult = await specializationRepository.findSubSpecializations({
+    filter: { ...filter, mainSpecializationId: id },
+    pagination,
+    orderBy,
+    paginate: true
+  });
 
   new SuccessResponse(
     "Sub-specializations retrieved successfully",
-    { subSpecializations },
+    {
+      subSpecializations: subSpecializationsResult.data,
+      pagination: subSpecializationsResult.pagination,
+    },
     200
   ).send(res);
 });
@@ -144,8 +187,8 @@ export const deleteSubSpecialization = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
   const subId = String(req.params.subId);
 
-  const existing = await specializationRepository.findSubSpecializations({ id: subId });
-  if (!existing) {
+  const existing = await specializationRepository.findSubSpecializations({ filter: { id: subId } });
+  if (!existing || existing.data.length === 0) {
     throw new AppError("Sub-specialization not found", 404);
   }
 
