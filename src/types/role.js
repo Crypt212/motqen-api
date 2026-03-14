@@ -3,11 +3,12 @@
  * @module types/role
  */
 
-import * as pkg from '@prisma/client';
+import pkg from "@prisma/client";
 const { $Enums } = pkg;
 
 /**
  * @typedef {$Enums.Role} Role
  */
 
-export {};
+
+export { };

@@ -3,7 +3,7 @@
  * @module types/asyncHandler
  */
 
-import * as pkg from '@prisma/client';
+import pkg from '@prisma/client';
 const { $Enums } = pkg;
 
 /** @typedef {import('../repositories/database/Repository').IDType} IDType */
