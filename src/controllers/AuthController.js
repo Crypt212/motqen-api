@@ -60,7 +60,6 @@ export const verifyOTP = asyncHandler(async (req, res) => {
   if (tokenType === 'login') {
     const user = await userService.get({ phoneNumber, userId: undefined });
     const workProfile = await workerService.get({ userId: user.id });
-    console.log(user, workProfile);
     workerShit.isWorker = workProfile ? true : false;
     if (workerShit.isWorker)
       workerShit.isWorkerSignedUp = (await workerService.getVerification({ workerProfileId: workProfile.id })).status === "APPROVED";
@@ -108,7 +107,7 @@ export const registerClient = asyncHandler(async (req, res) => {
       governmentId,
       role: "USER",
       cityId,
-      profileImage: image,
+      profileImageBuffer: image.buffer,
     },
     clientProfileData: {
       address,
@@ -132,7 +131,7 @@ export const registerClient = asyncHandler(async (req, res) => {
   new SuccessResponse(
     'User created successfully',
     { user, clientProfile: profile, accessToken, refreshToken: unHashedRefreshToken },
-    200
+    201
   ).send(res);
 });
 
@@ -179,11 +178,11 @@ export const registerWorker = asyncHandler(async (req, res) => {
       governmentId,
       cityId,
       role: "USER",
-      profileImage: images['personal_image'][0],
+      profileImageBuffer: images['personal_image'][0].buffer,
     },
     workerProfileData: {
-      idImage: images['id_image'][0],
-      profileWithIdImage: images['personal_with_id_image'][0],
+      idImageBuffer: images['id_image'][0].buffer,
+      profileWithIdImageBuffer: images['personal_with_id_image'][0].buffer,
       experienceYears,
       isInTeam,
       acceptsUrgentJobs,
@@ -208,7 +207,7 @@ export const registerWorker = asyncHandler(async (req, res) => {
   new SuccessResponse(
     'User created successfully',
     { user, workerProfile, accessToken, refreshToken: unHashedRefreshToken },
-    200
+    201
   ).send(res);
 });
 

@@ -10,10 +10,12 @@ import SpecializationRepository from './repositories/database/SpecializationRepo
 import ClientService from './services/ClientService.js';
 import WorkerService from './services/WorkerService.js';
 import prisma from './libs/database.js';
+import redisClient from './libs/redis.js';
 // state.js  (wire it up like your other repos)
 
-export const rateLimitCache = new RateLimitCache();
-export const otpCache = new OTPCache();
+export const rateLimitCache = new RateLimitCache(redisClient);
+export const otpCache = new OTPCache(redisClient);
+
 export const sessionRepository = new SessionRepository(prisma);
 export const userRepository = new UserRepository(prisma);
 export const specializationRepository = new SpecializationRepository(prisma);

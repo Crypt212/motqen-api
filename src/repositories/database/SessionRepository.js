@@ -9,6 +9,9 @@ import { Repository } from "./Repository.js";
 
 /** @typedef {import('@prisma/client').Prisma.BatchPayload} BatchPayload */
 /** @typedef {import("./Repository.js").IDType} IDType */
+/** @typedef {import('./Repository.js').PaginationOptions} PaginationOptions */
+/** @typedef {import('./Repository.js').OrderingOptions} OrderingOptions */
+/** @template T @typedef {import('./Repository.js').PaginatedResult<T>} PaginatedResult */
 
 /** @typedef {{userId: IDType, token: String, isRevoked: boolean, deviceId: String, lastUsedAt: Date, createdAt: Date, expiresAt: Date}} SessionData */
 /** @typedef {SessionData & {id: IDType}} Session */

@@ -29,7 +29,11 @@ export const verifyDeviceId = asyncHandler(async (req, _, next) => {
 export const authenticateLogin = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
 
-  verifyHeaderToken(authHeader, "login");
+  try {
+    verifyHeaderToken(authHeader, "login");
+  } catch (err) {
+    throw new AppError("Invalid login token", 401);
+  }
   next();
 });
 
@@ -38,7 +42,11 @@ export const authenticateLogin = asyncHandler(async (req, _, next) => {
 export const authenticateRegister = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
 
-  verifyHeaderToken(authHeader, "register");
+  try {
+    verifyHeaderToken(authHeader, "register");
+  } catch (err) {
+    throw new AppError("Invalid register token", 401);
+  }
   next();
 });
 
@@ -46,11 +54,15 @@ export const authenticateRegister = asyncHandler(async (req, _, next) => {
  */
 export const authenticateAccess = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
-  const payload = verifyHeaderToken(authHeader, "access");
+  try {
+    const payload = verifyHeaderToken(authHeader, "access");
+    req.userState = (await redisRetreiveOrCache("access:" + payload.userId, async () => {
+      return await userService.getStatus({ userId: payload.userId });
+    }));
+  } catch (err) {
+    throw new AppError("Invalid access token", 401);
+  }
 
-  req.userState = (await redisRetreiveOrCache("access:" + payload.userId, async () => {
-    return await userService.getStatus({ userId: payload.userId });
-  }));
 
   next();
 });
@@ -59,37 +71,43 @@ export const authenticateAccess = asyncHandler(async (req, _, next) => {
  */
 export const authenticateRefresh = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
-  const payload = verifyHeaderToken(authHeader, "refresh");
+  try {
+    const payload = verifyHeaderToken(authHeader, "refresh");
+    req.userState = (await redisRetreiveOrCache("access:" + payload.userId, async () => {
+      return await userService.getStatus({ userId: payload.userId });
+    }));
+  } catch (err) {
+    throw new AppError("Invalid refresh token", 401);
+  }
 
-  req.userState = (await redisRetreiveOrCache("access:" + payload.userId, async () => {
-    return await userService.getStatus({ userId: payload.userId });
-  }));
 
   next();
 });
 
 /**
  * Authenticates the request by verifying that the user has verfied access or refresh token and is active
- * @throws {AppError} 401 if user has not verified access or refresh token or is not active
+ * @throws {AppError} 401 if user has no verified access or refresh token
+ * @throws {AppError} 403 if user has an inactive account
  */
 export const isActive = asyncHandler(async (req, _, next) => {
   if (req.userState) {
     if (req.userState.accountStatus !== "ACTIVE")
-      throw new AppError("Not Active", 401);
+      throw new AppError("Unauthorized access for users with no active account", 403);
   } else
-    throw new AppError("Unauthorized", 401);
+    throw new AppError("Not authenticated", 401);
 
   next();
 });
 
 /**
  * Authorizes the request to ensure the user has ADMIN role
- * @throws {AppError} 401 if user is not an ADMIN
+ * @throws {AppError} 401 if user has no verified access or refresh token
+ * @throws {AppError} 403 if user is not an admin
  */
 export const authorizeAdmin = asyncHandler(async (req, _, next) => {
   if (req.userState) {
-    if (req.userState.role !== 'ADMIN') throw new AppError('Unauthorized', 401);
+    if (req.userState.role !== 'ADMIN') throw new AppError('Unauthorized access for non-admins users', 403);
   } else
-    throw new AppError("Unauthorized", 401);
+    throw new AppError("Not authenticated", 401);
   next();
 });

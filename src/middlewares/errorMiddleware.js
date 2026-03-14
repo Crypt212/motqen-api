@@ -4,12 +4,23 @@
  */
 
 import { logger } from "../libs/winston.js";
+import RepositoryError from "../errors/RepositoryError.js";
 
 /**
  * Error handler middleware
  * @type {import("express").ErrorRequestHandler}
  */
-export default (err, req, res , next) => {
+export default (err, req, res, next) => {
+  logger.info(err);
+
+  // Handle RepositoryError - extract status code from the error
+  if (err instanceof RepositoryError) {
+    err.code = err.getStatusCode();
+    err.status = String(err.statusCode).startsWith('4') ? 'fail' : 'error';
+    err.isOperational = true;
+  }
+
+
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 
@@ -18,8 +29,8 @@ export default (err, req, res , next) => {
     res.setHeader('Retry-After', String(Math.max(1, Math.ceil(retryAfter))));
   }
 
+
   if (process.env.NODE_ENV === 'development') {
-    logger.error(err);
     return res.status(err.statusCode).json({
       status: err.status,
       message: err.message,
@@ -30,13 +41,14 @@ export default (err, req, res , next) => {
 
   // production
   if (err.isOperational) {
-    logger.error(err);
     return res.status(err.statusCode).json({
       status: err.status,
       message: err.message,
-      error: err.errors || {},
+      error: err.errors || err.info || {},
     });
   }
+
+  logger.error(err);
 
   // unknown error
   return res.status(500).json({

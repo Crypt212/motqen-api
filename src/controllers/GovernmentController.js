@@ -8,16 +8,50 @@ import AppError from "../errors/AppError.js";
 import SuccessResponse from "../responses/successResponse.js";
 import { governmentRepository } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
+import { parseQueryParams } from '../validators/common.js';
 
 /**
- * Get all governments
+ * Configuration for government query validation
  */
-export const getGovernments = asyncHandler(async (_, res) => {
-  const governments = await governmentRepository.findMany();
+const GOVERNMENT_QUERY_CONFIG = {
+  allowedFilterFields: ['name', 'status'],
+  filterFieldTypes: {
+    name: { type: 'string', minLength: 2, maxLength: 100 },
+    status: { type: 'enum', enumValues: ['ACTIVE', 'INACTIVE', 'PENDING'] }
+  },
+  allowedOrderByFields: ['name', 'createdAt', 'updatedAt'],
+  allowedSearchFields: ['name']
+};
+
+const CITY_QUERY_CONFIG = {
+  allowedFilterFields: ['name', 'governmentId'],
+  filterFieldTypes: {
+    name: { type: 'string', minLength: 2, maxLength: 100 },
+    governmentId: { type: 'uuid' }
+  },
+  allowedOrderByFields: ['name', 'createdAt', 'updatedAt'],
+  allowedSearchFields: ['name']
+};
+
+/**
+ * Get all governments with pagination, filtering, and ordering
+ */
+export const getGovernments = asyncHandler(async (req, res) => {
+  const { pagination, filter, orderBy } = parseQueryParams(req.query, GOVERNMENT_QUERY_CONFIG);
+
+  const result = await governmentRepository.findMany({
+    where: filter,
+    pagination,
+    orderBy,
+    paginate: true
+  });
 
   new SuccessResponse(
     "Governments retrieved successfully",
-    { governments },
+    {
+      governments: result.data,
+      pagination: result.pagination,
+    },
     200
   ).send(res);
 });
@@ -98,17 +132,26 @@ export const deleteGovernment = asyncHandler(async (req, res) => {
 });
 
 /**
- * Get all cities under a specific government
+ * Get all cities under a specific government with pagination
  */
 export const getCitiesByGovernment = asyncHandler(async (req, res) => {
     const governmentId = String(req.params.governmentId);
+    const { pagination, filter, orderBy } = parseQueryParams(req.query, CITY_QUERY_CONFIG);
 
     const government = await governmentRepository.findFirst({ id: governmentId });
     if (!government) {
         throw new AppError('Government not found', 404);
     }
 
-    const cities = await governmentRepository.findCities({ governmentId });
+    const citiesResult = await governmentRepository.findCities({
+      filter: { ...filter, governmentId },
+      pagination,
+      orderBy,
+      paginate: true
+    });
 
-    new SuccessResponse('Cities retrieved', { cities }).send(res);
+    new SuccessResponse('Cities retrieved', {
+      cities: citiesResult.data,
+      pagination: citiesResult.pagination,
+    }).send(res);
 });

@@ -3,10 +3,14 @@
  * @module repositories/UserRepository
  */
 
-import { Repository } from './Repository.js';
+import { handlePrismaError, Repository } from './Repository.js';
 import { $Enums, PrismaClient } from '@prisma/client';
 
 /** @typedef {import("./Repository.js").IDType} IDType */
+/** @typedef {import('./Repository.js').PaginationOptions} PaginationOptions */
+/** @typedef {import('./Repository.js').OrderingOptions} OrderingOptions */
+/** @typedef {import('./Repository.js').QueryOptions} QueryOptions */
+/** @template T @typedef {import('./Repository.js').PaginatedResult<T>} PaginatedResult */
 /** @typedef {import('@prisma/client').Prisma.BatchPayload} BatchPayload */
 /** @typedef {import('../../types/role.js').Role} Role */
 /** @typedef {$Enums.AccountStatus} AccountStatus */
@@ -48,232 +52,297 @@ export default class UserRepository extends Repository {
     super(prisma, "user");
   }
 
-  // Handling WorkerProfile ---------------------------------------------------------------------
 
   /**
-   * @async
-   * @method
    * @param {Object} params
    * @param {IDType} params.userId
    * @returns {Promise<boolean>}
+   * @throws {RepositoryError}
    */
   async hasWorkerProfile({ userId }) {
-    return (
-      (await this.prismaClient.workerProfile.count({ where: { userId } })) > 0
-    );
+    try {
+      return (
+        (await this.prismaClient.workerProfile.count({ where: { userId } })) > 0
+      );
+    } catch (error) {
+      handlePrismaError(error, 'hasWorkerProfile');
+    }
   }
 
   /**
-   * @async
-   * @method
+   * Find worker profile by user ID
    * @param {Object} params
    * @param {IDType} params.userId
-   * @returns {Promise<WorkerProfile>}
+   * @returns {Promise<WorkerProfile | null>}
+   * @throws {RepositoryError}
    */
   async findWorkerProfile({ userId }) {
-    return await this.prismaClient.workerProfile.findUnique({
-      where: { userId },
-    });
+    try {
+      return await this.prismaClient.workerProfile.findUnique({
+        where: { userId },
+      });
+    } catch (error) {
+      handlePrismaError(error, 'findWorkerProfile');
+    }
   }
 
   /**
-   * @async
-   * @method
+   * Find worker profile by worker profile ID
+   * @param {Object} params
+   * @param {IDType} params.workerProfileId
+   * @returns {Promise<WorkerProfile | null>}
+   * @throws {RepositoryError}
+   */
+  async findWorkerProfileById({ workerProfileId }) {
+    try {
+      return await this.prismaClient.workerProfile.findUnique({
+        where: { id: workerProfileId },
+      });
+    } catch (error) {
+      handlePrismaError(error, 'findWorkerProfileById');
+    }
+  }
+
+  /**
+   * Create a new user with worker profile
    * @param {Object} params
    * @param {UserData} params.userData
    * @param {WorkerProfileData} params.workerProfileData
    * @param {WorkerVerificationData | undefined} params.verificationData
    * @returns {Promise<{ user: User, profile: WorkerProfile }>}
+   * @throws {RepositoryError}
    */
   async createWorker({ userData, workerProfileData, verificationData = undefined }) {
-    const user = await this.prismaClient.user.create({
-      data: {
-        ...userData,
-        workerProfile: {
-          create: {
-            ...workerProfileData,
-            verification: {
-              create: (verificationData !== undefined) ? verificationData : undefined
+    try {
+      const user = await this.prismaClient.user.create({
+        data: {
+          ...userData,
+          workerProfile: {
+            create: {
+              ...workerProfileData,
+              verification: {
+                create: (verificationData !== undefined) ? verificationData : undefined
+              }
             }
           }
         }
-      }
-    });
-    const profile = await this.findWorkerProfile({ userId: user.id });
-    return { user, profile };
+      });
+      const profile = await this.findWorkerProfile({ userId: user.id });
+      return { user, profile };
+    } catch (error) {
+      handlePrismaError(error, 'createWorker');
+    }
   }
 
   /**
-   * @async
-   * @method
+   * Insert a worker profile for existing user
    * @param {Object} params
    * @param {IDType} params.userId
    * @param {WorkerProfileData} params.data
    * @param {WorkerVerificationData | undefined} params.verificationData
    * @returns {Promise<WorkerProfile>}
+   * @throws {RepositoryError}
    */
   async insertWorkerProfile({ userId, data, verificationData = undefined }) {
-    return await this.prismaClient.workerProfile.create({
-      data: {
-        userId,
-        ...data,
-        verification: {
-          create: (verificationData !== undefined) ? verificationData : undefined
-        }
-      },
-    });
+    try {
+      return await this.prismaClient.workerProfile.create({
+        data: {
+          userId,
+          ...data,
+          verification: {
+            create: (verificationData !== undefined) ? verificationData : undefined
+          }
+        },
+      });
+    } catch (error) {
+      handlePrismaError(error, 'insertWorkerProfile');
+    }
   }
 
   /**
-   * @async
-   * @method
+   * Update a worker profile
    * @param {Object} params
    * @param {IDType} params.workerProfileId
    * @param {OptionalWorkerProfileData} params.data
    * @param {WorkerVerificationData | undefined} params.verificationData
    * @returns {Promise<WorkerProfile>}
+   * @throws {RepositoryError}
    */
   async updateWorkerProfile({ workerProfileId, data, verificationData = undefined }) {
-    return await this.prismaClient.workerProfile.update({
-      where: { id: workerProfileId },
-      data: {
-        ...data,
-        verification: {
-          create: (verificationData !== undefined) ? verificationData : undefined
+    try {
+      return await this.prismaClient.workerProfile.update({
+        where: { id: workerProfileId },
+        data: {
+          ...data,
+          verification: {
+            create: (verificationData !== undefined) ? verificationData : undefined
+          }
         }
-      }
-    });
+      });
+    } catch (error) {
+      handlePrismaError(error, 'updateWorkerProfile');
+    }
   }
 
   /**
-   * @async
-   * @method
+   * Delete a worker profile
    * @param {Object} params
    * @param {IDType} params.workerProfileId
    * @returns {Promise<WorkerProfile>}
+   * @throws {RepositoryError}
    */
   async deleteWorkerProfile({ workerProfileId }) {
-    return await this.prismaClient.workerProfile.delete({
-      where: { userId: workerProfileId },
-    });
+    try {
+      return await this.prismaClient.workerProfile.delete({
+        where: { id: workerProfileId },
+      });
+    } catch (error) {
+      handlePrismaError(error, 'deleteWorkerProfile');
+    }
   }
 
+  // ============================================
+  // Worker Profile Governments Operations
+  // ============================================
+
   /**
-   * @async
-   * @method
+   * Add working governments for worker profile
    * @param {Object} params
    * @param {IDType} params.workerProfileId
    * @param {IDType[]} params.governmentIds
    * @returns {Promise<BatchPayload>}
+   * @throws {RepositoryError}
    */
   async insertWorkerProfileGovernments({ workerProfileId, governmentIds }) {
-    return await this.prismaClient.governmentForWorkers.createMany({
-      data: governmentIds.map(id => ({
-        governmentId: id,
-        workerProfileId
-      })),
-      skipDuplicates: true
-    })
+    try {
+      return await this.prismaClient.governmentForWorkers.createMany({
+        data: governmentIds.map(id => ({
+          governmentId: id,
+          workerProfileId
+        })),
+        skipDuplicates: true
+      });
+    } catch (error) {
+      handlePrismaError(error, 'insertWorkerProfileGovernments');
+    }
   }
 
   /**
-   * @async
-   * @method
+   * Delete working governments for worker profile
    * @param {Object} params
    * @param {IDType} params.workerProfileId
    * @param {IDType[] | undefined} params.governmentIds
    * @returns {Promise<BatchPayload>}
+   * @throws {RepositoryError}
    */
   async deleteWorkerProfileGovernments({ workerProfileId, governmentIds = undefined }) {
-    if (!governmentIds) {
-      return await this.prismaClient.governmentForWorkers.deleteMany({
-        where: { workerProfileId },
-      });
-    }
-    return await this.prismaClient.governmentForWorkers.deleteMany({
-      where: { workerProfileId, governmentId: { in: governmentIds } },
-    });
-  }
-
-  /**
-   * @async
-   * @method
-   * @param {Object} params
-   * @param {IDType} params.workerProfileId
-   * @returns {Promise<any>}
-   */
-  async findWorkerProfileGovernments({ workerProfileId }) {
-    const governments = await this.prismaClient.governmentForWorkers.findMany({
-      where: { workerProfileId }
-    });
-
-    return governments.map(({ governmentId }) => governmentId);
-  }
-
-  /**
-   * @async
-   * @method
-   * @param {Object} params
-   * @param {IDType} params.workerProfileId
-   * @param {IDType[]} params.mainSpecializationIds
-   * @returns {Promise<SpecializationTree>}
-   */
-  async findWorkerProfileSpecializations({ workerProfileId, mainSpecializationIds }) {
-    const query = await this.prismaClient.chosenSpecialization.findMany({
-      where: {
-        workerProfileId,
-        specializationId: { in: mainSpecializationIds },
+    try {
+      if (!governmentIds) {
+        return await this.prismaClient.governmentForWorkers.deleteMany({
+          where: { workerProfileId },
+        });
       }
-    });
+      return await this.prismaClient.governmentForWorkers.deleteMany({
+        where: { workerProfileId, governmentId: { in: governmentIds } },
+      });
+    } catch (error) {
+      handlePrismaError(error, 'deleteWorkerProfileGovernments');
+    }
+  }
 
+  /**
+   * Find working governments for worker profile
+   * @param {Object} params
+   * @param {IDType} params.workerProfileId
+   * @param {Object} [params.pagination] - Pagination options { page, limit }
+   * @param {Object} [params.filter] - Filter options
+   * @param {Object[]} [params.orderBy] - OrderBy options [{ field, direction }]
+   * @param {boolean} [params.paginate] - Whether to return paginated results
+   * @returns {Promise<PaginatedResult<import('./GovernmentRepository.js').Government>>}
+   */
+  async findWorkerProfileGovernments({ workerProfileId, pagination = { page: 1, limit: 20 }, filter = {}, orderBy = [], paginate = false }) {
+    return Repository.performFindManyQuery({
+
+      prismaModel: this.prismaClient.governmentForWorkers,
+      parentQueryParameters: { workerProfileId },
+      orderBy,
+      filter,
+      paginate,
+      pagination,
+      include: ["government"],
+      mapFunction: (x) => x.government
+
+    });
+  }
+
+  // ============================================
+  // Worker Profile Specializations Operations
+  // ============================================
+
+  /**
+   * Find specializations for worker profile
+   * @param {Object} params
+   * @param {IDType} params.workerProfileId
+   * @param {IDType[]} [params.mainSpecializationIds]
+   * @param {Object} [params.pagination] - Pagination options { page, limit }
+   * @param {Object} [params.filter] - Filter options
+   * @param {Object[]} [params.orderBy] - OrderBy options [{ field, direction }]
+   * @param {boolean} [params.paginate] - Whether to return paginated results
+   * @returns {Promise<PaginatedResult<SpecializationTree>>}
+   */
+  async findWorkerProfileSpecializations({ workerProfileId, mainSpecializationIds, pagination = { page: 1, limit: 20 }, filter = {}, orderBy = [], paginate = false }) {
+    const query = await Repository.performFindManyQuery({
+
+      prismaModel: this.prismaClient.chosenSpecialization,
+      parentQueryParameters: { workerProfileId, mainSpecializationIds },
+      orderBy,
+      filter,
+      paginate,
+      pagination,
+      include: ["subSpecialization"],
+
+    });
+    // Build tree structure from results
     const tree = [];
     const map = new Map();
-    for (let { subSpecializationId, specializationId } of query) {
-      if (!(specializationId in map)) {
+    for (const { subSpecializationId, specializationId } of query.data) {
+      if (!map.has(specializationId)) {
         const branch = { mainId: specializationId, subIds: [] };
         map.set(specializationId, branch);
       }
 
       map.get(specializationId).subIds.push(subSpecializationId);
     }
-    for (let [_, branch] of map) {
+    for (const [, branch] of map) {
       tree.push(branch);
     }
-
-    return tree;
+    query.data = tree;
+    return query;
   }
 
   /**
-   * @async
-   * @method
+   * Add specializations for worker profile
    * @param {Object} params
    * @param {IDType} params.workerProfileId
    * @param {SpecializationTree} params.specializationsTree
    * @returns {Promise<BatchPayload>}
    */
   async insertWorkerProfileSpecializations({ workerProfileId, specializationsTree }) {
-
-    // const existingSpecializations = await this.prismaClient.chosenSpecialization.findMany({ where: { workerProfileId }, select: { subSpecializationId: true } });
     const data = specializationsTree.reduce((acc, current) => {
       return [...acc, ...current.subIds.map(subId => {
-        // if (subId in existingSpecializations) {
-        //   return "heck";
-        // }
         return {
           specializationId: current.mainId,
           subSpecializationId: subId,
           workerProfileId,
-        }
+        };
       })];
     }, []);
-    data.filter((value) => value !== "heck");
 
-    return await this.prismaClient.chosenSpecialization.createMany({ data , skipDuplicates: true });
+    return await this.prismaClient.chosenSpecialization.createMany({ data, skipDuplicates: true });
   }
 
   /**
-   * @async
-   * @method
+   * Add sub specializations for worker profile
    * @param {Object} params
    * @param {IDType} params.workerProfileId
    * @param {IDType} params.specializationId
@@ -296,8 +365,7 @@ export default class UserRepository extends Repository {
   }
 
   /**
-   * @async
-   * @method
+   * Delete main specializations for worker profile
    * @param {Object} params
    * @param {IDType} params.workerProfileId
    * @param {IDType[] | undefined} params.specializationIds
@@ -310,8 +378,7 @@ export default class UserRepository extends Repository {
   }
 
   /**
-   * @async
-   * @method
+   * Delete sub specializations for worker profile
    * @param {Object} params
    * @param {IDType} params.workerProfileId
    * @param {IDType} params.specializationId
@@ -333,8 +400,7 @@ export default class UserRepository extends Repository {
   }
 
   /**
-   * @async
-   * @method
+   * Find specialization IDs for worker profile
    * @param {Object} params
    * @param {IDType} params.workerProfileId
    * @returns {Promise<{id: IDType, children: IDType[]}[]>}
@@ -348,7 +414,7 @@ export default class UserRepository extends Repository {
 
     const specializationTree = [];
 
-    for (let { specializationId } of chosenSpecializations) {
+    for (const { specializationId } of chosenSpecializations) {
       const branch = { id: specializationId, children: [] };
 
       const subSpecializations =
@@ -364,9 +430,12 @@ export default class UserRepository extends Repository {
     return specializationTree;
   }
 
+  // ============================================
+  // Worker Verification Operations
+  // ============================================
+
   /**
-   * @async
-   * @method
+   * Upsert worker profile verification
    * @param {Object} params
    * @param {IDType} params.workerProfileId
    * @param {WorkerVerificationData} params.verificationData
@@ -391,11 +460,10 @@ export default class UserRepository extends Repository {
   }
 
   /**
-   * @async
-   * @method
+   * Find worker profile verification
    * @param {Object} params
    * @param {IDType} params.workerProfileId
-   * @returns {Promise<WorkerVerification>}
+   * @returns {Promise<WorkerVerification | null>}
    */
   async findWorkerProfileVerification({ workerProfileId }) {
     return await this.prismaClient.workerVerification.findFirst({
@@ -404,11 +472,12 @@ export default class UserRepository extends Repository {
   }
 
 
-  // Handling ClientProfile ---------------------------------------------------------------------
+  // ============================================
+  // Client Profile Operations
+  // ============================================
 
   /**
-   * @async
-   * @method
+   * Check if user has a client profile
    * @param {Object} params
    * @param {IDType} params.userId
    * @returns {Promise<boolean>}
@@ -420,8 +489,7 @@ export default class UserRepository extends Repository {
   }
 
   /**
-   * @async
-   * @method
+   * Create a new user with client profile
    * @param {Object} params
    * @param {UserData} params.userData
    * @param {ClientProfileData} params.clientProfileData
@@ -441,8 +509,7 @@ export default class UserRepository extends Repository {
   }
 
   /**
-   * @async
-   * @method
+   * Create a client profile for existing user
    * @param {Object} params
    * @param {IDType} params.userId
    * @param {ClientProfileData} params.data
@@ -458,11 +525,10 @@ export default class UserRepository extends Repository {
   }
 
   /**
-   * @async
-   * @method
+   * Find client profile by user ID
    * @param {Object} params
    * @param {IDType} params.userId
-   * @returns {Promise<ClientProfile>}
+   * @returns {Promise<ClientProfile | null>}
    */
   async findClientProfile({ userId }) {
     return await this.prismaClient.clientProfile.findUnique({
@@ -471,8 +537,19 @@ export default class UserRepository extends Repository {
   }
 
   /**
-   * @async
-   * @method
+   * Find client profile by client profile ID
+   * @param {Object} params
+   * @param {IDType} params.clientProfileId
+   * @returns {Promise<ClientProfile | null>}
+   */
+  async findClientProfileById({ clientProfileId }) {
+    return await this.prismaClient.clientProfile.findUnique({
+      where: { id: clientProfileId },
+    });
+  }
+
+  /**
+   * Update a client profile
    * @param {Object} params
    * @param {IDType} params.clientProfileId
    * @param {OptionalClientProfileData} params.data
@@ -486,8 +563,7 @@ export default class UserRepository extends Repository {
   }
 
   /**
-   * @async
-   * @method
+   * Delete a client profile
    * @param {Object} params
    * @param {IDType} params.clientProfileId
    * @returns {Promise<ClientProfile>}

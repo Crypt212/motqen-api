@@ -4,6 +4,7 @@
  */
 
 import { validationResult } from "express-validator";
+import { logger } from "../libs/winston";
 
 /**
  * Middleware to validate request using express-validator
@@ -21,7 +22,8 @@ export const validateRequest = (req, res, next) => {
       message: err.msg,
     }));
 
-    res.status(400).json({
+    logger.info({code: 422, errors: formattedErrors });
+    res.status(422).json({
       success: false,
       message: "Validation failed",
       errors: formattedErrors,

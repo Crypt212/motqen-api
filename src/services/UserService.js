@@ -13,10 +13,12 @@ import GovernmentRepository from "../repositories/database/GovernmentRepository.
 /** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
 /** @typedef {import("../types/asyncHandler.js").UserState} UserState */
 /** @typedef {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} File */
-
 /** @typedef {import("../repositories/database/UserRepository.js").OptionalUser} ReturnUserData */
+/** @typedef {import("../repositories/database/UserRepository.js").UserFilter} UserFilter */
+/** @typedef {import("../repositories/database/UserRepository.js").PaginationOptions} PaginationOptions */
+/** @typedef {import("../repositories/database/UserRepository.js").OrderingOptions} OrderingOptions */
 
-/** @typedef {Partial<{role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: string, bio: string, profileImage: File, status: $Enums.AccountStatus}>} InputUserData */
+/** @typedef {Partial<{role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: string, bio: string, profileImageBuffer: Buffer, status: $Enums.AccountStatus}>} InputUserData */
 
 /**
  * User Service - Manages user-related operations
@@ -42,7 +44,7 @@ export default class UserService extends Service {
   }
 
   /**
-   * Get a user
+   * Get a user by ID or phone number
    * @async
    * @method getUser
    * @param {Object} params
@@ -56,6 +58,32 @@ export default class UserService extends Service {
   }
 
   /**
+   * Find many users with pagination, filtering, and ordering
+   * Uses the flexible findMany method
+   * @async
+   * @method findMany
+   * @param {Object} params
+   * @param {UserFilter} [params.filter={}] - Filter criteria
+   * @param {PaginationOptions} [params.pagination] - Pagination options
+   * @param {OrderingOptions[]} [params.orderBy=[]] - Ordering options
+   * @param {boolean} [params.paginate=false] - Whether to return paginated results
+   * @returns {Promise<import("../repositories/database/Repository.js").PaginatedResult<ReturnUserData>>} | ReturnUserData[]>}
+   */
+  async findMany({
+    filter = {},
+    pagination = { page: 1, limit: 20 },
+    orderBy = [],
+    paginate = false
+  }) {
+    return await this.#userRepository.findMany({
+      where: filter,
+      pagination,
+      orderBy,
+      paginate
+    });
+  }
+
+  /**
    * Update a user's basic information
    * @async
    * @method updateUser
@@ -66,12 +94,17 @@ export default class UserService extends Service {
    * @throws {AppError} If government or city not found
    */
   async update({ userId, data }) {
-    const cities = await this.#governmentRepository.findCities({ id: data.cityId, governmentId: data.governmentId });
-    if (!cities || cities.length === 0) throw new AppError("Government or city not found", 400);
+    const cities = await this.#governmentRepository.findCities({
+      filter: {
+        id: data.cityId,
+        governmentId: data.governmentId
+      }
+    });
+    if (!cities || cities.data.length === 0) throw new AppError("Government or city not found", 400);
 
     let url = undefined;
-    if (data.profileImage) {
-      url = (await uploadToCloudinary(data.profileImage.buffer, `${userId}/profile_image`, "profileMain")).url;
+    if (data.profileImageBuffer) {
+      url = (await uploadToCloudinary(data.profileImageBuffer, `${userId}/profile_image`, "profileMain")).url;
     }
 
     await this.#userRepository.updateMany({
@@ -112,5 +145,18 @@ export default class UserService extends Service {
     }
 
     return userState;
+  }
+
+  /**
+   * Check if user exists
+   * @async
+   * @method exists
+   * @param {Object} params
+   * @param {IDType} [params.userId] - User ID
+   * @param {string} [params.phoneNumber] - Phone number
+   * @returns {Promise<boolean>}
+   */
+  async exists({ userId, phoneNumber }) {
+    return await this.#userRepository.exists({ id: userId, phoneNumber });
   }
 }

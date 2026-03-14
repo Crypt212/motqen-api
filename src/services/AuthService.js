@@ -25,8 +25,8 @@ const MAX_VERIFY_ATTEMPTS = 5;
 /** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
 /** @typedef {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} File */
 
-/** @typedef {{ phoneNumber: string, role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: IDType, profileImage: File }} InputUserData */
-/** @typedef {{ isInTeam: Boolean, experienceYears: number, acceptsUrgentJobs: Boolean, workGovernmentIds: IDType[], specializationsTree: { mainId: IDType, subIds: IDType[]}[], idImage: File, profileWithIdImage: File  }} InputWorkerData */
+/** @typedef {{ phoneNumber: string, role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: IDType, profileImageBuffer: Buffer }} InputUserData */
+/** @typedef {{ isInTeam: Boolean, experienceYears: number, acceptsUrgentJobs: Boolean, workGovernmentIds: IDType[], specializationsTree: { mainId: IDType, subIds: IDType[]}[], idImageBuffer: Buffer, profileWithIdImageBuffer: Buffer  }} InputWorkerData */
 /** @typedef {{ address: string, addressNotes?: string  }} InputClientData */
 
 /** @typedef {{ phoneNumber: string, role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, city: string, status: $Enums.AccountStatus }} ReturnUserData */
@@ -85,11 +85,11 @@ export default class AuthService extends Service {
       governmentId,
       cityId,
       role,
-      profileImage,
+      profileImageBuffer,
     },
     workerProfileData: {
-      idImage,
-      profileWithIdImage,
+      idImageBuffer,
+      profileWithIdImageBuffer,
       experienceYears,
       isInTeam,
       acceptsUrgentJobs,
@@ -100,8 +100,8 @@ export default class AuthService extends Service {
     return tryCatch(async () => {
       try {
 
-        const cities = await this.#governmentRepository.findCities({ id: cityId, governmentId });
-        if (!cities || cities.length === 0) throw new AppError("Government or city not found", 400);
+        const cities = await this.#governmentRepository.findCities({ filter: { id: cityId, governmentId }});
+        if (!cities || cities.data.length === 0) throw new AppError("Government or city not found", 400);
 
         const { user, profile } = await this.#userRepository.createWorker({
           userData: {
@@ -123,10 +123,10 @@ export default class AuthService extends Service {
         });
 
         /** @type {string} */
-        const nationalID = (await uploadToCloudinary(idImage.buffer, `${user.id}/verification_info`, "nationalID")).url;
+        const nationalID = (await uploadToCloudinary(idImageBuffer, `${user.id}/verification_info`, "nationalID")).url;
 
         /** @type {string} */
-        const selfiWithID = (await uploadToCloudinary(profileWithIdImage.buffer, `${user.id}/verification_info`, "selfiWithID")).url;
+        const selfiWithID = (await uploadToCloudinary(profileWithIdImageBuffer, `${user.id}/verification_info`, "selfiWithID")).url;
 
         const verification = await this.#userRepository.upsertWorkerProfileVerification({
           workerProfileId: profile.id,
@@ -141,13 +141,12 @@ export default class AuthService extends Service {
         await this.#userRepository.insertWorkerProfileGovernments({ workerProfileId: profile.id, governmentIds: workGovernmentIds });
         await this.#userRepository.insertWorkerProfileSpecializations({ workerProfileId: profile.id, specializationsTree });
 
-        const { url } = (await uploadToCloudinary(profileImage.buffer, `${phoneNumber}/profile_image`, "profileMain"))
+        const { url } = (await uploadToCloudinary(profileImageBuffer, `${phoneNumber}/profile_image`, "profileMain"))
         await this.#userRepository.updateMany({ profileImageUrl: url }, { id: user.id });
         user.profileImageUrl = url;
 
         return { profile, user, verification };
       } catch (reason) {
-        console.log(reason)
         throw new AppError("Failed to create worker profile", 500, reason);
       }
     });
@@ -172,7 +171,7 @@ export default class AuthService extends Service {
       governmentId,
       cityId,
       role,
-      profileImage,
+      profileImageBuffer,
     },
     clientProfileData: {
       address,
@@ -182,8 +181,8 @@ export default class AuthService extends Service {
     return tryCatch(async () => {
       try {
 
-        const cities = await this.#governmentRepository.findCities({ id: cityId, governmentId });
-        if (!cities || cities.length === 0) throw new AppError("Government or city not found", 400);
+        const cities = await this.#governmentRepository.findCities({ filter: { id: cityId, governmentId } });
+        if (!cities || cities.data.length === 0) throw new AppError("Government or city not found", 400);
 
         const { user, profile } = await this.#userRepository.createClient({
           userData: {
@@ -203,10 +202,10 @@ export default class AuthService extends Service {
         });
 
         /** @type {import("../repositories/database/UserRepository.js").User & { cityName: string }} */
-        const modifiedUser = { ...user, cityName: cities[0].name };
+        const modifiedUser = { ...user, cityName: cities.data[0].name };
 
-        if (profileImage) {
-          const { url } = await uploadToCloudinary(profileImage.buffer, `${user.id}/profile_image`, "profileMain");
+        if (profileImageBuffer) {
+          const { url } = await uploadToCloudinary(profileImageBuffer, `${user.id}/profile_image`, "profileMain");
 
           await this.#userRepository.updateMany({ profileImageUrl: url }, { id: user.id });
           user.profileImageUrl = url
@@ -214,7 +213,6 @@ export default class AuthService extends Service {
 
         return { profile, user: modifiedUser };
       } catch (error) {
-        console.log(error)
         throw new AppError("Failed to create client profile", 500, error);
       }
     });
@@ -232,7 +230,6 @@ export default class AuthService extends Service {
   async requestOTP(phoneNumber, method) {
 
     const OTP = generateOTP();
-    console.log(OTP);
     const hashedOTP = hashOTP(OTP);
 
     await this.#otpCache.setOtp(phoneNumber, method, hashedOTP, environment.otps.expiresIn);
@@ -263,7 +260,7 @@ export default class AuthService extends Service {
       const hashedOTP = hashOTP(OTP);
 
       if (!OTP)
-        throw new AppError("OTP is not provided", 400, { type: "OTP" });
+        throw new AppError("OTP is not provided", 422, { type: "OTP" });
 
       const otp = await this.#otpCache.getOtp(phoneNumber, method);
 
