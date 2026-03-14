@@ -135,23 +135,25 @@ export const deleteGovernment = asyncHandler(async (req, res) => {
  * Get all cities under a specific government with pagination
  */
 export const getCitiesByGovernment = asyncHandler(async (req, res) => {
-    const governmentId = String(req.params.governmentId);
-    const { pagination, filter, orderBy } = parseQueryParams(req.query, CITY_QUERY_CONFIG);
+  const governmentId = String(req.params.governmentId);
+  const { pagination, filter, orderBy } = parseQueryParams(req.query, CITY_QUERY_CONFIG);
 
-    const government = await governmentRepository.findFirst({ id: governmentId });
-    if (!government) {
-        throw new AppError('Government not found', 404);
-    }
+  const government = await governmentRepository.findFirst({ id: governmentId });
+  if (!government) {
+    throw new AppError('Government not found', 404);
+  }
 
-    const citiesResult = await governmentRepository.findCities({
-      filter: { ...filter, governmentId },
-      pagination,
-      orderBy,
-      paginate: true
-    });
+  console.log(government);
 
-    new SuccessResponse('Cities retrieved', {
-      cities: citiesResult.data,
-      pagination: citiesResult.pagination,
-    }).send(res);
+  const citiesResult = await governmentRepository.findCities({
+    filter: { ...filter, governmentId },
+    // pagination,
+    // orderBy,
+    // paginate: true
+  });
+
+  new SuccessResponse('Cities retrieved', {
+    cities: citiesResult.data,
+    pagination: citiesResult.pagination,
+  }).send(res);
 });

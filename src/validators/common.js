@@ -106,10 +106,11 @@ export const validateJSONField = (fieldName, required = false) => {
 export const specializationsTreeValidation = (prefix, required = false) => {
   const fieldName = prefix + 'specializationsTree';
 
-  return validateField(fieldName, required)
+  return validateJSONField(fieldName, required)
     .isArray({ min: 1 })
     .withMessage(fieldName + ' must be a non-empty array')
     .custom((value) => {
+      console.log({...value});
       for (let i = 0; i < value.length; i++) {
         const item = value[i];
         if (!item || typeof item !== 'object') {
@@ -141,7 +142,7 @@ export const specializationsTreeValidation = (prefix, required = false) => {
         }
       }
       return true;
-    });
+    })
 };
 
 /**

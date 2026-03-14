@@ -14,6 +14,7 @@ import { sensitiveIpRateLimiter } from "../../middlewares/rateLimitMiddleware.js
 
 const mainRouter = Router();
 
+
 mainRouter.use("/auth",
   // sensitiveIpRateLimiter,
   authRouter);

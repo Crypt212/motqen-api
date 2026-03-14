@@ -3,7 +3,7 @@
  * @module repositories/SpecializationRepository
  */
 
-import { Repository } from "./Repository.js";
+import { handlePrismaError, Repository } from "./Repository.js";
 import { PrismaClient } from "@prisma/client";
 
 
@@ -63,12 +63,19 @@ export default class SpecializationRepository extends Repository {
     orderBy = [],
     paginate = false
   }) {
-    return super.findMany({
-      where: filter,
-      pagination,
-      orderBy,
-      paginate
-    });
+    try {
+      return Repository.performFindManyQuery({
+        prismaModel: this.prismaClient.subSpecialization,
+        parentQueryParameters: { mainSpecializationId: filter.mainSpecializationId },
+        orderBy,
+        filter,
+        paginate,
+        pagination,
+        mapFunction: (x) => x,
+      });
+    } catch (error) {
+      throw handlePrismaError(error, 'findMany');
+    }
   }
 
   /**

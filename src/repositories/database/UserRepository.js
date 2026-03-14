@@ -3,6 +3,7 @@
  * @module repositories/UserRepository
  */
 
+import { logger } from '../../libs/winston.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { $Enums, PrismaClient } from '@prisma/client';
 
@@ -337,6 +338,7 @@ export default class UserRepository extends Repository {
         };
       })];
     }, []);
+
 
     return await this.prismaClient.chosenSpecialization.createMany({ data, skipDuplicates: true });
   }
