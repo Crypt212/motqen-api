@@ -3,7 +3,7 @@
  * @module routes/specializations
  */
 
-import { Router } from "express";
+import { Router } from 'express';
 import {
   getSpecializations,
   getSpecializationById,
@@ -13,10 +13,16 @@ import {
   deleteSpecialization,
   createSubSpecialization,
   deleteSubSpecialization,
-} from "../controllers/SpecializationController.js";
-import { isActive, authorizeAdmin } from "../middlewares/authMiddleware.js";
-import { validateRequest } from "../middlewares/validateRequest.js";
-import { body, param } from "express-validator";
+} from '../../controllers/SpecializationController.js';
+import { isActive, authorizeAdmin } from '../../middlewares/authMiddleware.js';
+import { validateRequest } from '../../middlewares/validateRequest.js';
+import {
+  validateSpecializationIdParam,
+  validateCreateSpecialization,
+  validateUpdateSpecialization,
+  validateSubSpecializationIdParam,
+  validateCreateSubSpecialization,
+} from '../../validators/specializations.js';
 
 const specializationRouter = Router();
 
@@ -49,10 +55,7 @@ const specializationRouter = Router();
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-specializationRouter.get(
-  "/",
-  getSpecializations
-);
+specializationRouter.get('/', getSpecializations);
 
 /**
  * @swagger
@@ -87,10 +90,8 @@ specializationRouter.get(
  *         $ref: '#/components/responses/InternalServerError'
  */
 specializationRouter.get(
-  "/:id",
-  param("id")
-    .matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-    .withMessage("Invalid specialization ID format"),
+  '/:id',
+  validateSpecializationIdParam(),
   validateRequest,
   getSpecializationById
 );
@@ -127,10 +128,7 @@ specializationRouter.get(
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-specializationRouter.get(
-  "/:id/sub-specializations",
-  getSubSpecializations
-);
+specializationRouter.get('/:id/sub-specializations', getSubSpecializations);
 
 /**
  * @swagger
@@ -174,15 +172,10 @@ specializationRouter.get(
  *         $ref: '#/components/responses/InternalServerError'
  */
 specializationRouter.post(
-  "/",
+  '/',
   isActive,
   authorizeAdmin,
-  body("name")
-    .trim()
-    .notEmpty()
-    .withMessage("Name is required")
-    .isLength({ min: 2, max: 100 })
-    .withMessage("Name must be between 2 and 100 characters"),
+  validateCreateSpecialization,
   validateRequest,
   createSpecialization
 );
@@ -232,18 +225,11 @@ specializationRouter.post(
  *         $ref: '#/components/responses/InternalServerError'
  */
 specializationRouter.put(
-  "/:id",
+  '/:id',
   isActive,
   authorizeAdmin,
-  param("id")
-    .matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-    .withMessage("Invalid specialization ID format"),
-  body("name")
-    .trim()
-    .notEmpty()
-    .withMessage("Name is required")
-    .isLength({ min: 2, max: 100 })
-    .withMessage("Name must be between 2 and 100 characters"),
+  validateSpecializationIdParam(),
+  validateUpdateSpecialization,
   validateRequest,
   updateSpecialization
 );
@@ -277,12 +263,10 @@ specializationRouter.put(
  *         $ref: '#/components/responses/InternalServerError'
  */
 specializationRouter.delete(
-  "/:id",
+  '/:id',
   isActive,
   authorizeAdmin,
-  param("id")
-    .matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-    .withMessage("Invalid specialization ID format"),
+  validateSpecializationIdParam(),
   validateRequest,
   deleteSpecialization
 );
@@ -332,18 +316,11 @@ specializationRouter.delete(
  *         $ref: '#/components/responses/InternalServerError'
  */
 specializationRouter.post(
-  "/:id/sub-specializations",
+  '/:id/sub-specializations',
   isActive,
   authorizeAdmin,
-  param("id")
-    .matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-    .withMessage("Invalid specialization ID format"),
-  body("name")
-    .trim()
-    .notEmpty()
-    .withMessage("Name is required")
-    .isLength({ min: 2, max: 100 })
-    .withMessage("Name must be between 2 and 100 characters"),
+  validateSpecializationIdParam('id'),
+  validateCreateSubSpecialization,
   validateRequest,
   createSubSpecialization
 );
@@ -384,15 +361,11 @@ specializationRouter.post(
  *         $ref: '#/components/responses/InternalServerError'
  */
 specializationRouter.delete(
-  "/:id/sub-specializations/:subId",
+  '/:id/sub-specializations/:subId',
   isActive,
   authorizeAdmin,
-  param("id")
-    .matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-    .withMessage("Invalid specialization ID format"),
-  param("subId")
-    .matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-    .withMessage("Invalid sub-specialization ID format"),
+  validateSpecializationIdParam('id'),
+  validateSubSpecializationIdParam(),
   validateRequest,
   deleteSubSpecialization
 );

@@ -15,6 +15,7 @@ model Session {
   ipAddress  String?
   userAgent  String?
   lastUsedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
   createdAt  DateTime @default(now())
   expiresAt  DateTime
 
@@ -31,11 +32,12 @@ model User {
   lastName        String
   governmentId    String?
   cityId          String?
-  cityName        String?
   profileImageUrl String?
   status          AccountStatus @default(ACTIVE)
   role            Role          @default(USER)
   lastSeenAt      DateTime?
+  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime      @default(now())
 
   government          Government?               @relation(fields: [governmentId], references: [id], onDelete: Cascade)
   city                City?                     @relation(fields: [cityId], references: [id], onDelete: Cascade)
@@ -51,10 +53,12 @@ model User {
 }
 
 model ClientProfile {
-  id           String  @id @default(uuid())
-  userId       String  @unique
+  id           String   @id @default(uuid())
+  userId       String   @unique
   address      String
   addressNotes String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -62,12 +66,14 @@ model ClientProfile {
 }
 
 model WorkerProfile {
-  id                String  @id @default(uuid())
-  userId            String  @unique
+  id                String   @id @default(uuid())
+  userId            String   @unique
   experienceYears   Int
   isInTeam          Boolean
   acceptsUrgentJobs Boolean
-  isApproved        Boolean @default(false)
+  isApproved        Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+  createdAt         DateTime @default(now())
 
   portfolio             PortfolioProject[]
   verification          WorkerVerification?
@@ -84,9 +90,9 @@ model WorkerVerification {
   idWithPersonalImageUrl String
   idDocumentUrl          String
   status                 VerificationStatus @default(PENDING)
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
   reason                 String?
+  updatedAt              DateTime           @updatedAt
+  createdAt              DateTime           @default(now())
 
   workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
 
@@ -94,26 +100,32 @@ model WorkerVerification {
 }
 
 model PortfolioProject {
-  id              String  @id @default(uuid())
+  id              String   @id @default(uuid())
   workerProfileId String
   description     String?
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
 
   projectImages ProjectImage[]
   workerProfile WorkerProfile  @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
 }
 
 model ProjectImage {
-  id        String @id @default(uuid())
+  id        String   @id @default(uuid())
   projectId String
   imageUrl  String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 
   project PortfolioProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model ChosenSpecialization {
   workerProfileId     String
-  subSpecializationId String @unique
+  subSpecializationId String   @unique
   specializationId    String
+  updatedAt           DateTime @updatedAt
+  createdAt           DateTime @default(now())
 
   tasks             ChosenSpecializationTask[]
   workerProfile     WorkerProfile              @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
@@ -127,6 +139,8 @@ model ChosenSpecialization {
 model ChosenSpecializationTask {
   taskId              String
   subSpecializationId String
+  updatedAt           DateTime @updatedAt
+  createdAt           DateTime @default(now())
 
   task                 Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)
   chosenSpecialization ChosenSpecialization @relation(fields: [subSpecializationId], references: [subSpecializationId], onDelete: Cascade)
@@ -135,17 +149,20 @@ model ChosenSpecializationTask {
 }
 
 model Task {
-  id String @id @default(uuid())
+  id        String   @id @default(uuid())
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 
   title String
-
 
   specializations ChosenSpecializationTask[]
 }
 
 model Specialization {
-  id   String @id @default(uuid())
-  name String
+  id        String   @id @default(uuid())
+  name      String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 
   subSpecializations SubSpecialization[]
   choosingWorkers    ChosenSpecialization[]
@@ -155,12 +172,14 @@ model Specialization {
 }
 
 model SubSpecialization {
-  id                   String @id @default(uuid())
+  id                   String   @id @default(uuid())
   name                 String
   mainSpecializationId String
+  updatedAt            DateTime @updatedAt
+  createdAt            DateTime @default(now())
 
-  choosingWorkers           ChosenSpecialization[]
-  mainSpecialization        Specialization             @relation(fields: [mainSpecializationId], references: [id], onDelete: Cascade)
+  choosingWorkers    ChosenSpecialization[]
+  mainSpecialization Specialization         @relation(fields: [mainSpecializationId], references: [id], onDelete: Cascade)
 
   @@index([name])
   @@map("sub_specializations")
@@ -169,6 +188,8 @@ model SubSpecialization {
 model GovernmentForWorkers {
   workerProfileId String
   governmentId    String
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
 
   workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
   government    Government    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
@@ -178,8 +199,10 @@ model GovernmentForWorkers {
 }
 
 model Government {
-  id   String @id @default(uuid())
-  name String
+  id        String   @id @default(uuid())
+  name      String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 
   workers GovernmentForWorkers[]
   users   User[]
@@ -189,9 +212,11 @@ model Government {
 }
 
 model City {
-  id           String @id @default(uuid())
+  id           String   @id @default(uuid())
   governmentId String
   name         String
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
 
   users      User[]
   government Government @relation(fields: [governmentId], references: [id], onDelete: Cascade)
@@ -263,6 +288,7 @@ model ConversationParticipant {
   role                  ConversationRole
   lastReadMessageNumber Int              @default(0)
   createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -281,6 +307,7 @@ model Message {
   content        String
   type           MessageType @default(TEXT)
   createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User         @relation(fields: [senderId], references: [id])

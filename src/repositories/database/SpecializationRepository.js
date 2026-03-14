@@ -3,12 +3,15 @@
  * @module repositories/SpecializationRepository
  */
 
-import { Repository } from "./Repository.js";
+import { handlePrismaError, Repository } from "./Repository.js";
 import { PrismaClient } from "@prisma/client";
 
 
 /** @typedef {import("./Repository.js").IDType} IDType */
 /** @typedef {import("./Repository.js").BatchPayload} BatchPayload */
+/** @typedef {import('./Repository.js').PaginationOptions} PaginationOptions */
+/** @typedef {import('./Repository.js').OrderingOptions} OrderingOptions */
+/** @template T @typedef {import('./Repository.js').PaginatedResult<T>} PaginatedResult */
 
 /** @typedef {{name: String}} SpecializationData */
 /** @typedef {SpecializationData & { id: IDType }} Specialization */
@@ -32,11 +35,12 @@ export default class SpecializationRepository extends Repository {
     super(prisma, "specialization");
   }
 
-  // Handling Sub-Specializations ----------------------------------------------------
+  // ============================================
+  // Sub-Specialization Operations
+  // ============================================
 
   /**
-   * @async
-   * @method
+   * Check if sub-specialization exists
    * @param {SubSpecializationFilter} filter
    * @returns {Promise<boolean>}
    */
@@ -45,20 +49,48 @@ export default class SpecializationRepository extends Repository {
   }
 
   /**
-   * @async
-   * @method
+   * Find sub-specializations with flexible filtering, pagination, and ordering
+   * @param {Object} params - Query parameters
+   * @param {SubSpecializationFilter} [params.filter] - Filter criteria
+   * @param {PaginationOptions} [params.pagination] - Pagination options
+   * @param {OrderingOptions[]} [params.orderBy] - Ordering options
+   * @param {boolean} [params.paginate] - Whether to return paginated results
+   * @returns {Promise<PaginatedResult<SubSpecialization>>}
+   */
+  async findSubSpecializations({
+    filter = {},
+    pagination,
+    orderBy = [],
+    paginate = false
+  }) {
+    try {
+      return Repository.performFindManyQuery({
+        prismaModel: this.prismaClient.subSpecialization,
+        parentQueryParameters: { mainSpecializationId: filter.mainSpecializationId },
+        orderBy,
+        filter,
+        paginate,
+        pagination,
+        mapFunction: (x) => x,
+      });
+    } catch (error) {
+      throw handlePrismaError(error, 'findMany');
+    }
+  }
+
+  /**
+   * Find sub-specializations (legacy method for backward compatibility)
    * @param {SubSpecializationFilter} filter
    * @returns {Promise<SubSpecialization[]>}
    */
-  async findSubSpecializations(filter) {
+  async findSubSpecializationsLegacy(filter) {
     return await this.prismaClient.subSpecialization.findMany({
       where: filter
     });
-  };
+  }
 
   /**
-   * @async
-   * @method
+   * Update sub-specializations
    * @param {SubSpecializationFilter} filter
    * @param {SubSpecializationData} data
    * @returns {Promise<BatchPayload>}
@@ -71,8 +103,7 @@ export default class SpecializationRepository extends Repository {
   };
 
   /**
-   * @async
-   * @method
+   * Create sub-specializations
    * @param {IDType} mainSpecializationId
    * @param {SubSpecializationData[]} data
    * @returns {Promise<BatchPayload>}
@@ -87,8 +118,7 @@ export default class SpecializationRepository extends Repository {
   };
 
   /**
-   * @async
-   * @method
+   * Delete sub-specializations
    * @param {SubSpecializationFilter} filter
    * @returns {Promise<BatchPayload>}
    */
@@ -97,5 +127,4 @@ export default class SpecializationRepository extends Repository {
       where: filter
     });
   };
-
-};
+}

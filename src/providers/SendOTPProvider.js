@@ -26,7 +26,6 @@ export default async function (method, OTP, phoneNumber) {
   console.log(method, OTP, phoneNumber);
   if (method === "SMS") {
    // await sendViaSMS(`Your OTP is ${OTP}`, phoneNumber);
-   console.log(`Your OTP is ${OTP}`);
   } else if (method === "WhatsApp") {
     if (environment.nodeEnv === "development") {
       await sendViaWhatApp(`Your OTP is ${OTP}`, phoneNumber);

@@ -10,7 +10,9 @@ import { Repository } from "../repositories/database/Repository.js";
 
 /** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
 /** @typedef {import("../repositories/database/UserRepository.js").ClientProfile} ReturnClientProfile */
-/** @typedef {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} File */
+/** @typedef {import("../repositories/database/UserRepository.js").ClientProfileFilter} ClientProfileFilter */
+/** @typedef {import("../repositories/database/UserRepository.js").PaginationOptions} PaginationOptions */
+/** @typedef {import("../repositories/database/UserRepository.js").OrderingOptions} OrderingOptions */
 /** @typedef {{address: String, addressNotes: String}} InputClientProfileData */
 
 /**
@@ -43,7 +45,7 @@ export default class ClientService extends Service {
    */
   async get({ userId }) {
     return tryCatch(async () => {
-      const user = await this.#userRepository.findOne({ id: userId });
+      const user = await this.#userRepository.findFirst({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
       const clientProfile = await this.#userRepository.findClientProfile({ userId });
@@ -69,7 +71,7 @@ export default class ClientService extends Service {
     data,
   }) {
     return tryCatch(async () => {
-      const user = await this.#userRepository.findOne({ id: userId });
+      const user = await this.#userRepository.findFirst({ id: userId });
       if (!user) throw new AppError("User not found", 404);
 
       return await Repository.createTransaction([this.#userRepository], async () => {
@@ -112,5 +114,17 @@ export default class ClientService extends Service {
     return tryCatch(async () => {
       return await this.#userRepository.deleteClientProfile({ clientProfileId });
     });
+  }
+
+  /**
+   * Check if user has a client profile
+   * @async
+   * @method hasClientProfile
+   * @param {Object} params
+   * @param {IDType} params.userId - User ID
+   * @returns {Promise<boolean>}
+   */
+  async hasClientProfile({ userId }) {
+    return await this.#userRepository.hasClientProfile({ userId });
   }
 }

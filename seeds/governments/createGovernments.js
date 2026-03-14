@@ -16,110 +16,6 @@ const prisma = new PrismaClient({
   log: ["error", "warn"],
 });
 
-// Craftsman Specializations Data
-const specializations = [
-  {
-    name: "Carpentry",
-    subSpecializations: [
-      "Furniture Making",
-      "Wood Carving",
-      "Cabinet Making",
-      "Door & Window Installation",
-      "Kitchen Cabinets",
-    ],
-  },
-  {
-    name: "Plumbing",
-    subSpecializations: [
-      "Water Piping",
-      "Drainage Systems",
-      "Water Heater Installation",
-      "Bathroom Fixtures",
-      "Pipe Leak Repair",
-    ],
-  },
-  {
-    name: "Electrical",
-    subSpecializations: [
-      "Wiring & Rewiring",
-      "Switchboard Installation",
-      "Lighting Installation",
-      "AC Installation",
-      "Generator Installation",
-    ],
-  },
-  {
-    name: "Painting",
-    subSpecializations: [
-      "Interior Painting",
-      "Exterior Painting",
-      "Wall Textures",
-      "Decorative Painting",
-      "Waterproofing",
-    ],
-  },
-  {
-    name: "Tiling",
-    subSpecializations: [
-      "Floor Tiling",
-      "Wall Tiling",
-      "Mosaic Work",
-      "Marble Installation",
-      "Grouting & Sealing",
-    ],
-  },
-  {
-    name: "Masonry",
-    subSpecializations: [
-      "Bricklaying",
-      "Block Work",
-      "Stone Masonry",
-      "Concrete Work",
-      "Wall Repair",
-    ],
-  },
-  {
-    name: "Aluminum",
-    subSpecializations: [
-      "Window Frames",
-      "Door Frames",
-      "Glass Work",
-      "Curtain Walls",
-      "Partition Walls",
-    ],
-  },
-  {
-    name: "Welding",
-    subSpecializations: [
-      "Iron Work",
-      "Steel Structures",
-      "Gate & Fence",
-      "Metal Furniture",
-      "Pipe Welding",
-    ],
-  },
-  {
-    name: "HVAC",
-    subSpecializations: [
-      "AC Installation",
-      "AC Repair",
-      "Ventilation Systems",
-      "Central Heating",
-      "Refrigeration",
-    ],
-  },
-  {
-    name: "Flooring",
-    subSpecializations: [
-      "Wood Flooring",
-      "Laminate Flooring",
-      "Vinyl Flooring",
-      "Carpet Installation",
-      "Parquet",
-    ],
-  },
-];
-
 // Egyptian Governments and their Cities
 const egyptData = [
   {
@@ -182,36 +78,6 @@ const egyptData = [
       "Al-Moqattam",
       "Al-Haram",
       "Al-Mansoura",
-    ],
-  },
-  {
-    name: "Qalyubia",
-    cities: [
-      "Banha",
-      "Qalyub",
-      "Shubra El Kheima",
-      "Al Qanater",
-      "Khanka",
-      "Kafr Shukr",
-      "Tiba",
-      "Sinsin",
-      "Al-Masjid",
-      "Sheikh Hammad",
-    ],
-  },
-  {
-    name: "Beheira",
-    cities: [
-      "Damanhour",
-      "Kafr El Dawar",
-      "Rosetta",
-      "Kom Hamada",
-      "Hosh Issa",
-      "Edku",
-      "Abou El Matamir",
-      "El Rahmaniya",
-      "Itay El Barud",
-      "Shubrakhit",
     ],
   },
   {
@@ -346,21 +212,6 @@ const egyptData = [
     ],
   },
   {
-    name: "Fayoum",
-    cities: [
-      "Fayoum",
-      "Tamiya",
-      "Ibshway",
-      "Sinnuris",
-      "Yusuf El-Saddik",
-      "Abshway",
-      "Fayoum El-Gedida",
-      "Al-Qasr",
-      "Al-Hawatka",
-      "Al-Rawda",
-    ],
-  },
-  {
     name: "Red Sea",
     cities: [
       "Hurghada",
@@ -413,21 +264,6 @@ const egyptData = [
       "Madinat El Fath",
       "Ain Shams",
       "Qasr Al Fath",
-    ],
-  },
-  {
-    name: "Damietta",
-    cities: [
-      "Damietta",
-      "Kafr El Batikh",
-      "Ezbet El Borg",
-      "Fareskou",
-      "Al-Matariya",
-      "Al-Saff",
-      "Al-Zarqa",
-      "Kafr Saad",
-      "Bani Ebeid",
-      "Al-Sahel",
     ],
   },
   {
@@ -576,43 +412,10 @@ const egyptData = [
   },
 ];
 
-
-
 async function main() {
   console.log("Starting database seeding...");
 
   try {
-    // 1. Seed Specializations and Sub-specializations
-    console.log("\n--- Seeding Specializations and Sub-specializations ---");
-
-    for (const spec of specializations) {
-      // Check if specialization already exists
-      const existingSpec = await prisma.specialization.findFirst({
-        where: { name: spec.name },
-      });
-
-      if (!existingSpec) {
-        const createdSpec = await prisma.specialization.create({
-          data: { name: spec.name },
-        });
-        console.log(`Created specialization: ${createdSpec.name}`);
-
-        // Create sub-specializations
-        for (const subSpecName of spec.subSpecializations) {
-          await prisma.subSpecialization.create({
-            data: {
-              name: subSpecName,
-              mainSpecializationId: createdSpec.id,
-            },
-          });
-          console.log(`  - Created sub-specialization: ${subSpecName}`);
-        }
-      } else {
-        console.log(`Specialization already exists: ${spec.name}`);
-      }
-    }
-
-    // 2. Seed Governments and Cities
     console.log("\n--- Seeding Governments and Cities ---");
 
     for (const gov of egyptData) {
@@ -649,23 +452,7 @@ async function main() {
   } finally {
     await prisma.$disconnect();
   }
+
 }
 
 main();
-
-async function getAllSpecializations() {
-
-  const tree = [];
-
-  const mainSs = await prisma.specialization.findMany({ take: 3, skip: 5 });
-  for (let { id: mainId } of mainSs) {
-    const subIds = (await prisma.subSpecialization.findMany({ where: { mainSpecializationId: mainId }, take: 3 })).map(({ id }) => id);
-    tree.push({
-      mainId,
-      subIds
-    })
-  }
-
-  console.log(JSON.stringify(tree));
-
-}

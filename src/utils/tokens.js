@@ -56,7 +56,6 @@ export const verifyAndDecodeToken = (token, expectedType) => {
 
   try {
 
-    console.log(token, tokenConfig);
     const decoded = jwt.verify(token, tokenConfig.secret);
     return /** @type {import('../types/tokens.js').TokenTypeMap[T]} */ (decoded);
   } catch (error) {
@@ -73,13 +72,12 @@ export const verifyAndDecodeToken = (token, expectedType) => {
  * @returns {TokenTypeMap[T]} decoded payload
  */
 export const verifyHeaderToken = function(tokenString, type) {
-  console.log(tokenString, type);
-  if (!tokenString) throw new AppError("Unauthorized 1", 401);
+  if (!tokenString) throw new AppError("Unauthorized, bearer token not found", 401);
 
   const token = tokenString.split(" ")[1];
-  if (!token) throw new AppError("Unauthorized 2", 401);
-  
+  if (!token) throw new AppError("Unauthorized, bad token format", 401);
+
   const decoded = verifyAndDecodeToken(token, type);
-  if (!decoded) throw new AppError("Unauthorized 3", 401);
+  if (!decoded) throw new AppError("Unauthorized, invalid token", 401);
   return decoded;
 }

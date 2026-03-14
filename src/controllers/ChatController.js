@@ -40,9 +40,9 @@ export const getConversations = asyncHandler(async (req, res) => {
  */
 export const getMessages = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const { conversationId } = req.params;
-  const after = parseInt(req.query.after ?? '0', 10);
-  const limit = Math.min(parseInt(req.query.limit ?? '30', 10), 100);
+  const conversationId = String(req.params.conversationId);
+  const after = parseInt(String(req.query.after) ?? '0', 10);
+  const limit = Math.min(parseInt(String(req.query.limit) ?? '30', 10), 100);
 
   const messages = await chatService.getMessages({ conversationId, userId, after, limit });
 
@@ -71,8 +71,8 @@ export const getUnreadSummary = asyncHandler(async (req, res) => {
  */
 export const getMissedMessages = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const { conversationId } = req.params;
-  const after = parseInt(req.query.after ?? '0', 10);
+  const conversationId = String(req.params.conversationId);
+  const after = parseInt(String(req.query.after) ?? '0', 10);
 
   const messages = await chatService.getMissedMessages({
     conversationId,

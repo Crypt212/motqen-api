@@ -1,5 +1,4 @@
 import AppError from "../errors/AppError.js";
-import { userRepository } from "../state.js";
 import { asyncHandler } from "../types/asyncHandler.js";
 
 /**
@@ -7,7 +6,7 @@ import { asyncHandler } from "../types/asyncHandler.js";
  */
 export const unAuthorizeWorker = asyncHandler(async (req, _, next) => {
 
-  if (req.access.isWorker) throw new AppError("Unauthorized access for worker users", 401);
+  if (!req.userState.worker) throw new AppError("Unauthorized access for worker users", 403);
 
   next();
 });
@@ -17,9 +16,7 @@ export const unAuthorizeWorker = asyncHandler(async (req, _, next) => {
  */
 export const authorizeWorker = asyncHandler(async (req, _, next) => {
 
-  if (!req.access.isWorker) throw new AppError("Unauthorized access for non-worker users", 401);
-  const workerProfile = await userRepository.get(req.access.userId);
-
-  if (!workerProfile.isApproved) throw new AppError("You are not approved yet", 401);
+  if (!req.userState.worker) throw new AppError("Unauthorized access for non-worker users", 403);
+  if (req.userState.worker.verification.status !== "APPROVED") throw new AppError("You are not approved yet", 403);
   next();
 });

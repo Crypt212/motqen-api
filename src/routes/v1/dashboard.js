@@ -27,11 +27,11 @@ import {
   updateClientProfile,
   deleteClientProfile,
 
-} from "../controllers/DashboardController.js";
-import { authorizeWorker, unAuthorizeWorker } from "../middlewares/workerMiddleware.js";
-import { authorizeClient, unAuthorizeClient } from "../middlewares/clientMiddleware.js";
-import { validateRequest } from "../middlewares/validateRequest.js";
-import upload from "../configs/multer.js";
+} from "../../controllers/DashboardController.js";
+import { authorizeWorker, unAuthorizeWorker } from "../../middlewares/workerMiddleware.js";
+import { authorizeClient, unAuthorizeClient } from "../../middlewares/clientMiddleware.js";
+import { validateRequest } from "../../middlewares/validateRequest.js";
+import upload from "../../configs/multer.js";
 
 // Import validators
 import {
@@ -56,8 +56,8 @@ import {
   validateUpdateClientProfile,
   validateDeleteClientProfile,
 
-} from "../validators/dashboard.js";
-import { isActive } from "../middlewares/authMiddleware.js";
+} from "../../validators/dashboard.js";
+import { isActive } from "../../middlewares/authMiddleware.js";
 
 const usersRouter = Router();
 
@@ -130,6 +130,7 @@ usersRouter.get("/",
  *         $ref: '#/components/responses/InternalServerError'
  */
 usersRouter.put("/",
+  upload.single("personal_image"),
   isActive,
   validateUpdateUser,
   validateRequest,

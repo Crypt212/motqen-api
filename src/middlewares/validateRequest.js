@@ -4,6 +4,7 @@
  */
 
 import { validationResult } from "express-validator";
+import { logger } from "../libs/winston.js";
 
 /**
  * Middleware to validate request using express-validator
@@ -16,12 +17,14 @@ import { validationResult } from "express-validator";
 export const validateRequest = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log(req.body);
     const formattedErrors = errors.array().map((err) => ({
       type: err.type,
       message: err.msg,
     }));
 
-    res.status(400).json({
+    logger.info({code: 422, errors: formattedErrors });
+    res.status(422).json({
       success: false,
       message: "Validation failed",
       errors: formattedErrors,

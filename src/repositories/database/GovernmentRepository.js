@@ -3,11 +3,14 @@
  * @module repositories/GovernmentRepository
  */
 
-import { Repository } from "./Repository.js";
+import { handlePrismaError, Repository } from "./Repository.js";
 import { PrismaClient } from "@prisma/client";
 
 /** @typedef {import('@prisma/client').Prisma.BatchPayload} BatchPayload */
 /** @typedef {import("./Repository.js").IDType} IDType */
+/** @typedef {import('./Repository.js').PaginationOptions} PaginationOptions */
+/** @typedef {import('./Repository.js').OrderingOptions} OrderingOptions */
+/** @template T @typedef {import('./Repository.js').PaginatedResult<T>} PaginatedResult */
 
 /** @typedef {{name: String }} GovernmentData */
 /** @typedef {GovernmentData & { id: IDType }} Government */
@@ -32,61 +35,110 @@ export default class GovernmentRepository extends Repository {
   }
 
 
+  // ============================================
+  // City CRUD Operations
+  // ============================================
+
   /**
-   * @async
-   * @method
+   * Check if city exists
    * @param {CityFilter} filter
    * @returns {Promise<boolean>}
+   * @throws {RepositoryError}
    */
   async existsCity(filter) {
-    return (await this.prismaClient.city.count({ where: filter })) > 0;
+    try {
+      return (await this.prismaClient.city.count({ where: filter })) > 0;
+    } catch (error) {
+      handlePrismaError(error, 'existsCity');
+    }
   }
 
   /**
-   * @async
-   * @method
-   * @param {CityFilter} filter
-   * @returns {Promise<City[]>}
+   * Find cities with flexible filtering, pagination, and ordering
+   * @param {Object} params - Query parameters
+   * @param {CityFilter} [params.filter] - Filter criteria
+   * @param {PaginationOptions} [params.pagination] - Pagination options
+   * @param {OrderingOptions[]} [params.orderBy] - Ordering options
+   * @param {boolean} [params.paginate] - Whether to return paginated results
+   * @returns {Promise<PaginatedResult<City>>}
    */
-  async findCities(filter) {
-    return await this.prismaClient.city.findMany({
-      where: filter
-    });
-  };
+  async findCities({
+    filter = {},
+    pagination,
+    orderBy = [],
+    paginate = false
+  }) {
+    try {
+      return Repository.performFindManyQuery({
+        prismaModel: this.prismaClient.city,
+        parentQueryParameters: { governmentId: filter.governmentId },
+        orderBy,
+        filter,
+        paginate,
+        pagination,
+        mapFunction: (x) => x,
+      });
+    } catch (error) {
+      throw handlePrismaError(error, 'findMany');
+    }
+  }
 
   /**
-   * @async
-   * @method
+   * Find cities (legacy method for backward compatibility)
+   * @param {CityFilter} filter
+   * @returns {Promise<City[]>}
+   * @throws {RepositoryError}
+   */
+  async findCitiesLegacy(filter) {
+    try {
+      return await this.prismaClient.city.findMany({
+        where: filter
+      });
+    } catch (error) {
+      handlePrismaError(error, 'findCitiesLegacy');
+    }
+  }
+
+  /**
+   * Update cities
    * @param {CityFilter} filter
    * @param {CityData} data
    * @returns {Promise<BatchPayload>}
+   * @throws {RepositoryError}
    */
   async updateCities(filter, data) {
-    return await this.prismaClient.city.updateMany({
-      where: filter,
-      data,
-    });
-  };
+    try {
+      return await this.prismaClient.city.updateMany({
+        where: filter,
+        data,
+      });
+    } catch (error) {
+      handlePrismaError(error, 'updateCities');
+    }
+  }
 
   /**
-   * @async
-   * @method
+   * Create cities
    * @param {IDType} governmentId
    * @param {CityData} data
    * @returns {Promise<BatchPayload>}
+   * @throws {RepositoryError}
    */
   async createCities(governmentId, data) {
-    return await this.prismaClient.city.createMany({
+    try {
+      return await this.prismaClient.city.createMany({
       data: {
         ...data,
         governmentId
       },
     });
-  };
+    } catch (error) {
+      handlePrismaError(error, 'createCities');
+    }
+  }
 
   /**
-   * @async
-   * @method
+   * Delete cities
    * @param {CityFilter} filter
    * @returns {Promise<BatchPayload>}
    */
@@ -95,5 +147,4 @@ export default class GovernmentRepository extends Repository {
       where: filter
     });
   };
-
-};
+}

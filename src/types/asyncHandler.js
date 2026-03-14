@@ -17,7 +17,6 @@ import { $Enums } from '@prisma/client';
 
 /** @typedef {string} DeviceID */
 
-
 /**
  * @typedef {(import('express').Request & { deviceId?: DeviceID } & { userState?: UserState}) & Partial<MulterPayload>} Request
  * @typedef {import('express').Response} Response

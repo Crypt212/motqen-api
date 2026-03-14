@@ -8,11 +8,12 @@ import authRouter from "./auth.js";
 import dashboardRouter from "./dashboard.js";
 import governmentRouter from "./governments.js";
 import specializationRouter from "./specializations.js";
-import chatRouter from "./chat.js";
-import { isActive, authenticateAccess } from "../middlewares/authMiddleware.js";
-import { sensitiveIpRateLimiter } from "../middlewares/rateLimitMiddleware.js";
+import chatRouter from "../chat.js";
+import { isActive, authenticateAccess } from "../../middlewares/authMiddleware.js";
+import { sensitiveIpRateLimiter } from "../../middlewares/rateLimitMiddleware.js";
 
 const mainRouter = Router();
+
 
 mainRouter.use("/auth",
   // sensitiveIpRateLimiter,
