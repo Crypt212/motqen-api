@@ -3,11 +3,11 @@
  * @module services/RateLimitService
  */
 
-import pkg from "@prisma/client";
+import * as pkg from '@prisma/client';
 const { $Enums } = pkg;
-import AppError from "../errors/AppError.js";
-import Service from "./Service.js";
-import RateLimitCache from "../repositories/cache/RateLimitCache.js";
+import AppError from '../errors/AppError.js';
+import Service from './Service.js';
+import RateLimitCache from '../repositories/cache/RateLimitCache.js';
 
 const MAX_VERIFY_ATTEMPTS = 5;
 
@@ -45,7 +45,11 @@ export default class RateLimitService extends Service {
     ]);
 
     if (phoneCooldown || deviceCooldown) {
-      const retryAfter = await this.#repository.getSendCooldownTTL(phone, method, deviceId);
+      const retryAfter = await this.#repository.getSendCooldownTTL(
+        phone,
+        method,
+        deviceId
+      );
       throw new AppError(
         `Too many requests, retry after ${retryAfter} seconds`,
         429,
@@ -79,7 +83,7 @@ export default class RateLimitService extends Service {
     const attempts = await this.#repository.getVerifyAttempts(phone, method);
     if (attempts >= MAX_VERIFY_ATTEMPTS) {
       throw new AppError(
-        "Too many verification attempts, please request a new OTP",
+        'Too many verification attempts, please request a new OTP',
         429,
         { remainingAttempts: 0, requestNewOtp: true }
       );

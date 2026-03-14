@@ -3,13 +3,13 @@
  * @module services/UserService
  */
 
-import pkg from "@prisma/client";
+import * as pkg from '@prisma/client';
 const { $Enums } = pkg;
-import AppError from "../errors/AppError.js";
-import Service from "./Service.js";
-import uploadToCloudinary from "../providers/cloudinaryProvider.js";
-import UserRepository from "../repositories/database/UserRepository.js";
-import GovernmentRepository from "../repositories/database/GovernmentRepository.js";
+import AppError from '../errors/AppError.js';
+import Service from './Service.js';
+import uploadToCloudinary from '../providers/cloudinaryProvider.js';
+import UserRepository from '../repositories/database/UserRepository.js';
+import GovernmentRepository from '../repositories/database/GovernmentRepository.js';
 
 /** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
 /** @typedef {import("../types/asyncHandler.js").UserState} UserState */
@@ -27,7 +27,6 @@ import GovernmentRepository from "../repositories/database/GovernmentRepository.
  * @extends Service
  */
 export default class UserService extends Service {
-
   /** @type {UserRepository} */
   #userRepository;
   /** @type {GovernmentRepository} */
@@ -54,7 +53,10 @@ export default class UserService extends Service {
    * @returns {Promise<ReturnUserData>} user
    */
   async get({ userId = undefined, phoneNumber = undefined }) {
-    const user = await this.#userRepository.findFirst({ id: userId, phoneNumber: phoneNumber });
+    const user = await this.#userRepository.findFirst({
+      id: userId,
+      phoneNumber: phoneNumber,
+    });
     return user;
   }
 
@@ -74,13 +76,13 @@ export default class UserService extends Service {
     filter = {},
     pagination = { page: 1, limit: 20 },
     orderBy = [],
-    paginate = false
+    paginate = false,
   }) {
     return await this.#userRepository.findMany({
       where: filter,
       pagination,
       orderBy,
-      paginate
+      paginate,
     });
   }
 
@@ -98,25 +100,35 @@ export default class UserService extends Service {
     const cities = await this.#governmentRepository.findCities({
       filter: {
         id: data.cityId,
-        governmentId: data.governmentId
-      }
+        governmentId: data.governmentId,
+      },
     });
-    if (!cities || cities.data.length === 0) throw new AppError("Government or city not found", 400);
+    if (!cities || cities.data.length === 0)
+      throw new AppError('Government or city not found', 400);
 
     let url = undefined;
     if (data.profileImageBuffer) {
-      url = (await uploadToCloudinary(data.profileImageBuffer, `${userId}/profile_image`, "profileMain")).url;
+      url = (
+        await uploadToCloudinary(
+          data.profileImageBuffer,
+          `${userId}/profile_image`,
+          'profileMain'
+        )
+      ).url;
     }
 
-    await this.#userRepository.updateMany({
-      role: data.role,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      governmentId: data.governmentId,
-      cityId: data.cityId,
-      status: data.status,
-      profileImageUrl: typeof url === "string" ? url : undefined
-    }, { id: userId });
+    await this.#userRepository.updateMany(
+      {
+        role: data.role,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        governmentId: data.governmentId,
+        cityId: data.cityId,
+        status: data.status,
+        profileImageUrl: typeof url === 'string' ? url : undefined,
+      },
+      { id: userId }
+    );
     return await this.#userRepository.findFirst({ id: userId });
   }
 
@@ -129,11 +141,13 @@ export default class UserService extends Service {
    * @returns {Promise<UserState>} Roles of user
    */
   async getStatus({ userId }) {
-
     const user = await this.#userRepository.findFirst({ id: userId });
     const worker = await this.#userRepository.findWorkerProfile({ userId });
     let verification = null;
-    if (worker) verification = await this.#userRepository.findWorkerProfileVerification({ workerProfileId: worker.id });
+    if (worker)
+      verification = await this.#userRepository.findWorkerProfileVerification({
+        workerProfileId: worker.id,
+      });
     const client = await this.#userRepository.findClientProfile({ userId });
 
     const userState = {
@@ -141,9 +155,17 @@ export default class UserService extends Service {
       userId: user.id,
       phoneNumber: user.phoneNumber,
       accountStatus: user.status,
-      worker: worker ? { id: worker.id, verification: { status: verification.status, reason: verification.reason } } : undefined,
+      worker: worker
+        ? {
+            id: worker.id,
+            verification: {
+              status: verification.status,
+              reason: verification.reason,
+            },
+          }
+        : undefined,
       client: client ? { id: client.id } : undefined,
-    }
+    };
 
     return userState;
   }

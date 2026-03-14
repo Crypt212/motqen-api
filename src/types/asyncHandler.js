@@ -3,7 +3,8 @@
  * @module types/asyncHandler
  */
 
-import { $Enums } from '@prisma/client';
+import * as pkg from '@prisma/client';
+const { $Enums } = pkg;
 
 /** @typedef {import('../repositories/database/Repository').IDType} IDType */
 // Map token types to the payload that should be attached to request

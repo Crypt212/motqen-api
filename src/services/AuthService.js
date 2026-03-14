@@ -1,25 +1,25 @@
-import { generateOTP, hashOTP } from "../utils/OTP.js";
+import { generateOTP, hashOTP } from '../utils/OTP.js';
 
 /**
  * @fileoverview User Service - Handle authentication
  * @module services/AuthService
  */
 
-import crypto from "crypto";
-import AppError from "../errors/AppError.js";
-import uploadToCloudinary from "../providers/cloudinaryProvider.js";
-import Service, { tryCatch } from "./Service.js";
-import OtpCache from "../repositories/cache/OTPCache.js";
-import SessionRepository from "../repositories/database/SessionRepository.js";
-import UserRepository from "../repositories/database/UserRepository.js";
-import environment from "../configs/environment.js";
-import SendOTPProvider from "../providers/SendOTPProvider.js";
-import pkg from "@prisma/client";
+import crypto from 'crypto';
+import AppError from '../errors/AppError.js';
+import uploadToCloudinary from '../providers/cloudinaryProvider.js';
+import Service, { tryCatch } from './Service.js';
+import OtpCache from '../repositories/cache/OTPCache.js';
+import SessionRepository from '../repositories/database/SessionRepository.js';
+import UserRepository from '../repositories/database/UserRepository.js';
+import environment from '../configs/environment.js';
+import SendOTPProvider from '../providers/SendOTPProvider.js';
+import * as pkg from '@prisma/client';
 const { $Enums } = pkg;
-import RateLimitCache from "../repositories/cache/RateLimitCache.js";
-import { generateToken } from "../utils/tokens.js";
-import { logger } from "../libs/winston.js";
-import GovernmentRepository from "../repositories/database/GovernmentRepository.js";
+import RateLimitCache from '../repositories/cache/RateLimitCache.js';
+import { generateToken } from '../utils/tokens.js';
+import { logger } from '../libs/winston.js';
+import GovernmentRepository from '../repositories/database/GovernmentRepository.js';
 
 const MAX_VERIFY_ATTEMPTS = 5;
 
@@ -38,7 +38,6 @@ const MAX_VERIFY_ATTEMPTS = 5;
  * @extends Service
  */
 export default class AuthService extends Service {
-
   /** @type {UserRepository} */
   #userRepository;
   /** @type {OtpCache} */
@@ -58,7 +57,13 @@ export default class AuthService extends Service {
    * @param {SessionRepository} params.sessionRepository
    * @param {RateLimitCache} params.rateLimitCache
    */
-  constructor({ userRepository, governmentRepository, otpCache, sessionRepository, rateLimitCache }) {
+  constructor({
+    userRepository,
+    governmentRepository,
+    otpCache,
+    sessionRepository,
+    rateLimitCache,
+  }) {
     super();
     this.#userRepository = userRepository;
     this.#governmentRepository = governmentRepository;
@@ -96,11 +101,14 @@ export default class AuthService extends Service {
       acceptsUrgentJobs,
       specializationsTree,
       workGovernmentIds,
-    }
+    },
   }) {
     return tryCatch(async () => {
-      const cities = await this.#governmentRepository.findCities({ filter: { id: cityId, governmentId } });
-      if (!cities || cities.data.length === 0) throw new AppError("Government or city not found", 400);
+      const cities = await this.#governmentRepository.findCities({
+        filter: { id: cityId, governmentId },
+      });
+      if (!cities || cities.data.length === 0)
+        throw new AppError('Government or city not found', 400);
 
       const { user, profile } = await this.#userRepository.createWorker({
         userData: {
@@ -111,37 +119,63 @@ export default class AuthService extends Service {
           lastName,
           governmentId,
           cityId,
-          status: "ACTIVE"
+          status: 'ACTIVE',
         },
         workerProfileData: {
           experienceYears,
           isInTeam: Boolean(isInTeam),
           acceptsUrgentJobs: Boolean(acceptsUrgentJobs),
         },
-        verificationData: undefined
+        verificationData: undefined,
       });
 
       /** @type {string} */
-      const nationalID = (await uploadToCloudinary(idImageBuffer, `${user.id}/verification_info`, "nationalID")).url;
+      const nationalID = (
+        await uploadToCloudinary(
+          idImageBuffer,
+          `${user.id}/verification_info`,
+          'nationalID'
+        )
+      ).url;
 
       /** @type {string} */
-      const selfiWithID = (await uploadToCloudinary(profileWithIdImageBuffer, `${user.id}/verification_info`, "selfiWithID")).url;
+      const selfiWithID = (
+        await uploadToCloudinary(
+          profileWithIdImageBuffer,
+          `${user.id}/verification_info`,
+          'selfiWithID'
+        )
+      ).url;
 
-      const verification = await this.#userRepository.upsertWorkerProfileVerification({
+      const verification =
+        await this.#userRepository.upsertWorkerProfileVerification({
+          workerProfileId: profile.id,
+          verificationData: {
+            idWithPersonalImageUrl: nationalID,
+            idDocumentUrl: selfiWithID,
+            status: 'PENDING',
+            reason: 'Waiting for verification',
+          },
+        });
+
+      await this.#userRepository.insertWorkerProfileGovernments({
         workerProfileId: profile.id,
-        verificationData: {
-          idWithPersonalImageUrl: nationalID,
-          idDocumentUrl: selfiWithID,
-          status: "PENDING",
-          reason: "Waiting for verification"
-        }
+        governmentIds: workGovernmentIds,
+      });
+      await this.#userRepository.insertWorkerProfileSpecializations({
+        workerProfileId: profile.id,
+        specializationsTree,
       });
 
-      await this.#userRepository.insertWorkerProfileGovernments({ workerProfileId: profile.id, governmentIds: workGovernmentIds });
-      await this.#userRepository.insertWorkerProfileSpecializations({ workerProfileId: profile.id, specializationsTree });
-
-      const { url } = (await uploadToCloudinary(profileImageBuffer, `${phoneNumber}/profile_image`, "profileMain"))
-      await this.#userRepository.updateMany({ profileImageUrl: url }, { id: user.id });
+      const { url } = await uploadToCloudinary(
+        profileImageBuffer,
+        `${phoneNumber}/profile_image`,
+        'profileMain'
+      );
+      await this.#userRepository.updateMany(
+        { profileImageUrl: url },
+        { id: user.id }
+      );
       user.profileImageUrl = url;
 
       /** @type {import("../repositories/database/UserRepository.js").User & { cityName: string }} */
@@ -172,15 +206,14 @@ export default class AuthService extends Service {
       role,
       profileImageBuffer,
     },
-    clientProfileData: {
-      address,
-      addressNotes
-    },
+    clientProfileData: { address, addressNotes },
   }) {
     return tryCatch(async () => {
-
-      const cities = await this.#governmentRepository.findCities({ filter: { id: cityId, governmentId } });
-      if (!cities || cities.data.length === 0) throw new AppError("Government or city not found", 400);
+      const cities = await this.#governmentRepository.findCities({
+        filter: { id: cityId, governmentId },
+      });
+      if (!cities || cities.data.length === 0)
+        throw new AppError('Government or city not found', 400);
 
       const { user, profile } = await this.#userRepository.createClient({
         userData: {
@@ -191,22 +224,29 @@ export default class AuthService extends Service {
           lastName,
           governmentId,
           cityId,
-          status: "ACTIVE"
+          status: 'ACTIVE',
         },
         clientProfileData: {
           address,
-          addressNotes
-        }
+          addressNotes,
+        },
       });
 
       /** @type {import("../repositories/database/UserRepository.js").User & { cityName: string }} */
       const modifiedUser = { ...user, cityName: cities.data[0].name };
 
       if (profileImageBuffer) {
-        const { url } = await uploadToCloudinary(profileImageBuffer, `${user.id}/profile_image`, "profileMain");
+        const { url } = await uploadToCloudinary(
+          profileImageBuffer,
+          `${user.id}/profile_image`,
+          'profileMain'
+        );
 
-        await this.#userRepository.updateMany({ profileImageUrl: url }, { id: user.id });
-        user.profileImageUrl = url
+        await this.#userRepository.updateMany(
+          { profileImageUrl: url },
+          { id: user.id }
+        );
+        user.profileImageUrl = url;
       }
 
       return { profile, user: modifiedUser };
@@ -223,19 +263,24 @@ export default class AuthService extends Service {
    * @description Generates a new OTP and sends it via the specified method
    */
   async requestOTP(phoneNumber, method) {
-
     const OTP = generateOTP();
     const hashedOTP = hashOTP(OTP);
 
-    await this.#otpCache.setOtp(phoneNumber, method, hashedOTP, environment.otps.expiresIn);
+    await this.#otpCache.setOtp(
+      phoneNumber,
+      method,
+      hashedOTP,
+      environment.otps.expiresIn
+    );
 
     await SendOTPProvider(method, OTP, phoneNumber);
 
     // Reset verify attempts so user gets 5 fresh attempts on the new code
-    if (environment.nodeEnv !== "development") await this.#rateLimitCache.resetVerifyAttempts(phoneNumber, method);
+    if (environment.nodeEnv !== 'development')
+      await this.#rateLimitCache.resetVerifyAttempts(phoneNumber, method);
 
     return true;
-  };
+  }
 
   /**
    * Validate an OTP
@@ -254,20 +299,24 @@ export default class AuthService extends Service {
     try {
       const hashedOTP = hashOTP(OTP);
 
-      if (!OTP)
-        throw new AppError("OTP is not provided", 422, { type: "OTP" });
+      if (!OTP) throw new AppError('OTP is not provided', 422, { type: 'OTP' });
 
       const otp = await this.#otpCache.getOtp(phoneNumber, method);
 
-
       if (!otp || hashedOTP !== otp)
-        throw new AppError("OTP is expired or doesn't match", 400, { type: "OTP" });
+        throw new AppError("OTP is expired or doesn't match", 400, {
+          type: 'OTP',
+        });
 
       await this.#otpCache.deleteOtp(phoneNumber, method);
 
       await this.#rateLimitCache.incrementVerify(phoneNumber, method);
 
-      await this.#rateLimitCache.resetAfterSuccess(phoneNumber, method, deviceId);
+      await this.#rateLimitCache.resetAfterSuccess(
+        phoneNumber,
+        method,
+        deviceId
+      );
       const user = await this.#userRepository.findFirst({ phoneNumber });
 
       /** @type {string} */
@@ -286,11 +335,13 @@ export default class AuthService extends Service {
         token = generateToken(payload);
       }
       return { tokenType, token };
-
     } catch (error) {
-      if (!(error instanceof AppError && error.errors.type === "OTP"))
+      if (!(error instanceof AppError && error.errors.type === 'OTP'))
         throw error;
-      const record = await this.#rateLimitCache.incrementVerify(phoneNumber, method);
+      const record = await this.#rateLimitCache.incrementVerify(
+        phoneNumber,
+        method
+      );
 
       const limitStatus = {
         attempts: record.attempts,
@@ -319,9 +370,9 @@ export default class AuthService extends Service {
    */
   async generateAccessToken({ refreshToken, deviceId, userId, role }) {
     const hashedToken = crypto
-      .createHash("sha256")
+      .createHash('sha256')
       .update(refreshToken)
-      .digest("hex");
+      .digest('hex');
 
     const session = await this.#sessionRepository.findFirst({
       userId,
@@ -330,20 +381,20 @@ export default class AuthService extends Service {
     });
 
     if (!session) {
-      throw new AppError("Invalid or Expired refresh token", 400);
+      throw new AppError('Invalid or Expired refresh token', 400);
     }
     if (session.isRevoked) {
-      throw new AppError("Refresh token has been revoked", 400,);
+      throw new AppError('Refresh token has been revoked', 400);
     }
     if (session.expiresAt.getTime() < Date.now()) {
       await this.#sessionRepository.deleteMany({ id: session.id });
-      throw new AppError("Refresh token has expired", 400);
+      throw new AppError('Refresh token has expired', 400);
     }
 
     const user = await this.#userRepository.findFirst({ id: userId });
 
     const accessToken = generateToken({
-      type: "access",
+      type: 'access',
       userId,
       role: role,
       phoneNumber: user.phoneNumber,
@@ -364,23 +415,22 @@ export default class AuthService extends Service {
    * @returns {Promise<{session: Object, user: import("../repositories/database/UserRepository.js").OptionalUser, unHashedRefreshToken: string}>} Created session and refresh token
    * @description Creates a new session, revokes existing ones for the same device
    */
-  async login({
-    phoneNumber,
-    deviceId: deviceFingerprint,
-    expiresAt,
-  }) {
+  async login({ phoneNumber, deviceId: deviceFingerprint, expiresAt }) {
     await this.#sessionRepository.deleteMany({ deviceId: deviceFingerprint });
     const user = await this.#userRepository.findFirst({ phoneNumber });
     const unHashedRefreshToken = generateToken({
-      type: "refresh",
+      type: 'refresh',
       userId: user.id,
       phoneNumber: user.phoneNumber,
       role: user.role,
     });
 
-    logger.info("Generated Refresh Token:", expiresAt);
+    logger.info('Generated Refresh Token:', expiresAt);
 
-    const hashedToken = crypto.createHash("sha256").update(unHashedRefreshToken).digest("hex");
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(unHashedRefreshToken)
+      .digest('hex');
 
     const session = await this.#sessionRepository.create({
       isRevoked: false,
@@ -409,7 +459,7 @@ export default class AuthService extends Service {
         deviceId: deviceFingerprint,
       });
     } catch (err) {
-      logger.error("Failed to revoke session:", err);
+      logger.error('Failed to revoke session:', err);
       throw err;
     }
   }
