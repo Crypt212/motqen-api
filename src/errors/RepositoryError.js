@@ -1,3 +1,5 @@
+import AppError from "./AppError.js";
+
 /**
  * Error types for repository operations
  * @readonly
@@ -12,25 +14,27 @@ export const RepositoryErrorType = {
   NOT_FOUND: 3,
   /** Resource already exists */
   ALREADY_EXISTS: 4,
+  /** Validation errors */
+  INVALID: 5,
 };
 
 /**
  * Custom error class for repository layer errors
  * @class
- * @extends Error
+ * @extends AppError
  */
-export default class RepositoryError extends Error {
+export default class RepositoryError extends AppError {
   /**
    * Create a new RepositoryError
    * @constructor
    * @param {string} message - Error message
-   * @param {RepositoryErrorType} [errorType=RepositoryErrorType.DATABASE_ERROR] - Type of error
+   * @param {RepositoryErrorType} [code=RepositoryErrorType.DATABASE_ERROR] - Type of error
    * @param {Object} [info] - Additional error information
    */
-  constructor(message, errorType = RepositoryErrorType.DATABASE_ERROR, info = null) {
+  constructor(message, code = RepositoryErrorType.DATABASE_ERROR, info = null) {
     super(message);
 
-    this.errorType = errorType;
+    this.code = code;
     this.info = info;
     this.isOperational = true;
 
@@ -42,7 +46,7 @@ export default class RepositoryError extends Error {
    * @returns {number} HTTP status code
    */
   getStatusCode() {
-    switch (this.errorType) {
+    switch (this.code) {
       case RepositoryErrorType.NOT_FOUND:
         return 404;
       case RepositoryErrorType.ALREADY_EXISTS:

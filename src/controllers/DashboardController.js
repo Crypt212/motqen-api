@@ -9,6 +9,13 @@ import AppError from "../errors/AppError.js";
 import SuccessResponse from "../responses/successResponse.js";
 import { clientService, userService, workerService } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
+import { parseQueryParams } from '../validators/common.js';
+
+// Import query configs for validation
+import {
+  WORKER_GOVERNMENTS_QUERY_CONFIG,
+  WORKER_SPECIALIZATIONS_QUERY_CONFIG
+} from "../validators/dashboard.js";
 
 /** @template T @typedef {import("../types/asyncHandler.js").RequestHandler} RequestHandler */
 
@@ -30,7 +37,7 @@ export const updateUser = asyncHandler(async (req, res) => {
 
   // If phoneNumber is provided, update user's phone (need additional verification)
   // For now, update other fields only
-  await userService.update({ userId, data: { firstName, middleName, lastName, governmentId, cityId, bio, profileImage: image } });
+  await userService.update({ userId, data: { firstName, middleName, lastName, governmentId, cityId, bio, profileImageBuffer: image.buffer } });
 
   new SuccessResponse("updated user successfully", {}, 200).send(res);
 });
@@ -100,9 +107,9 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
     acceptsUrgentJobs,
     specializationsTree,
     governmentIds: workGovernmentIds,
-    idImage: images["id_image"],
-    profileWithIdImage: images["personal_with_id_image"],
-    profileImage: images["personal_image"],
+    idImageBuffer: images["id_image"].buffer,
+    profileWithIdImageBuffer: images["personal_with_id_image"].buffer,
+    profileImageBuffer: images["personal_image"].buffer,
   });
 
   new SuccessResponse("created worker profile successfully", { workerProfile }, 200).send(res);
@@ -148,11 +155,25 @@ export const deleteWorkerProfile = asyncHandler(async (req, res) => {
 /**
  */
 export const getWorkerGovernments = asyncHandler(async (req, res) => {
-  const { } = matchedData(req, { includeOptionals: true });
+  const queryData = matchedData(req, { includeOptionals: true });
 
-  const governments = await workerService.getWorkGovernments({ workerProfileId: req.userState.worker.id });
+  // Parse query parameters (pagination, filtering, ordering)
+  const { pagination, filter, orderBy, paginate } = parseQueryParams(queryData, WORKER_GOVERNMENTS_QUERY_CONFIG);
 
-  new SuccessResponse("retrieved worker working governments successfully", { governments }, 200).send(res);
+  const result = await workerService.getWorkGovernments({
+    workerProfileId: req.userState.worker.id,
+    pagination,
+    filter,
+    orderBy,
+    paginate
+  });
+
+  // Check if paginated response
+  if (paginate && result.data) {
+    new SuccessResponse("retrieved worker working governments successfully", result, 200).send(res);
+  } else {
+    new SuccessResponse("retrieved worker working governments successfully", { governments: result }, 200).send(res);
+  }
 });
 
 /**
@@ -180,11 +201,26 @@ export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
 /**
  */
 export const getWorkerSpecializations = asyncHandler(async (req, res) => {
-  const { specializationIds } = matchedData(req, { includeOptionals: true });
+  const { specializationIds, ...queryData } = matchedData(req, { includeOptionals: true });
 
-  const specializationsTree = await workerService.getSpecializations({ workerProfileId: req.userState.worker.id, mainSpecializationIds: specializationIds });
+  // Parse query parameters (pagination, filtering, ordering)
+  const { pagination, filter, orderBy, paginate } = parseQueryParams(queryData, WORKER_SPECIALIZATIONS_QUERY_CONFIG);
 
-  new SuccessResponse("retrieved worker specialization tree successfully", { specializationsTree }, 200).send(res);
+  const result = await workerService.getSpecializations({
+    workerProfileId: req.userState.worker.id,
+    mainSpecializationIds: specializationIds,
+    pagination,
+    filter,
+    orderBy,
+    paginate
+  });
+
+  // Check if paginated response
+  if (paginate && result.data) {
+    new SuccessResponse("retrieved worker specialization tree successfully", result, 200).send(res);
+  } else {
+    new SuccessResponse("retrieved worker specialization tree successfully", { specializationsTree: result }, 200).send(res);
+  }
 });
 
 /**

@@ -23,8 +23,8 @@ export const checkSendOtpLimit = asyncHandler(async (req, _, next) => {
     const method   = req.body.method;
     const deviceId = req.deviceId;
 
-    if (!phone)    return next(new AppError("Phone number is required", 400));
-    if (!deviceId) return next(new AppError("X-Device-Fingerprint header is required", 400));
+    if (!phone)    return next(new AppError("Phone number is required", 422));
+    if (!deviceId) return next(new AppError("X-Device-Fingerprint header is required", 422));
 
     if (environment.nodeEnv !== "development") await rateLimitService.checkSendOtp(phone, method, deviceId);
     next();
@@ -42,7 +42,7 @@ export const checkVerifyLimit = asyncHandler(async (req, _, next) => {
     const phone  = req.body.phoneNumber;
     const method = req.body.method;
 
-    if (!phone) return next(new AppError("Phone number is required", 400));
+    if (!phone) return next(new AppError("Phone number is required", 422));
 
     if (environment.nodeEnv !== "development") await rateLimitService.checkVerify(phone, method);
     next();

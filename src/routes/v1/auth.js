@@ -13,14 +13,14 @@ import {
   logout,
   generateAccessToken,
   reviewStatus,
-} from '../controllers/AuthController.js';
-import { validateRequest } from '../middlewares/validateRequest.js';
+} from '../../controllers/AuthController.js';
+import { validateRequest } from '../../middlewares/validateRequest.js';
 import {
   checkSendOtpLimit,
   checkVerifyLimit,
-} from '../middlewares/rateLimitMiddleware.js';
+} from '../../middlewares/rateLimitMiddleware.js';
 
-import upload from '../configs/multer.js';
+import upload from '../../configs/multer.js';
 
 import {
   validateRequestOTP,
@@ -31,8 +31,8 @@ import {
   validateGenerateAccessToken,
   validateLogout,
   validateReviewStatus,
-} from '../validators/auth.js';
-import { authenticateAccess, authenticateLogin, authenticateRefresh, authenticateRegister, isActive } from '../middlewares/authMiddleware.js';
+} from '../../validators/auth.js';
+import { authenticateAccess, authenticateLogin, authenticateRefresh, authenticateRegister, isActive } from '../../middlewares/authMiddleware.js';
 
 const authRouter = Router();
 
@@ -328,9 +328,9 @@ authRouter.post(
     { name: "id_image", maxCount: 1 },
     { name: "personal_with_id_image", maxCount: 1 }
   ]),
+  authenticateRegister,
   ...validateRegisterWorker,
   validateRequest,
-  authenticateRegister,
   registerWorker
 );
 /**
@@ -453,9 +453,9 @@ authRouter.post(
 authRouter.get(
   '/access',
   authenticateRefresh,
+  isActive,
   ...validateGenerateAccessToken,
   validateRequest,
-  isActive,
   generateAccessToken
 );
 /**

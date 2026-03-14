@@ -56,6 +56,7 @@ const api = {
 const logging = {
   level: process.env.LOGGING_LEVEL || "info",
   enableFileLogs: process.env.ENABLE_FILE_LOGS === "true",
+  logToConsole: process.env.LOG_TO_CONSOLE === "true",
 };
 
 const cloudinary = {
