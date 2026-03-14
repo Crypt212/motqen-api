@@ -4,7 +4,8 @@
  */
 
 import { handlePrismaError, Repository } from "./Repository.js";
-import { PrismaClient } from "@prisma/client";
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 
 
 /** @typedef {import("./Repository.js").IDType} IDType */

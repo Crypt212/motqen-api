@@ -5,7 +5,8 @@
 
 import { logger } from '../../libs/winston.js';
 import { handlePrismaError, Repository } from './Repository.js';
-import { $Enums, PrismaClient } from '@prisma/client';
+import pkg from '@prisma/client';
+const { $Enums, PrismaClient } = pkg;
 
 /** @typedef {import("./Repository.js").IDType} IDType */
 /** @typedef {import('./Repository.js').PaginationOptions} PaginationOptions */

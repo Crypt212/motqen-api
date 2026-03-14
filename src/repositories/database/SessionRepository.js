@@ -1,6 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import pkg from "@prisma/client";
 import { Repository } from "./Repository.js";
-
+const { PrismaClient } = pkg;
 /**
  * @fileoverview Session Repository - Handle database operations for sessions
  * @module repositories/SessionRepository

@@ -3,7 +3,8 @@
  * @module repositories/database/MessageRepository
  */
 
-import { PrismaClient } from '@prisma/client';
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
 import { Repository } from './Repository.js';
 
 /** @typedef {import('./Repository.js').IDType} IDType */
