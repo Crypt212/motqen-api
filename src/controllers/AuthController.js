@@ -9,8 +9,6 @@ import SuccessResponse from '../responses/successResponse.js';
 import {
   authService,
   rateLimitService,
-  userService,
-  workerService,
 } from '../state.js';
 
 import { asyncHandler } from '../types/asyncHandler.js';
@@ -49,24 +47,12 @@ export const verifyOTP = asyncHandler(async (req, res) => {
   const { phoneNumber, otp, method } = matchedData(req, { includeOptionals: true });
   const deviceId = req.deviceId;
 
-  const { tokenType, token } = await authService.verifyOTP(
+  const { tokenType, token, workerShit } = await authService.verifyOTP(
     phoneNumber,
     method,
     otp,
     deviceId
   );
-
-  let workerShit = {};
-  if (tokenType === 'login') {
-    const user = await userService.get({ phoneNumber, userId: undefined });
-    const workProfile = await workerService.get({ userId: user.id });
-    workerShit.isWorker = workProfile ? true : false;
-    if (workerShit.isWorker)
-      workerShit.isWorkerSignedUp = (await workerService.getVerification({ workerProfileId: workProfile.id })).status === "APPROVED";
-  } else {
-    workerShit.isWorker = false;
-    workerShit.isWorkerSignedUp = false;
-  }
 
   new SuccessResponse(
     'OTP verified successfully',

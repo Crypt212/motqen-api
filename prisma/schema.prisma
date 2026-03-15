@@ -71,7 +71,6 @@ model WorkerProfile {
   experienceYears   Int
   isInTeam          Boolean
   acceptsUrgentJobs Boolean
-  isApproved        Boolean  @default(false)
   updatedAt         DateTime @updatedAt
   createdAt         DateTime @default(now())
   rating            Float   @default(0) // 0-5 stars
