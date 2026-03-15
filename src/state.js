@@ -2,6 +2,7 @@ import UserService from './services/UserService.js';
 import OTPCache from './repositories/cache/OTPCache.js';
 import SessionRepository from './repositories/database/SessionRepository.js';
 import UserRepository from './repositories/database/UserRepository.js';
+import WorkerRepository from './repositories/database/WorkerRepository.js';
 import RateLimitCache from './repositories/cache/RateLimitCache.js';
 import RateLimitService from './services/RateLimitService.js';
 import AuthService from './services/AuthService.js';
@@ -22,6 +23,7 @@ export const otpCache = new OTPCache(redisClient);
 
 export const sessionRepository = new SessionRepository(prisma);
 export const userRepository = new UserRepository(prisma);
+export const workerRepository = new WorkerRepository(prisma);
 export const specializationRepository = new SpecializationRepository(prisma);
 export const governmentRepository = new GovernmentRepository(prisma);
 export const conversationRepository = new ConversationRepository(prisma);

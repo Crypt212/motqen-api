@@ -12,14 +12,14 @@
 
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
-import { validateRequest } from '../middlewares/validateRequest.js';
+import { validateRequest } from '../../middlewares/validateRequest.js';
 import {
   getOrCreateConversation,
   getConversations,
   getMessages,
   getUnreadSummary,
   getMissedMessages,
-} from '../controllers/ChatController.js';
+} from '../../controllers/ChatController.js';
 
 const chatRouter = Router();
 
