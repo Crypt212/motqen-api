@@ -726,47 +726,49 @@ const options = {
         },
         ErrorResponse: {
           type: 'object',
+          required: ['error_code', 'message'],
           properties: {
-            status: {
+            error_code: {
               type: 'string',
-              enum: ['fail', 'error'],
-              example: 'fail',
-              description: '"fail" for 4xx errors, "error" for 5xx errors',
+              example: 'VALIDATION_ERROR',
+              description: 'Machine-readable error code in UPPER_SNAKE_CASE',
             },
             message: {
               type: 'string',
               example: 'Error description',
             },
+            details: {
+              type: 'object',
+              nullable: true,
+              description: 'Optional error details. Present for validation and selected 4xx responses.',
+            },
           },
         },
         ValidationErrorResponse: {
-          type: 'object',
-          properties: {
-            success: {
-              type: 'boolean',
-              example: false,
-            },
-            message: {
-              type: 'string',
-              example: 'Validation failed',
-            },
-            errors: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  type: {
-                    type: 'string',
-                    example: 'field',
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'Phone number is required',
+          allOf: [
+            { $ref: '#/components/schemas/ErrorResponse' },
+            {
+              type: 'object',
+              properties: {
+                details: {
+                  type: 'object',
+                  properties: {
+                    errors: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          type: { type: 'string', example: 'field' },
+                          field: { type: 'string', example: 'phoneNumber' },
+                          message: { type: 'string', example: 'Phone number is required' },
+                        },
+                      },
+                    },
                   },
                 },
               },
             },
-          },
+          ],
         },
       },
       responses: {
@@ -778,7 +780,7 @@ const options = {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                status: 'fail',
+                error_code: 'BAD_REQUEST',
                 message: 'Invalid or expired OTP',
               },
             },
@@ -792,12 +794,14 @@ const options = {
                 $ref: '#/components/schemas/ValidationErrorResponse',
               },
               example: {
-                success: false,
+                error_code: 'VALIDATION_ERROR',
                 message: 'Validation failed',
-                errors: [
-                  { type: 'field', message: 'Phone number is required' },
-                  { type: 'field', message: 'Method must be either SMS or WhatsApp' },
-                ],
+                details: {
+                  errors: [
+                    { type: 'field', field: 'phoneNumber', message: 'Phone number is required' },
+                    { type: 'field', field: 'method', message: 'Method must be either SMS or WhatsApp' },
+                  ],
+                },
               },
             },
           },
@@ -810,7 +814,7 @@ const options = {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                status: 'fail',
+                error_code: 'UNAUTHORIZED',
                 message: 'Unauthorized',
               },
             },
@@ -824,7 +828,7 @@ const options = {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                status: 'fail',
+                error_code: 'FORBIDDEN',
                 message: 'Unauthorized',
               },
             },
@@ -838,7 +842,7 @@ const options = {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                status: 'fail',
+                error_code: 'NOT_FOUND',
                 message: 'Resource not found',
               },
             },
@@ -852,8 +856,22 @@ const options = {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                status: 'fail',
+                error_code: 'CONFLICT',
                 message: 'User already exists',
+              },
+            },
+          },
+        },
+        Gone: {
+          description: 'Gone - Resource exists but is no longer available (expired)',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/ErrorResponse',
+              },
+              example: {
+                error_code: 'RESOURCE_EXPIRED',
+                message: 'Draft order has expired',
               },
             },
           },
@@ -875,7 +893,7 @@ const options = {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                status: 'fail',
+                error_code: 'RATE_LIMITED',
                 message: 'Too many requests, please try again later',
               },
             },
@@ -889,8 +907,8 @@ const options = {
                 $ref: '#/components/schemas/ErrorResponse',
               },
               example: {
-                status: 'error',
-                message: 'Something went wrong',
+                error_code: 'INTERNAL_SERVER_ERROR',
+                message: 'An unexpected error occurred',
               },
             },
           },
@@ -913,6 +931,10 @@ const options = {
       {
         name: 'Specializations',
         description: 'Specialization & sub-specialization lookup and management',
+      },
+      {
+        name: 'Orders',
+        description: 'Draft order operations such as promo application',
       },
     ],
   },

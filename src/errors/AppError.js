@@ -3,7 +3,7 @@
  * @module errors/AppError
  */
 
-import { logger } from "../libs/winston.js";
+import { resolveErrorCode } from './errorCodes.js';
 
 /**
  * Custom error class for operational errors
@@ -16,14 +16,15 @@ export default class AppError extends Error {
    * @constructor
    * @param {string} message - Error message
    * @param {number} [statusCode=500] - HTTP status code
-   * @param {Object|null} [errors=null] - Additional error data
+   * @param {Object|null} [errors=null] - Additional error details
+   * @param {string|null} [errorCode=null] - Machine-readable error code
    */
-  constructor(message, statusCode = 500, errors = null) {
+  constructor(message, statusCode = 500, errors = null, errorCode = null) {
     super(message);
 
     this.statusCode = statusCode;
-    this.status = String(statusCode).startsWith('4') ? 'fail' : 'error';
     this.errors = errors;
+    this.errorCode = resolveErrorCode(statusCode, errorCode);
     this.isOperational = true;
 
     Error.captureStackTrace(this, this.constructor);

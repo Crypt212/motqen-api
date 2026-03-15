@@ -4,6 +4,7 @@
  */
 
 import { logger } from "../libs/winston.js";
+import { resolveErrorCode } from '../errors/errorCodes.js';
 
 /**
  * Error handler middleware
@@ -11,37 +12,33 @@ import { logger } from "../libs/winston.js";
  */
 export default (err, req, res , next) => {
   err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
+  const statusCode = err.statusCode;
+  const errorCode = resolveErrorCode(statusCode, err.errorCode);
+  const isServerError = statusCode >= 500;
 
   const retryAfter = err.errors?.retryAfter;
-  if (err.statusCode === 429 && typeof retryAfter === 'number') {
+  if (statusCode === 429 && typeof retryAfter === 'number') {
     res.setHeader('Retry-After', String(Math.max(1, Math.ceil(retryAfter))));
   }
 
+  const responsePayload = {
+    error_code: errorCode,
+    message: isServerError ? 'An unexpected error occurred' : (err.message || 'Request failed'),
+  };
+
+  if (!isServerError && err.errors) {
+    responsePayload.details = err.errors;
+  }
+
   if (process.env.NODE_ENV === 'development') {
-    logger.error(err);
-    return res.status(err.statusCode).json({
-      status: err.status,
-      message: err.message,
+    responsePayload.details = {
+      ...(responsePayload.details || {}),
       stack: err.stack,
-      error: err,
-    });
+      cause: err.cause,
+    };
   }
 
-  // production
-  if (err.isOperational) {
-    logger.error(err);
-    return res.status(err.statusCode).json({
-      status: err.status,
-      message: err.message,
-      error: err.errors || {},
-    });
-  }
+  logger.error(err);
 
-  // unknown error
-  return res.status(500).json({
-    status: 'error',
-    message: 'Something went wrong',
-
-  });
+  return res.status(statusCode).json(responsePayload);
 };

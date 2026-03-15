@@ -12,6 +12,7 @@ import specializationRouter from "./specializations.js";
 import { isActive, authenticateAccess } from "../middlewares/authMiddleware.js";
 import { sensitiveIpRateLimiter } from "../middlewares/rateLimitMiddleware.js";
 import workerRouter from "./worker.js";
+import ordersRouter from './orders.js';
 
 const mainRouter = Router();
 
@@ -24,5 +25,6 @@ mainRouter.use("/client", clientRouter);
 mainRouter.use("/worker", workerRouter);
 mainRouter.use("/governments", governmentRouter);
 mainRouter.use("/specializations", specializationRouter);
+mainRouter.use('/orders', ordersRouter);
 
 export default mainRouter;

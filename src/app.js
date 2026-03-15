@@ -10,6 +10,7 @@ import prismaClient from "./libs/database.js";
 import swaggerSpec from "./configs/swagger.js";
 import swaggerUi from "swagger-ui-express";
 import { verifyDeviceId } from "./middlewares/authMiddleware.js";
+import AppError from './errors/AppError.js';
 
 const initApp = async () => {
   const app = express();
@@ -59,11 +60,11 @@ const initApp = async () => {
     res.send(swaggerSpec);
   });
 
-  app.use(errorHandler);
-
-  app.use((_, res) => {
-    res.status(404).json({ error: "Route not found" });
+  app.use((req, _, next) => {
+    next(new AppError('Route not found', 404, null, 'ROUTE_NOT_FOUND'));
   });
+
+  app.use(errorHandler);
 
 
 

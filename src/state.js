@@ -11,6 +11,9 @@ import SpecializationRepository from './repositories/database/SpecializationRepo
 import ClientService from './services/ClientService.js';
 import WorkerService from './services/WorkerService.js';
 import prisma from './libs/database.js';
+import OrderRepository from './repositories/database/OrderRepository.js';
+import PromoRepository from './repositories/database/PromoRepository.js';
+import OrderService from './services/OrderService.js';
 // state.js  (wire it up like your other repos)
 
 export const rateLimitCache = new RateLimitCache();
@@ -20,9 +23,12 @@ export const userRepository = new UserRepository(prisma);
 export const workerRepository = new WorkerRepository(prisma);
 export const specializationRepository = new SpecializationRepository(prisma);
 export const governmentRepository = new GovernmentRepository(prisma);
+export const orderRepository = new OrderRepository(prisma);
+export const promoRepository = new PromoRepository(prisma);
 
 export const rateLimitService = new RateLimitService({ rateLimitCache });
 export const userService = new UserService({ userRepository, governmentRepository });
 export const clientService = new ClientService({ userRepository });
 export const workerService = new WorkerService({ userRepository });
 export const authService = new AuthService({ userRepository, governmentRepository, otpCache, sessionRepository, rateLimitCache });
+export const orderService = new OrderService({ orderRepository, promoRepository });

@@ -4,6 +4,7 @@
  */
 
 import { validationResult } from "express-validator";
+import AppError from '../errors/AppError.js';
 
 /**
  * Middleware to validate request using express-validator
@@ -18,15 +19,11 @@ export const validateRequest = (req, res, next) => {
   if (!errors.isEmpty()) {
     const formattedErrors = errors.array().map((err) => ({
       type: err.type,
+      field: 'path' in err ? err.path : undefined,
       message: err.msg,
     }));
 
-    res.status(400).json({
-      success: false,
-      message: "Validation failed",
-      errors: formattedErrors,
-    });
-    return;
+    return next(new AppError('Validation failed', 422, { errors: formattedErrors }, 'VALIDATION_ERROR'));
   }
   next();
 };

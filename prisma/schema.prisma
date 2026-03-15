@@ -50,6 +50,7 @@ model ClientProfile {
   userId       String  @unique
   address      String
   addressNotes String?
+  draftOrders  DraftOrder[]
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -76,8 +77,55 @@ model WorkerProfile {
   governments           GovernmentForWorkers[]
   badges                WorkerBadge[]
   reviews               WorkerReview[]
+  assignedDraftOrders   DraftOrder[]
+  scopedPromos          PromoCode[]
 
   @@map("worker_profiles")
+}
+
+model DraftOrder {
+  id              String           @id @default(uuid())
+  clientProfileId String
+  workerProfileId String?
+  status          DraftOrderStatus @default(DRAFT)
+  subtotal        Float            @default(0)
+  finalFee        Float            @default(0)
+  discountAmount  Float            @default(0)
+  promoId         String?
+  promoAppliedAt  DateTime?
+  expiresAt       DateTime
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  clientProfile ClientProfile  @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  workerProfile WorkerProfile? @relation(fields: [workerProfileId], references: [id], onDelete: SetNull)
+  promo        PromoCode?      @relation(fields: [promoId], references: [id], onDelete: SetNull)
+
+  @@index([clientProfileId])
+  @@index([workerProfileId])
+  @@index([promoId])
+  @@map("draft_orders")
+}
+
+model PromoCode {
+  id              String       @id @default(uuid())
+  code            String       @unique
+  isActive        Boolean      @default(true)
+  expiresAt       DateTime?
+  usageLimit      Int?
+  usedCount       Int          @default(0)
+  discountType    DiscountType
+  discountValue   Float
+  workerProfileId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  workerProfile WorkerProfile? @relation(fields: [workerProfileId], references: [id], onDelete: SetNull)
+  draftOrders   DraftOrder[]
+
+  @@index([code])
+  @@index([workerProfileId])
+  @@map("promo_codes")
 }
 
 model WorkerVerification {
@@ -252,4 +300,16 @@ enum WorkerProfileStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum DraftOrderStatus {
+  DRAFT
+  SUBMITTED
+  CANCELLED
+  EXPIRED
 }
