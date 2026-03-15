@@ -39,7 +39,7 @@ export async function createMains() {
 
   await authService.registerClient({
     userData: {
-      phoneNumber: "02000000000",
+      phoneNumber: "02222222222",
       firstName: "ahmed",
       middleName: "saeed",
       lastName: "farouk",
@@ -56,7 +56,7 @@ export async function createMains() {
 
   await authService.registerWorker({
     userData: {
-      phoneNumber: "01000000000",
+      phoneNumber: "01111111111",
       firstName: "ahmed",
       middleName: "mohamed",
       lastName: "mohamed",
