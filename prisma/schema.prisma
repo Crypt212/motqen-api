@@ -41,6 +41,7 @@ model User {
   sessions      Session[]
   workerProfile WorkerProfile?
   clientProfile ClientProfile?
+  workerReviews WorkerReview[]
 
   @@map("users")
 }
@@ -217,13 +218,16 @@ model WorkerBadge {
 model WorkerReview {
   id              String @id @default(uuid())
   workerProfileId String
+  userId          String?
   rating          Float  // 1-5 stars
   comment         String?
   createdAt       DateTime @default(now())
 
   workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@map("worker_reviews")
+  @@index([userId])
+  @@map("WorkerReview")
 }
 
 enum AccountStatus {

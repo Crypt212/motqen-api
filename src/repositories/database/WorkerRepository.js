@@ -5,6 +5,7 @@
 
 import { Repository } from './Repository.js';
 import { PrismaClient } from '@prisma/client';
+import { getNearestGovernmentDistanceKm } from '../../utils/governmentDistance.js';
 
 /** @typedef {import("./Repository.js").IDType} IDType */
 
@@ -19,32 +20,39 @@ export default class WorkerRepository extends Repository {
     super(prisma, 'workerProfile');
   }
 
-/**
- * Search for approved workers with pagination, filtering, and sorting
- * @async
- * @param {Object} params
- * @param {IDType} [params.categoryId] - Filter by category/sub-specialization
- * @param {string} [params.area] - Filter by area/government (ID or name)
- * @param {boolean} [params.availability] - Filter by availability status
- * @param {number} [params.page=1] - Page number
- * @param {number} [params.limit=10] - Items per page (max 50)
- * @returns {Promise<{data: Array, meta: {total: number, page: number, limit: number, totalPages: number}}>}
- */
+  /**
+   * Search for approved workers with explore-oriented filters.
+   * @async
+   * @param {Object} params
+   * @param {IDType} [params.specializationId]
+   * @param {IDType} [params.subSpecializationId]
+   * @param {string} [params.area]
+   * @param {boolean} [params.availability]
+   * @param {boolean} [params.highestRated]
+   * @param {boolean} [params.nearest]
+   * @param {string} [params.customerGovernmentName]
+  * @param {IDType} [params.currentUserId]
+   * @param {number} [params.page=1]
+   * @param {number} [params.limit=10]
+   * @returns {Promise<{data: Array, meta: {total: number, page: number, limit: number, totalPages: number}}>}
+   */
   async searchWorkers({
-    categoryId = undefined,
+    specializationId = undefined,
+    subSpecializationId = undefined,
     area = undefined,
     availability = undefined,
-    page = 1,
-    limit = 10,
+    highestRated = false,
+    nearest = false,
+    customerGovernmentName = undefined,
+    currentUserId = undefined,
+    page = undefined,
+    limit = undefined,
   }) {
-    // Validate and normalize limit and page
     const parsedLimit = typeof limit === 'string' ? parseInt(limit, 10) : limit;
     const parsedPage = typeof page === 'string' ? parseInt(page, 10) : page;
-    const normalizedLimit = Math.min(Math.max(parsedLimit || 10, 1), 50);
-    const normalizedPage = Math.max(parsedPage || 1, 1);
-    const skip = (normalizedPage - 1) * normalizedLimit;
+    const normalizedLimit = Math.min(Math.max(parsedLimit, 1), 50);
+    const normalizedPage = Math.max(parsedPage, 1);
 
-    // Build where clause
     /** @type {any} */
     const whereClause = {
       isApproved: true,
@@ -53,15 +61,15 @@ export default class WorkerRepository extends Repository {
       },
     };
 
-    // Add optional filters
     if (availability !== undefined && availability !== null) {
       whereClause.isAvailableNow = availability === true;
     }
 
-    if (categoryId) {
+    if (specializationId || subSpecializationId) {
       whereClause.chosenSpecializations = {
         some: {
-          subSpecializationId: categoryId,
+          ...(specializationId ? { specializationId } : {}),
+          ...(subSpecializationId ? { subSpecializationId } : {}),
         },
       };
     }
@@ -84,12 +92,6 @@ export default class WorkerRepository extends Repository {
       };
     }
 
-    // Get total count
-    const total = await this.prismaClient.workerProfile.count({
-      where: whereClause,
-    });
-
-    // Fetch workers with relations
     /** @type {any} */
     const workers = await this.prismaClient.workerProfile.findMany({
       where: whereClause,
@@ -109,6 +111,12 @@ export default class WorkerRepository extends Repository {
             profileImageUrl: true,
           },
         },
+        reviews: {
+          select: {
+            id: true,
+            userId: true,
+          },
+        },
         governments: {
           select: {
             government: {
@@ -120,6 +128,13 @@ export default class WorkerRepository extends Repository {
         },
         chosenSpecializations: {
           select: {
+            specializationId: true,
+            subSpecializationId: true,
+            specialization: {
+              select: {
+                name: true,
+              },
+            },
             subSpecialization: {
               select: {
                 name: true,
@@ -128,31 +143,88 @@ export default class WorkerRepository extends Repository {
           },
         },
       },
-      orderBy: [
-        { rating: 'desc' },
-        { completedServices: 'desc' },
-        { experienceYears: 'desc' },
-        { id: 'desc' },
-      ],
-      skip,
-      take: normalizedLimit,
     });
 
-    // Transform data to response format
-    const data = workers.map((worker) => ({
-      workerId: worker.id,
-      name: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
-      profileImage: worker.user.profileImageUrl,
-      service_title: worker.chosenSpecializations.length > 0
-        ? worker.chosenSpecializations[0].subSpecialization.name
-        : null,
-      rating: worker.rating,
-      area: worker.governments.length > 0 ? worker.governments[0].government.name : null,
-      isAvailableNow: worker.isAvailableNow,
-      completedServices: worker.completedServices,
-    }));
+    const mappedWorkers = workers.map((worker) => {
+      const matchingSpecialization = worker.chosenSpecializations.find((item) => {
+        if (subSpecializationId) {
+          return item.subSpecializationId === subSpecializationId;
+        }
 
+        if (specializationId) {
+          return item.specializationId === specializationId;
+        }
+
+        return true;
+      }) || worker.chosenSpecializations[0];
+
+      const workGovernments = worker.governments.map((government) => government.government.name);
+      const distanceKm = customerGovernmentName
+        ? getNearestGovernmentDistanceKm(customerGovernmentName, workGovernments)
+        : null;
+      const ratingCount = worker.reviews.length;
+      const hasCurrentUserRated = currentUserId
+        ? worker.reviews.some((review) => review.userId === currentUserId)
+        : false;
+
+      return {
+        workerId: worker.id,
+        name: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
+        image: worker.user.profileImageUrl,
+        profileImage: worker.user.profileImageUrl,
+        specialization: matchingSpecialization?.specialization?.name || null,
+        service_title: matchingSpecialization?.subSpecialization?.name || null,
+        rating: worker.rating,
+        ratingCount,
+        hasRatings: ratingCount > 0 || worker.rating > 0,
+        hasCurrentUserRated,
+        distance: distanceKm,
+        distanceKm,
+        area: workGovernments[0] || null,
+        workGovernments,
+        isAvailableNow: worker.isAvailableNow,
+        completedServices: worker.completedServices,
+        acceptsUrgentJobs: worker.acceptsUrgentJobs,
+        experienceYears: worker.experienceYears,
+      };
+    });
+
+    const sortedWorkers = mappedWorkers.sort((leftWorker, rightWorker) => {
+      if (nearest) {
+        const leftDistance = leftWorker.distanceKm ?? Number.MAX_SAFE_INTEGER;
+        const rightDistance = rightWorker.distanceKm ?? Number.MAX_SAFE_INTEGER;
+
+        if (leftDistance !== rightDistance) {
+          return leftDistance - rightDistance;
+        }
+      }
+
+      if (highestRated) {
+        if (rightWorker.rating !== leftWorker.rating) {
+          return rightWorker.rating - leftWorker.rating;
+        }
+
+        if (rightWorker.ratingCount !== leftWorker.ratingCount) {
+          return rightWorker.ratingCount - leftWorker.ratingCount;
+        }
+      }
+
+      if (rightWorker.completedServices !== leftWorker.completedServices) {
+        return rightWorker.completedServices - leftWorker.completedServices;
+      }
+
+      if (rightWorker.experienceYears !== leftWorker.experienceYears) {
+        return rightWorker.experienceYears - leftWorker.experienceYears;
+      }
+
+      return rightWorker.rating - leftWorker.rating;
+    });
+
+    const total = sortedWorkers.length;
     const totalPages = Math.ceil(total / normalizedLimit);
+    const skip = (normalizedPage - 1) * normalizedLimit;
+    const data = sortedWorkers.slice(skip, skip + normalizedLimit);
+
 
     return {
       data,

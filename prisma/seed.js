@@ -756,10 +756,10 @@ async function main() {
       const worker2 = await prisma.user.create({
         data: {
           phoneNumber: "+201222222222",
-          firstName: "محمد",
-          middleName: "علي",
+          firstName: "سعيد",
+          middleName: "ابرهيم",
           lastName: "عبدالله",
-          governmentId: giza.id,
+          governmentId: Qalyubia.id,
           status: "ACTIVE",
           role: "USER",
         },
@@ -883,6 +883,167 @@ async function main() {
       });
 
       console.log(`Created pending worker: ${worker4.firstName} ${worker4.lastName} (Not Approved)`);
+    }
+
+    // Ensure ratings are backed by real reviews so explore output is consistent.
+    const ensureReviewerUser = async ({ phoneNumber, firstName, middleName, lastName, governmentId }) => {
+      const existingReviewer = await prisma.user.findFirst({ where: { phoneNumber } });
+
+      if (existingReviewer) {
+        return existingReviewer;
+      }
+
+      return prisma.user.create({
+        data: {
+          phoneNumber,
+          firstName,
+          middleName,
+          lastName,
+          governmentId,
+          status: "ACTIVE",
+          role: "USER",
+        },
+      });
+    };
+
+    const createReviewIfMissing = async ({ workerProfileId, userId, rating, comment }) => {
+      const existingReview = await prisma.workerReview.findFirst({
+        where: {
+          workerProfileId,
+          userId,
+        },
+      });
+
+      if (existingReview) {
+        return existingReview;
+      }
+
+      return prisma.workerReview.create({
+        data: {
+          workerProfileId,
+          userId,
+          rating,
+          comment,
+        },
+      });
+    };
+
+    const reviewer1 = await ensureReviewerUser({
+      phoneNumber: "+201555555551",
+      firstName: "سارة",
+      middleName: "حسن",
+      lastName: "محمود",
+      governmentId: cairo?.id || giza?.id,
+    });
+    const reviewer2 = await ensureReviewerUser({
+      phoneNumber: "+201555555552",
+      firstName: "مريم",
+      middleName: "محمد",
+      lastName: "علي",
+      governmentId: giza?.id,
+    });
+    const reviewer3 = await ensureReviewerUser({
+      phoneNumber: "+201555555553",
+      firstName: "عمر",
+      middleName: "أحمد",
+      lastName: "سعيد",
+      governmentId: cairo?.id || giza?.id,
+    });
+
+    const workerProfilesByPhone = {
+      "+201111111111": await prisma.workerProfile.findFirst({
+        where: { user: { phoneNumber: "+201111111111" } },
+        select: { id: true },
+      }),
+      "+201222222222": await prisma.workerProfile.findFirst({
+        where: { user: { phoneNumber: "+201222222222" } },
+        select: { id: true },
+      }),
+      "+201333333333": await prisma.workerProfile.findFirst({
+        where: { user: { phoneNumber: "+201333333333" } },
+        select: { id: true },
+      }),
+    };
+
+    if (workerProfilesByPhone["+201111111111"]?.id) {
+      await createReviewIfMissing({
+        workerProfileId: workerProfilesByPhone["+201111111111"].id,
+        userId: reviewer1.id,
+        rating: 5,
+        comment: "شغل ممتاز ودقة عالية",
+      });
+      await createReviewIfMissing({
+        workerProfileId: workerProfilesByPhone["+201111111111"].id,
+        userId: reviewer2.id,
+        rating: 4.5,
+        comment: "ملتزم بالمواعيد",
+      });
+      await createReviewIfMissing({
+        workerProfileId: workerProfilesByPhone["+201111111111"].id,
+        userId: reviewer3.id,
+        rating: 5,
+        comment: "نتيجة ممتازة",
+      });
+    }
+
+    if (workerProfilesByPhone["+201222222222"]?.id) {
+      await createReviewIfMissing({
+        workerProfileId: workerProfilesByPhone["+201222222222"].id,
+        userId: reviewer1.id,
+        rating: 5,
+        comment: "حل المشكلة بسرعة",
+      });
+      await createReviewIfMissing({
+        workerProfileId: workerProfilesByPhone["+201222222222"].id,
+        userId: reviewer2.id,
+        rating: 4,
+        comment: "جيد جدا",
+      });
+    }
+
+    if (workerProfilesByPhone["+201333333333"]?.id) {
+      await createReviewIfMissing({
+        workerProfileId: workerProfilesByPhone["+201333333333"].id,
+        userId: reviewer1.id,
+        rating: 5,
+        comment: "تنفيذ احترافي",
+      });
+      await createReviewIfMissing({
+        workerProfileId: workerProfilesByPhone["+201333333333"].id,
+        userId: reviewer2.id,
+        rating: 5,
+        comment: "ممتاز",
+      });
+      await createReviewIfMissing({
+        workerProfileId: workerProfilesByPhone["+201333333333"].id,
+        userId: reviewer3.id,
+        rating: 4.7,
+        comment: "خبرة واضحة",
+      });
+    }
+
+    const approvedWorkers = await prisma.workerProfile.findMany({
+      where: { isApproved: true },
+      select: {
+        id: true,
+        reviews: {
+          select: {
+            rating: true,
+          },
+        },
+      },
+    });
+
+    for (const approvedWorker of approvedWorkers) {
+      const totalRating = approvedWorker.reviews.reduce((sum, review) => sum + review.rating, 0);
+      const averageRating = approvedWorker.reviews.length > 0
+        ? Number((totalRating / approvedWorker.reviews.length).toFixed(1))
+        : 0;
+
+      await prisma.workerProfile.update({
+        where: { id: approvedWorker.id },
+        data: { rating: averageRating },
+      });
     }
 
     console.log("\n--- Database seeding completed successfully! ---");

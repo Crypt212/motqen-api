@@ -185,6 +185,16 @@ export default class AuthService extends Service {
   }) {
     return tryCatch(async () => {
       try {
+        const existingUser = await this.#userRepository.findOne({ phoneNumber });
+        if (existingUser) {
+          const hasClientProfile = await this.#userRepository.hasClientProfile({ userId: existingUser.id });
+
+          if (hasClientProfile) {
+            throw new AppError("Phone number is already registered. Use login instead", 409);
+          }
+
+          throw new AppError("User already exists without client profile. Create profile from dashboard endpoint", 409);
+        }
 
         let cityId = undefined;
         const cities = await this.#governmentRepository.findCities({ name: city, governmentId });
@@ -219,6 +229,14 @@ export default class AuthService extends Service {
 
         return { profile, user };
       } catch (error) {
+        if (error instanceof AppError) {
+          throw error;
+        }
+
+        if (error?.code === "P2002") {
+          throw new AppError("Phone number is already registered. Use login instead", 409, error);
+        }
+
         console.log(error)
         throw new AppError("Failed to create client profile", 500, error);
       }
@@ -281,7 +299,10 @@ export default class AuthService extends Service {
       await this.#rateLimitCache.incrementVerify(phoneNumber, method);
 
       await this.#rateLimitCache.resetAfterSuccess(phoneNumber, method, deviceId);
-      const user = await this.#userRepository.findOne({ phoneNumber });
+      const user = await this.#userRepository.findOne(
+        { phoneNumber },
+        { id: true }
+      );
 
       /** @type {string} */
       let token;

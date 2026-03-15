@@ -1,5 +1,5 @@
 /**
- * @fileoverview Client Controller - Handle client-related HTTP requests
+ * @fileoverview Customer Controller - Handle customer-related HTTP requests
  * @module controllers/ClientController
  */
 
@@ -11,7 +11,7 @@ import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 
 /**
  * GET /client/me
- * Retrieve authenticated user's profile with client information
+ * Retrieve authenticated user's profile with customer information
  * @param {import('../types/asyncHandler.js').Request} req
  * @param {import('../types/asyncHandler.js').Response} res
  */
@@ -54,10 +54,11 @@ export const getMe = asyncHandler(async (req, res) => {
     clientProfile: {
       address: clientProfileData.address,
       addressNotes: clientProfileData.addressNotes,
+      governmentId: clientProfileData.governmentId,
     }
   };
 
-  new SuccessResponse('User profile retrieved successfully', responseData, 200).send(res);
+  new SuccessResponse('Customer profile retrieved successfully', responseData, 200).send(res);
 });
 
 /**

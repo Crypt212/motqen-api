@@ -10,7 +10,6 @@ import {
   authService,
   rateLimitService,
   userService,
-  workerService,
 } from '../state.js';
 
 import { asyncHandler } from '../types/asyncHandler.js';
@@ -59,11 +58,13 @@ export const verifyOTP = asyncHandler(async (req, res) => {
   let workerShit = {};
   if (tokenType === 'login') {
     const user = await userService.get({ phoneNumber, userId: undefined });
-    const workProfile = await workerService.get({ userId: user.id });
-    console.log(user, workProfile);
-    workerShit.isWorker = workProfile ? true : false;
-    if (workerShit.isWorker)
-      workerShit.isWorkerSignedUp = (await workerService.getVerification({ workerProfileId: workProfile.id })).status === "APPROVED";
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    const userState = await userService.getStatus({ userId: user.id });
+    workerShit.isWorker = Boolean(userState.worker);
+    workerShit.isWorkerSignedUp = userState.worker?.verification?.status === "APPROVED";
   } else {
     workerShit.isWorker = false;
     workerShit.isWorkerSignedUp = false;

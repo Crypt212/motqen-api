@@ -37,7 +37,9 @@ export const updateUser = asyncHandler(async (req, res) => {
 /**
  */
 export const createClientProfile = asyncHandler(async (req, res) => {
-  const { address, addressNotes } = matchedData(req, { includeOptionals: true });
+  const payload = matchedData(req, { includeOptionals: true });
+  const address = payload.address ?? payload.clientProfile?.address;
+  const addressNotes = payload.addressNotes ?? payload.clientProfile?.addressNotes;
   const userId = req.userState.userId;
 
   const clientProfile = await clientService.create({
@@ -54,7 +56,9 @@ export const createClientProfile = asyncHandler(async (req, res) => {
 /**
  */
 export const updateClientProfile = asyncHandler(async (req, res) => {
-  const { address, addressNotes } = matchedData(req, { includeOptionals: true });
+  const payload = matchedData(req, { includeOptionals: true });
+  const address = payload.address ?? payload.clientProfile?.address;
+  const addressNotes = payload.addressNotes ?? payload.clientProfile?.addressNotes;
   const clientProfileId = req.userState.client.id;
 
   const clientProfile = await clientService.update({ clientProfileId, data: { address, addressNotes } });

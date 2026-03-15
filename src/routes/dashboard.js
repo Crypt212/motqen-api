@@ -28,6 +28,10 @@ import {
   deleteClientProfile,
 
 } from "../controllers/DashboardController.js";
+import {
+  getMe as getCustomerDashboard,
+  updateProfileImage as updateCustomerProfileImage,
+} from "../controllers/ClientController.js";
 import { authorizeWorker, unAuthorizeWorker } from "../middlewares/workerMiddleware.js";
 import { authorizeClient, unAuthorizeClient } from "../middlewares/clientMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
@@ -207,7 +211,7 @@ usersRouter.post("/worker-profile",
  *       - Verification status
  *       - Portfolio projects
  *       - Availability status for urgent jobs
- *       
+ *
  *       User must be registered as a **Worker** (craftsman) to access this endpoint.
  *     tags: [Craftsman Profile]
  *     security:
@@ -725,6 +729,19 @@ usersRouter.delete("/worker-profile/specializations",
   validateRequest,
   deleteWorkerSpecializations);
 
+usersRouter.get("/customer",
+  isActive,
+  authorizeClient,
+  validateGetClientProfile,
+  validateRequest,
+  getCustomerDashboard);
+
+usersRouter.post("/customer/profile-image",
+  isActive,
+  authorizeClient,
+  upload.single("profileImage"),
+  updateCustomerProfileImage);
+
 
 /**
  * @swagger
@@ -772,6 +789,13 @@ usersRouter.post("/client-profile",
   validateRequest,
   createClientProfile);
 
+usersRouter.post("/customer-profile",
+  isActive,
+  unAuthorizeClient,
+  validateCreateClientProfile,
+  validateRequest,
+  createClientProfile);
+
 /**
  * @swagger
  * /me/client-profile:
@@ -806,6 +830,13 @@ usersRouter.post("/client-profile",
  *         $ref: '#/components/responses/InternalServerError'
  */
 usersRouter.get("/client-profile",
+  isActive,
+  authorizeClient,
+  validateGetClientProfile,
+  validateRequest,
+  getClientProfile);
+
+usersRouter.get("/customer-profile",
   isActive,
   authorizeClient,
   validateGetClientProfile,
@@ -860,6 +891,13 @@ usersRouter.put("/client-profile",
   validateRequest,
   updateClientProfile);
 
+usersRouter.put("/customer-profile",
+  isActive,
+  authorizeClient,
+  validateUpdateClientProfile,
+  validateRequest,
+  updateClientProfile);
+
 /**
  * @swagger
  * /me/client-profile:
@@ -902,6 +940,14 @@ usersRouter.put("/client-profile",
  *         $ref: '#/components/responses/InternalServerError'
  */
 usersRouter.delete("/client-profile",
+  isActive,
+  authorizeWorker,
+  authorizeClient,
+  validateDeleteClientProfile,
+  validateRequest,
+  deleteClientProfile);
+
+usersRouter.delete("/customer-profile",
   isActive,
   authorizeWorker,
   authorizeClient,

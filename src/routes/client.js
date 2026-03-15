@@ -1,5 +1,5 @@
 /**
- * @fileoverview Client Routes - Client-related endpoints
+ * @fileoverview Customer Routes - Customer-related endpoints
  * @module routes/client
  */
 
@@ -12,24 +12,24 @@ const clientRouter = Router();
 
 /**
  * @swagger
- * /client/me:
+ * /client:
  *   get:
- *     summary: Get Client Profile
+ *     summary: Get Customer Profile
  *     description: |
- *       Retrieves the authenticated client's profile information including:
+ *       Retrieves the authenticated customer's profile information including:
  *       - Personal details (name, phone, etc.)
  *       - Client-specific information (address, address notes)
  *       - Profile image URL
  *
  *       Requires valid access token from successful login.
- *     tags: [Client]
+ *     tags: [Customer]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/DeviceFingerprint'
  *     responses:
  *       200:
- *         description: Client profile retrieved successfully
+ *         description: Customer profile retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -71,20 +71,20 @@ const clientRouter = Router();
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-clientRouter.get('/me', authenticateAccess, getMe);
+clientRouter.get('/', authenticateAccess, getMe);
 
 /**
  * @swagger
- * /client/me/profile-image:
+ * /client/profile-image:
  *   post:
- *     summary: Update Client Profile Image
+ *     summary: Update Customer Profile Image
  *     description: |
- *       Updates the authenticated client's profile image.
+ *       Updates the authenticated customer's profile image.
  *       Image file is uploaded to Cloudinary and the URL is stored in the database.
  *
  *       Supported formats: JPEG, PNG, WebP
  *       Max file size: 5MB (configured in multer)
- *     tags: [Client]
+ *     tags: [Customer]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -126,6 +126,6 @@ clientRouter.get('/me', authenticateAccess, getMe);
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-clientRouter.post('/me/profile-image', authenticateAccess, upload.single('profileImage'), updateProfileImage);
+clientRouter.post('/profile-image', authenticateAccess, upload.single('profileImage'), updateProfileImage);
 
 export default clientRouter;
