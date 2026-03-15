@@ -13,7 +13,7 @@ import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient } from 'redis';
 import environment from '../configs/environment.js';
 import { logger } from '../libs/winston.js';
-import { socketAuth } from './socketAuth.js';
+import { socketAuth } from '../middlewares/socketMiddleware.js';
 import { registerSocketHandlers } from './socketHandlers.js';
 import { chatService, conversationRepository } from '../state.js';
 

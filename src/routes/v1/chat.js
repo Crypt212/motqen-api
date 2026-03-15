@@ -7,24 +7,24 @@
  *   - Authorization: Bearer <access_token>
  *   - User account must be ACTIVE
  *
- * Base path: /api/chat
+ * Base path: /chat
  */
 
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
-import { validateRequest } from '../middlewares/validateRequest.js';
+import { validateRequest } from '../../middlewares/validateRequest.js';
 import {
   getOrCreateConversation,
   getConversations,
   getMessages,
   getUnreadSummary,
   getMissedMessages,
-} from '../controllers/ChatController.js';
+} from '../../controllers/ChatController.js';
 
 const chatRouter = Router();
 
 // ─────────────────────────────────────────────────────────────────────────────
-// POST /api/chat/conversations
+// POST /chat/conversations
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -117,7 +117,7 @@ chatRouter.post(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/chat/conversations
+// GET /chat/conversations
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -187,7 +187,7 @@ chatRouter.post(
 chatRouter.get('/conversations', getConversations);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/chat/conversations/unread
+// GET /chat/conversations/unread
 // (Must be registered BEFORE /:conversationId routes to avoid param capture)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -234,7 +234,7 @@ chatRouter.get('/conversations', getConversations);
 chatRouter.get('/conversations/unread', getUnreadSummary);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/chat/conversations/:conversationId/messages
+// GET /chat/conversations/:conversationId/messages
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -344,7 +344,7 @@ chatRouter.get(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/chat/conversations/:conversationId/messages/missed
+// GET /chat/conversations/:conversationId/messages/missed
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
