@@ -3,39 +3,38 @@
  * @module types/asyncHandler
  */
 
-import { $Enums } from '@prisma/client';
+import pkg from '@prisma/client';
+const { $Enums } = pkg;
 
+/** @typedef {import('../repositories/database/Repository').IDType} IDType */
+// Map token types to the payload that should be attached to request
 
-/**
- * @typedef {{ user: {id: string, role: $Enums.Role, isWorker: Boolean, isClient: Boolean} }} UserPayload
- */
-
+/** @typedef {{ userId: IDType, phoneNumber: string, role: $Enums.Role, accountStatus: $Enums.AccountStatus, worker?: { id: IDType, verification: { status: $Enums.VerificationStatus, reason: string } }, client?: { id: IDType } }} UserState */
 
 /**
  * @typedef {{fieldname: string, originalname: string, encoding: string, mimetype: string, buffer: Buffer, size: number}} MulterFile
  * @typedef {{file?: MulterFile, files?: MulterFile[] }} MulterPayload
  */
 
+/** @typedef {string} DeviceID */
 
 /**
- * @typedef {import('express').Request} Request
+ * @typedef {(import('express').Request & { deviceId?: DeviceID } & { userState?: UserState}) & Partial<MulterPayload>} Request
  * @typedef {import('express').Response} Response
  * @typedef {import('express').NextFunction} NextFunction
  */
 
 /**
- * @template T
- * @typedef {function(Request & T, Response, NextFunction): any} RequestHandler<T>
+ * @typedef {function(Request, Response, NextFunction): any} RequestHandler
  */
 
 /**
- * @template T = {}
- * Controller wrapper to ensure consistent error handling
- * @param {RequestHandler<T>} controller
- * @returns {RequestHandler<T>}
+ * Wraps an Express controller to forward thrown or rejected errors to the next error handler.
+ * @param {RequestHandler} controller - The controller function to wrap.
+ * @returns {RequestHandler} An Express request handler that calls the controller and forwards any error to `next`.
  */
 export function asyncHandler(controller) {
-  /** @type RequestHandler<T> */
+  /** @type RequestHandler */
   return (req, res, next) => {
     Promise.resolve(controller(req, res, next)).catch(next);
   };
