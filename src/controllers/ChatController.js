@@ -3,7 +3,6 @@
  * @module controllers/ChatController
  */
 
-import { matchedData } from 'express-validator';
 import SuccessResponse from '../responses/successResponse.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { chatService } from '../state.js';
@@ -11,12 +10,17 @@ import { chatService } from '../state.js';
 /**
  * POST /api/chat/conversations
  * Create or return the existing conversation between a Worker and a Client.
- * Request body: { workerId, clientId }
+ * Request body: { workerId }
+ * clientId is derived from authenticated user (req.userState.userId).
  */
 export const getOrCreateConversation = asyncHandler(async (req, res) => {
-  const { workerId, clientId } = matchedData(req, { includeOptionals: true });
+  const { workerId } = req.body;
+  const clientId = req.userState.userId;
 
-  const conversation = await chatService.getOrCreateConversation({ workerId, clientId });
+  const conversation = await chatService.getOrCreateConversation({
+    workerId,
+    clientId,
+  });
 
   new SuccessResponse('Conversation ready', { conversation }, 200).send(res);
 });
@@ -24,11 +28,21 @@ export const getOrCreateConversation = asyncHandler(async (req, res) => {
 /**
  * GET /api/chat/conversations
  * List all conversations for the authenticated user, with unread counts.
+ * Query params: skip (offset), take (limit)
  */
 export const getConversations = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
+  const skip = parseInt(String(req.query.skip ?? '0'), 10);
+  const take = Math.min(
+    parseInt(String(req.query.take ?? '30'), 10),
+    30,
+  );
 
-  const conversations = await chatService.getConversations({ userId });
+  const conversations = await chatService.getConversations({
+    userId,
+    skip,
+    take,
+  });
 
   new SuccessResponse('Conversations retrieved', { conversations }, 200).send(res);
 });
@@ -42,9 +56,17 @@ export const getMessages = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
   const conversationId = String(req.params.conversationId);
   const after = parseInt(String(req.query.after) ?? '0', 10);
-  const limit = Math.min(parseInt(String(req.query.limit) ?? '30', 10), 100);
+  const limit = Math.min(
+    parseInt(String(req.query.limit) ?? '30', 10),
+    100,
+  );
 
-  const messages = await chatService.getMessages({ conversationId, userId, after, limit });
+  const messages = await chatService.getMessages({
+    conversationId,
+    userId,
+    after,
+    limit,
+  });
 
   new SuccessResponse('Messages retrieved', { messages }, 200).send(res);
 });
@@ -52,12 +74,21 @@ export const getMessages = asyncHandler(async (req, res) => {
 /**
  * GET /api/chat/conversations/unread
  * App-open snapshot: all conversations with unread counts.
- * This is the HTTP sync endpoint used by the offline catch-up hybrid strategy.
+ * Query params: offset, limit
  */
 export const getUnreadSummary = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
+  const offset = parseInt(String(req.query.offset) ?? '0', 10);
+  const limit = Math.min(
+    parseInt(String(req.query.limit) ?? '30', 10),
+    100,
+  );
 
-  const conversations = await chatService.getConversations({ userId });
+  const conversations = await chatService.getConversations({
+    userId,
+    skip: offset,
+    take: limit,
+  });
   const unread = conversations.filter((c) => c.unreadCount > 0);
 
   new SuccessResponse('Unread summary', { unread }, 200).send(res);

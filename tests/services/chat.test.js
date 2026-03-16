@@ -19,7 +19,7 @@ const mockUser = {
   firstName: 'Ahmed',
   lastName: 'Mohamed',
   profileImageUrl: null,
-  lastSeenAt: new Date(),
+  isOnline: true,
 };
 
 const mockParticipant = {
@@ -28,6 +28,7 @@ const mockParticipant = {
   userId: 'worker-1',
   role: 'WORKER',
   lastReadMessageNumber: 3,
+  lastReceivedMessageNumber: 3,
 };
 
 const mockMessage = {
@@ -63,6 +64,7 @@ const mockConversationRepo = {
   findWithParticipant: jest.fn(),
   findParticipant: jest.fn(),
   updateLastRead: jest.fn(),
+  updateLastReceived: jest.fn(),
   findFirst: jest.fn(),
 };
 
@@ -195,7 +197,7 @@ describe('ChatService', () => {
   });
 
   describe('getConversations', () => {
-    test('should return conversations with unread counts', async () => {
+    test('should return conversations with unread counts and delivery info', async () => {
       const conversationsFromDb = [
         {
           ...mockConversation,
@@ -205,6 +207,8 @@ describe('ChatService', () => {
               ...mockParticipant,
               id: 'p2',
               userId: 'client-1',
+              lastReceivedMessageNumber: 4,
+              lastReadMessageNumber: 2,
               user: { ...mockUser, id: 'client-1' },
             },
           ],
@@ -222,6 +226,8 @@ describe('ChatService', () => {
       expect(result[0].unreadCount).toBe(2);
       expect(result[0].partner).toBeDefined();
       expect(result[0].lastMessage).toEqual(mockMessage);
+      expect(result[0].partnerLastReceivedMessageNumber).toBe(4);
+      expect(result[0].partnerLastReadMessageNumber).toBe(2);
     });
 
     test('should handle conversations with no messages', async () => {
@@ -355,9 +361,10 @@ describe('ChatService', () => {
       expect(result).rejects.toThrow('Conversation not found');
     });
 
-    test('should update lastReadMessageNumber to current counter', async () => {
+    test('should update lastReadMessageNumber and lastReceivedMessageNumber to current counter', async () => {
       mockConversationRepo.findFirst.mockResolvedValue(mockConversation);
       mockConversationRepo.updateLastRead.mockResolvedValue(mockParticipant);
+      mockConversationRepo.updateLastReceived.mockResolvedValue(mockParticipant);
 
       await service.markAllAsRead({
         conversationId: 'conv-1',
@@ -365,6 +372,11 @@ describe('ChatService', () => {
       });
 
       expect(mockConversationRepo.updateLastRead).toHaveBeenCalledWith({
+        conversationId: 'conv-1',
+        userId: 'worker-1',
+        messageNumber: 5,
+      });
+      expect(mockConversationRepo.updateLastReceived).toHaveBeenCalledWith({
         conversationId: 'conv-1',
         userId: 'worker-1',
         messageNumber: 5,
@@ -456,6 +468,25 @@ describe('ChatService', () => {
         userId: 'worker-1',
       });
 
+      expect(result).toEqual(mockParticipant);
+    });
+  });
+
+  describe('markAsDelivered', () => {
+    test('should update lastReceivedMessageNumber via repository', async () => {
+      mockConversationRepo.updateLastReceived.mockResolvedValue(mockParticipant);
+
+      const result = await service.markAsDelivered({
+        conversationId: 'conv-1',
+        userId: 'worker-1',
+        messageNumber: 10,
+      });
+
+      expect(mockConversationRepo.updateLastReceived).toHaveBeenCalledWith({
+        conversationId: 'conv-1',
+        userId: 'worker-1',
+        messageNumber: 10,
+      });
       expect(result).toEqual(mockParticipant);
     });
   });

@@ -14,12 +14,13 @@
  * SERVER emits:
  *   new_message            { message, conversationId }          → partner room
  *   messages_read          { conversationId, readUpTo }         → partner room
+ *   messages_delivered     { conversationId, deliveredUpTo }    → sender room
  *   typing                 { conversationId, userId, isTyping } → partner room
  *   partner_entered_chat   { conversationId }                   → partner room
  *   partner_left_chat      { conversationId }                   → partner room
- *   user_online            { userId }                           → partner rooms
- *   user_offline           { userId, lastSeenAt }               → partner rooms
+ *   user_offline           { userId }                           → partner rooms
  *   missed_messages_available { conversationId, unreadCount }   → reconnecting user
+ *   pong                                                       → requesting socket
  */
 
 import { logger } from '../libs/winston.js';
@@ -68,6 +69,12 @@ export function registerSocketHandlers(io, socket) {
   const { userId } = socket.data;
   const presence = chatService.presence;
 
+  // ─── ping / pong (keep-alive + TTL refresh) ────────────────────────────────
+  socket.on('ping', async () => {
+    await presence.refreshPresence({ userId });
+    socket.emit('pong');
+  });
+
   // ─── send_message ───────────────────────────────────────────────────────────
   socket.on('send_message', async ({ conversationId, content, type = 'TEXT' }, ack) => {
     try {
@@ -79,6 +86,7 @@ export function registerSocketHandlers(io, socket) {
       const partnerId = getPartnerId(conv, userId);
 
       // 3. Send the message (atomic counter increment + insert in tx)
+      //    sendMessage also auto-updates sender's lastReceivedMessageNumber
       const message = await chatService.sendMessage({ conversationId, senderId: userId, content, type });
 
       // 4. Check recipient presence
@@ -87,17 +95,32 @@ export function registerSocketHandlers(io, socket) {
         presence.isInChat({ conversationId, userId: partnerId }),
       ]);
 
-      // 5. If recipient is inside this chat → auto-mark as read immediately
+      // 5. If recipient is online → mark as delivered in DB
+      if (delivered && partnerId) {
+        await chatService.markAsDelivered({
+          conversationId,
+          userId: partnerId,
+          messageNumber: message.messageNumber,
+        });
+
+        // Notify sender that their message was delivered
+        socket.emit('messages_delivered', {
+          conversationId,
+          deliveredUpTo: message.messageNumber,
+        });
+      }
+
+      // 6. If recipient is inside this chat → auto-mark as read immediately
       if (recipientInChat) {
         await chatService.markAllAsRead({ conversationId, userId: partnerId });
       }
 
-      // 6. Emit new_message to recipient
+      // 7. Emit new_message to recipient
       if (partnerId) {
         io.to(`user:${partnerId}`).emit('new_message', { message, conversationId });
       }
 
-      // 7. ACK sender with delivery + read status
+      // 8. ACK sender with delivery + read status
       if (typeof ack === 'function') {
         ack({
           ok: true,
@@ -169,14 +192,20 @@ export function registerSocketHandlers(io, socket) {
       // 2. Track per-socket inChat (multi-device safe)
       await presence.enterChat({ conversationId, userId, socketId: socket.id });
 
-      // 3. Auto-mark all messages as read
+      // 3. Auto-mark all messages as read (also bumps lastReceivedMessageNumber)
       await chatService.markAllAsRead({ conversationId, userId });
 
-      // 4. Notify partner
+      // 4. Notify partner — entered chat + their messages are now delivered
       const conv = await conversationRepository.findWithParticipant({ conversationId, userId });
       const partnerId = getPartnerId(conv, userId);
       if (partnerId) {
         io.to(`user:${partnerId}`).emit('partner_entered_chat', { conversationId });
+
+        // Tell partner their messages are delivered up to conversation's messageCounter
+        io.to(`user:${partnerId}`).emit('messages_delivered', {
+          conversationId,
+          deliveredUpTo: conv.messageCounter,
+        });
       }
 
       if (typeof ack === 'function') ack({ ok: true });
@@ -221,15 +250,20 @@ export function registerSocketHandlers(io, socket) {
       const remaining = await presence.countSockets({ userId });
 
       if (remaining === 0) {
-        // 4. Persist lastSeenAt on the User row — single write, zero amplification
-        const lastSeenAt = new Date();
+        // 4. Full cleanup — remove all presence keys to prevent leaks
+        await Promise.all([
+          presence.removeAllSockets({ userId }),
+          presence.removeAllInChat({ userId, conversationIds }),
+        ]);
+
+        // 5. Persist availability state in DB
         await prisma.user.update({
           where: { id: userId },
-          data: { lastSeenAt },
+          data: { isOnline: false },
         });
 
-        // 5. Emit user_offline to all partner rooms
-        await emitToPartners(io, userId, 'user_offline', { userId, lastSeenAt });
+        // 6. Emit user_offline to all partner rooms
+        await emitToPartners(io, userId, 'user_offline', { userId });
 
         logger.info(`[socket] user ${userId} is now fully offline`);
       }

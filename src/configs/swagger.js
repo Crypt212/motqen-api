@@ -800,7 +800,7 @@ const options = {
             firstName: { type: 'string', example: 'أحمد' },
             lastName: { type: 'string', example: 'محمد' },
             profileImageUrl: { type: 'string', nullable: true, example: 'https://res.cloudinary.com/.../avatar.jpg' },
-            lastSeenAt: { type: 'string', format: 'date-time', nullable: true, description: 'Last time the partner was online' },
+            isOnline: { type: 'boolean', description: 'Whether the partner is currently online' },
           },
         },
         Message: {
@@ -823,6 +823,8 @@ const options = {
             id: { type: 'string', format: 'uuid' },
             messageCounter: { type: 'integer', example: 42, description: 'Total messages sent in this conversation' },
             unreadCount: { type: 'integer', example: 5, description: 'messageCounter − lastReadMessageNumber' },
+            partnerLastReceivedMessageNumber: { type: 'integer', example: 40, description: 'Last messageNumber the partner has received (delivered)' },
+            partnerLastReadMessageNumber: { type: 'integer', example: 38, description: 'Last messageNumber the partner has read' },
             lastMessage: { nullable: true, $ref: '#/components/schemas/Message' },
             partner: { $ref: '#/components/schemas/PartnerUser' },
             createdAt: { type: 'string', format: 'date-time' },

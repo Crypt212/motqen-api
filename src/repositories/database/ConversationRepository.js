@@ -80,20 +80,28 @@ export default class ConversationRepository extends Repository {
 
   /**
    * Find all conversations for a user, including derived unread count.
-   * unreadCount = conversation.messageCounter - participant.lastReadMessageNumber
-   * @param {{ userId: IDType }} params
+   * Only returns conversations that have at least 1 message.
+   *
+   * @param {{ userId: IDType, skip?: number, take?: number }} params
    * @returns {Promise<(import('@prisma/client').Conversation & { participants: (import('@prisma/client').ConversationParticipant & { user: import('@prisma/client').User })[], messages: import('@prisma/client').Message[] })[] >}
    */
-  async findAllByUserId({ userId }) {
+  async findAllByUserId({ userId, skip = 0, take = 30 }) {
     const conversations = await this.prismaClient.conversation.findMany({
       where: {
         participants: { some: { userId } },
+        messageCounter: { gt: 0 },
       },
       include: {
         participants: {
           include: {
             user: {
-              select: { id: true, firstName: true, lastName: true, profileImageUrl: true, lastSeenAt: true },
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                profileImageUrl: true,
+                isOnline: true,
+              },
             },
           },
         },
@@ -103,6 +111,8 @@ export default class ConversationRepository extends Repository {
         },
       },
       orderBy: { updatedAt: 'desc' },
+      skip,
+      take,
     });
     return conversations;
   }
@@ -148,6 +158,20 @@ export default class ConversationRepository extends Repository {
     return this.prismaClient.$queryRaw`
       UPDATE conversation_participants
       SET "lastReadMessageNumber" = GREATEST("lastReadMessageNumber", ${messageNumber})
+      WHERE "conversationId" = ${conversationId} AND "userId" = ${userId}
+      RETURNING *
+    `.then((rows) => rows[0]);
+  }
+
+  /**
+   * Update lastReceivedMessageNumber using GREATEST semantics (never decrements).
+   * @param {{ conversationId: IDType, userId: IDType, messageNumber: number }} params
+   * @returns {Promise<import('@prisma/client').ConversationParticipant>}
+   */
+  async updateLastReceived({ conversationId, userId, messageNumber }) {
+    return this.prismaClient.$queryRaw`
+      UPDATE conversation_participants
+      SET "lastReceivedMessageNumber" = GREATEST("lastReceivedMessageNumber", ${messageNumber})
       WHERE "conversationId" = ${conversationId} AND "userId" = ${userId}
       RETURNING *
     `.then((rows) => rows[0]);

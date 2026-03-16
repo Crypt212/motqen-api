@@ -9,10 +9,20 @@ import redisClient from '../../libs/redis.js';
  * All presence state is ephemeral — stored in Redis only, never touched in DB.
  *
  * Key schema:
- *   sockets:{userId}                   → Redis Set  (socketIds) — online if SCARD > 0
- *   inChat:{conversationId}:{userId}   → Redis Set  (socketIds) — inChat if SCARD > 0
+ *   sockets:{userId}                   → Redis Set  (socketIds) — online if SCARD > 0, TTL 5min
+ *   inChat:{conversationId}:{userId}   → Redis Set  (socketIds) — inChat if SCARD > 0, TTL 5min
  *   typing:{conversationId}:{userId}   → String "1" with 5s TTL
+ *
+ * TTL strategy:
+ *   - sockets and inChat keys use a 5-minute safety TTL, refreshed on every write.
+ *     If the server crashes and never fires disconnect, these keys auto-expire
+ *     instead of leaking forever.
+ *   - typing already has a 5s TTL.
  */
+
+/** @type {number} Safety TTL for presence Sets (seconds) */
+const PRESENCE_TTL = 300; // 5 minutes
+
 export default class ChatPresenceCache {
   #client;
 
@@ -24,10 +34,13 @@ export default class ChatPresenceCache {
 
   /**
    * Register a socket as active for a user.
+   * Refreshes TTL on every add to keep the key alive while connected.
    * @param {{ userId: string, socketId: string }} params
    */
   async addSocket({ userId, socketId }) {
-    await this.#client.sAdd(`sockets:${userId}`, socketId);
+    const key = `sockets:${userId}`;
+    await this.#client.sAdd(key, socketId);
+    await this.#client.expire(key, PRESENCE_TTL);
   }
 
   /**
@@ -56,14 +69,33 @@ export default class ChatPresenceCache {
     return (await this.countSockets({ userId })) > 0;
   }
 
+  /**
+   * Refresh the TTL on the sockets key (called periodically via ping/pong).
+   * @param {{ userId: string }} params
+   */
+  async refreshPresence({ userId }) {
+    await this.#client.expire(`sockets:${userId}`, PRESENCE_TTL);
+  }
+
+  /**
+   * Remove ALL sockets for a user — full cleanup on last disconnect.
+   * @param {{ userId: string }} params
+   */
+  async removeAllSockets({ userId }) {
+    await this.#client.del(`sockets:${userId}`);
+  }
+
   // ─── inChat tracking ──────────────────────────────────────────────────────
 
   /**
    * Mark a socket as "inside" a conversation screen.
+   * Refreshes TTL on every enter to keep the key alive.
    * @param {{ conversationId: string, userId: string, socketId: string }} params
    */
   async enterChat({ conversationId, userId, socketId }) {
-    await this.#client.sAdd(`inChat:${conversationId}:${userId}`, socketId);
+    const key = `inChat:${conversationId}:${userId}`;
+    await this.#client.sAdd(key, socketId);
+    await this.#client.expire(key, PRESENCE_TTL);
   }
 
   /**
@@ -93,6 +125,19 @@ export default class ChatPresenceCache {
     const pipeline = this.#client.multi();
     for (const cid of conversationIds) {
       pipeline.sRem(`inChat:${cid}:${userId}`, socketId);
+    }
+    await pipeline.exec();
+  }
+
+  /**
+   * Remove ALL inChat keys for a user across all conversations — full cleanup.
+   * @param {{ userId: string, conversationIds: string[] }} params
+   */
+  async removeAllInChat({ userId, conversationIds }) {
+    if (!conversationIds.length) return;
+    const pipeline = this.#client.multi();
+    for (const cid of conversationIds) {
+      pipeline.del(`inChat:${cid}:${userId}`);
     }
     await pipeline.exec();
   }

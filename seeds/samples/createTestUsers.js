@@ -54,7 +54,7 @@ export async function createMains() {
     },
   });
 
-  await authService.registerWorker({
+  let x = await authService.registerWorker({
     userData: {
       phoneNumber: "01111111111",
       firstName: "ahmed",
@@ -75,6 +75,7 @@ export async function createMains() {
       specializationsTree: exampleSpecializationTree,
     },
   });
+  console.log(x)
 }
 
 createMains();
