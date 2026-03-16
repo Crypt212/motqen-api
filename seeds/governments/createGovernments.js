@@ -446,6 +446,249 @@ async function main() {
       }
     }
 
+    // 3. Seed Test User
+    console.log("\n--- Seeding Test User ---");
+
+    // Check if test user already exists
+    const existingTestUser = await prisma.user.findFirst({
+      where: { phoneNumber: "+201001234567" },
+    });
+
+    if (!existingTestUser) {
+      const testUser = await prisma.user.create({
+        data: {
+          phoneNumber: "+201001234567",
+          firstName: "محمد",
+          middleName: "أحمد",
+          lastName: "علي",
+          status: "ACTIVE",
+          role: "USER",
+        },
+      });
+      console.log(`Created test user: ${testUser.firstName} ${testUser.lastName}`);
+
+      // Create client profile for test user
+      await prisma.clientProfile.create({
+        data: {
+          userId: testUser.id,
+          address: "القاهرة، شارع النيل",
+          addressNotes: "الشقة 5، العمارة 10",
+        },
+      });
+      console.log(`Created client profile for test user`);
+    } else {
+      console.log("Test user already exists");
+    }
+
+    // 4. Seed Test Workers (Craftsmen)
+    console.log("\n--- Seeding Test Workers ---");
+
+    // Get some specializations and governments for workers
+    const cairo = await prisma.government.findFirst({ where: { name: "Cairo" } });
+    const giza = await prisma.government.findFirst({ where: { name: "Giza" } });
+    const carpentry = await prisma.specialization.findFirst({ where: { name: "Carpentry" } });
+    const plumbing = await prisma.specialization.findFirst({ where: { name: "Plumbing" } });
+    const electrical = await prisma.specialization.findFirst({ where: { name: "Electrical" } });
+
+    const furnitureMaking = await prisma.subSpecialization.findFirst({
+      where: { name: "Furniture Making", mainSpecializationId: carpentry?.id }
+    });
+    const waterPiping = await prisma.subSpecialization.findFirst({
+      where: { name: "Water Piping", mainSpecializationId: plumbing?.id }
+    });
+    const wiring = await prisma.subSpecialization.findFirst({
+      where: { name: "Wiring & Rewiring", mainSpecializationId: electrical?.id }
+    });
+
+    // Worker 1: Approved Carpenter
+    const existingWorker1 = await prisma.user.findFirst({
+      where: { phoneNumber: "+201111111111" },
+    });
+
+    if (!existingWorker1 && cairo && carpentry && furnitureMaking) {
+      const worker1 = await prisma.user.create({
+        data: {
+          phoneNumber: "+201111111111",
+          firstName: "أحمد",
+          middleName: "محمود",
+          lastName: "حسن",
+          governmentId: cairo.id,
+          status: "ACTIVE",
+          role: "USER",
+        },
+      });
+
+      const workerProfile1 = await prisma.workerProfile.create({
+        data: {
+          userId: worker1.id,
+          experienceYears: 10,
+          isInTeam: false,
+          acceptsUrgentJobs: true,
+          isApproved: true,
+          rating: 4.8,
+          servicePrice: 150.0,
+          isAvailableNow: true,
+          completedServices: 85,
+          bio: "نجار محترف متخصص في صناعة الأثاث المنزلي والمكتبي بخبرة 10 سنوات",
+        },
+      });
+
+      await prisma.chosenSpecialization.create({
+        data: {
+          workerProfileId: workerProfile1.id,
+          subSpecializationId: furnitureMaking.id,
+          specializationId: carpentry.id,
+        },
+      });
+
+      await prisma.governmentForWorkers.create({
+        data: {
+          workerProfileId: workerProfile1.id,
+          governmentId: cairo.id,
+        },
+      });
+
+      console.log(`Created approved worker: ${worker1.firstName} ${worker1.lastName} (Carpenter)`);
+    }
+
+    // Worker 2: Approved Plumber
+    const existingWorker2 = await prisma.user.findFirst({
+      where: { phoneNumber: "+201222222222" },
+    });
+
+    if (!existingWorker2 && giza && plumbing && waterPiping) {
+      const worker2 = await prisma.user.create({
+        data: {
+          phoneNumber: "+201222222222",
+          firstName: "محمد",
+          middleName: "علي",
+          lastName: "عبدالله",
+          governmentId: giza.id,
+          status: "ACTIVE",
+          role: "USER",
+        },
+      });
+
+      const workerProfile2 = await prisma.workerProfile.create({
+        data: {
+          userId: worker2.id,
+          experienceYears: 7,
+          isInTeam: true,
+          acceptsUrgentJobs: true,
+          isApproved: true,
+          rating: 4.5,
+          servicePrice: 120.0,
+          isAvailableNow: true,
+          completedServices: 62,
+          bio: "سباك خبرة في تمديد المواسير وإصلاح التسريبات",
+        },
+      });
+
+      await prisma.chosenSpecialization.create({
+        data: {
+          workerProfileId: workerProfile2.id,
+          subSpecializationId: waterPiping.id,
+          specializationId: plumbing.id,
+        },
+      });
+
+      await prisma.governmentForWorkers.create({
+        data: {
+          workerProfileId: workerProfile2.id,
+          governmentId: giza.id,
+        },
+      });
+
+      console.log(`Created approved worker: ${worker2.firstName} ${worker2.lastName} (Plumber)`);
+    }
+
+    // Worker 3: Approved Electrician (accepts urgent jobs)
+    const existingWorker3 = await prisma.user.findFirst({
+      where: { phoneNumber: "+201333333333" },
+    });
+
+    if (!existingWorker3 && cairo && electrical && wiring) {
+      const worker3 = await prisma.user.create({
+        data: {
+          phoneNumber: "+201333333333",
+          firstName: "خالد",
+          middleName: "حسين",
+          lastName: "إبراهيم",
+          governmentId: cairo.id,
+          status: "ACTIVE",
+          role: "USER",
+        },
+      });
+
+      const workerProfile3 = await prisma.workerProfile.create({
+        data: {
+          userId: worker3.id,
+          experienceYears: 12,
+          isInTeam: false,
+          acceptsUrgentJobs: true,
+          isApproved: true,
+          rating: 4.9,
+          servicePrice: 180.0,
+          isAvailableNow: true,
+          completedServices: 120,
+          bio: "كهربائي محترف متخصص في الأعمال الكهربائية السكنية والتجارية",
+        },
+      });
+
+      await prisma.chosenSpecialization.create({
+        data: {
+          workerProfileId: workerProfile3.id,
+          subSpecializationId: wiring.id,
+          specializationId: electrical.id,
+        },
+      });
+
+      await prisma.governmentForWorkers.create({
+        data: {
+          workerProfileId: workerProfile3.id,
+          governmentId: cairo.id,
+        },
+      });
+
+      console.log(`Created approved worker: ${worker3.firstName} ${worker3.lastName} (Electrician)`);
+    }
+
+    // Worker 4: Pending approval (for testing filters)
+    const existingWorker4 = await prisma.user.findFirst({
+      where: { phoneNumber: "+201444444444" },
+    });
+
+    if (!existingWorker4 && cairo && carpentry && furnitureMaking) {
+      const worker4 = await prisma.user.create({
+        data: {
+          phoneNumber: "+201444444444",
+          firstName: "يوسف",
+          middleName: "سعيد",
+          lastName: "محمد",
+          governmentId: cairo.id,
+          status: "ACTIVE",
+          role: "USER",
+        },
+      });
+
+      await prisma.workerProfile.create({
+        data: {
+          userId: worker4.id,
+          experienceYears: 3,
+          isInTeam: false,
+          acceptsUrgentJobs: false,
+          isApproved: false, // Not approved yet
+          rating: 0,
+          servicePrice: 100.0,
+          isAvailableNow: true,
+          completedServices: 0,
+          bio: "نجار جديد يبحث عن فرص عمل",
+        },
+      });
+
+      console.log(`Created pending worker: ${worker4.firstName} ${worker4.lastName} (Not Approved)`);
+    }
+
     console.log("\n--- Database seeding completed successfully! ---");
   } catch (error) {
     console.error("Error seeding database:", error);

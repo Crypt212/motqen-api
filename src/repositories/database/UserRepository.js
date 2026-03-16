@@ -23,7 +23,7 @@ const { $Enums, PrismaClient } = pkg;
 /** @typedef {import("./Repository.js").FilterArgs<User>} UserFilter */
 /** @typedef {Partial<User>} OptionalUser */
 
-/** @typedef {{ experienceYears: number, isInTeam: Boolean, acceptsUrgentJobs: Boolean, isApproved?: Boolean }} WorkerProfileData */
+/** @typedef {{ experienceYears: number, isInTeam: Boolean, acceptsUrgentJobs: Boolean }} WorkerProfileData */
 /** @typedef {Partial<WorkerProfileData>} OptionalWorkerProfileData */
 /** @typedef { WorkerProfileData & { id: IDType, userId: IDType }} WorkerProfile */
 /** @typedef {import("./Repository.js").FilterArgs<WorkerProfile>} WorkerProfileFilter */

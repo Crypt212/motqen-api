@@ -290,7 +290,7 @@ export default class AuthService extends Service {
    * @param {$Enums.Method} method - OTP delivery method
    * @param {string} OTP - The OTP to validate (hashed)
    * @param {string} deviceId - The device identifier
-   * @returns {Promise<{ tokenType: "register" | "login", token: string}>} Validation result
+   * @returns {Promise<{ tokenType: "register" | "login", token: string, workerShit: { isWorker: boolean, isWorkerSignedUp: boolean } | {}}>} Validation result
    * @description Checks if the provided OTP is valid and not expired
    */
   async verifyOTP(phoneNumber, method, OTP, deviceId) {
@@ -334,7 +334,26 @@ export default class AuthService extends Service {
         tokenType = 'register';
         token = generateToken(payload);
       }
-      return { tokenType, token };
+
+      let workerShit = {};
+      if (tokenType === 'login') {
+        const user = await this.#userRepository.findFirst({
+          phoneNumber: phoneNumber,
+        });
+
+        const workProfile = await this.#userRepository.findWorkerProfile({ userId: user.id });
+        workerShit.isWorker = workProfile ? true : false;
+        if (workerShit.isWorker) {
+          const verification = await this.#userRepository.findWorkerProfileVerification({ workerProfileId: workProfile.id });
+          workerShit.isWorkerSignedUp = (verification).status === "APPROVED";
+        }
+      } else {
+        workerShit.isWorker = false;
+        workerShit.isWorkerSignedUp = false;
+      }
+
+
+      return { tokenType, token, workerShit };
     } catch (error) {
       if (!(error instanceof AppError && error.errors.type === 'OTP'))
         throw error;

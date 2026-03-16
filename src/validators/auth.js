@@ -4,12 +4,12 @@
  */
 
 import { body } from "express-validator";
-import { 
-  validateImageFile, 
-  validateToken, 
-  validateDeviceFingerprint, 
-  userDataValidation, 
-  clientProfileValidation, 
+import {
+  validateImageFile,
+  validateToken,
+  validateDeviceFingerprint,
+  userDataValidation,
+  clientProfileValidation,
   workerProfileValidation,
   createQueryValidator
 } from "./common.js";

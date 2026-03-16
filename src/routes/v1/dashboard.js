@@ -197,16 +197,27 @@ usersRouter.post("/worker-profile",
  * @swagger
  * /me/worker-profile:
  *   get:
- *     summary: Get worker profile
- *     description: Returns the authenticated worker's profile. User must have a worker profile.
- *     tags: [Dashboards]
+ *     summary: Get Craftsman Profile Details
+ *     description: |
+ *       Returns the complete profile of the authenticated craftsman/worker.
+ *       Includes:
+ *       - Experience years and team status
+ *       - All specializations and sub-specializations
+ *       - Operating governments/areas
+ *       - Rating and badges
+ *       - Verification status
+ *       - Portfolio projects
+ *       - Availability status for urgent jobs
+ *       
+ *       User must be registered as a **Worker** (craftsman) to access this endpoint.
+ *     tags: [Craftsman Profile]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/DeviceFingerprint'
  *     responses:
  *       200:
- *         description: Worker profile retrieved
+ *         description: Worker profile retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -218,7 +229,104 @@ usersRouter.post("/worker-profile",
  *                       type: object
  *                       properties:
  *                         workerProfile:
- *                           $ref: '#/components/schemas/WorkerProfile'
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                               format: uuid
+ *                             userId:
+ *                               type: string
+ *                               format: uuid
+ *                             experienceYears:
+ *                               type: integer
+ *                               minimum: 0
+ *                               maximum: 50
+ *                             isInTeam:
+ *                               type: boolean
+ *                             acceptsUrgentJobs:
+ *                               type: boolean
+ *                             isApproved:
+ *                               type: boolean
+ *                               description: Admin approval status
+ *                             rating:
+ *                               type: number
+ *                               format: float
+ *                               description: Average rating (0-5 stars)
+ *                             completedServices:
+ *                               type: integer
+ *                               description: Total number of completed services
+ *                             isAvailableNow:
+ *                               type: boolean
+ *                             bio:
+ *                               type: string
+ *                               nullable: true
+ *                               description: Craftsman biography or description
+ *                             servicePrice:
+ *                               type: number
+ *                               nullable: true
+ *                             specializations:
+ *                               type: array
+ *                               description: All specializations with sub-specializations
+ *                               items:
+ *                                 type: object
+ *                                 properties:
+ *                                   id:
+ *                                     type: string
+ *                                     format: uuid
+ *                                   name:
+ *                                     type: string
+ *                                     example: "Plumbing"
+ *                                   subSpecializations:
+ *                                     type: array
+ *                                     items:
+ *                                       type: object
+ *                                       properties:
+ *                                         id:
+ *                                           type: string
+ *                                           format: uuid
+ *                                         name:
+ *                                           type: string
+ *                                           example: "Water Pipe Repairs"
+ *                             workGovernments:
+ *                               type: array
+ *                               description: Operating areas/governments
+ *                               items:
+ *                                 type: object
+ *                                 properties:
+ *                                   id:
+ *                                     type: string
+ *                                     format: uuid
+ *                                   name:
+ *                                     type: string
+ *                                     example: "Cairo"
+ *                             verification:
+ *                               type: object
+ *                               properties:
+ *                                 status:
+ *                                   type: string
+ *                                   enum: [PENDING, APPROVED, REJECTED]
+ *                                 idDocumentUrl:
+ *                                   type: string
+ *                                 idWithPersonalImageUrl:
+ *                                   type: string
+ *                             badges:
+ *                               type: array
+ *                               items:
+ *                                 type: string
+ *                                 enum: [VERIFIED, TOP_RATED, TRUSTED]
+ *                             portfolio:
+ *                               type: array
+ *                               items:
+ *                                 type: object
+ *                                 properties:
+ *                                   id:
+ *                                     type: string
+ *                                   description:
+ *                                     type: string
+ *                                   images:
+ *                                     type: array
+ *                                     items:
+ *                                       type: string
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       403:

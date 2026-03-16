@@ -2,6 +2,7 @@ import "dotenv/config";
 import { authService, userRepository } from "../../src/state.js";
 import { getExampleCityIds, getExampleGovernmentIds, getExampleSpecializationTree } from "../utils/exampleData.js";
 import loadLocalImage from "../utils/imageLoader.js";
+import prisma from "../../src/libs/database.js";
 
 
 
@@ -13,33 +14,33 @@ export async function createMains() {
 
   const exampleImage = await loadLocalImage("./seeds/samples/", "personal-profile.jpg");
 
-  await userRepository.deleteMany({});
+  // console.log({
+  //   userData: {
+  //     phoneNumber: "01000000000",
+  //     firstName: "ahmed",
+  //     middleName: "mohamed",
+  //     lastName: "mohamed",
+  //     governmentId: exampleGovernmentId,
+  //     cityId: exampleCityId,
+  //     role: "USER",
+  //     profileImageBuffer: exampleImage,
+  //   },
+  //   workerProfileData: {
+  //     idImageBuffer: exampleImage,
+  //     profileWithIdImageBuffer: exampleImage,
+  //     experienceYears: 1,
+  //     isInTeam: true,
+  //     acceptsUrgentJobs: true,
+  //     workGovernmentIds: exampleGovernmentIds,
+  //     specializationsTree: exampleSpecializationTree,
+  //   }
+  // });
 
-  console.log({
-    userData: {
-      phoneNumber: "01000000000",
-      firstName: "ahmed",
-      middleName: "mohamed",
-      lastName: "mohamed",
-      governmentId: exampleGovernmentId,
-      cityId: exampleCityId,
-      role: "USER",
-      profileImageBuffer: exampleImage,
-    },
-    workerProfileData: {
-      idImageBuffer: exampleImage,
-      profileWithIdImageBuffer: exampleImage,
-      experienceYears: 1,
-      isInTeam: true,
-      acceptsUrgentJobs: true,
-      workGovernmentIds: exampleGovernmentIds,
-      specializationsTree: exampleSpecializationTree,
-    }
-  });
+  await prisma.user.deleteMany();
 
   await authService.registerClient({
     userData: {
-      phoneNumber: "02222222222",
+      phoneNumber: "01222222222",
       firstName: "ahmed",
       middleName: "saeed",
       lastName: "farouk",

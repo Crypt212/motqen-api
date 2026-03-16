@@ -13,7 +13,6 @@
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import { validateRequest } from '../../middlewares/validateRequest.js';
-
 import { authorizeClient } from '../../middlewares/clientMiddleware.js';
 import {
   getOrCreateConversation,
