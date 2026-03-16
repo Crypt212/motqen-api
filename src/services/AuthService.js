@@ -15,7 +15,6 @@ import UserRepository from '../repositories/database/UserRepository.js';
 import environment from '../configs/environment.js';
 import SendOTPProvider from '../providers/SendOTPProvider.js';
 import * as pkg from '@prisma/client';
-const { $Enums } = pkg;
 import RateLimitCache from '../repositories/cache/RateLimitCache.js';
 import { generateToken } from '../utils/tokens.js';
 import { logger } from '../libs/winston.js';
@@ -26,11 +25,11 @@ const MAX_VERIFY_ATTEMPTS = 5;
 /** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
 /** @typedef {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} File */
 
-/** @typedef {{ phoneNumber: string, role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: IDType, profileImageBuffer: Buffer | undefined }} InputUserData */
+/** @typedef {{ phoneNumber: string, role: pkg.$Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: IDType, profileImageBuffer: Buffer | undefined }} InputUserData */
 /** @typedef {{ isInTeam: Boolean, experienceYears: number, acceptsUrgentJobs: Boolean, workGovernmentIds: IDType[], specializationsTree: { mainId: IDType, subIds: IDType[]}[], idImageBuffer: Buffer, profileWithIdImageBuffer: Buffer  }} InputWorkerData */
 /** @typedef {{ address: string, addressNotes?: string  }} InputClientData */
 
-/** @typedef {{ phoneNumber: string, role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, city: string, status: $Enums.AccountStatus }} ReturnUserData */
+/** @typedef {{ phoneNumber: string, role: pkg.$Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, city: string, status: pkg.$Enums.AccountStatus }} ReturnUserData */
 
 /**
  * Auth Service
@@ -258,7 +257,7 @@ export default class AuthService extends Service {
    * @async
    * @method requestOTP
    * @param {string} phoneNumber - User's phone number
-   * @param {$Enums.Method} method - OTP delivery method (SMS or WhatsApp)
+   * @param {pkg.$Enums.Method} method - OTP delivery method (SMS or WhatsApp)
    * @returns {Promise<boolean>} True if OTP was sent successfully
    * @description Generates a new OTP and sends it via the specified method
    */
@@ -287,7 +286,7 @@ export default class AuthService extends Service {
    * @async
    * @method isValidOTP
    * @param {string} phoneNumber - User's phone number
-   * @param {$Enums.Method} method - OTP delivery method
+   * @param {pkg.$Enums.Method} method - OTP delivery method
    * @param {string} OTP - The OTP to validate (hashed)
    * @param {string} deviceId - The device identifier
    * @returns {Promise<{ tokenType: "register" | "login", token: string, workerShit: { isWorker: boolean, isWorkerSignedUp: boolean } | {}}>} Validation result

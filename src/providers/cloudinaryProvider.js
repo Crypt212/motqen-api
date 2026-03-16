@@ -1,5 +1,10 @@
 import cloudinary from '../configs/cloudinary.js';
 
+/**
+ * @param {Buffer} buffer - The buffer to upload to Cloudinary.
+ * @param {string} [folder='Motqen'] - The folder to upload the file to.
+ * @param {string | null} [publicId=null] - The public id to use for the uploaded file.
+ */
 const uploadToCloudinary = (buffer, folder = 'Motqen', publicId = null) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(

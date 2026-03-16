@@ -3,13 +3,9 @@
  * @module repositories/cache/RateLimitCache
  */
 
+import * as pkg from '@prisma/client';
 
 /** @typedef {import('redis').RedisClientType} RedisClient */
-
-/**
- * OTP Method type
- * @typedef {'SMS' | 'WHATSAPP'} OTPMethod
- */
 
 /**
  * Result object for increment operations
@@ -53,12 +49,12 @@ export default class RateLimitCache {
 
     this.#keys = {
       /** @param {string} phone - Phone number
-       * @param {OTPMethod} method - OTP method
+       * @param {pkg.$Enums.Method} method - OTP method
        * @returns {string}
        */
       sendCount: (phone, method) => `rate:send:phone:${phone}:${method}:count`,
       /** @param {string} phone - Phone number
-       * @param {OTPMethod} method - OTP method
+       * @param {pkg.$Enums.Method} method - OTP method
        * @returns {string}
        */
       sendCooldown: (phone, method) => `rate:send:phone:${phone}:${method}:cd`,
@@ -71,7 +67,7 @@ export default class RateLimitCache {
        */
       sendDeviceCooldown: (deviceId) => `rate:send:device:${deviceId}:cd`,
       /** @param {string} phone - Phone number
-       * @param {OTPMethod} method - OTP method
+       * @param {pkg.$Enums.Method} method - OTP method
        * @returns {string}
        */
       verify: (phone, method) => `rate:verify:phone:${phone}:${method}`,
@@ -151,7 +147,7 @@ export default class RateLimitCache {
    * Check if send OTP is on cooldown for phone/method
    * @async
    * @param {string} phone - Phone number
-   * @param {OTPMethod} method - OTP method
+   * @param {pkg.$Enums.Method} method - OTP method
    * @returns {Promise<boolean>} True if on cooldown
    */
   async isSendOnCooldown(phone, method) {
@@ -174,7 +170,7 @@ export default class RateLimitCache {
    * Get the TTL of send cooldown for phone or device
    * @async
    * @param {string} phone - Phone number
-   * @param {OTPMethod} method - OTP method
+   * @param {pkg.$Enums.Method} method - OTP method
    * @param {string} deviceId - Device identifier
    * @returns {Promise<number>} Maximum TTL in seconds
    */
@@ -191,7 +187,7 @@ export default class RateLimitCache {
    * Increment send attempt counter for phone/method and device
    * @async
    * @param {string} phone - Phone number
-   * @param {OTPMethod} method - OTP method
+   * @param {pkg.$Enums.Method} method - OTP method
    * @param {string} deviceId - Device identifier
    * @returns {Promise<IncrementResult>} Attempts count and cooldown time
    */
@@ -216,7 +212,7 @@ export default class RateLimitCache {
    * Get verification attempts for phone/method
    * @async
    * @param {string} phone - Phone number
-   * @param {OTPMethod} method - OTP method
+   * @param {pkg.$Enums.Method} method - OTP method
    * @returns {Promise<number>} Number of verification attempts
    */
   async getVerifyAttempts(phone, method) {
@@ -228,7 +224,7 @@ export default class RateLimitCache {
    * Increment verification attempt counter
    * @async
    * @param {string} phone - Phone number
-   * @param {OTPMethod} method - OTP method
+   * @param {pkg.$Enums.Method} method - OTP method
    * @returns {Promise<IncrementResult>} Attempts count and cooldown time
    */
   async incrementVerify(phone, method) {
@@ -245,7 +241,7 @@ export default class RateLimitCache {
    * Reset verification attempts for phone/method
    * @async
    * @param {string} phone - Phone number
-   * @param {OTPMethod} method - OTP method
+   * @param {pkg.$Enums.Method} method - OTP method
    * @returns {Promise<void>}
    */
   async resetVerifyAttempts(phone, method) {
@@ -319,7 +315,7 @@ export default class RateLimitCache {
    * Reset rate limit state after successful verification
    * @async
    * @param {string} phone - Phone number
-   * @param {OTPMethod} method - OTP method
+   * @param {pkg.$Enums.Method} method - OTP method
    * @param {string} deviceId - Device identifier
    * @returns {Promise<void>}
    */

@@ -4,7 +4,6 @@
  */
 
 import * as pkg from '@prisma/client';
-const { $Enums } = pkg;
 import AppError from '../errors/AppError.js';
 import Service from './Service.js';
 import RateLimitCache from '../repositories/cache/RateLimitCache.js';
@@ -33,7 +32,7 @@ export default class RateLimitService extends Service {
    * @async
    * @method checkSendOtp
    * @param {string} phone - User's phone number
-   * @param {$Enums.Method} method - OTP delivery method
+   * @param {pkg.$Enums.Method} method - OTP delivery method
    * @param {string} deviceId - Device identifier
    * @returns {Promise<void>}
    * @throws {AppError} If rate limit is exceeded
@@ -63,7 +62,7 @@ export default class RateLimitService extends Service {
    * @async
    * @method incrementSend
    * @param {string} phone - User's phone number
-   * @param {string} method - OTP delivery method
+   * @param {pkg.$Enums.Method} method - OTP delivery method
    * @param {string} deviceId - Device identifier
    * @returns {Promise<{attempts: number, cooldown: number}>}
    */
@@ -76,6 +75,7 @@ export default class RateLimitService extends Service {
    * @async
    * @method checkVerify
    * @param {string} phone - User's phone number
+   * @param {pkg.$Enums.Method} method - The method of OTP delivery
    * @returns {Promise<void>}
    * @throws {AppError} If too many verification attempts
    */
@@ -95,6 +95,7 @@ export default class RateLimitService extends Service {
    * @async
    * @method incrementVerify
    * @param {string} phone - User's phone number
+   * @param {pkg.$Enums.Method} method - The method of OTP delivery
    * @returns {Promise<{attempts: number, remaining: number, blocked: boolean}>} Current rate limit status
    */
   async incrementVerify(phone, method) {
@@ -112,6 +113,7 @@ export default class RateLimitService extends Service {
    * @async
    * @method reset
    * @param {string} phone - User's phone number
+   * @param {pkg.$Enums.Method} method - The method of OTP delivery
    * @param {string} deviceId - Device identifier
    * @returns {Promise<void>}
    */

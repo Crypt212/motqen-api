@@ -8,7 +8,7 @@
  * @property {"refresh"} type
  * @property {string} phoneNumber
  * @property {string} userId
- * @property {import("./role").Role} role
+ * @property {import("@prisma/client").$Enums.Role} role
  */
 
 /**
@@ -16,7 +16,7 @@
  * @property {"access"} type
  * @property {string} phoneNumber
  * @property {string} userId
- * @property {import("./role").Role} role
+ * @property {import("@prisma/client").$Enums.Role} role
  */
 
 /**

@@ -4,7 +4,6 @@
  */
 
 import * as pkg from '@prisma/client';
-const { $Enums } = pkg;
 import AppError from '../errors/AppError.js';
 import Service from './Service.js';
 import uploadToCloudinary from '../providers/cloudinaryProvider.js';
@@ -19,7 +18,7 @@ import GovernmentRepository from '../repositories/database/GovernmentRepository.
 /** @typedef {import("../repositories/database/UserRepository.js").PaginationOptions} PaginationOptions */
 /** @typedef {import("../repositories/database/UserRepository.js").OrderingOptions} OrderingOptions */
 
-/** @typedef {Partial<{role: $Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: string, bio: string, profileImageBuffer: Buffer, status: $Enums.AccountStatus}>} InputUserData */
+/** @typedef {Partial<{role: pkg.$Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: string, bio: string, profileImageBuffer: Buffer, status: pkg.$Enums.AccountStatus}>} InputUserData */
 
 /**
  * User Service - Manages user-related operations

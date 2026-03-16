@@ -147,9 +147,9 @@ export const getCitiesByGovernment = asyncHandler(async (req, res) => {
 
   const citiesResult = await governmentRepository.findCities({
     filter: { ...filter, governmentId },
-    // pagination,
-    // orderBy,
-    // paginate: true
+    pagination,
+    orderBy,
+    paginate: true
   });
 
   new SuccessResponse('Cities retrieved', {
