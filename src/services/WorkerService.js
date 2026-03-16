@@ -355,8 +355,8 @@ export default class WorkerService extends Service {
   async get({ userId }) {
     return tryCatch(async () => {
       const workerProfile = await this.#userRepository.findWorkerProfile({ userId });
-      if (!workerProfile)
-        throw new AppError("Worker profile not found", 404);
+   //   if (!workerProfile)
+//        throw new AppError("Worker profile not found", 404);
 
       return workerProfile;
     });

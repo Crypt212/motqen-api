@@ -17,7 +17,7 @@ import { redisRetreiveOrCache } from '../utils/redis.js';
  */
 export const verifyDeviceId = asyncHandler(async (req, _, next) => {
   req.deviceId = getHeaderValue(req.headers['x-device-fingerprint']);
-  if (!req.deviceId) throw new AppError("Device ID is required", 401);
+  if (!req.deviceId) return next(new AppError("Device ID is required", 401));
 
   // TODO: DeviceID needs to be verified here
 
@@ -32,7 +32,7 @@ export const authenticateLogin = asyncHandler(async (req, _, next) => {
   try {
     verifyHeaderToken(authHeader, "login");
   } catch (err) {
-    throw new AppError("Invalid login token", 401);
+    return next(new AppError("Invalid login token", 401));
   }
   next();
 });
@@ -45,7 +45,7 @@ export const authenticateRegister = asyncHandler(async (req, _, next) => {
   try {
     verifyHeaderToken(authHeader, "register");
   } catch (err) {
-    throw new AppError("Invalid register token", 401);
+    return next(new AppError("Invalid register token", 401));
   }
   next();
 });
@@ -60,7 +60,7 @@ export const authenticateAccess = asyncHandler(async (req, _, next) => {
       return await userService.getStatus({ userId: payload.userId });
     }));
   } catch (err) {
-    throw new AppError("Invalid access token", 401);
+    return next(new AppError("Invalid access token", 401));
   }
 
 
@@ -77,7 +77,7 @@ export const authenticateRefresh = asyncHandler(async (req, _, next) => {
       return await userService.getStatus({ userId: payload.userId });
     }));
   } catch (err) {
-    throw new AppError("Invalid refresh token", 401);
+    return next(new AppError("Invalid refresh token", 401));
   }
 
 
@@ -92,9 +92,9 @@ export const authenticateRefresh = asyncHandler(async (req, _, next) => {
 export const isActive = asyncHandler(async (req, _, next) => {
   if (req.userState) {
     if (req.userState.accountStatus !== "ACTIVE")
-      throw new AppError("Unauthorized access for users with no active account", 403);
+      return next(new AppError("Unauthorized access for users with no active account", 403));
   } else
-    throw new AppError("Not authenticated", 401);
+    return next(new AppError("Not authenticated", 401));
 
   next();
 });
@@ -106,8 +106,8 @@ export const isActive = asyncHandler(async (req, _, next) => {
  */
 export const authorizeAdmin = asyncHandler(async (req, _, next) => {
   if (req.userState) {
-    if (req.userState.role !== 'ADMIN') throw new AppError('Unauthorized access for non-admins users', 403);
+    if (req.userState.role !== 'ADMIN') return next(new AppError('Unauthorized access for non-admins users', 403));
   } else
-    throw new AppError("Not authenticated", 401);
+    return next(new AppError("Not authenticated", 401));
   next();
 });

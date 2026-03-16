@@ -7,12 +7,13 @@
  *   - Authorization: Bearer <access_token>
  *   - User account must be ACTIVE
  *
- * Base path: /api/chat
+ * Base path: /chat
  */
 
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import { validateRequest } from '../../middlewares/validateRequest.js';
+import { authorizeClient } from '../../middlewares/clientMiddleware.js';
 import {
   getOrCreateConversation,
   getConversations,
@@ -20,11 +21,12 @@ import {
   getUnreadSummary,
   getMissedMessages,
 } from '../../controllers/ChatController.js';
+import { authenticateAccess } from '../../middlewares/authMiddleware.js';
 
 const chatRouter = Router();
 
 // ─────────────────────────────────────────────────────────────────────────────
-// POST /api/chat/conversations
+// POST /chat/conversations
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -52,18 +54,13 @@ const chatRouter = Router();
  *         application/json:
  *           schema:
  *             type: object
- *             required: [workerId, clientId]
+ *             required: [workerId]
  *             properties:
  *               workerId:
  *                 type: string
  *                 format: uuid
  *                 example: 550e8400-e29b-41d4-a716-446655440000
  *                 description: UUID of the user who has a WorkerProfile
- *               clientId:
- *                 type: string
- *                 format: uuid
- *                 example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
- *                 description: UUID of the user who has a ClientProfile
  *     responses:
  *       200:
  *         description: Conversation ready (existing or newly created)
@@ -108,16 +105,17 @@ const chatRouter = Router();
  */
 chatRouter.post(
   '/conversations',
+  authenticateAccess,
+  authorizeClient,
   [
     body('workerId').isUUID().withMessage('workerId must be a valid UUID'),
-    body('clientId').isUUID().withMessage('clientId must be a valid UUID'),
   ],
   validateRequest,
   getOrCreateConversation,
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/chat/conversations
+// GET /chat/conversations
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -131,7 +129,7 @@ chatRouter.post(
  *       ordered by most recently updated. Each item includes:
  *       - `unreadCount` — derived as `messageCounter − lastReadMessageNumber` (O(1), no COUNT query)
  *       - `lastMessage` — the most recent message in the conversation (for preview)
- *       - `partner` — the other participant's public info (name, avatar, lastSeenAt)
+ *       - `partner` — the other participant's public info (name, avatar, isOnline)
  *
  *       This is the **app-open HTTP sync** endpoint; call it on cold start before
  *       connecting to Socket.IO.
@@ -139,6 +137,23 @@ chatRouter.post(
  *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/DeviceFingerprint'
+ *       - in: query
+ *         name: skip
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           default: 0
+ *           example: 0
+ *         description: Number of conversations to skip (offset-based pagination)
+ *       - in: query
+ *         name: take
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 30
+ *           default: 30
+ *           example: 30
+ *         description: Number of conversations to return (max 30)
  *     responses:
  *       200:
  *         description: List of conversations with unread counts
@@ -168,6 +183,8 @@ chatRouter.post(
  *                   - id: 550e8400-e29b-41d4-a716-446655440000
  *                     messageCounter: 10
  *                     unreadCount: 3
+ *                     partnerLastReceivedMessageNumber: 8
+ *                     partnerLastReadMessageNumber: 6
  *                     lastMessage:
  *                       id: abc123
  *                       messageNumber: 10
@@ -179,15 +196,23 @@ chatRouter.post(
  *                       firstName: أحمد
  *                       lastName: محمد
  *                       profileImageUrl: null
- *                       lastSeenAt: "2026-03-01T16:50:00.000Z"
+ *                       isOnline: true
  *                     updatedAt: "2026-03-01T17:00:00.000Z"
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
-chatRouter.get('/conversations', getConversations);
+chatRouter.get(
+  '/conversations',
+  [
+    query('skip').optional().isInt({ min: 0 }).toInt(),
+    query('take').optional().isInt({ min: 1, max: 100 }).toInt(),
+  ],
+  validateRequest,
+  getConversations,
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/chat/conversations/unread
+// GET /chat/conversations/unread
 // (Must be registered BEFORE /:conversationId routes to avoid param capture)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -207,6 +232,23 @@ chatRouter.get('/conversations', getConversations);
  *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/DeviceFingerprint'
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           default: 0
+ *           example: 0
+ *         description: Number of conversations to skip
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 30
+ *           example: 30
+ *         description: Max conversations to return (max 100)
  *     responses:
  *       200:
  *         description: Conversations with at least one unread message
@@ -231,10 +273,18 @@ chatRouter.get('/conversations', getConversations);
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
-chatRouter.get('/conversations/unread', getUnreadSummary);
+chatRouter.get(
+  '/conversations/unread',
+  [
+    query('offset').optional().isInt({ min: 0 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+  ],
+  validateRequest,
+  getUnreadSummary,
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/chat/conversations/:conversationId/messages
+// GET /chat/conversations/:conversationId/messages
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -321,7 +371,7 @@ chatRouter.get('/conversations/unread', getUnreadSummary);
  *                       firstName: أحمد
  *                       lastName: محمد
  *                       profileImageUrl: null
- *                       lastSeenAt: "2026-03-01T16:50:00.000Z"
+ *                       isOnline: true
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       403:
@@ -344,7 +394,7 @@ chatRouter.get(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/chat/conversations/:conversationId/messages/missed
+// GET /chat/conversations/:conversationId/messages/missed
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**

@@ -37,7 +37,7 @@ const mockUser = {
   firstName: 'Ahmed',
   lastName: 'Mohamed',
   profileImageUrl: null,
-  lastSeenAt: new Date(),
+  isOnline: true,
 };
 
 import ConversationRepository from '../../src/repositories/database/ConversationRepository.js';
@@ -259,6 +259,22 @@ describe('ConversationRepository', () => {
 
       expect(prisma.$queryRaw).toHaveBeenCalled();
       expect(result).toEqual(mockParticipants[0]);
+    });
+  });
+
+  describe('updateLastReceived', () => {
+    test('should update lastReceivedMessageNumber using raw query with GREATEST', async () => {
+      const updatedParticipant = { ...mockParticipants[0], lastReceivedMessageNumber: 10 };
+      prisma.$queryRaw.mockResolvedValue([updatedParticipant]);
+
+      const result = await repository.updateLastReceived({
+        conversationId: 'conv-1',
+        userId: 'worker-1',
+        messageNumber: 10,
+      });
+
+      expect(prisma.$queryRaw).toHaveBeenCalled();
+      expect(result).toEqual(updatedParticipant);
     });
   });
 });

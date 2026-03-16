@@ -56,42 +56,61 @@ export default class ChatService extends Service {
    * @throws {AppError} 409 if DB race creates duplicate (caught from UNIQUE constraint)
    */
   async getOrCreateConversation({ workerId, clientId }) {
-    return tryCatch(async () => {
-      if (workerId === clientId)
-        throw new AppError('A user cannot start a conversation with themselves', 400);
+    if (workerId === clientId)
+      throw new AppError('A user cannot start a conversation with themselves', 400);
 
-      // Validate roles at the profile level
-      const [workerProfile, clientProfile] = await Promise.all([
-        this.#userRepository.findWorkerProfile({ userId: workerId }),
-        this.#userRepository.findClientProfile({ userId: clientId }),
-      ]);
+    // Validate roles at the profile level
+    const [workerProfile, clientProfile] = await Promise.all([
+      this.#userRepository.findWorkerProfile({ userId: workerId }),
+      this.#userRepository.findClientProfile({ userId: clientId }),
+    ]);
 
-      if (!workerProfile)
-        throw new AppError('Worker profile not found', 400);
-      if (!clientProfile)
-        throw new AppError('Client profile not found', 400);
+    if (!workerProfile)
+      throw new AppError('Worker profile not found', 400);
+    if (!clientProfile)
+      throw new AppError('Client profile not found', 400);
 
-      // Check if conversation already exists
-      const existing = await this.#conversationRepository.findByPair({ workerId, clientId });
-      if (existing) return existing;
-
-      // Create the conversation + both participant rows atomically
-      const { conversation } = await this.#conversationRepository.createWithParticipants({
-        workerId,
-        clientId,
-      });
-      return conversation;
+    // Check if conversation already exists
+    const existing = await this.#conversationRepository.findByPair({
+      workerId,
+      clientId,
     });
+    if (existing) return existing;
+
+    // Create the conversation + both participant rows atomically
+    try {
+      const { conversation } =
+        await this.#conversationRepository.createWithParticipants({
+          workerId,
+          clientId,
+        });
+      return conversation;
+    } catch (err) {
+      // P2002 = UNIQUE constraint violation — race condition, another request
+      // already created this conversation. Return the existing one.
+      if (err.code === 'P2002') {
+        const existing = await this.#conversationRepository.findByPair({
+          workerId,
+          clientId,
+        });
+        if (existing) return existing;
+      }
+      throw err;
+    }
   }
 
   /**
    * List all conversations for a user with derived unreadCount.
-   * @param {{ userId: IDType }} params
+   * @param {{ userId: IDType, skip?: number, take?: number }} params
    * @returns {Promise<{ id: IDType, messageCounter: number, unreadCount: number, lastMessage: import('@prisma/client').Message | null, partner: import('@prisma/client').User | null, createdAt: Date, updatedAt: Date}[]>}
    */
-  async getConversations({ userId }) {
+  async getConversations({ userId, skip = 0, take = 30 }) {
     return tryCatch(async () => {
-      const convs = await this.#conversationRepository.findAllByUserId({ userId });
+      const convs = await this.#conversationRepository.findAllByUserId({
+        userId,
+        skip,
+        take,
+      });
 
       const conversations = convs.map((conv) => {
         const myParticipant = conv.participants.find((p) => p.userId === userId);
@@ -104,6 +123,8 @@ export default class ChatService extends Service {
           unreadCount,
           lastMessage: conv.messages[0] ?? null,
           partner: partnerParticipant?.user ?? null,
+          partnerLastReceivedMessageNumber: partnerParticipant?.lastReceivedMessageNumber ?? 0,
+          partnerLastReadMessageNumber: partnerParticipant?.lastReadMessageNumber ?? 0,
           createdAt: conv.createdAt,
           updatedAt: conv.updatedAt,
         };
@@ -129,7 +150,10 @@ export default class ChatService extends Service {
    */
   async sendMessage({ conversationId, senderId, content, type = 'TEXT' }) {
     return tryCatch(async () => {
-      if (!content?.trim()) throw new AppError('Message content cannot be empty', 400);
+      if (!content?.trim())
+        throw new AppError('Message content cannot be empty', 400);
+      if (content.length > 2000)
+        throw new AppError('Message content cannot exceed 2000 characters', 400);
 
       const message = await prisma.$transaction(async (tx) => {
         // Atomic increment — returns new counter value
@@ -144,6 +168,13 @@ export default class ChatService extends Service {
         return tx.message.create({
           data: { conversationId, senderId, messageNumber, content, type },
         });
+      });
+
+      // Sender always "receives" their own message
+      await this.#conversationRepository.updateLastReceived({
+        conversationId,
+        userId: senderId,
+        messageNumber: message.messageNumber,
       });
 
       return message;
@@ -190,11 +221,19 @@ export default class ChatService extends Service {
       const conv = await this.#conversationRepository.findFirst({ id: conversationId });
       if (!conv) throw new AppError('Conversation not found', 404);
 
-      await this.#conversationRepository.updateLastRead({
-        conversationId,
-        userId,
-        messageNumber: conv.messageCounter,
-      });
+      // Reading implies receiving — bump both counters
+      await Promise.all([
+        this.#conversationRepository.updateLastRead({
+          conversationId,
+          userId,
+          messageNumber: conv.messageCounter,
+        }),
+        this.#conversationRepository.updateLastReceived({
+          conversationId,
+          userId,
+          messageNumber: conv.messageCounter,
+        }),
+      ]);
     });
   }
 
@@ -247,6 +286,24 @@ export default class ChatService extends Service {
       const participant = await this.#conversationRepository.findParticipant({ conversationId, userId });
       if (!participant) throw new AppError('Not a participant in this conversation', 403);
       return participant;
+    });
+  }
+
+  // ─── Delivery tracking ─────────────────────────────────────────────────────
+
+  /**
+   * Mark messages as delivered for a recipient up to a given messageNumber.
+   * Uses GREATEST semantics to never decrement.
+   * @param {{ conversationId: IDType, userId: IDType, messageNumber: number }} params
+   * @returns {Promise<import('@prisma/client').ConversationParticipant>}
+   */
+  async markAsDelivered({ conversationId, userId, messageNumber }) {
+    return tryCatch(async () => {
+      return this.#conversationRepository.updateLastReceived({
+        conversationId,
+        userId,
+        messageNumber,
+      });
     });
   }
 
