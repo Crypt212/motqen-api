@@ -55,7 +55,7 @@ export const getConversations = asyncHandler(async (req, res) => {
 export const getMessages = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
   const conversationId = String(req.params.conversationId);
-  const after = parseInt(String(req.query.after) ?? '0', 10);
+  const after = parseInt(String(req.query.after ?? '0'), 10);
   const limit = Math.min(
     parseInt(String(req.query.limit) ?? '30', 10),
     100,
@@ -78,7 +78,7 @@ export const getMessages = asyncHandler(async (req, res) => {
  */
 export const getUnreadSummary = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const offset = parseInt(String(req.query.offset) ?? '0', 10);
+  const offset = parseInt(String(req.query.offset ?? '0'), 10);
   const limit = Math.min(
     parseInt(String(req.query.limit) ?? '30', 10),
     100,

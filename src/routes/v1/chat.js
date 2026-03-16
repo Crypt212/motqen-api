@@ -151,10 +151,10 @@ chatRouter.post(
  *         schema:
  *           type: integer
  *           minimum: 1
- *           maximum: 100
+ *           maximum: 30
  *           default: 30
  *           example: 30
- *         description: Number of conversations to return (max 100)
+ *         description: Number of conversations to return (max 30)
  *     responses:
  *       200:
  *         description: List of conversations with unread counts

@@ -160,7 +160,12 @@ export default class ConversationRepository extends Repository {
       SET "lastReadMessageNumber" = GREATEST("lastReadMessageNumber", ${messageNumber})
       WHERE "conversationId" = ${conversationId} AND "userId" = ${userId}
       RETURNING *
-    `.then((rows) => rows[0]);
+    `.then((rows) => {
+      if (!rows || rows.length === 0) {
+        throw new Error(`Participant not found: conversationId=${conversationId}, userId=${userId}`);
+      }
+      return rows[0];
+    });
   }
 
   /**
@@ -174,6 +179,11 @@ export default class ConversationRepository extends Repository {
       SET "lastReceivedMessageNumber" = GREATEST("lastReceivedMessageNumber", ${messageNumber})
       WHERE "conversationId" = ${conversationId} AND "userId" = ${userId}
       RETURNING *
-    `.then((rows) => rows[0]);
+      `.then((rows) => {
+      if (!rows || rows.length === 0) {
+        throw new Error(`Participant not found: conversationId=${conversationId}, userId=${userId}`);
+      }
+      return rows[0];
+    });
   }
 }

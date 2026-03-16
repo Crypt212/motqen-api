@@ -25,7 +25,7 @@ import AppError from '../errors/AppError.js';
 export const socketAuth = async (socket, next) => {
   const token = socket.handshake.auth?.token;
   if (!token) {
-    return next(new AppError('Unauthorized, handshake token is not found', 403));
+    return next(new AppError('Unauthorized, handshake token is not found', 401));
   }
   // Reuse the same verifyAndDecodeToken utility used by HTTP middleware
   let payload;
@@ -42,11 +42,11 @@ export const socketAuth = async (socket, next) => {
   );
 
   if (!userState) {
-    throw new AppError("Not authenticated", 401);
+    return next(new AppError("Not authenticated", 401));
   }
 
   if (userState.accountStatus !== 'ACTIVE') {
-    throw new AppError("Unauthorized access for users with no active account", 403);
+    return next(new AppError("Unauthorized access for users with no active account", 403));
   }
 
   // Attach to socket for use in all handlers
