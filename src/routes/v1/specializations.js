@@ -22,6 +22,8 @@ import {
   validateUpdateSpecialization,
   validateSubSpecializationIdParam,
   validateCreateSubSpecialization,
+  validateGetSpecializations,
+  validateGetSubSpecializations,
 } from '../../validators/specializations.js';
 
 const specializationRouter = Router();
@@ -55,7 +57,12 @@ const specializationRouter = Router();
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-specializationRouter.get('/', getSpecializations);
+specializationRouter.get(
+  '/',
+  validateGetSpecializations,
+  validateRequest,
+  getSpecializations
+);
 
 /**
  * @swagger
@@ -128,7 +135,13 @@ specializationRouter.get(
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-specializationRouter.get('/:id/sub-specializations', getSubSpecializations);
+specializationRouter.get(
+  '/:id/sub-specializations',
+  validateSpecializationIdParam(),
+  validateGetSubSpecializations,
+  validateRequest,
+  getSubSpecializations
+);
 
 /**
  * @swagger

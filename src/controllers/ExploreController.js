@@ -3,6 +3,7 @@
  * @module controllers/ExploreController
  */
 
+import { matchedData } from 'express-validator';
 import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { userRepository, workerRepository } from '../state.js';
@@ -72,7 +73,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     nearestFirst,
     page,
     limit,
-  } = req.query;
+  } = matchedData(req, { includeOptionals: true });
 
   const mainSpecializationId = getFirstString(specializationId, specialization_id);
   const subSpecId = getFirstString(subSpecializationId, sub_specialization_id, category_id);
@@ -150,7 +151,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
  * @param {import('../types/asyncHandler.js').Response} res
  */
 export const getWorkerById = asyncHandler(async (req, res) => {
-  const workerId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const { workerId } = matchedData(req, { includeOptionals: true });
 
   const worker = await workerRepository.getWorkerById({ workerId });
 

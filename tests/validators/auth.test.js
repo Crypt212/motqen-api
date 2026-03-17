@@ -5,51 +5,140 @@
 
 import {
   SESSIONS_QUERY_CONFIG,
-  USERS_QUERY_CONFIG
+  USERS_QUERY_CONFIG,
+  validateRequestOTP,
+  validateVerifyOTP,
+  validateRegisterClient,
+  validateRegisterWorker,
+  validateLogin,
+  validateReviewStatus,
+  validateGenerateAccessToken,
+  validateLogout,
+  validateListSessions,
+  validateListUsers,
 } from '../../src/validators/auth.js';
 
-describe('Auth Validators', () => {
-  describe('SESSIONS_QUERY_CONFIG', () => {
-    test('should have allowedFilterFields', () => {
-      expect(SESSIONS_QUERY_CONFIG.allowedFilterFields).toBeDefined();
-      expect(Array.isArray(SESSIONS_QUERY_CONFIG.allowedFilterFields)).toBe(true);
-    });
-
-    test('should have filterFieldTypes', () => {
-      expect(SESSIONS_QUERY_CONFIG.filterFieldTypes).toBeDefined();
-      expect(typeof SESSIONS_QUERY_CONFIG.filterFieldTypes).toBe('object');
-    });
-
-    test('should have allowedOrderByFields', () => {
-      expect(SESSIONS_QUERY_CONFIG.allowedOrderByFields).toBeDefined();
-      expect(Array.isArray(SESSIONS_QUERY_CONFIG.allowedOrderByFields)).toBe(true);
-    });
-
-    test('should have allowedSearchFields', () => {
-      expect(SESSIONS_QUERY_CONFIG.allowedSearchFields).toBeDefined();
-      expect(Array.isArray(SESSIONS_QUERY_CONFIG.allowedSearchFields)).toBe(true);
-    });
+describe('SESSIONS_QUERY_CONFIG', () => {
+  test('should have correct allowedFilterFields', () => {
+    expect(SESSIONS_QUERY_CONFIG.allowedFilterFields).toContain('userId');
+    expect(SESSIONS_QUERY_CONFIG.allowedFilterFields).toContain('deviceId');
+    expect(SESSIONS_QUERY_CONFIG.allowedFilterFields).toContain('isRevoked');
   });
 
-  describe('USERS_QUERY_CONFIG', () => {
-    test('should have allowedFilterFields', () => {
-      expect(USERS_QUERY_CONFIG.allowedFilterFields).toBeDefined();
-      expect(Array.isArray(USERS_QUERY_CONFIG.allowedFilterFields)).toBe(true);
-    });
+  test('should have correct filterFieldTypes', () => {
+    expect(SESSIONS_QUERY_CONFIG.filterFieldTypes.userId.type).toBe('uuid');
+    expect(SESSIONS_QUERY_CONFIG.filterFieldTypes.isRevoked.type).toBe(
+      'boolean'
+    );
+  });
+});
 
-    test('should have filterFieldTypes', () => {
-      expect(USERS_QUERY_CONFIG.filterFieldTypes).toBeDefined();
-      expect(typeof USERS_QUERY_CONFIG.filterFieldTypes).toBe('object');
-    });
+describe('USERS_QUERY_CONFIG', () => {
+  test('should have correct allowedFilterFields', () => {
+    expect(USERS_QUERY_CONFIG.allowedFilterFields).toContain('role');
+    expect(USERS_QUERY_CONFIG.allowedFilterFields).toContain('status');
+    expect(USERS_QUERY_CONFIG.allowedFilterFields).toContain('phoneNumber');
+  });
 
-    test('should have allowedOrderByFields', () => {
-      expect(USERS_QUERY_CONFIG.allowedOrderByFields).toBeDefined();
-      expect(Array.isArray(USERS_QUERY_CONFIG.allowedOrderByFields)).toBe(true);
-    });
+  test('should have correct filterFieldTypes for role', () => {
+    expect(USERS_QUERY_CONFIG.filterFieldTypes.role.type).toBe('enum');
+    expect(USERS_QUERY_CONFIG.filterFieldTypes.role.enumValues).toContain(
+      'USER'
+    );
+    expect(USERS_QUERY_CONFIG.filterFieldTypes.role.enumValues).toContain(
+      'ADMIN'
+    );
+  });
+});
 
-    test('should have allowedSearchFields', () => {
-      expect(USERS_QUERY_CONFIG.allowedSearchFields).toBeDefined();
-      expect(Array.isArray(USERS_QUERY_CONFIG.allowedSearchFields)).toBe(true);
-    });
+describe('validateRequestOTP', () => {
+  test('should be defined', () => {
+    expect(validateRequestOTP).toBeDefined();
+  });
+
+  test('should be an array', () => {
+    expect(Array.isArray(validateRequestOTP)).toBe(true);
+  });
+
+  test('should have validators for phoneNumber and method', () => {
+    expect(validateRequestOTP.length).toBe(2);
+  });
+});
+
+describe('validateVerifyOTP', () => {
+  test('should be defined', () => {
+    expect(validateVerifyOTP).toBeDefined();
+  });
+
+  test('should be an array', () => {
+    expect(Array.isArray(validateVerifyOTP)).toBe(true);
+  });
+
+  test('should have validators for phoneNumber, otp, and method', () => {
+    expect(validateVerifyOTP.length).toBe(3);
+  });
+});
+
+describe('validateRegisterClient', () => {
+  test('should be defined', () => {
+    expect(validateRegisterClient).toBeDefined();
+  });
+
+  test('should be an array', () => {
+    expect(Array.isArray(validateRegisterClient)).toBe(true);
+  });
+});
+
+describe('validateRegisterWorker', () => {
+  test('should be defined', () => {
+    expect(validateRegisterWorker).toBeDefined();
+  });
+
+  test('should be an array', () => {
+    expect(Array.isArray(validateRegisterWorker)).toBe(true);
+  });
+});
+
+describe('validateLogin', () => {
+  test('should be defined', () => {
+    expect(validateLogin).toBeDefined();
+  });
+});
+
+describe('validateReviewStatus', () => {
+  test('should be defined', () => {
+    expect(validateReviewStatus).toBeDefined();
+  });
+});
+
+describe('validateGenerateAccessToken', () => {
+  test('should be defined', () => {
+    expect(validateGenerateAccessToken).toBeDefined();
+  });
+});
+
+describe('validateLogout', () => {
+  test('should be defined', () => {
+    expect(validateLogout).toBeDefined();
+  });
+});
+
+describe('validateListSessions', () => {
+  test('should be defined', () => {
+    expect(validateListSessions).toBeDefined();
+  });
+
+  test('should be an array', () => {
+    expect(Array.isArray(validateListSessions)).toBe(true);
+  });
+});
+
+describe('validateListUsers', () => {
+  test('should be defined', () => {
+    expect(validateListUsers).toBeDefined();
+  });
+
+  test('should be an array', () => {
+    expect(Array.isArray(validateListUsers)).toBe(true);
   });
 });

@@ -8,6 +8,11 @@ import {
   searchWorkers,
   getWorkerById,
 } from '../../controllers/WorkerController.js';
+import { validateRequest } from '../../middlewares/validateRequest.js';
+import {
+  validateSearchWorkers,
+  validateGetWorkerById,
+} from '../../validators/worker.js';
 
 const workerRouter = Router();
 
@@ -120,7 +125,7 @@ const workerRouter = Router();
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-workerRouter.get('/', searchWorkers);
+workerRouter.get('/', validateSearchWorkers, validateRequest, searchWorkers);
 
 /**
  * @swagger
@@ -251,6 +256,6 @@ workerRouter.get('/', searchWorkers);
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-workerRouter.get('/:id', getWorkerById);
+workerRouter.get('/:id', validateGetWorkerById, validateRequest, getWorkerById);
 
 export default workerRouter;
