@@ -217,6 +217,7 @@ export class Repository {
    * @returns {{ [x: string]: 'asc' | 'desc'}[]}
    */
   static handleOrder(orderBy) {
+    if (!orderBy) return [];
     return orderBy
       .map(({ field, direction }) => {
         const order = direction;
