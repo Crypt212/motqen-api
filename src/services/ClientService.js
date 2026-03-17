@@ -3,17 +3,25 @@
  * @module services/ClientService
  */
 
-import AppError from "../errors/AppError.js";
-import Service, { tryCatch } from "./Service.js";
-import UserRepository from "../repositories/database/UserRepository.js";
-import { Repository } from "../repositories/database/Repository.js";
+import AppError from '../errors/AppError.js';
+import Service, { tryCatch } from './Service.js';
+import UserRepository from '../repositories/database/UserRepository.js';
+import { Repository } from '../repositories/database/Repository.js';
+import ClientRepository from '../repositories/database/ClientRepository.js';
 
-/** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
-/** @typedef {import("../repositories/database/UserRepository.js").ClientProfile} ReturnClientProfile */
-/** @typedef {import("../repositories/database/UserRepository.js").ClientProfileFilter} ClientProfileFilter */
-/** @typedef {import("../repositories/database/UserRepository.js").PaginationOptions} PaginationOptions */
-/** @typedef {import("../repositories/database/UserRepository.js").OrderingOptions} OrderingOptions */
-/** @typedef {{address: String, addressNotes: String}} InputClientProfileData */
+/**
+ * @typedef {Object} InputClientData
+ * @property {string} address
+ * @property {string} [addressNotes]
+ * @property {import('../repositories/database/Repository.js').IDType} governmentId
+ * @property {import('../repositories/database/Repository.js').IDType} cityId
+ */
+
+/**
+ * @typedef {Object} InputClientUpdateData
+ * @property {string} [address]
+ * @property {string} [addressNotes]
+ */
 
 /**
  * Client Service - Manages client-related operations
@@ -21,16 +29,19 @@ import { Repository } from "../repositories/database/Repository.js";
  * @extends Service
  */
 export default class ClientService extends Service {
-
+  /** @type {ClientRepository} */
+  #clientRepository;
   /** @type {UserRepository} */
   #userRepository;
 
   /**
    * @param {Object} params
+   * @param {ClientRepository} params.clientRepository
    * @param {UserRepository} params.userRepository
    */
-  constructor({ userRepository }) {
+  constructor({ clientRepository, userRepository }) {
     super();
+    this.#clientRepository = clientRepository;
     this.#userRepository = userRepository;
   }
 
@@ -39,18 +50,19 @@ export default class ClientService extends Service {
    * @async
    * @method getClientProfile
    * @param {Object} params
-   * @param {IDType} params.userId - User ID
-   * @returns {Promise<ReturnClientProfile>} Client profile
-   * @throws {AppError} If user not found
+   * @param {import('../repositories/database/Repository.js').IDType} params.userId
+   * @returns {Promise<import('@prisma/client').ClientProfile>}
+   * @throws {AppError} If user or profile not found
    */
   async get({ userId }) {
     return tryCatch(async () => {
       const user = await this.#userRepository.findFirst({ id: userId });
-      if (!user) throw new AppError("User not found", 404);
+      if (!user) throw new AppError('User not found', 404);
 
-      const clientProfile = await this.#userRepository.findClientProfile({ userId });
-      if (!clientProfile)
-        throw new AppError("Client profile not found", 404);
+      const clientProfile = await this.#clientRepository.findByUserId({
+        userId,
+      });
+      if (!clientProfile) throw new AppError('Client profile not found', 404);
 
       return clientProfile;
     });
@@ -61,27 +73,40 @@ export default class ClientService extends Service {
    * @async
    * @method createClientProfile
    * @param {Object} params
-   * @param {IDType} params.userId - User ID
-   * @param {InputClientProfileData} params.data
-   * @returns {Promise<ReturnClientProfile>} Created client profile
+   * @param {import('../repositories/database/Repository.js').IDType} params.userId
+   * @param {InputClientData} params.data
+   * @returns {Promise<import('@prisma/client').ClientProfile>}
    * @throws {AppError} If user not found
    */
-  async create({
-    userId,
-    data,
-  }) {
+  async create({ userId, data }) {
     return tryCatch(async () => {
       const user = await this.#userRepository.findFirst({ id: userId });
-      if (!user) throw new AppError("User not found", 404);
+      if (!user) throw new AppError('User not found', 404);
 
-      return await Repository.createTransaction([this.#userRepository], async () => {
+      return await Repository.createTransaction(
+        [this.#clientRepository],
+        async () => {
+          const clientProfile = await this.#clientRepository.createByUserId({
+            userId,
+            data: {
+              locations: {
+                create: {
+                  governmentId: data.governmentId,
+                  cityId: data.cityId,
+                  address: data.address,
+                  addressNotes: data.addressNotes,
+                  isMain: true,
+                },
+              },
+            },
+          });
 
-        const clientProfile = await this.#userRepository.createClientProfile({ userId: user.id, data: { address: data.address, addressNotes: data.addressNotes } });
-
-        return clientProfile;
-      }, (reason) => {
-        throw new AppError("Failed to create worker profile", 500, reason);
-      });
+          return clientProfile;
+        },
+        (reason) => {
+          throw new AppError('Failed to create client profile', 500, reason);
+        }
+      );
     });
   }
 
@@ -90,14 +115,14 @@ export default class ClientService extends Service {
    * @async
    * @method updateClientProfile
    * @param {Object} params
-   * @param {IDType} params.clientProfileId - Client Profile ID
-   * @param {Partial<InputClientProfileData>} params.data - Client profile data to update
-   * @returns {Promise<ReturnClientProfile>} Updated client profile
-   * @throws {AppError} If user not found or profile not found
+   * @param {import('../repositories/database/Repository.js').IDType} params.clientProfileId
+   * @param {InputClientUpdateData} params.data
+   * @returns {Promise<import('@prisma/client').ClientProfile>}
+   * @throws {AppError} If profile not found
    */
   async update({ clientProfileId, data }) {
     return tryCatch(async () => {
-      return await this.#userRepository.updateClientProfile({ clientProfileId, data });
+      return await this.#clientRepository.update({ id: clientProfileId, data });
     });
   }
 
@@ -106,13 +131,13 @@ export default class ClientService extends Service {
    * @async
    * @method deleteClientProfile
    * @param {Object} params
-   * @param {IDType} params.clientProfileId - Client Profile ID
-   * @returns {Promise<ReturnClientProfile>} Deleted client profile
-   * @throws {AppError} If user not found
+   * @param {import('../repositories/database/Repository.js').IDType} params.clientProfileId
+   * @returns {Promise<import('@prisma/client').ClientProfile>}
+   * @throws {AppError} If profile not found
    */
   async delete({ clientProfileId }) {
     return tryCatch(async () => {
-      return await this.#userRepository.deleteClientProfile({ clientProfileId });
+      return await this.#clientRepository.delete({ id: clientProfileId });
     });
   }
 
@@ -121,10 +146,10 @@ export default class ClientService extends Service {
    * @async
    * @method hasClientProfile
    * @param {Object} params
-   * @param {IDType} params.userId - User ID
+   * @param {import('../repositories/database/Repository.js').IDType} params.userId
    * @returns {Promise<boolean>}
    */
   async hasClientProfile({ userId }) {
-    return await this.#userRepository.hasClientProfile({ userId });
+    return await this.#clientRepository.exists({ userId });
   }
 }

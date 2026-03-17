@@ -20,31 +20,36 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     area,
     availability,
     subSpecializationId,
-    governmentId,
     acceptsUrgentJobs,
     page,
     limit,
   } = req.query;
 
   // Support both new API names and legacy names
-  const subSpecId = typeof category_id === 'string'
-    ? category_id
-    : (typeof subSpecializationId === 'string' ? subSpecializationId : undefined);
+  const subSpecId =
+    typeof category_id === 'string'
+      ? category_id
+      : typeof subSpecializationId === 'string'
+        ? subSpecializationId
+        : undefined;
 
-  const areaFilter = typeof area === 'string'
-    ? area
-    : (typeof governmentId === 'string' ? governmentId : undefined);
+  const areaFilter = typeof area === 'string' ? area : undefined;
 
-  const availabilityRaw = typeof availability === 'string'
-    ? availability
-    : (typeof acceptsUrgentJobs === 'string' ? acceptsUrgentJobs : undefined);
+  const availabilityRaw =
+    typeof availability === 'string'
+      ? availability
+      : typeof acceptsUrgentJobs === 'string'
+        ? acceptsUrgentJobs
+        : undefined;
 
-  let isAvailableNow;
+  let isOnline;
   if (availabilityRaw !== undefined) {
     const normalized = availabilityRaw.toLowerCase();
-    isAvailableNow = ['true', '1', 'yes', 'available', 'now'].includes(normalized)
+    isOnline = ['true', '1', 'yes', 'available', 'now'].includes(normalized)
       ? true
-      : (['false', '0', 'no', 'unavailable'].includes(normalized) ? false : undefined);
+      : ['false', '0', 'no', 'unavailable'].includes(normalized)
+        ? false
+        : undefined;
   }
 
   const pageNum = typeof page === 'string' ? parseInt(page, 10) : 1;
@@ -53,7 +58,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
   const result = await workerRepository.searchWorkers({
     categoryId: subSpecId,
     area: areaFilter,
-    availability: isAvailableNow,
+    availability: isOnline,
     page: pageNum,
     limit: limitNum,
   });
@@ -70,7 +75,9 @@ export const searchWorkers = asyncHandler(async (req, res) => {
  * @param {import('../types/asyncHandler.js').Response} res
  */
 export const getWorkerById = asyncHandler(async (req, res) => {
-  const workerId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const workerId = Array.isArray(req.params.id)
+    ? req.params.id[0]
+    : req.params.id;
 
   const worker = await workerRepository.getWorkerById({ workerId });
 
@@ -78,5 +85,9 @@ export const getWorkerById = asyncHandler(async (req, res) => {
     throw new AppError('Worker not found or not approved', 404);
   }
 
-  new SuccessResponse('Worker profile retrieved successfully', worker, 200).send(res);
+  new SuccessResponse(
+    'Worker profile retrieved successfully',
+    worker,
+    200
+  ).send(res);
 });

@@ -19,17 +19,39 @@ import RateLimitCache from '../repositories/cache/RateLimitCache.js';
 import { generateToken } from '../utils/tokens.js';
 import { logger } from '../libs/winston.js';
 import GovernmentRepository from '../repositories/database/GovernmentRepository.js';
+import ClientRepository from '../repositories/database/ClientRepository.js';
+import WorkerRepository from '../repositories/database/WorkerRepository.js';
 
 const MAX_VERIFY_ATTEMPTS = 5;
 
-/** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
-/** @typedef {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} File */
+/**
+ * @typedef {Object} InputUserData
+ * @property {string} phoneNumber
+ * @property {pkg.$Enums.Role} role
+ * @property {string} firstName
+ * @property {string} middleName
+ * @property {string} lastName
+ * @property {Buffer} [profileImageBuffer]
+ */
 
-/** @typedef {{ phoneNumber: string, role: pkg.$Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: IDType, profileImageBuffer: Buffer | undefined }} InputUserData */
-/** @typedef {{ isInTeam: Boolean, experienceYears: number, acceptsUrgentJobs: Boolean, workGovernmentIds: IDType[], specializationsTree: { mainId: IDType, subIds: IDType[]}[], idImageBuffer: Buffer, profileWithIdImageBuffer: Buffer  }} InputWorkerData */
-/** @typedef {{ address: string, addressNotes?: string  }} InputClientData */
+/**
+ * @typedef {Object} InputWorkerData
+ * @property {boolean} isInTeam
+ * @property {number} experienceYears
+ * @property {boolean} acceptsUrgentJobs
+ * @property {import('../repositories/database/Repository.js').IDType[]} workGovernmentIds
+ * @property {{ mainId: import('../repositories/database/Repository.js').IDType, subIds: import('../repositories/database/Repository.js').IDType[] }[]} specializationsTree
+ * @property {Buffer} idImageBuffer
+ * @property {Buffer} profileWithIdImageBuffer
+ */
 
-/** @typedef {{ phoneNumber: string, role: pkg.$Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, city: string, status: pkg.$Enums.AccountStatus }} ReturnUserData */
+/**
+ * @typedef {Object} InputClientData
+ * @property {string} address
+ * @property {string} [addressNotes]
+ * @property {import('../repositories/database/Repository.js').IDType} governmentId
+ * @property {import('../repositories/database/Repository.js').IDType} cityId
+ */
 
 /**
  * Auth Service
@@ -39,18 +61,22 @@ const MAX_VERIFY_ATTEMPTS = 5;
 export default class AuthService extends Service {
   /** @type {UserRepository} */
   #userRepository;
+  /** @type {WorkerRepository} */
+  #workerRepository;
+  /** @type {ClientRepository} */
+  #clientRepository;
   /** @type {OtpCache} */
   #otpCache;
   /** @type {SessionRepository} */
   #sessionRepository;
-  /** @type {GovernmentRepository} */
-  #governmentRepository;
   /** @type {RateLimitCache} */
   #rateLimitCache;
 
   /**
    * @param {Object} params
    * @param {UserRepository} params.userRepository
+   * @param {WorkerRepository} params.workerRepository
+   * @param {ClientRepository} params.clientRepository
    * @param {GovernmentRepository} params.governmentRepository
    * @param {OtpCache} params.otpCache
    * @param {SessionRepository} params.sessionRepository
@@ -58,14 +84,16 @@ export default class AuthService extends Service {
    */
   constructor({
     userRepository,
-    governmentRepository,
+    workerRepository,
+    clientRepository,
     otpCache,
     sessionRepository,
     rateLimitCache,
   }) {
     super();
     this.#userRepository = userRepository;
-    this.#governmentRepository = governmentRepository;
+    this.#workerRepository = workerRepository;
+    this.#clientRepository = clientRepository;
     this.#sessionRepository = sessionRepository;
     this.#rateLimitCache = rateLimitCache;
     this.#otpCache = otpCache;
@@ -78,7 +106,7 @@ export default class AuthService extends Service {
    * @param {Object} params - User registration data
    * @param {InputUserData} params.userData
    * @param {InputWorkerData} params.workerProfileData
-   * @returns {Promise<{ user: import("../repositories/database/UserRepository.js").User & { cityName: string }, profile: import("@prisma/client").WorkerProfile }>}
+   * @returns {Promise<{ user: import("../repositories/database/UserRepository.js").User, profile: import("@prisma/client").WorkerProfile }>}
    * @throws {AppError} If government or city not found
    */
   async registerWorker({
@@ -87,8 +115,6 @@ export default class AuthService extends Service {
       firstName,
       middleName,
       lastName,
-      governmentId,
-      cityId,
       role,
       profileImageBuffer,
     },
@@ -103,32 +129,27 @@ export default class AuthService extends Service {
     },
   }) {
     return tryCatch(async () => {
-      const cities = await this.#governmentRepository.findCities({
-        filter: { id: cityId, governmentId },
-      });
-      if (!cities || cities.data.length === 0)
-        throw new AppError('Government or city not found', 400);
+      // Note: governmentId and cityId validation moved to location handling
+      // For workers, government associations are handled via workGovernmentIds
 
-      const { user, profile } = await this.#userRepository.createWorker({
-        userData: {
+      const user = await this.#userRepository.create({
+        data: {
           phoneNumber,
           role,
           firstName,
           middleName,
           lastName,
-          governmentId,
-          cityId,
-          status: 'ACTIVE',
+          status: pkg.$Enums.AccountStatus.ACTIVE,
+          workerProfile: {
+            create: {
+              experienceYears,
+              isInTeam: Boolean(isInTeam),
+              acceptsUrgentJobs: Boolean(acceptsUrgentJobs),
+            },
+          },
         },
-        workerProfileData: {
-          experienceYears,
-          isInTeam: Boolean(isInTeam),
-          acceptsUrgentJobs: Boolean(acceptsUrgentJobs),
-        },
-        verificationData: undefined,
       });
 
-      /** @type {string} */
       const nationalID = (
         await uploadToCloudinary(
           idImageBuffer,
@@ -137,7 +158,6 @@ export default class AuthService extends Service {
         )
       ).url;
 
-      /** @type {string} */
       const selfiWithID = (
         await uploadToCloudinary(
           profileWithIdImageBuffer,
@@ -146,23 +166,28 @@ export default class AuthService extends Service {
         )
       ).url;
 
+      const workerProfile = await this.#workerRepository.findFirst({
+        userId: user.id,
+      });
+
       const verification =
-        await this.#userRepository.upsertWorkerProfileVerification({
-          workerProfileId: profile.id,
-          verificationData: {
+        await this.#workerRepository.upsertVerification({
+          workerProfileId: workerProfile.id,
+          data: {
+            workerProfile: { connect: { id: workerProfile.id } },
             idWithPersonalImageUrl: nationalID,
             idDocumentUrl: selfiWithID,
-            status: 'PENDING',
+            status: pkg.$Enums.VerificationStatus.PENDING,
             reason: 'Waiting for verification',
           },
         });
 
-      await this.#userRepository.insertWorkerProfileGovernments({
-        workerProfileId: profile.id,
+      await this.#workerRepository.insertWorkingGovernments({
+        userId: user.id,
         governmentIds: workGovernmentIds,
       });
-      await this.#userRepository.insertWorkerProfileSpecializations({
-        workerProfileId: profile.id,
+      await this.#workerRepository.insertSpecializations({
+        workerProfileId: workerProfile.id,
         specializationsTree,
       });
 
@@ -171,16 +196,18 @@ export default class AuthService extends Service {
         `${phoneNumber}/profile_image`,
         'profileMain'
       );
-      await this.#userRepository.updateMany(
-        { profileImageUrl: url },
-        { id: user.id }
-      );
+
+      const profile = await this.#workerRepository.findByUserId({
+        userId: user.id,
+      });
+
+      await this.#userRepository.updateMany({
+        where: { id: user.id },
+        data: { profileImageUrl: url },
+      });
       user.profileImageUrl = url;
 
-      /** @type {import("../repositories/database/UserRepository.js").User & { cityName: string }} */
-      const modifiedUser = { ...user, cityName: cities.data[0].name };
-
-      return { profile, user: modifiedUser, verification };
+      return { profile, user, verification };
     });
   }
 
@@ -191,7 +218,7 @@ export default class AuthService extends Service {
    * @param {Object} params - User registration data
    * @param {InputUserData} params.userData
    * @param {InputClientData} params.clientProfileData
-   * @returns {Promise<{ user: import("../repositories/database/UserRepository.js").User & { cityName: string }, profile: import("@prisma/client").ClientProfile }>} Created user object
+   * @returns {Promise<{ user: import("../repositories/database/UserRepository.js").User, profile: import("@prisma/client").ClientProfile }>} Created user object
    * @throws {AppError} If government or city not found
    */
   async registerClient({
@@ -200,39 +227,38 @@ export default class AuthService extends Service {
       middleName,
       lastName,
       phoneNumber,
-      governmentId,
-      cityId,
       role,
       profileImageBuffer,
     },
-    clientProfileData: { address, addressNotes },
+    clientProfileData: { governmentId, cityId, address, addressNotes },
   }) {
     return tryCatch(async () => {
-      const cities = await this.#governmentRepository.findCities({
-        filter: { id: cityId, governmentId },
-      });
-      if (!cities || cities.data.length === 0)
-        throw new AppError('Government or city not found', 400);
+      // Note: governmentId and cityId validation moved to location handling
+      // For clients, location data is handled separately via the Location model
 
-      const { user, profile } = await this.#userRepository.createClient({
-        userData: {
+      const user = await this.#userRepository.create({
+        data: {
           phoneNumber,
           role,
           firstName,
           middleName,
           lastName,
-          governmentId,
-          cityId,
-          status: 'ACTIVE',
-        },
-        clientProfileData: {
-          address,
-          addressNotes,
+          status: pkg.$Enums.AccountStatus.ACTIVE,
+          clientProfile: {
+            create: {
+              locations: {
+                create: {
+                  governmentId,
+                  cityId,
+                  address,
+                  addressNotes,
+                  isMain: true,
+                },
+              },
+            },
+          },
         },
       });
-
-      /** @type {import("../repositories/database/UserRepository.js").User & { cityName: string }} */
-      const modifiedUser = { ...user, cityName: cities.data[0].name };
 
       if (profileImageBuffer) {
         const { url } = await uploadToCloudinary(
@@ -241,14 +267,18 @@ export default class AuthService extends Service {
           'profileMain'
         );
 
-        await this.#userRepository.updateMany(
-          { profileImageUrl: url },
-          { id: user.id }
-        );
+        await this.#userRepository.updateMany({
+          data: { profileImageUrl: url },
+          where: { id: user.id },
+        });
         user.profileImageUrl = url;
       }
 
-      return { profile, user: modifiedUser };
+      const profile = await this.#clientRepository.findFirst({
+        userId: user.id,
+      });
+
+      return { profile, user };
     });
   }
 
@@ -340,17 +370,21 @@ export default class AuthService extends Service {
           phoneNumber: phoneNumber,
         });
 
-        const workProfile = await this.#userRepository.findWorkerProfile({ userId: user.id });
+        const workProfile = await this.#workerRepository.findFirst({
+          userId: user.id,
+        });
         workerShit.isWorker = workProfile ? true : false;
         if (workerShit.isWorker) {
-          const verification = await this.#userRepository.findWorkerProfileVerification({ workerProfileId: workProfile.id });
-          workerShit.isWorkerSignedUp = (verification).status === "APPROVED";
+          const verification =
+            await this.#workerRepository.findVerification({
+              workerProfileId: workProfile.id,
+            });
+          workerShit.isWorkerSignedUp = verification.status === 'APPROVED';
         }
       } else {
         workerShit.isWorker = false;
         workerShit.isWorkerSignedUp = false;
       }
-
 
       return { tokenType, token, workerShit };
     } catch (error) {
@@ -382,7 +416,7 @@ export default class AuthService extends Service {
    * @param {string} params.refreshToken - The refresh token
    * @param {string} params.deviceId - Device fingerprint
    * @param {string} params.userId - User's ID
-   * @param {import("../types/role.js").Role} params.role - User's role
+   * @param {pkg.$Enums.Role} params.role - User's role
    * @returns {Promise<string>} Generated access token
    * @throws {AppError} If refresh token is invalid, revoked, or expired
    */
@@ -430,7 +464,7 @@ export default class AuthService extends Service {
    * @param {Date} [params.expiresAt] - Token expiration date
    * @param {string} [params.ipAddress] - Client IP address
    * @param {string} [params.userAgent] - Client user agent
-   * @returns {Promise<{session: Object, user: import("../repositories/database/UserRepository.js").OptionalUser, unHashedRefreshToken: string}>} Created session and refresh token
+   * @returns {Promise<{session: Object, user: Partial<import('@prisma/client').User>, unHashedRefreshToken: string}>} Created session and refresh token
    * @description Creates a new session, revokes existing ones for the same device
    */
   async login({ phoneNumber, deviceId: deviceFingerprint, expiresAt }) {
@@ -454,7 +488,7 @@ export default class AuthService extends Service {
       isRevoked: false,
       lastUsedAt: new Date(Date.now()),
       createdAt: new Date(Date.now()),
-      userId: user.id,
+      user: { connect: { id: user.id } },
       deviceId: deviceFingerprint,
       expiresAt,
       token: hashedToken,

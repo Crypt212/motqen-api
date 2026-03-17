@@ -4,7 +4,10 @@
  */
 
 import { Router } from 'express';
-import { searchWorkers, getWorkerById } from '../../controllers/WorkerController.js';
+import {
+  searchWorkers,
+  getWorkerById,
+} from '../../controllers/WorkerController.js';
 
 const workerRouter = Router();
 
@@ -15,7 +18,7 @@ const workerRouter = Router();
  *     summary: Search Craftsmen/Workers
  *     description: |
  *       Returns a paginated list of approved craftsmen/workers based on filters.
- *       Results are sorted by rating (descending), completed services, and experience years.
+ *       Results are sorted by experience years (descending).
  *
  *       Only returns **APPROVED** workers. Unapproved workers are excluded from results.
  *     tags: [Worker Search]

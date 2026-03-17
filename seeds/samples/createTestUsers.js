@@ -1,10 +1,12 @@
-import "dotenv/config";
-import { authService, userRepository } from "../../src/state.js";
-import { getExampleCityIds, getExampleGovernmentIds, getExampleSpecializationTree } from "../utils/exampleData.js";
-import loadLocalImage from "../utils/imageLoader.js";
-import prisma from "../../src/libs/database.js";
-
-
+import 'dotenv/config';
+import { authService, userRepository } from '../../src/state.js';
+import {
+  getExampleCityIds,
+  getExampleGovernmentIds,
+  getExampleSpecializationTree,
+} from '../utils/exampleData.js';
+import loadLocalImage from '../utils/imageLoader.js';
+import prisma from '../../src/libs/database.js';
 
 export async function createMains() {
   const exampleGovernmentIds = await getExampleGovernmentIds();
@@ -12,7 +14,10 @@ export async function createMains() {
   const exampleCityId = (await getExampleCityIds(exampleGovernmentId, 1))[0];
   const exampleSpecializationTree = await getExampleSpecializationTree();
 
-  const exampleImage = await loadLocalImage("./seeds/samples/", "personal-profile.jpg");
+  const exampleImage = await loadLocalImage(
+    './seeds/samples/',
+    'personal-profile.jpg'
+  );
 
   // console.log({
   //   userData: {
@@ -40,30 +45,26 @@ export async function createMains() {
 
   await authService.registerClient({
     userData: {
-      phoneNumber: "01222222222",
-      firstName: "ahmed",
-      middleName: "saeed",
-      lastName: "farouk",
-      governmentId: exampleGovernmentId,
-      cityId: exampleCityId,
-      role: "USER",
+      phoneNumber: '01222222222',
+      firstName: 'ahmed',
+      middleName: 'saeed',
+      lastName: 'farouk',
+      role: 'USER',
       profileImageBuffer: exampleImage,
     },
     clientProfileData: {
-      address: "Cairo, Egypt",
-      addressNotes: "Near the government office",
+      address: 'Cairo, Egypt',
+      addressNotes: 'Near the government office',
     },
   });
 
   let x = await authService.registerWorker({
     userData: {
-      phoneNumber: "01111111111",
-      firstName: "ahmed",
-      middleName: "mohamed",
-      lastName: "mohamed",
-      governmentId: exampleGovernmentId,
-      cityId: exampleCityId,
-      role: "USER",
+      phoneNumber: '01111111111',
+      firstName: 'ahmed',
+      middleName: 'mohamed',
+      lastName: 'mohamed',
+      role: 'USER',
       profileImageBuffer: exampleImage,
     },
     workerProfileData: {
@@ -76,7 +77,7 @@ export async function createMains() {
       specializationsTree: exampleSpecializationTree,
     },
   });
-  console.log(x)
+  console.log(x);
 }
 
 createMains();

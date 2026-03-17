@@ -3,61 +3,56 @@
  * @module routes/users
  */
 
-import { Router } from "express";
+import { Router } from 'express';
 import {
   getUser,
   updateUser,
-
   getWorkerProfile,
   createWorkerProfile,
   updateWorkerProfile,
   deleteWorkerProfile,
-
   getWorkerGovernments,
   addWorkerGovernments,
   deleteWorkerGovernments,
-
   getWorkerSpecializations,
   addWorkerSpecializations,
   deleteWorkerSpecializations,
-
-
   getClientProfile,
   createClientProfile,
   updateClientProfile,
   deleteClientProfile,
-
-} from "../../controllers/DashboardController.js";
-import { authorizeWorker, unAuthorizeWorker } from "../../middlewares/workerMiddleware.js";
-import { authorizeClient, unAuthorizeClient } from "../../middlewares/clientMiddleware.js";
-import { validateRequest } from "../../middlewares/validateRequest.js";
-import upload from "../../configs/multer.js";
+} from '../../controllers/DashboardController.js';
+import {
+  authorizeWorker,
+  unAuthorizeWorker,
+} from '../../middlewares/workerMiddleware.js';
+import {
+  authorizeClient,
+  unAuthorizeClient,
+} from '../../middlewares/clientMiddleware.js';
+import { validateRequest } from '../../middlewares/validateRequest.js';
+import upload from '../../configs/multer.js';
 
 // Import validators
 import {
   validateGetUser,
   validateUpdateUser,
-
   validateCreateWorkerProfile,
   validateUpdateWorkerProfile,
   validateGetWorkerProfile,
   validateDeleteWorkerProfile,
-
   validateGetWorkerGovernments,
   validateAddWorkerGovernments,
   validateDeleteWorkerGovernments,
-
   validateGetWorkerSpecializations,
   validateAddWorkerSpecializations,
   validateDeleteWorkerSpecializations,
-
   validateGetClientProfile,
   validateCreateClientProfile,
   validateUpdateClientProfile,
   validateDeleteClientProfile,
-
-} from "../../validators/dashboard.js";
-import { isActive } from "../../middlewares/authMiddleware.js";
+} from '../../validators/dashboard.js';
+import { isActive } from '../../middlewares/authMiddleware.js';
 
 const usersRouter = Router();
 
@@ -92,11 +87,7 @@ const usersRouter = Router();
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.get("/",
-  isActive,
-  validateGetUser,
-  validateRequest,
-  getUser);
+usersRouter.get('/', isActive, validateGetUser, validateRequest, getUser);
 
 /**
  * @swagger
@@ -129,12 +120,14 @@ usersRouter.get("/",
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.put("/",
-  upload.single("personal_image"),
+usersRouter.put(
+  '/',
+  upload.single('personal_image'),
   isActive,
   validateUpdateUser,
   validateRequest,
-  updateUser);
+  updateUser
+);
 
 /**
  * @swagger
@@ -181,17 +174,19 @@ usersRouter.put("/",
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.post("/worker-profile",
+usersRouter.post(
+  '/worker-profile',
   isActive,
   unAuthorizeWorker,
   upload.fields([
-    { name: "personal_image", maxCount: 1 },
-    { name: "id_image", maxCount: 1 },
-    { name: "personal_with_id_image", maxCount: 1 }
+    { name: 'personal_image', maxCount: 1 },
+    { name: 'id_image', maxCount: 1 },
+    { name: 'personal_with_id_image', maxCount: 1 },
   ]),
   validateCreateWorkerProfile,
   validateRequest,
-  createWorkerProfile);
+  createWorkerProfile
+);
 
 /**
  * @swagger
@@ -208,7 +203,7 @@ usersRouter.post("/worker-profile",
  *       - Verification status
  *       - Portfolio projects
  *       - Availability status for urgent jobs
- *       
+ *
  *       User must be registered as a **Worker** (craftsman) to access this endpoint.
  *     tags: [Craftsman Profile]
  *     security:
@@ -248,22 +243,10 @@ usersRouter.post("/worker-profile",
  *                             isApproved:
  *                               type: boolean
  *                               description: Admin approval status
- *                             rating:
- *                               type: number
- *                               format: float
- *                               description: Average rating (0-5 stars)
- *                             completedServices:
- *                               type: integer
- *                               description: Total number of completed services
- *                             isAvailableNow:
- *                               type: boolean
  *                             bio:
  *                               type: string
  *                               nullable: true
  *                               description: Craftsman biography or description
- *                             servicePrice:
- *                               type: number
- *                               nullable: true
  *                             specializations:
  *                               type: array
  *                               description: All specializations with sub-specializations
@@ -334,12 +317,14 @@ usersRouter.post("/worker-profile",
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.get("/worker-profile",
+usersRouter.get(
+  '/worker-profile',
   isActive,
   authorizeWorker,
   validateGetWorkerProfile,
   validateRequest,
-  getWorkerProfile);
+  getWorkerProfile
+);
 
 /**
  * @swagger
@@ -374,12 +359,14 @@ usersRouter.get("/worker-profile",
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.put("/worker-profile",
+usersRouter.put(
+  '/worker-profile',
   isActive,
   authorizeWorker,
   validateUpdateWorkerProfile,
   validateRequest,
-  updateWorkerProfile);
+  updateWorkerProfile
+);
 
 /**
  * @swagger
@@ -414,13 +401,15 @@ usersRouter.put("/worker-profile",
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.delete("/worker-profile",
+usersRouter.delete(
+  '/worker-profile',
   isActive,
   authorizeWorker,
   authorizeClient,
   validateDeleteWorkerProfile,
   validateRequest,
-  deleteWorkerProfile);
+  deleteWorkerProfile
+);
 
 /**
  * @swagger
@@ -542,26 +531,32 @@ usersRouter.delete("/worker-profile",
  *         $ref: '#/components/responses/InternalServerError'
  */
 
-usersRouter.get("/worker-profile/work-governments",
+usersRouter.get(
+  '/worker-profile/work-governments',
   isActive,
   authorizeWorker,
   validateGetWorkerGovernments,
   validateRequest,
-  getWorkerGovernments);
+  getWorkerGovernments
+);
 
-usersRouter.post("/worker-profile/work-governments",
+usersRouter.post(
+  '/worker-profile/work-governments',
   isActive,
   authorizeWorker,
   validateAddWorkerGovernments,
   validateRequest,
-  addWorkerGovernments);
+  addWorkerGovernments
+);
 
-usersRouter.delete("/worker-profile/work-governments",
+usersRouter.delete(
+  '/worker-profile/work-governments',
   isActive,
   authorizeWorker,
   validateDeleteWorkerGovernments,
   validateRequest,
-  deleteWorkerGovernments);
+  deleteWorkerGovernments
+);
 
 /**
  * @swagger
@@ -705,27 +700,32 @@ usersRouter.delete("/worker-profile/work-governments",
  *         $ref: '#/components/responses/InternalServerError'
  */
 
-usersRouter.get("/worker-profile/specializations",
+usersRouter.get(
+  '/worker-profile/specializations',
   isActive,
   authorizeWorker,
   validateGetWorkerSpecializations,
   validateRequest,
-  getWorkerSpecializations);
+  getWorkerSpecializations
+);
 
-usersRouter.post("/worker-profile/specializations",
+usersRouter.post(
+  '/worker-profile/specializations',
   isActive,
   authorizeWorker,
   validateAddWorkerSpecializations,
   validateRequest,
-  addWorkerSpecializations);
+  addWorkerSpecializations
+);
 
-usersRouter.delete("/worker-profile/specializations",
+usersRouter.delete(
+  '/worker-profile/specializations',
   isActive,
   authorizeWorker,
   validateDeleteWorkerSpecializations,
   validateRequest,
-  deleteWorkerSpecializations);
-
+  deleteWorkerSpecializations
+);
 
 /**
  * @swagger
@@ -766,12 +766,14 @@ usersRouter.delete("/worker-profile/specializations",
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.post("/client-profile",
+usersRouter.post(
+  '/client-profile',
   isActive,
   unAuthorizeClient,
   validateCreateClientProfile,
   validateRequest,
-  createClientProfile);
+  createClientProfile
+);
 
 /**
  * @swagger
@@ -806,12 +808,14 @@ usersRouter.post("/client-profile",
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.get("/client-profile",
+usersRouter.get(
+  '/client-profile',
   isActive,
   authorizeClient,
   validateGetClientProfile,
   validateRequest,
-  getClientProfile);
+  getClientProfile
+);
 
 /**
  * @swagger
@@ -854,12 +858,14 @@ usersRouter.get("/client-profile",
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.put("/client-profile",
+usersRouter.put(
+  '/client-profile',
   isActive,
   authorizeClient,
   validateUpdateClientProfile,
   validateRequest,
-  updateClientProfile);
+  updateClientProfile
+);
 
 /**
  * @swagger
@@ -902,12 +908,14 @@ usersRouter.put("/client-profile",
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.delete("/client-profile",
+usersRouter.delete(
+  '/client-profile',
   isActive,
   authorizeWorker,
   authorizeClient,
   validateDeleteClientProfile,
   validateRequest,
-  deleteClientProfile);
+  deleteClientProfile
+);
 
 export default usersRouter;

@@ -1,7 +1,7 @@
-import "dotenv/config";
-import pkg from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pg from "pg";
+import 'dotenv/config';
+import pkg from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 const { PrismaClient } = pkg;
 
 const { Pool } = pg;
@@ -14,507 +14,536 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({
   adapter,
-  log: ["error", "warn"],
+  log: ['error', 'warn'],
 });
 
 // Egyptian Governments and their Cities
+// We'll track the first government and first city for creating a location for the test client
+let firstGovId = null;
+let firstCityId = null;
+
 const egyptData = [
   {
-    name: "Cairo",
+    name: 'Cairo',
     cities: [
-      "Maadi",
-      "Helwan",
-      "New Cairo",
-      "El Shorouk",
-      "Madinaty",
-      "Badr",
-      "Shubra El Kheima",
-      "El Marg",
-      "El Matareya",
-      "El Salam",
-      "Manshiyat Naser",
-      "Rod El Farag",
-      "El Zawiyah",
-      "Al-Moqattam",
-      "Al-Khalifa",
-      "Al-Darb Al-Ahmar",
-      "Al-Masjid Al-Nabawi",
-      "Al-Manshiyah",
-      "Al-Azbakeyah",
-      "Al-Waily",
-      "Al-Muhandisin",
-      "Al-Mokatam",
-      "Al-Mokattam",
-      "Al-Nozha",
-      "Al-Mansoura",
-      "Al-Mahkama",
+      'Maadi',
+      'Helwan',
+      'New Cairo',
+      'El Shorouk',
+      'Madinaty',
+      'Badr',
+      'Shubra El Kheima',
+      'El Marg',
+      'El Matareya',
+      'El Salam',
+      'Manshiyat Naser',
+      'Rod El Farag',
+      'El Zawiyah',
+      'Al-Moqattam',
+      'Al-Khalifa',
+      'Al-Darb Al-Ahmar',
+      'Al-Masjid Al-Nabawi',
+      'Al-Manshiyah',
+      'Al-Azbakeyah',
+      'Al-Waily',
+      'Al-Muhandisin',
+      'Al-Mokatam',
+      'Al-Mokattam',
+      'Al-Nozha',
+      'Al-Mansoura',
+      'Al-Mahkama',
     ],
   },
   {
-    name: "Alexandria",
+    name: 'Alexandria',
     cities: [
-      "Montaza",
-      "Maamoura",
-      "Alamein",
-      "Kafr El Sheikh",
-      "Dekhela",
-      "El Mahalla El Kubra",
-      "Borg El Arab",
-      "Marina",
-      "Al中添加更多城市",
+      'Montaza',
+      'Maamoura',
+      'Alamein',
+      'Kafr El Sheikh',
+      'Dekhela',
+      'El Mahalla El Kubra',
+      'Borg El Arab',
+      'Marina',
+      'Al中添加更多城市',
     ],
   },
   {
-    name: "Giza",
+    name: 'Giza',
     cities: [
-      "6th of October",
-      "Sheikh Zayed",
-      "Dokki",
-      "Mohandessin",
-      "Agouza",
-      "Elharam",
-      "Imbaba",
-      "Bulaq",
-      "Kerdasa",
-      "Al-Moqattam",
-      "Al-Haram",
-      "Al-Mansoura",
+      '6th of October',
+      'Sheikh Zayed',
+      'Dokki',
+      'Mohandessin',
+      'Agouza',
+      'Elharam',
+      'Imbaba',
+      'Bulaq',
+      'Kerdasa',
+      'Al-Moqattam',
+      'Al-Haram',
+      'Al-Mansoura',
     ],
   },
   {
-    name: "Qalyubia",
+    name: 'Qalyubia',
     cities: [
-      "Banha",
-      "Qalyub",
-      "Shubra El Kheima",
-      "Al Qanater",
-      "Khanka",
-      "Kafr Shukr",
-      "Tiba",
-      "Sinsin",
-      "Al-Masjid",
-      "Sheikh Hammad",
+      'Banha',
+      'Qalyub',
+      'Shubra El Kheima',
+      'Al Qanater',
+      'Khanka',
+      'Kafr Shukr',
+      'Tiba',
+      'Sinsin',
+      'Al-Masjid',
+      'Sheikh Hammad',
     ],
   },
   {
-    name: "Sharqia",
+    name: 'Sharqia',
     cities: [
-      "Zagazig",
-      "Belbes",
-      "Al Husseiniya",
-      "Faqous",
-      "Hihya",
-      "Al Ibrahimiya",
-      "Minya Al Qamh",
-      "Abu Kabir",
-      "Salam",
-      "Kafr Saqr",
-      "Deir Balah",
-      "Mashtoul El Souq",
-      "Qareen",
-      "Al Anwar",
+      'Zagazig',
+      'Belbes',
+      'Al Husseiniya',
+      'Faqous',
+      'Hihya',
+      'Al Ibrahimiya',
+      'Minya Al Qamh',
+      'Abu Kabir',
+      'Salam',
+      'Kafr Saqr',
+      'Deir Balah',
+      'Mashtoul El Souq',
+      'Qareen',
+      'Al Anwar',
     ],
   },
   {
-    name: "Dakahlia",
+    name: 'Dakahlia',
     cities: [
-      "Mansoura",
-      "Talkha",
-      "Nabaroh",
-      "Dekernes",
-      "Al Manzala",
-      "Aga",
-      "Sherbin",
-      "Belqas",
-      "Tima",
-      "Al Gamaliya",
-      "Gamasa",
-      "Mitt Ghamr",
-      "El Kurdi",
+      'Mansoura',
+      'Talkha',
+      'Nabaroh',
+      'Dekernes',
+      'Al Manzala',
+      'Aga',
+      'Sherbin',
+      'Belqas',
+      'Tima',
+      'Al Gamaliya',
+      'Gamasa',
+      'Mitt Ghamr',
+      'El Kurdi',
     ],
   },
   {
-    name: "Menoufia",
+    name: 'Menoufia',
     cities: [
-      "Shebin El KOm",
-      "Tala",
-      "Menouf",
-      "Sers El Layan",
-      "Al Shohada",
-      "Quesna",
-      "Al Bagour",
-      "Birket El Sab",
-      "El Sadat",
-      "Al Dana",
+      'Shebin El KOm',
+      'Tala',
+      'Menouf',
+      'Sers El Layan',
+      'Al Shohada',
+      'Quesna',
+      'Al Bagour',
+      'Birket El Sab',
+      'El Sadat',
+      'Al Dana',
     ],
   },
   {
-    name: "Gharbia",
+    name: 'Gharbia',
     cities: [
-      "Tanta",
-      "Al Mahalla El Kubra",
-      "Kafr El Zayat",
-      "Zefta",
-      "Samanoud",
-      "Basion",
-      "Al GMT",
-      "El Santa",
-      "Qutour",
-      "Al Rahmaniyah",
+      'Tanta',
+      'Al Mahalla El Kubra',
+      'Kafr El Zayat',
+      'Zefta',
+      'Samanoud',
+      'Basion',
+      'Al GMT',
+      'El Santa',
+      'Qutour',
+      'Al Rahmaniyah',
     ],
   },
   {
-    name: "Kafr El Sheikh",
+    name: 'Kafr El Sheikh',
     cities: [
-      "Kafr El Sheikh",
-      "Desouk",
-      "Bela",
-      "Sidi Ghazi",
-      "El Burullus",
-      "Al Hamoul",
-      "Al Riadh",
-      "Baltim",
-      "Metoubes",
-      "Sakha",
+      'Kafr El Sheikh',
+      'Desouk',
+      'Bela',
+      'Sidi Ghazi',
+      'El Burullus',
+      'Al Hamoul',
+      'Al Riadh',
+      'Baltim',
+      'Metoubes',
+      'Sakha',
     ],
   },
   {
-    name: "Port Said",
+    name: 'Port Said',
     cities: [
-      "Port Said",
-      "Port Fuad",
-      "Al Manakh",
-      "Al Zohour",
-      "Al Arab",
-      "Al Nasr",
+      'Port Said',
+      'Port Fuad',
+      'Al Manakh',
+      'Al Zohour',
+      'Al Arab',
+      'Al Nasr',
     ],
   },
   {
-    name: "Suez",
+    name: 'Suez',
     cities: [
-      "Suez",
-      "Ain Sokhna",
-      "Al Ganah",
-      "Al Suez",
-      "Al Shoqayef",
-      "Ramadan",
+      'Suez',
+      'Ain Sokhna',
+      'Al Ganah',
+      'Al Suez',
+      'Al Shoqayef',
+      'Ramadan',
     ],
   },
   {
-    name: "Ismailia",
+    name: 'Ismailia',
     cities: [
-      "Ismailia",
-      "Al Qantara",
-      "Al Tal El Kebir",
-      "Fayed",
-      "Sarabit El Khadim",
-      "Al Nassereya",
-      "New Ismailia",
+      'Ismailia',
+      'Al Qantara',
+      'Al Tal El Kebir',
+      'Fayed',
+      'Sarabit El Khadim',
+      'Al Nassereya',
+      'New Ismailia',
     ],
   },
   {
-    name: "Red Sea",
+    name: 'Red Sea',
     cities: [
-      "Hurghada",
-      "Marsa Alam",
-      "Sharm El Sheikh",
-      "Dahab",
-      "Safaga",
-      "El Quseer",
-      "Ras Ghareb",
-      "Halaib",
-      "Marsa Matrouh",
+      'Hurghada',
+      'Marsa Alam',
+      'Sharm El Sheikh',
+      'Dahab',
+      'Safaga',
+      'El Quseer',
+      'Ras Ghareb',
+      'Halaib',
+      'Marsa Matrouh',
     ],
   },
   {
-    name: "New Valley",
+    name: 'New Valley',
+    cities: ['Kharga', 'Dakhla', 'Farafra', 'Baris', 'Mut', 'El Wahat'],
+  },
+  {
+    name: 'Beni Suef',
     cities: [
-      "Kharga",
-      "Dakhla",
-      "Farafra",
-      "Baris",
-      "Mut",
-      "El Wahat",
+      'Beni Suef',
+      'Al Wasta',
+      'Biba',
+      'Sedfa',
+      'Al Minshad',
+      'Ehnasia',
+      'Al Fashn',
+      'Al Badr',
+      'Dayr Mawas',
+      'Marsa Matrouh',
     ],
   },
   {
-    name: "Beni Suef",
+    name: 'Minya',
     cities: [
-      "Beni Suef",
-      "Al Wasta",
-      "Biba",
-      "Sedfa",
-      "Al Minshad",
-      "Ehnasia",
-      "Al Fashn",
-      "Al Badr",
-      "Dayr Mawas",
-      "Marsa Matrouh",
+      'Minya',
+      'Maghagha',
+      'Malawi',
+      'Samalut',
+      'Beni Mazar',
+      'Mattay',
+      'Deir Mawas',
+      'Madinat El Fath',
+      'Ain Shams',
+      'Qasr Al Fath',
     ],
   },
   {
-    name: "Minya",
+    name: 'Assiut',
     cities: [
-      "Minya",
-      "Maghagha",
-      "Malawi",
-      "Samalut",
-      "Beni Mazar",
-      "Mattay",
-      "Deir Mawas",
-      "Madinat El Fath",
-      "Ain Shams",
-      "Qasr Al Fath",
+      'Assiut',
+      'Sohag',
+      'Al Balyana',
+      'Abu Tig',
+      'El Badari',
+      'Al Khatatba',
+      'Manfalut',
+      'Dairut',
+      'Al Ghanayim',
+      'Sidfa',
     ],
   },
   {
-    name: "Assiut",
+    name: 'Sohag',
     cities: [
-      "Assiut",
-      "Sohag",
-      "Al Balyana",
-      "Abu Tig",
-      "El Badari",
-      "Al Khatatba",
-      "Manfalut",
-      "Dairut",
-      "Al Ghanayim",
-      "Sidfa",
+      'Sohag',
+      'Akhmim',
+      'Girga',
+      'Al Balyana',
+      'Tahta',
+      'Juhayna',
+      'Al Maragha',
+      'Sama',
+      'Al Mansha',
+      'Qasr',
     ],
   },
   {
-    name: "Sohag",
+    name: 'Qena',
     cities: [
-      "Sohag",
-      "Akhmim",
-      "Girga",
-      "Al Balyana",
-      "Tahta",
-      "Juhayna",
-      "Al Maragha",
-      "Sama",
-      "Al Mansha",
-      "Qasr",
+      'Qena',
+      'Luxor',
+      'Qus',
+      'Naqada',
+      'Farshut',
+      'Dendera',
+      'Al Waqf',
+      'Al Mahamid',
+      'Nekhel',
+      'Sahel Selim',
     ],
   },
   {
-    name: "Qena",
+    name: 'Luxor',
     cities: [
-      "Qena",
-      "Luxor",
-      "Qus",
-      "Naqada",
-      "Farshut",
-      "Dendera",
-      "Al Waqf",
-      "Al Mahamid",
-      "Nekhel",
-      "Sahel Selim",
+      'Luxor',
+      'Karnak',
+      'Valley of the Kings',
+      'Esna',
+      'Edfu',
+      'Kom Ombo',
+      'Al Kharnak',
+      'Al Bayadiya',
+      'Al Mrah',
     ],
   },
   {
-    name: "Luxor",
+    name: 'Aswan',
     cities: [
-      "Luxor",
-      "Karnak",
-      "Valley of the Kings",
-      "Esna",
-      "Edfu",
-      "Kom Ombo",
-      "Al Kharnak",
-      "Al Bayadiya",
-      "Al Mrah",
+      'Aswan',
+      'Abu Simbel',
+      'Kom Ombo',
+      'Edfu',
+      'Philae',
+      'Elephantine',
+      'Syene',
+      'Al Dabbah',
+      'Nekhel',
+      'Ras Al Him',
     ],
   },
   {
-    name: "Aswan",
+    name: 'Matrouh',
     cities: [
-      "Aswan",
-      "Abu Simbel",
-      "Kom Ombo",
-      "Edfu",
-      "Philae",
-      "Elephantine",
-      "Syene",
-      "Al Dabbah",
-      "Nekhel",
-      "Ras Al Him",
+      'Marsa Matrouh',
+      'Alexandria',
+      'El Alamein',
+      'Sidi Barrani',
+      'Mersa Matruh',
+      'Al Hamam',
+      'Dabaa',
+      'Alamein',
+      'Marina',
+      'Zagazig',
     ],
   },
   {
-    name: "Matrouh",
+    name: 'North Sinai',
     cities: [
-      "Marsa Matrouh",
-      "Alexandria",
-      "El Alamein",
-      "Sidi Barrani",
-      "Mersa Matruh",
-      "Al Hamam",
-      "Dabaa",
-      "Alamein",
-      "Marina",
-      "Zagazig",
+      'Arish',
+      'Rafah',
+      'Sheikh Zuweid',
+      'Al Hasana',
+      'Bir al-Abed',
+      'Tal Al Sultan',
+      'Al Mazar',
+      'Al Nakhla',
+      'Wadi Al Mukhtar',
     ],
   },
   {
-    name: "North Sinai",
+    name: 'South Sinai',
     cities: [
-      "Arish",
-      "Rafah",
-      "Sheikh Zuweid",
-      "Al Hasana",
-      "Bir al-Abed",
-      "Tal Al Sultan",
-      "Al Mazar",
-      "Al Nakhla",
-      "Wadi Al Mukhtar",
+      'Sharm El Sheikh',
+      'Dahab',
+      'Nuweiba',
+      'Taba',
+      'Saint Catherine',
+      'Ras Sudr',
+      'Marsa Alam',
+      'Soma Bay',
+      'El Tor',
+      'Abu Rudies',
     ],
   },
   {
-    name: "South Sinai",
+    name: '6th of October',
     cities: [
-      "Sharm El Sheikh",
-      "Dahab",
-      "Nuweiba",
-      "Taba",
-      "Saint Catherine",
-      "Ras Sudr",
-      "Marsa Alam",
-      "Soma Bay",
-      "El Tor",
-      "Abu Rudies",
+      '6th of October City',
+      'Sheikh Zayed',
+      'Industrial Zone',
+      'Central Business District',
+      'Dreamland',
+      'Grand Heights',
+      'Family Village',
+      'Al Motley',
     ],
   },
   {
-    name: "6th of October",
+    name: 'Alamein',
     cities: [
-      "6th of October City",
-      "Sheikh Zayed",
-      "Industrial Zone",
-      "Central Business District",
-      "Dreamland",
-      "Grand Heights",
-      "Family Village",
-      "Al Motley",
-    ],
-  },
-  {
-    name: "Alamein",
-    cities: [
-      "Al Alamein City",
-      "Marina",
-      "North Coast",
-      "El Dabaa",
-      "Alamein Resort",
-      "Sidi Abdallah",
-      "Al Bahr",
-      "Al Ghandour",
+      'Al Alamein City',
+      'Marina',
+      'North Coast',
+      'El Dabaa',
+      'Alamein Resort',
+      'Sidi Abdallah',
+      'Al Bahr',
+      'Al Ghandour',
     ],
   },
 ];
 
 async function main() {
-  console.log("Starting database seeding...");
+  console.log('Starting database seeding...');
 
   try {
-    console.log("\n--- Seeding Governments and Cities ---");
+    console.log('\n--- Seeding Governments and Cities ---');
 
     for (const gov of egyptData) {
-      // Check if government already exists
-      const existingGov = await prisma.government.findFirst({
+      let govRecord = await prisma.government.findFirst({
         where: { name: gov.name },
       });
-
-      if (!existingGov) {
-        const createdGov = await prisma.government.create({
-          data: { name: gov.name },
+      if (!govRecord) {
+        govRecord = await prisma.government.create({
+          data: { name: gov.name, nameAr: gov.nameAr },
         });
-        console.log(`Created government: ${createdGov.name}`);
-
-        // Create cities
-        for (const cityName of gov.cities) {
-          await prisma.city.create({
-            data: {
-              name: cityName,
-              governmentId: createdGov.id,
-            },
-          });
-          console.log(`  - Created city: ${cityName}`);
-        }
+        console.log(`Created government: ${govRecord.name}`);
       } else {
-        console.log(`Government already exists: ${gov.name}`);
+        console.log(`Government already exists: ${govRecord.name}`);
+      }
+
+      if (firstGovId === null) {
+        firstGovId = govRecord.id;
+      }
+
+      for (const cityName of gov.cities) {
+        let cityRecord = await prisma.city.findFirst({
+          where: { name: cityName, governmentId: govRecord.id },
+        });
+        if (!cityRecord) {
+          cityRecord = await prisma.city.create({
+            data: { name: cityName, nameAr: cityName, governmentId: govRecord.id },
+          });
+          console.log(`  - Created city: ${cityRecord.name}`);
+        } else {
+          console.log(`  - City already exists: ${cityRecord.name}`);
+        }
+
+        // Set firstCityId if we are processing the first government and we haven't set a city for it yet.
+        if (firstGovId === govRecord.id && firstCityId === null) {
+          firstCityId = cityRecord.id;
+        }
       }
     }
 
     // 3. Seed Test User
-    console.log("\n--- Seeding Test User ---");
+    console.log('\n--- Seeding Test User ---');
 
     // Check if test user already exists
     const existingTestUser = await prisma.user.findFirst({
-      where: { phoneNumber: "+201001234567" },
+      where: { phoneNumber: '+201001234567' },
     });
 
     if (!existingTestUser) {
       const testUser = await prisma.user.create({
         data: {
-          phoneNumber: "+201001234567",
-          firstName: "محمد",
-          middleName: "أحمد",
-          lastName: "علي",
-          status: "ACTIVE",
-          role: "USER",
+          phoneNumber: '+201001234567',
+          firstName: 'محمد',
+          middleName: 'أحمد',
+          lastName: 'علي',
+          status: 'ACTIVE',
+          role: 'USER',
         },
       });
-      console.log(`Created test user: ${testUser.firstName} ${testUser.lastName}`);
+      console.log(
+        `Created test user: ${testUser.firstName} ${testUser.lastName}`
+      );
 
       // Create client profile for test user
-      await prisma.clientProfile.create({
+      const clientProfile = await prisma.clientProfile.create({
         data: {
           userId: testUser.id,
-          address: "القاهرة، شارع النيل",
-          addressNotes: "الشقة 5، العمارة 10",
+        },
+      });
+
+      // Create location for the client (since client needs at least one location)
+      await prisma.location.create({
+        data: {
+          clientProfileId: clientProfile.id,
+          governmentId: firstGovId,
+          cityId: firstCityId,
+          address: 'القاهرة، شارع النيل',
+          addressNotes: 'الشقة 5، العمارة 10',
+          isMain: true,
         },
       });
       console.log(`Created client profile for test user`);
     } else {
-      console.log("Test user already exists");
+      console.log('Test user already exists');
     }
 
     // 4. Seed Test Workers (Craftsmen)
-    console.log("\n--- Seeding Test Workers ---");
+    console.log('\n--- Seeding Test Workers ---');
 
     // Get some specializations and governments for workers
-    const cairo = await prisma.government.findFirst({ where: { name: "Cairo" } });
-    const giza = await prisma.government.findFirst({ where: { name: "Giza" } });
-    const carpentry = await prisma.specialization.findFirst({ where: { name: "Carpentry" } });
-    const plumbing = await prisma.specialization.findFirst({ where: { name: "Plumbing" } });
-    const electrical = await prisma.specialization.findFirst({ where: { name: "Electrical" } });
+    const cairo = await prisma.government.findFirst({
+      where: { name: 'Cairo' },
+    });
+    const giza = await prisma.government.findFirst({ where: { name: 'Giza' } });
+    const carpentry = await prisma.specialization.findFirst({
+      where: { name: 'Carpentry' },
+    });
+    const plumbing = await prisma.specialization.findFirst({
+      where: { name: 'Plumbing' },
+    });
+    const electrical = await prisma.specialization.findFirst({
+      where: { name: 'Electrical' },
+    });
 
     const furnitureMaking = await prisma.subSpecialization.findFirst({
-      where: { name: "Furniture Making", mainSpecializationId: carpentry?.id }
+      where: { name: 'Furniture Making', mainSpecializationId: carpentry?.id },
     });
     const waterPiping = await prisma.subSpecialization.findFirst({
-      where: { name: "Water Piping", mainSpecializationId: plumbing?.id }
+      where: { name: 'Water Piping', mainSpecializationId: plumbing?.id },
     });
     const wiring = await prisma.subSpecialization.findFirst({
-      where: { name: "Wiring & Rewiring", mainSpecializationId: electrical?.id }
+      where: {
+        name: 'Wiring & Rewiring',
+        mainSpecializationId: electrical?.id,
+      },
     });
 
     // Worker 1: Approved Carpenter
     const existingWorker1 = await prisma.user.findFirst({
-      where: { phoneNumber: "+201111111111" },
+      where: { phoneNumber: '+201111111111' },
     });
 
     if (!existingWorker1 && cairo && carpentry && furnitureMaking) {
       const worker1 = await prisma.user.create({
         data: {
-          phoneNumber: "+201111111111",
-          firstName: "أحمد",
-          middleName: "محمود",
-          lastName: "حسن",
-          governmentId: cairo.id,
-          status: "ACTIVE",
-          role: "USER",
+          phoneNumber: '+201111111111',
+          firstName: 'أحمد',
+          middleName: 'محمود',
+          lastName: 'حسن',
+          status: 'ACTIVE',
+          role: 'USER',
         },
       });
 
@@ -524,12 +553,20 @@ async function main() {
           experienceYears: 10,
           isInTeam: false,
           acceptsUrgentJobs: true,
-          isApproved: true,
-          rating: 4.8,
-          servicePrice: 150.0,
-          isAvailableNow: true,
-          completedServices: 85,
-          bio: "نجار محترف متخصص في صناعة الأثاث المنزلي والمكتبي بخبرة 10 سنوات",
+          bio: 'نجار محترف متخصص في صناعة الأثاث المنزلي والمكتبي بخبرة 10 سنوات',
+          workGovernments: {
+            connect: {
+              id: cairo.id,
+            }
+          },
+          verification: {
+            create: {
+              status: 'APPROVED',
+              idWithPersonalImageUrl: 'http://example.com/id1.jpg',
+              idDocumentUrl: 'http://example.com/doc1.jpg',
+              reason: 'Verified',
+            },
+          },
         },
       });
 
@@ -541,31 +578,25 @@ async function main() {
         },
       });
 
-      await prisma.governmentForWorkers.create({
-        data: {
-          workerProfileId: workerProfile1.id,
-          governmentId: cairo.id,
-        },
-      });
-
-      console.log(`Created approved worker: ${worker1.firstName} ${worker1.lastName} (Carpenter)`);
+      console.log(
+        `Created approved worker: ${worker1.firstName} ${worker1.lastName} (Carpenter)`
+      );
     }
 
     // Worker 2: Approved Plumber
     const existingWorker2 = await prisma.user.findFirst({
-      where: { phoneNumber: "+201222222222" },
+      where: { phoneNumber: '+201222222222' },
     });
 
     if (!existingWorker2 && giza && plumbing && waterPiping) {
       const worker2 = await prisma.user.create({
         data: {
-          phoneNumber: "+201222222222",
-          firstName: "محمد",
-          middleName: "علي",
-          lastName: "عبدالله",
-          governmentId: giza.id,
-          status: "ACTIVE",
-          role: "USER",
+          phoneNumber: '+201222222222',
+          firstName: 'محمد',
+          middleName: 'علي',
+          lastName: 'عبدالله',
+          status: 'ACTIVE',
+          role: 'USER',
         },
       });
 
@@ -575,12 +606,20 @@ async function main() {
           experienceYears: 7,
           isInTeam: true,
           acceptsUrgentJobs: true,
-          isApproved: true,
-          rating: 4.5,
-          servicePrice: 120.0,
-          isAvailableNow: true,
-          completedServices: 62,
-          bio: "سباك خبرة في تمديد المواسير وإصلاح التسريبات",
+          bio: 'سباك خبرة في تمديد المواسير وإصلاح التسريبات',
+          verification: {
+            create: {
+              status: 'APPROVED',
+              idWithPersonalImageUrl: 'http://example.com/id2.jpg',
+              idDocumentUrl: 'http://example.com/doc2.jpg',
+              reason: 'Verified',
+            },
+          },
+          workGovernments: {
+            connect: {
+              id: giza.id,
+            }
+          }
         },
       });
 
@@ -592,31 +631,25 @@ async function main() {
         },
       });
 
-      await prisma.governmentForWorkers.create({
-        data: {
-          workerProfileId: workerProfile2.id,
-          governmentId: giza.id,
-        },
-      });
-
-      console.log(`Created approved worker: ${worker2.firstName} ${worker2.lastName} (Plumber)`);
+      console.log(
+        `Created approved worker: ${worker2.firstName} ${worker2.lastName} (Plumber)`
+      );
     }
 
     // Worker 3: Approved Electrician (accepts urgent jobs)
     const existingWorker3 = await prisma.user.findFirst({
-      where: { phoneNumber: "+201333333333" },
+      where: { phoneNumber: '+201333333333' },
     });
 
     if (!existingWorker3 && cairo && electrical && wiring) {
       const worker3 = await prisma.user.create({
         data: {
-          phoneNumber: "+201333333333",
-          firstName: "خالد",
-          middleName: "حسين",
-          lastName: "إبراهيم",
-          governmentId: cairo.id,
-          status: "ACTIVE",
-          role: "USER",
+          phoneNumber: '+201333333333',
+          firstName: 'خالد',
+          middleName: 'حسين',
+          lastName: 'إبراهيم',
+          status: 'ACTIVE',
+          role: 'USER',
         },
       });
 
@@ -626,12 +659,12 @@ async function main() {
           experienceYears: 12,
           isInTeam: false,
           acceptsUrgentJobs: true,
-          isApproved: true,
-          rating: 4.9,
-          servicePrice: 180.0,
-          isAvailableNow: true,
-          completedServices: 120,
-          bio: "كهربائي محترف متخصص في الأعمال الكهربائية السكنية والتجارية",
+          bio: 'كهربائي محترف متخصص في الأعمال الكهربائية السكنية والتجارية',
+          workGovernments: {
+            connect: {
+              id: cairo.id,
+            }
+          }
         },
       });
 
@@ -643,31 +676,25 @@ async function main() {
         },
       });
 
-      await prisma.governmentForWorkers.create({
-        data: {
-          workerProfileId: workerProfile3.id,
-          governmentId: cairo.id,
-        },
-      });
-
-      console.log(`Created approved worker: ${worker3.firstName} ${worker3.lastName} (Electrician)`);
+      console.log(
+        `Created approved worker: ${worker3.firstName} ${worker3.lastName} (Electrician)`
+      );
     }
 
     // Worker 4: Pending approval (for testing filters)
     const existingWorker4 = await prisma.user.findFirst({
-      where: { phoneNumber: "+201444444444" },
+      where: { phoneNumber: '+201444444444' },
     });
 
     if (!existingWorker4 && cairo && carpentry && furnitureMaking) {
       const worker4 = await prisma.user.create({
         data: {
-          phoneNumber: "+201444444444",
-          firstName: "يوسف",
-          middleName: "سعيد",
-          lastName: "محمد",
-          governmentId: cairo.id,
-          status: "ACTIVE",
-          role: "USER",
+          phoneNumber: '+201444444444',
+          firstName: 'يوسف',
+          middleName: 'سعيد',
+          lastName: 'محمد',
+          status: 'ACTIVE',
+          role: 'USER',
         },
       });
 
@@ -677,26 +704,27 @@ async function main() {
           experienceYears: 3,
           isInTeam: false,
           acceptsUrgentJobs: false,
-          isApproved: false, // Not approved yet
-          rating: 0,
-          servicePrice: 100.0,
-          isAvailableNow: true,
-          completedServices: 0,
-          bio: "نجار جديد يبحث عن فرص عمل",
+          bio: 'نجار جديد يبحث عن فرص عمل',
+          workGovernments: {
+            connect: {
+              id: cairo.id
+            }
+          }
         },
       });
 
-      console.log(`Created pending worker: ${worker4.firstName} ${worker4.lastName} (Not Approved)`);
+      console.log(
+        `Created pending worker: ${worker4.firstName} ${worker4.lastName} (Not Approved)`
+      );
     }
 
-    console.log("\n--- Database seeding completed successfully! ---");
+    console.log('\n--- Database seeding completed successfully! ---');
   } catch (error) {
-    console.error("Error seeding database:", error);
+    console.error('Error seeding database:', error);
     throw error;
   } finally {
     await prisma.$disconnect();
   }
-
 }
 
 main();

@@ -3,26 +3,31 @@
  * @module services/WorkerService
  */
 
-import AppError from "../errors/AppError.js";
-import Service, { tryCatch } from "./Service.js";
-import { Repository } from "../repositories/database/Repository.js";
-import UserRepository from "../repositories/database/UserRepository.js";
-import uploadToCloudinary from "../providers/cloudinaryProvider.js";
+import AppError from '../errors/AppError.js';
+import Service, { tryCatch } from './Service.js';
+import * as pkg from '@prisma/client';
+import { Repository } from '../repositories/database/Repository.js';
+import WorkerRepository from '../repositories/database/WorkerRepository.js';
+import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 
-/** @template T @typedef {import("../repositories/database/Repository.js").PaginatedResult<T>} PaginatedResult */
+/**
+ * @typedef {Object} InputWorkerData
+ * @property {number} experienceYears
+ * @property {boolean} isInTeam
+ * @property {boolean} acceptsUrgentJobs
+ * @property {import('../repositories/database/Repository.js').IDType[]} governmentIds
+ * @property {{ mainId: import('../repositories/database/Repository.js').IDType, subIds: import('../repositories/database/Repository.js').IDType[] }[]} specializationsTree
+ * @property {Buffer} [profileImageBuffer]
+ * @property {Buffer} [idImageBuffer]
+ * @property {Buffer} [profileWithIdImageBuffer]
+ */
 
-/** @typedef {import("../repositories/database/GovernmentRepository.js").Government} Government */
-
-/** @typedef {import("../repositories/database/UserRepository.js").SpecializationTree} SpecializationTree */
-/** @typedef {import("../repositories/database/UserRepository.js").WorkerVerificationData} WorkerVerificationData */
-/** @typedef {import("../repositories/database/UserRepository.js").WorkerVerificationFilter} WorkerVerificationFilter */
-/** @typedef {import("../repositories/database/UserRepository.js").WorkerVerification} WorkerVerification */
-
-/** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
-/** @typedef {import("../repositories/database/UserRepository.js").WorkerProfile} WorkerProfile */
-/** @typedef {import("../repositories/database/UserRepository.js").WorkerProfileFilter} WorkerProfileFilter */
-/** @typedef {import("../repositories/database/UserRepository.js").PaginationOptions} PaginationOptions */
-/** @typedef {import("../repositories/database/UserRepository.js").OrderingOptions} OrderingOptions */
+/**
+ * @typedef {Object} InputWorkerUpdateData
+ * @property {number} [experienceYears]
+ * @property {boolean} [isInTeam]
+ * @property {boolean} [acceptsUrgentJobs]
+ */
 
 /**
  * Worker Service - Manages worker-related operations
@@ -30,87 +35,107 @@ import uploadToCloudinary from "../providers/cloudinaryProvider.js";
  * @extends Service
  */
 export default class WorkerService extends Service {
-
-  /** @type {UserRepository} */
-  #userRepository;
+  /** @type {WorkerRepository} */
+  #workerRepository;
 
   /**
    * @param {Object} params
-   * @param {UserRepository} params.userRepository
+   * @param {WorkerRepository} params.workerRepository
    */
-  constructor({ userRepository }) {
+  constructor({ workerRepository }) {
     super();
-    this.#userRepository = userRepository;
+    this.#workerRepository = workerRepository;
   }
 
   /**
    * Create a worker profile for a user
    * @async
    * @method createWorkerProfile
-   * @param {IDType} userId - User ID
-   * @param {Object} data - Worker profile data
-   * @param {number} data.experienceYears - Years of experience
-   * @param {boolean} data.isInTeam - Whether worker is in a team
-   * @param {boolean} data.acceptsUrgentJobs - Whether worker accepts urgent jobs
-   * @param {{ mainId: string, subIds: string[] }[]} data.specializationsTree - Tree of main specialization and sub specializations
-   * @param {IDType[]} data.governmentIds - List of government names where worker operates
-   * @param {Buffer} data.profileImageBuffer - Profile image URL
-   * @param {Buffer} data.idImageBuffer - ID image URL
-   * @param {Buffer} data.profileWithIdImageBuffer - Profile with ID image URL
-   * @returns {Promise<WorkerProfile>} Created worker profile
+   * @param {import('../repositories/database/Repository.js').IDType} userId
+   * @param {InputWorkerData} data
+   * @returns {Promise<{ workerProfile: import('@prisma/client').WorkerProfile }>}
    * @throws {AppError} If user not found or invalid data
    */
-  async create(userId, {
-    experienceYears,
-    isInTeam,
-    acceptsUrgentJobs,
-    governmentIds,
-    specializationsTree,
-    profileImageBuffer,
-    idImageBuffer,
-    profileWithIdImageBuffer
-  }) {
+  async create(
+    userId,
+    {
+      experienceYears,
+      isInTeam,
+      acceptsUrgentJobs,
+      governmentIds,
+      specializationsTree,
+      profileImageBuffer,
+      idImageBuffer,
+      profileWithIdImageBuffer,
+    }
+  ) {
     return tryCatch(async () => {
-      const user = await this.#userRepository.findFirst({ id: userId });
-      if (!user) throw new AppError("User not found", 404);
+      const nationalID = (
+        await uploadToCloudinary(
+          idImageBuffer,
+          `${userId}/verification_info`,
+          'nationalID'
+        )
+      ).url;
+      const selfiWithID = (
+        await uploadToCloudinary(
+          profileWithIdImageBuffer,
+          `${userId}/verification_info`,
+          'selfiWithID'
+        )
+      ).url;
 
-      /** @type {WorkerProfile} */
       let workerProfile;
+      await Repository.createTransaction(
+        [this.#workerRepository],
+        async () => {
+          workerProfile = await this.#workerRepository.create({
+            data: {
+              user: { connect: { id: userId } },
+              experienceYears,
+              isInTeam,
+              acceptsUrgentJobs,
+            },
+          });
 
-      await Repository.createTransaction([this.#userRepository], async () => {
-        workerProfile = await this.#userRepository.insertWorkerProfile({
-          userId,
-          data: {
-            experienceYears,
-            isInTeam,
-            acceptsUrgentJobs,
-          },
-          verificationData: undefined
-        });
+          await this.#workerRepository.insertWorkingGovernments({
+            userId: workerProfile.userId,
+            governmentIds,
+          });
+          await this.#workerRepository.insertSpecializations({
+            workerProfileId: workerProfile.id,
+            specializationsTree,
+          });
 
-        await this.#userRepository.insertWorkerProfileGovernments({ workerProfileId: workerProfile.id, governmentIds });
-        await this.#userRepository.insertWorkerProfileSpecializations({ workerProfileId: workerProfile.id, specializationsTree });
+          await this.#workerRepository.upsertVerification({
+            workerProfileId: workerProfile.id,
+            data: {
+              workerProfile: { connect: { id: workerProfile.id } },
+              idWithPersonalImageUrl: selfiWithID,
+              idDocumentUrl: nationalID,
+              status: 'PENDING',
+              reason: 'Waiting for verification',
+            },
+          });
 
-        const nationalID = (await uploadToCloudinary(idImageBuffer, `${userId}/verification_info`, "nationalID")).url
-        const selfiWithID = (await uploadToCloudinary(profileWithIdImageBuffer, `${userId}/verification_info`, "selfiWithID")).url
-
-        await this.#userRepository.upsertWorkerProfileVerification({
-          workerProfileId: workerProfile.id,
-          verificationData: {
-            idWithPersonalImageUrl: selfiWithID,
-            idDocumentUrl: nationalID,
-            status: "PENDING",
-            reason: "Waiting for verification"
-
+          if (profileImageBuffer) {
+            const { url } = await uploadToCloudinary(
+              profileImageBuffer,
+              `${userId}/profile_image`,
+              'profileMain'
+            );
+            await this.#workerRepository.update({
+              id: workerProfile.id,
+              data: { user: { update: { profileImageUrl: url } } },
+            });
           }
-        })
 
-        await this.#userRepository.updateMany({ profileImageUrl: (await uploadToCloudinary(profileImageBuffer, `${user.phoneNumber}/profile_image`, "profileMain")).url }, { id: user.id });
-
-        return workerProfile;
-      }, (reason) => {
-        throw new AppError("Failed to create worker profile", 500, reason);
-      });
+          return workerProfile;
+        },
+        (reason) => {
+          throw new AppError('Failed to create worker profile', 500, reason);
+        }
+      );
 
       return { workerProfile };
     });
@@ -121,32 +146,23 @@ export default class WorkerService extends Service {
    * @async
    * @method updateWorkerProfile
    * @param {Object} params
-   * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @param {Object} [params.data] - Worker profile data to update
-   * @param {number} [params.data.experienceYears] - Years of experience
-   * @param {boolean} [params.data.isInTeam] - Whether worker is in a team
-   * @param {boolean} [params.data.acceptsUrgentJobs] - Whether worker accepts urgent jobs
-   * @returns {Promise<WorkerProfile>} Updated worker profile
-   * @throws {AppError} If user not found
+   * @param {import('../repositories/database/Repository.js').IDType} params.workerProfileId
+   * @param {InputWorkerUpdateData} params.data
+   * @returns {Promise<import('@prisma/client').WorkerProfile>}
+   * @throws {AppError} If profile not found
    */
   async update({
     workerProfileId,
-    data: {
-      experienceYears,
-      isInTeam,
-      acceptsUrgentJobs,
-    }
+    data: { experienceYears, isInTeam, acceptsUrgentJobs },
   }) {
     return tryCatch(async () => {
-      return await this.#userRepository.updateWorkerProfile({
-        workerProfileId,
+      return await this.#workerRepository.update({
+        id: workerProfileId,
         data: {
           experienceYears,
           isInTeam,
           acceptsUrgentJobs,
         },
-        verificationData: undefined
-
       });
     });
   }
@@ -156,13 +172,13 @@ export default class WorkerService extends Service {
    * @async
    * @method deleteWorkerProfile
    * @param {Object} params
-   * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @returns {Promise<WorkerProfile>} Deleted worker profile
-   * @throws {AppError} If user not found
+   * @param {import('../repositories/database/Repository.js').IDType} params.workerProfileId
+   * @returns {Promise<import('@prisma/client').WorkerProfile>}
+   * @throws {AppError} If profile not found
    */
   async delete({ workerProfileId }) {
     return tryCatch(async () => {
-      return await this.#userRepository.deleteWorkerProfile({ workerProfileId });
+      return await this.#workerRepository.delete({ id: workerProfileId });
     });
   }
 
@@ -170,21 +186,21 @@ export default class WorkerService extends Service {
    * Get working governments for worker
    * @async
    * @param {Object} params
-   * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @param {Object} [params.pagination] - Pagination options { page, limit }
-   * @param {Object} [params.filter] - Filter options
-   * @param {Object[]} [params.orderBy] - OrderBy options [{ field, direction }]
-   * @param {boolean} [params.paginate] - Whether to return paginated results
-   * @returns {Promise<PaginatedResult<Government>>}
+   * @param {import('../repositories/database/Repository.js').IDType} params.userId
+   * @param {import('../repositories/database/Repository.js').PaginationOptions} [params.pagination]
+   * @param {pkg.Prisma.GovernmentFindManyArgs} [params.filter]
+   * @returns {Promise<{ data: import('@prisma/client').Government[], pagination: import('../repositories/database/Repository.js').PaginatedResult }>}
    */
-  async getWorkGovernments({ workerProfileId, pagination = { page: 1, limit: 20 }, filter = {}, orderBy = [], paginate = false }) {
+  async getWorkGovernments({
+    userId,
+    pagination = { page: 1, limit: 20 },
+    filter = {},
+  }) {
     return tryCatch(async () => {
-      const result = await this.#userRepository.findWorkerProfileGovernments({
-        workerProfileId,
+      const result = await this.#workerRepository.findWorkingGovernments({
+        userId,
         pagination,
         filter,
-        orderBy,
-        paginate
       });
       return result;
     });
@@ -195,18 +211,18 @@ export default class WorkerService extends Service {
    * @async
    * @method addWorkerProfileWorkGovernments
    * @param {Object} params
-   * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @param {IDType[]} params.governmentIds - Ids of working governments
-   * @returns {Promise<Number>} Number of added governments
+   * @param {import('../repositories/database/Repository.js').IDType} params.workerProfileId
+   * @param {import('../repositories/database/Repository.js').IDType[]} params.governmentIds
+   * @returns {Promise<{ count: number }>}
    */
   async addWorkGovernments({ workerProfileId, governmentIds }) {
     return tryCatch(async () => {
-      Repository.createTransaction([this.#userRepository], async () => {
-        const { count } = await this.#userRepository.insertWorkerProfileGovernments({ workerProfileId, governmentIds });
-        return count;
-      }, (error) => {
-        throw new AppError("Failed to insert worker profile governments", 400, error);
-      });
+      const { count } =
+        await this.#workerRepository.insertWorkingGovernments({
+          userId: workerProfileId,
+          governmentIds,
+        });
+      return { count };
     });
   }
 
@@ -215,18 +231,18 @@ export default class WorkerService extends Service {
    * @async
    * @method deleteWorkerProfileWorkGovernments
    * @param {Object} params
-   * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @param {IDType[] | undefined} params.governmentIds - Ids of working governments
-   * @returns {Promise<Number>} Number of deleted governments
+   * @param {import('../repositories/database/Repository.js').IDType} params.workerProfileId
+   * @param {import('../repositories/database/Repository.js').IDType[]} [params.governmentIds]
+   * @returns {Promise<{ count: number }>}
    */
   async deleteWorkGovernments({ workerProfileId, governmentIds = undefined }) {
     return tryCatch(async () => {
-      Repository.createTransaction([this.#userRepository], async () => {
-        const { count } = await this.#userRepository.deleteWorkerProfileGovernments({ workerProfileId, governmentIds });
-        return count;
-      }, (error) => {
-        throw new AppError("Failed to insert worker profile governments", 400, error);
-      });
+      const { count } =
+        await this.#workerRepository.deleteWorkingGovernments({
+          userId: workerProfileId,
+          governmentIds,
+        });
+      return { count };
     });
   }
 
@@ -235,24 +251,26 @@ export default class WorkerService extends Service {
    * @async
    * @method getWorkerProfileSpecializations
    * @param {Object} params
-   * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @param {IDType[] | undefined} params.mainSpecializationIds - IDs of the main specializations to get retrieved
-   * @param {Object} [params.pagination] - Pagination options { page, limit }
-   * @param {Object} [params.filter] - Filter options
-   * @param {Object[]} [params.orderBy] - OrderBy options [{ field, direction }]
-   * @param {boolean} [params.paginate] - Whether to return paginated results
-   * @returns {Promise<PaginatedResult<SpecializationTree>>}
+   * @param {import('../repositories/database/Repository.js').IDType} params.userId
+   * @param {import('../repositories/database/Repository.js').IDType[]} [params.mainSpecializationIds]
+   * @param {import('../repositories/database/Repository.js').PaginationOptions} [params.pagination]
+   * @param {pkg.Prisma.ChosenSpecializationFindManyArgs} [params.filter]
+   * @returns {Promise<{ data: { mainId: import('../repositories/database/Repository.js').IDType, subIds: import('../repositories/database/Repository.js').IDType[] }[], pagination: import('../repositories/database/Repository.js').PaginatedResult }>}
    */
-  async getSpecializations({ workerProfileId, mainSpecializationIds = undefined, pagination = { page: 1, limit: 20 }, filter = {}, orderBy = [], paginate = false }) {
+  async getSpecializations({
+    userId,
+    mainSpecializationIds = undefined,
+    pagination = { page: 1, limit: 20 },
+    filter = {},
+  }) {
     return tryCatch(async () => {
-      const result = await this.#userRepository.findWorkerProfileSpecializations({
-        workerProfileId,
-        mainSpecializationIds,
-        pagination,
-        filter,
-        orderBy,
-        paginate
-      });
+      const result =
+        await this.#workerRepository.findSpecializations({
+          userId,
+          mainSpecializationIds,
+          pagination,
+          filter,
+        });
       return result;
     });
   }
@@ -262,15 +280,14 @@ export default class WorkerService extends Service {
    * @async
    * @method addWorkerProfileSpecializations
    * @param {Object} params
-   * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @param {{mainId: IDType, subIds: IDType[]}[]} params.specializationsTree - Tree of main and sub specializations
+   * @param {import('../repositories/database/Repository.js').IDType} params.workerProfileId
+   * @param {{mainId: import('../repositories/database/Repository.js').IDType, subIds: import('../repositories/database/Repository.js').IDType[]}[]} params.specializationsTree
    */
   async addSpecializations({ workerProfileId, specializationsTree }) {
     return tryCatch(async () => {
-      Repository.createTransaction([this.#userRepository], async () => {
-        await this.#userRepository.insertWorkerProfileSpecializations({ workerProfileId, specializationsTree });
-      }, (error) => {
-        throw new AppError("Failed to insert worker profile specializations", 400, error);
+      await this.#workerRepository.insertSpecializations({
+        workerProfileId,
+        specializationsTree,
       });
     });
   }
@@ -280,14 +297,19 @@ export default class WorkerService extends Service {
    * @async
    * @method deleteWorkerProfileMainSpecializations
    * @param {Object} params
-   * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @param {IDType[] | undefined} params.mainSpecializationIds - IDs of main specializations to be deleted
-   * @returns {Promise<Number>} Number of deleted main specializations
+   * @param {import('../repositories/database/Repository.js').IDType} params.userId
+   * @param {import('../repositories/database/Repository.js').IDType[]} [params.mainSpecializationIds]
+   * @returns {Promise<import('@prisma/client').Prisma.BatchPayload>}
    */
-  async deleteSpecializations({ workerProfileId, mainSpecializationIds = undefined }) {
+  async deleteSpecializations({
+    userId,
+    mainSpecializationIds = undefined,
+  }) {
     return tryCatch(async () => {
-      const { count } = await this.#userRepository.deleteWorkerProfileSpecializations({ workerProfileId, specializationIds: mainSpecializationIds });
-      return count;
+      return await this.#workerRepository.deleteSpecializations({
+        userId,
+        specializationIds: mainSpecializationIds,
+      });
     });
   }
 
@@ -296,34 +318,37 @@ export default class WorkerService extends Service {
    * @async
    * @method deleteWorkerProfileSubSpecializations
    * @param {Object} params
-   * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @param {{mainId: IDType, subIds: IDType[]}[]} params.specializationsTree - Tree of main and sub specializations
-   * @returns {Promise<Number>} Number of deleted sub specializations
+   * @param {import('../repositories/database/Repository.js').IDType} params.userId
+   * @param {{mainId: import('../repositories/database/Repository.js').IDType, subIds: import('../repositories/database/Repository.js').IDType[]}[]} params.specializationsTree
+   * @returns {Promise<import('@prisma/client').Prisma.BatchPayload>}
    */
-  async deleteSubSpecializations({ workerProfileId, specializationsTree }) {
+  async deleteSubSpecializations({ userId, specializationsTree }) {
     return tryCatch(async () => {
-      Repository.createTransaction([this.#userRepository], async () => {
-        for (const { mainId, subIds } of specializationsTree) {
-          await this.#userRepository.deleteWorkerProfileSubSpecializations({ workerProfileId, specializationId: mainId, subSpecializationIds: subIds });
-        }
-      }, (error) => {
-        throw new AppError("Failed to delete worker profile sub specializations", 400, error);
-      });
+      for (const { mainId, subIds } of specializationsTree) {
+        await this.#workerRepository.deleteSubSpecializations({
+          userId,
+          specializationId: mainId,
+          subSpecializationIds: subIds,
+        });
+      }
     });
   }
 
   /**
+   * Create or update worker profile verification
    * @async
-   * @method
+   * @method createVerification
    * @param {Object} params
-   * @param {IDType} params.workerProfileId
-   * @param {WorkerVerificationData} params.data
-   * @returns {Promise<WorkerVerificationFilter>}
+   * @param {import('../repositories/database/Repository.js').IDType} params.workerProfileId
+   * @param {import('@prisma/client').Prisma.WorkerVerificationCreateInput} params.data
+   * @returns {Promise<import('@prisma/client').WorkerVerification>}
    */
   async createVerification({ workerProfileId, data }) {
     return tryCatch(async () => {
-      const verification = await this.#userRepository.upsertWorkerProfileVerification({ workerProfileId, verificationData: data });
-      return verification;
+      return await this.#workerRepository.upsertVerification({
+        workerProfileId,
+        data,
+      });
     });
   }
 
@@ -331,15 +356,14 @@ export default class WorkerService extends Service {
    * Get a worker profile's verification
    * @async
    * @param {Object} params
-   * @param {IDType} params.workerProfileId - Worker Profile ID
-   * @returns {Promise<WorkerVerification>}
-   * @throws {AppError} If user not found
+   * @param {import('../repositories/database/Repository.js').IDType} params.workerProfileId
+   * @returns {Promise<import('@prisma/client').WorkerVerification | null>}
    */
   async getVerification({ workerProfileId }) {
     return tryCatch(async () => {
-      const verification = await this.#userRepository.findWorkerProfileVerification({ workerProfileId });
-
-      return verification;
+      return await this.#workerRepository.findVerification({
+        workerProfileId,
+      });
     });
   }
 
@@ -348,17 +372,12 @@ export default class WorkerService extends Service {
    * @async
    * @method getWorkerProfile
    * @param {Object} params
-   * @param {IDType} params.userId - User ID
-   * @returns {Promise<WorkerProfile>} Worker profile
-   * @throws {AppError} If user not found
+   * @param {import('../repositories/database/Repository.js').IDType} params.userId
+   * @returns {Promise<import('@prisma/client').WorkerProfile | null>}
    */
   async get({ userId }) {
     return tryCatch(async () => {
-      const workerProfile = await this.#userRepository.findWorkerProfile({ userId });
-   //   if (!workerProfile)
-//        throw new AppError("Worker profile not found", 404);
-
-      return workerProfile;
+      return await this.#workerRepository.findByUserId({ userId });
     });
   }
 
@@ -367,10 +386,10 @@ export default class WorkerService extends Service {
    * @async
    * @method hasWorkerProfile
    * @param {Object} params
-   * @param {IDType} params.userId - User ID
+   * @param {import('../repositories/database/Repository.js').IDType} params.userId
    * @returns {Promise<boolean>}
    */
   async hasWorkerProfile({ userId }) {
-    return await this.#userRepository.hasWorkerProfile({ userId });
+    return await this.#workerRepository.exists({ userId });
   }
 }

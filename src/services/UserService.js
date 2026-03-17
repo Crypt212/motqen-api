@@ -4,21 +4,33 @@
  */
 
 import * as pkg from '@prisma/client';
-import AppError from '../errors/AppError.js';
 import Service from './Service.js';
 import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 import UserRepository from '../repositories/database/UserRepository.js';
-import GovernmentRepository from '../repositories/database/GovernmentRepository.js';
+import ClientRepository from '../repositories/database/ClientRepository.js';
+import WorkerRepository from '../repositories/database/WorkerRepository.js';
+import { Repository } from '../repositories/database/Repository.js';
 
-/** @typedef {import("../repositories/database/UserRepository.js").IDType} IDType */
-/** @typedef {import("../types/asyncHandler.js").UserState} UserState */
-/** @typedef {Express.Multer.File & import("../types/asyncHandler.js").MulterFile} File */
-/** @typedef {import("../repositories/database/UserRepository.js").OptionalUser} ReturnUserData */
-/** @typedef {import("../repositories/database/UserRepository.js").UserFilter} UserFilter */
-/** @typedef {import("../repositories/database/UserRepository.js").PaginationOptions} PaginationOptions */
-/** @typedef {import("../repositories/database/UserRepository.js").OrderingOptions} OrderingOptions */
+/**
+ * @typedef {Object} InputUserData
+ * @property {pkg.$Enums.Role} [role]
+ * @property {string} [firstName]
+ * @property {string} [middleName]
+ * @property {string} [lastName]
+ * @property {string} [bio]
+ * @property {Buffer} [profileImageBuffer]
+ * @property {pkg.$Enums.AccountStatus} [status]
+ */
 
-/** @typedef {Partial<{role: pkg.$Enums.Role, firstName: string, middleName: string, lastName: string, governmentId: IDType, cityId: string, bio: string, profileImageBuffer: Buffer, status: pkg.$Enums.AccountStatus}>} InputUserData */
+/**
+ * @typedef {Object} UserState
+ * @property {pkg.$Enums.Role} role
+ * @property {string} userId
+ * @property {string} phoneNumber
+ * @property {pkg.$Enums.AccountStatus} accountStatus
+ * @property {{ id: string, verification: { status: pkg.$Enums.VerificationStatus, reason?: string } } | undefined} worker
+ * @property {{ id: string } | undefined} client
+ */
 
 /**
  * User Service - Manages user-related operations
@@ -28,18 +40,22 @@ import GovernmentRepository from '../repositories/database/GovernmentRepository.
 export default class UserService extends Service {
   /** @type {UserRepository} */
   #userRepository;
-  /** @type {GovernmentRepository} */
-  #governmentRepository;
+  /** @type {WorkerRepository} */
+  #workerRepository;
+  /** @type {ClientRepository} */
+  #clientRepository;
 
   /**
    * @param {Object} params
    * @param {UserRepository} params.userRepository
-   * @param {GovernmentRepository} params.governmentRepository
+   * @param {WorkerRepository} params.workerRepository
+   * @param {ClientRepository} params.clientRepository
    */
-  constructor({ userRepository, governmentRepository }) {
+  constructor({ userRepository, workerRepository, clientRepository }) {
     super();
     this.#userRepository = userRepository;
-    this.#governmentRepository = governmentRepository;
+    this.#workerRepository = workerRepository;
+    this.#clientRepository = clientRepository;
   }
 
   /**
@@ -47,9 +63,9 @@ export default class UserService extends Service {
    * @async
    * @method getUser
    * @param {Object} params
-   * @param {IDType | undefined} params.userId - User ID
-   * @param {IDType | undefined} params.phoneNumber - Phone number
-   * @returns {Promise<ReturnUserData>} user
+   * @param {import('../repositories/database/Repository.js').IDType} [params.userId]
+   * @param {string} [params.phoneNumber]
+   * @returns {Promise<pkg.User | null>}
    */
   async get({ userId = undefined, phoneNumber = undefined }) {
     const user = await this.#userRepository.findFirst({
@@ -61,27 +77,24 @@ export default class UserService extends Service {
 
   /**
    * Find many users with pagination, filtering, and ordering
-   * Uses the flexible findMany method
    * @async
    * @method findMany
    * @param {Object} params
-   * @param {UserFilter} [params.filter={}] - Filter criteria
-   * @param {PaginationOptions} [params.pagination] - Pagination options
-   * @param {OrderingOptions[]} [params.orderBy=[]] - Ordering options
-   * @param {boolean} [params.paginate=false] - Whether to return paginated results
-   * @returns {Promise<import("../repositories/database/Repository.js").PaginatedResult<ReturnUserData>>} | ReturnUserData[]>}
+   * @param {pkg.Prisma.UserFindManyArgs} [params.filter={}]
+   * @param {import('../repositories/database/Repository.js').PaginationOptions} [params.pagination]
+   * @param {import('../repositories/database/Repository.js').OrderingOptions[]} [params.orderBy=[]]
+   * @returns {Promise<{data: pkg.User[], pagination: import('../repositories/database/Repository.js').PaginatedResult}>}
    */
   async findMany({
     filter = {},
     pagination = { page: 1, limit: 20 },
     orderBy = [],
-    paginate = false,
   }) {
+    filter.orderBy = Repository.handleOrder(orderBy);
+
     return await this.#userRepository.findMany({
-      where: filter,
+      filter,
       pagination,
-      orderBy,
-      paginate,
     });
   }
 
@@ -90,21 +103,11 @@ export default class UserService extends Service {
    * @async
    * @method updateUser
    * @param {Object} params
-   * @param {IDType} params.userId - User ID
-   * @param {Partial<InputUserData>} params.data - Update data
-   * @returns {Promise<import("../repositories/database/UserRepository.js").OptionalUser>} Updated user
-   * @throws {AppError} If government or city not found
+   * @param {import('../repositories/database/Repository.js').IDType} params.userId
+   * @param {Partial<InputUserData>} params.data
+   * @returns {Promise<pkg.User>}
    */
   async update({ userId, data }) {
-    const cities = await this.#governmentRepository.findCities({
-      filter: {
-        id: data.cityId,
-        governmentId: data.governmentId,
-      },
-    });
-    if (!cities || cities.data.length === 0)
-      throw new AppError('Government or city not found', 400);
-
     let url = undefined;
     if (data.profileImageBuffer) {
       url = (
@@ -116,18 +119,16 @@ export default class UserService extends Service {
       ).url;
     }
 
-    await this.#userRepository.updateMany(
-      {
+    await this.#userRepository.updateMany({
+      data: {
         role: data.role,
         firstName: data.firstName,
         lastName: data.lastName,
-        governmentId: data.governmentId,
-        cityId: data.cityId,
         status: data.status,
         profileImageUrl: typeof url === 'string' ? url : undefined,
       },
-      { id: userId }
-    );
+      where: { id: userId },
+    });
     return await this.#userRepository.findFirst({ id: userId });
   }
 
@@ -136,18 +137,18 @@ export default class UserService extends Service {
    * @async
    * @method getUserRoles
    * @param {Object} params
-   * @param {IDType} params.userId - User ID
-   * @returns {Promise<UserState>} Roles of user
+   * @param {import('../repositories/database/Repository.js').IDType} params.userId
+   * @returns {Promise<UserState>}
    */
   async getStatus({ userId }) {
     const user = await this.#userRepository.findFirst({ id: userId });
-    const worker = await this.#userRepository.findWorkerProfile({ userId });
+    const worker = await this.#workerRepository.findFirst({ userId });
     let verification = null;
     if (worker)
-      verification = await this.#userRepository.findWorkerProfileVerification({
-        workerProfileId: worker.id,
-      });
-    const client = await this.#userRepository.findClientProfile({ userId });
+      verification = await this.#workerRepository.findVerification(
+        { workerProfileId: worker.id }
+      );
+    const client = await this.#clientRepository.findFirst({ userId });
 
     const userState = {
       role: user.role,
@@ -174,8 +175,8 @@ export default class UserService extends Service {
    * @async
    * @method exists
    * @param {Object} params
-   * @param {IDType} [params.userId] - User ID
-   * @param {string} [params.phoneNumber] - Phone number
+   * @param {import('../repositories/database/Repository.js').IDType} [params.userId]
+   * @param {string} [params.phoneNumber]
    * @returns {Promise<boolean>}
    */
   async exists({ userId, phoneNumber }) {

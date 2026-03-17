@@ -7,11 +7,23 @@ import AppError from '../errors/AppError.js';
 import Service, { tryCatch } from './Service.js';
 import ConversationRepository from '../repositories/database/ConversationRepository.js';
 import MessageRepository from '../repositories/database/MessageRepository.js';
-import UserRepository from '../repositories/database/UserRepository.js';
 import ChatPresenceCache from '../repositories/cache/ChatPresenceCache.js';
 import prisma from '../libs/database.js';
+import WorkerRepository from '../repositories/database/WorkerRepository.js';
+import ClientRepository from '../repositories/database/ClientRepository.js';
 
-/** @typedef {import('../repositories/database/Repository.js').IDType} IDType */
+/**
+ * @typedef {Object} ConversationWithMeta
+ * @property {string} id
+ * @property {number} messageCounter
+ * @property {number} unreadCount
+ * @property {import('@prisma/client').Message | null} lastMessage
+ * @property {import('@prisma/client').User | null} partner
+ * @property {number} partnerLastReceivedMessageNumber
+ * @property {number} partnerLastReadMessageNumber
+ * @property {Date} createdAt
+ * @property {Date} updatedAt
+ */
 
 /**
  * ChatService — all chat business logic (conversation creation, messaging, read state)
@@ -23,23 +35,33 @@ export default class ChatService extends Service {
   #conversationRepository;
   /** @type {MessageRepository} */
   #messageRepository;
-  /** @type {UserRepository} */
-  #userRepository;
+  /** @type {WorkerRepository} */
+  #workerRepository;
+  /** @type {ClientRepository} */
+  #clientRepository;
   /** @type {ChatPresenceCache} */
   #presence;
 
   /**
    * @param {Object} params
    * @param {ConversationRepository} params.conversationRepository
-   * @param {MessageRepository}      params.messageRepository
-   * @param {UserRepository}         params.userRepository
-   * @param {ChatPresenceCache}      params.presence
+   * @param {MessageRepository} params.messageRepository
+   * @param {WorkerRepository} params.workerRepository
+   * @param {ClientRepository} params.clientRepository
+   * @param {ChatPresenceCache} params.presence
    */
-  constructor({ conversationRepository, messageRepository, userRepository, presence }) {
+  constructor({
+    conversationRepository,
+    messageRepository,
+    clientRepository,
+    workerRepository,
+    presence,
+  }) {
     super();
     this.#conversationRepository = conversationRepository;
     this.#messageRepository = messageRepository;
-    this.#userRepository = userRepository;
+    this.#workerRepository = workerRepository;
+    this.#clientRepository = clientRepository;
     this.#presence = presence;
   }
 
@@ -57,18 +79,19 @@ export default class ChatService extends Service {
    */
   async getOrCreateConversation({ workerId, clientId }) {
     if (workerId === clientId)
-      throw new AppError('A user cannot start a conversation with themselves', 400);
+      throw new AppError(
+        'A user cannot start a conversation with themselves',
+        400
+      );
 
     // Validate roles at the profile level
     const [workerProfile, clientProfile] = await Promise.all([
-      this.#userRepository.findWorkerProfile({ userId: workerId }),
-      this.#userRepository.findClientProfile({ userId: clientId }),
+      this.#workerRepository.findFirst({ userId: workerId }),
+      this.#clientRepository.findFirst({ userId: clientId }),
     ]);
 
-    if (!workerProfile)
-      throw new AppError('Worker profile not found', 400);
-    if (!clientProfile)
-      throw new AppError('Client profile not found', 400);
+    if (!workerProfile) throw new AppError('Worker profile not found', 400);
+    if (!clientProfile) throw new AppError('Client profile not found', 400);
 
     // Check if conversation already exists
     const existing = await this.#conversationRepository.findByPair({
@@ -113,9 +136,16 @@ export default class ChatService extends Service {
       });
 
       const conversations = convs.map((conv) => {
-        const myParticipant = conv.participants.find((p) => p.userId === userId);
-        const partnerParticipant = conv.participants.find((p) => p.userId !== userId);
-        const unreadCount = Math.max(0, conv.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0));
+        const myParticipant = conv.participants.find(
+          (p) => p.userId === userId
+        );
+        const partnerParticipant = conv.participants.find(
+          (p) => p.userId !== userId
+        );
+        const unreadCount = Math.max(
+          0,
+          conv.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0)
+        );
 
         return {
           id: conv.id,
@@ -123,8 +153,10 @@ export default class ChatService extends Service {
           unreadCount,
           lastMessage: conv.messages[0] ?? null,
           partner: partnerParticipant?.user ?? null,
-          partnerLastReceivedMessageNumber: partnerParticipant?.lastReceivedMessageNumber ?? 0,
-          partnerLastReadMessageNumber: partnerParticipant?.lastReadMessageNumber ?? 0,
+          partnerLastReceivedMessageNumber:
+            partnerParticipant?.lastReceivedMessageNumber ?? 0,
+          partnerLastReadMessageNumber:
+            partnerParticipant?.lastReadMessageNumber ?? 0,
           createdAt: conv.createdAt,
           updatedAt: conv.updatedAt,
         };
@@ -153,7 +185,10 @@ export default class ChatService extends Service {
       if (!content?.trim())
         throw new AppError('Message content cannot be empty', 400);
       if (content.length > 2000)
-        throw new AppError('Message content cannot exceed 2000 characters', 400);
+        throw new AppError(
+          'Message content cannot exceed 2000 characters',
+          400
+        );
 
       const message = await prisma.$transaction(async (tx) => {
         // Atomic increment — returns new counter value
@@ -195,7 +230,9 @@ export default class ChatService extends Service {
    */
   async markAsRead({ conversationId, userId, lastMessageId }) {
     return tryCatch(async () => {
-      const message = await this.#messageRepository.findById({ messageId: lastMessageId });
+      const message = await this.#messageRepository.findById({
+        messageId: lastMessageId,
+      });
       if (!message) throw new AppError('Message not found', 404);
       if (message.conversationId !== conversationId)
         throw new AppError('Message does not belong to this conversation', 400);
@@ -218,7 +255,9 @@ export default class ChatService extends Service {
    */
   async markAllAsRead({ conversationId, userId }) {
     return tryCatch(async () => {
-      const conv = await this.#conversationRepository.findFirst({ id: conversationId });
+      const conv = await this.#conversationRepository.findFirst({
+        id: conversationId,
+      });
       if (!conv) throw new AppError('Conversation not found', 404);
 
       // Reading implies receiving — bump both counters
@@ -247,7 +286,10 @@ export default class ChatService extends Service {
   async getMessages({ conversationId, userId, after = 0, limit = 30 }) {
     return tryCatch(async () => {
       // Validate participation (DB truth)
-      const participant = await this.#conversationRepository.findParticipant({ conversationId, userId });
+      const participant = await this.#conversationRepository.findParticipant({
+        conversationId,
+        userId,
+      });
       if (!participant) throw new AppError('Conversation not found', 404);
 
       return this.#messageRepository.findPage({ conversationId, after, limit });
@@ -261,7 +303,10 @@ export default class ChatService extends Service {
    */
   async getMissedMessages({ conversationId, userId, afterMessageNumber }) {
     return tryCatch(async () => {
-      const participant = await this.#conversationRepository.findParticipant({ conversationId, userId });
+      const participant = await this.#conversationRepository.findParticipant({
+        conversationId,
+        userId,
+      });
       if (!participant) throw new AppError('Conversation not found', 404);
 
       return this.#messageRepository.findPage({
@@ -283,8 +328,12 @@ export default class ChatService extends Service {
    */
   async validateParticipant({ conversationId, userId }) {
     return tryCatch(async () => {
-      const participant = await this.#conversationRepository.findParticipant({ conversationId, userId });
-      if (!participant) throw new AppError('Not a participant in this conversation', 403);
+      const participant = await this.#conversationRepository.findParticipant({
+        conversationId,
+        userId,
+      });
+      if (!participant)
+        throw new AppError('Not a participant in this conversation', 403);
       return participant;
     });
   }

@@ -3,39 +3,164 @@
  * @module repositories/GovernmentRepository
  */
 
-import { handlePrismaError, Repository } from "./Repository.js";
-import pkg from "@prisma/client";
-
-const { PrismaClient } = pkg;
-
-/** @typedef {import('@prisma/client').Prisma.BatchPayload} BatchPayload */
-/** @typedef {import("./Repository.js").IDType} IDType */
-/** @typedef {import('./Repository.js').PaginationOptions} PaginationOptions */
-/** @typedef {import('./Repository.js').OrderingOptions} OrderingOptions */
-/** @template T @typedef {import('./Repository.js').PaginatedResult<T>} PaginatedResult */
-
-/** @typedef {{name: String }} GovernmentData */
-/** @typedef {GovernmentData & { id: IDType }} Government */
-/** @typedef {Partial<GovernmentData>} OptionalGovernmentData */
-/** @typedef {import("./Repository.js").FilterArgs<Government>} GovernmentFilter */
-
-/** @typedef {{name: String }} CityData */
-/** @typedef {CityData & { id: IDType, governmentId: IDType }} City */
-/** @typedef {import("./Repository.js").FilterArgs<City>} CityFilter */
-
+import { handlePrismaError, Repository } from './Repository.js';
+import * as pkg from '@prisma/client';
 
 /**
  * Government Repository - Handles all database operations for governments
  * @class
- * @extends Repository<GovernmentData, OptionalGovernmentData, Government, GovernmentFilter>
+ * @extends Repository
  */
 export default class GovernmentRepository extends Repository {
-
-  /** @param {PrismaClient} prisma */
+  /** @param {pkg.PrismaClient} prisma */
   constructor(prisma) {
-    super(prisma, "government");
+    super(prisma);
   }
 
+  // ============================================
+  // Government CRUD Operations
+  // ============================================
+
+  /**
+   * Find government by ID
+   * @param {Object} params
+   * @param {string} params.id
+   * @returns {Promise<pkg.Government | null>}
+   */
+  async findById({ id }) {
+    try {
+      return await this.prismaClient.government.findUnique({
+        where: { id },
+      });
+    } catch (error) {
+      handlePrismaError(error, 'findById');
+    }
+  }
+
+  /**
+   * Find first government matching filter
+   * @param {pkg.Prisma.GovernmentWhereInput} filter
+   * @returns {Promise<pkg.Government | null>}
+   */
+  async findFirst(filter) {
+    try {
+      return await this.prismaClient.government.findFirst({
+        where: filter,
+      });
+    } catch (error) {
+      handlePrismaError(error, 'findFirst');
+    }
+  }
+
+  /**
+   * Check if government exists
+   * @param {pkg.Prisma.GovernmentCountArgs} filter
+   * @returns {Promise<boolean>}
+   */
+  async exists(filter) {
+    try {
+      return (await this.prismaClient.government.count(filter)) > 0;
+    } catch (error) {
+      handlePrismaError(error, 'exists');
+    }
+  }
+
+  /**
+   * Find governments with pagination, filtering, and ordering
+   * @param {Object} params
+   * @param {pkg.Prisma.GovernmentFindManyArgs} [params.filter]
+   * @param {import('./Repository.js').PaginationOptions} [params.pagination]
+   * @param {boolean} [params.paginate]
+   * @returns {Promise<{ data: pkg.Government[], pagination: import('./Repository.js').PaginatedResult }>}
+   */
+  async findMany({ filter = {}, pagination = undefined }) {
+    try {
+      const query = { ...filter };
+      let paginationResult = undefined;
+
+      if (pagination) {
+        const total = await this.prismaClient.government.count({
+          where: query.where,
+        });
+        const res = Repository.handlePagination({
+          total,
+          pagination,
+        });
+        const paginationQuery = res.paginationQuery;
+        paginationResult = res.paginationResult;
+
+        query.skip = paginationQuery.skip;
+        query.take = paginationQuery.take;
+      }
+
+      const data = await this.prismaClient.government.findMany(query);
+      return { data, pagination: paginationResult };
+    } catch (error) {
+      handlePrismaError(error, 'findMany');
+    }
+  }
+
+  /**
+   * Create a new government
+   * @param {pkg.Prisma.GovernmentCreateInput} data
+   * @returns {Promise<pkg.Government>}
+   */
+  async create(data) {
+    try {
+      return await this.prismaClient.government.create({
+        data,
+      });
+    } catch (error) {
+      handlePrismaError(error, 'create');
+    }
+  }
+
+  /**
+   * Create multiple governments
+   * @param {pkg.Prisma.GovernmentCreateManyInput[]} data
+   * @returns {Promise<pkg.Prisma.BatchPayload>}
+   */
+  async createMany(data) {
+    try {
+      return await this.prismaClient.government.createMany({
+        data,
+      });
+    } catch (error) {
+      handlePrismaError(error, 'createMany');
+    }
+  }
+
+  /**
+   * Update governments matching filter
+   * @param {pkg.Prisma.GovernmentWhereInput} filter
+   * @param {pkg.Prisma.GovernmentUpdateInput} data
+   * @returns {Promise<pkg.Prisma.BatchPayload>}
+   */
+  async updateMany(filter, data) {
+    try {
+      return await this.prismaClient.government.updateMany({
+        where: filter,
+        data,
+      });
+    } catch (error) {
+      handlePrismaError(error, 'updateMany');
+    }
+  }
+
+  /**
+   * Delete governments matching filter
+   * @param {pkg.Prisma.GovernmentWhereInput} filter
+   * @returns {Promise<pkg.Prisma.BatchPayload>}
+   */
+  async deleteMany(filter) {
+    try {
+      return await this.prismaClient.government.deleteMany({
+        where: filter,
+      });
+    } catch (error) {
+      handlePrismaError(error, 'deleteMany');
+    }
+  }
 
   // ============================================
   // City CRUD Operations
@@ -43,70 +168,57 @@ export default class GovernmentRepository extends Repository {
 
   /**
    * Check if city exists
-   * @param {CityFilter} filter
+   * @param {pkg.Prisma.CityCountArgs} filter
    * @returns {Promise<boolean>}
-   * @throws {RepositoryError}
    */
   async existsCity(filter) {
     try {
-      return (await this.prismaClient.city.count({ where: filter })) > 0;
+      return (await this.prismaClient.city.count(filter)) > 0;
     } catch (error) {
       handlePrismaError(error, 'existsCity');
     }
   }
 
   /**
-   * Find cities with flexible filtering, pagination, and ordering
-   * @param {Object} params - Query parameters
-   * @param {CityFilter} [params.filter] - Filter criteria
-   * @param {PaginationOptions} [params.pagination] - Pagination options
-   * @param {OrderingOptions[]} [params.orderBy] - Ordering options
-   * @param {boolean} [params.paginate] - Whether to return paginated results
-   * @returns {Promise<PaginatedResult<City>>}
+   * Find cities with pagination, filtering, and ordering
+   * @param {Object} params
+   * @param {pkg.Prisma.CityFindManyArgs} [params.filter]
+   * @param {import('./Repository.js').PaginationOptions} [params.pagination]
+   * @param {boolean} [params.paginate]
+   * @returns {Promise<{ data: pkg.City[], pagination: import('./Repository.js').PaginatedResult }>}
    */
-  async findCities({
-    filter = {},
-    pagination,
-    orderBy = [],
-    paginate = false
-  }) {
+  async findCities({ filter = {}, pagination = undefined }) {
     try {
-      return Repository.performFindManyQuery({
-        prismaModel: this.prismaClient.city,
-        parentQueryParameters: { governmentId: filter.governmentId },
-        orderBy,
-        filter,
-        paginate,
-        pagination,
-        mapFunction: (x) => x,
-      });
-    } catch (error) {
-      throw handlePrismaError(error, 'findMany');
-    }
-  }
+      const query = { ...filter };
+      let paginationResult = undefined;
 
-  /**
-   * Find cities (legacy method for backward compatibility)
-   * @param {CityFilter} filter
-   * @returns {Promise<City[]>}
-   * @throws {RepositoryError}
-   */
-  async findCitiesLegacy(filter) {
-    try {
-      return await this.prismaClient.city.findMany({
-        where: filter
-      });
+      if (pagination) {
+        const total = await this.prismaClient.city.count({
+          where: query.where,
+        });
+        const res = Repository.handlePagination({
+          total,
+          pagination,
+        });
+        const paginationQuery = res.paginationQuery;
+        paginationResult = res.paginationResult;
+
+        query.skip = paginationQuery.skip;
+        query.take = paginationQuery.take;
+      }
+
+      const data = await this.prismaClient.city.findMany(query);
+      return { data, pagination: paginationResult };
     } catch (error) {
-      handlePrismaError(error, 'findCitiesLegacy');
+      handlePrismaError(error, 'findCities');
     }
   }
 
   /**
    * Update cities
-   * @param {CityFilter} filter
-   * @param {CityData} data
-   * @returns {Promise<BatchPayload>}
-   * @throws {RepositoryError}
+   * @param {pkg.Prisma.CityWhereInput} filter
+   * @param {pkg.Prisma.CityUpdateInput} data
+   * @returns {Promise<pkg.Prisma.BatchPayload>}
    */
   async updateCities(filter, data) {
     try {
@@ -121,19 +233,18 @@ export default class GovernmentRepository extends Repository {
 
   /**
    * Create cities
-   * @param {IDType} governmentId
-   * @param {CityData} data
-   * @returns {Promise<BatchPayload>}
-   * @throws {RepositoryError}
+   * @param {string} governmentId
+   * @param {pkg.Prisma.CityCreateManyInput[]} data
+   * @returns {Promise<pkg.Prisma.BatchPayload>}
    */
   async createCities(governmentId, data) {
     try {
       return await this.prismaClient.city.createMany({
-      data: {
-        ...data,
-        governmentId
-      },
-    });
+        data: data.map((city) => ({
+          ...city,
+          governmentId,
+        })),
+      });
     } catch (error) {
       handlePrismaError(error, 'createCities');
     }
@@ -141,12 +252,16 @@ export default class GovernmentRepository extends Repository {
 
   /**
    * Delete cities
-   * @param {CityFilter} filter
-   * @returns {Promise<BatchPayload>}
+   * @param {pkg.Prisma.CityWhereInput} filter
+   * @returns {Promise<pkg.Prisma.BatchPayload>}
    */
   async deleteCities(filter) {
-    return await this.prismaClient.city.deleteMany({
-      where: filter
-    });
-  };
+    try {
+      return await this.prismaClient.city.deleteMany({
+        where: filter,
+      });
+    } catch (error) {
+      handlePrismaError(error, 'deleteCities');
+    }
+  }
 }

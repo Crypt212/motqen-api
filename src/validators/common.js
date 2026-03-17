@@ -110,7 +110,7 @@ export const specializationsTreeValidation = (prefix, required = false) => {
     .isArray({ min: 1 })
     .withMessage(fieldName + ' must be a non-empty array')
     .custom((value) => {
-      console.log({...value});
+      console.log({ ...value });
       for (let i = 0; i < value.length; i++) {
         const item = value[i];
         if (!item || typeof item !== 'object') {
@@ -142,7 +142,7 @@ export const specializationsTreeValidation = (prefix, required = false) => {
         }
       }
       return true;
-    })
+    });
 };
 
 /**
@@ -248,11 +248,6 @@ export const userDataValidation = (prefix, required = false) => {
     validateField(fieldName + '.firstName', required).trim(),
     validateField(fieldName + '.middleName', required).trim(),
     validateField(fieldName + '.lastName', required).trim(),
-    validateField(fieldName + '.governmentId', required)
-      .trim()
-      .isUUID()
-      .withMessage(fieldName + '.governmentId must be a valid UUID'),
-    validateField(fieldName + '.cityId', required).trim(),
   ];
 };
 
