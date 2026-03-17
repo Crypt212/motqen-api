@@ -60,24 +60,24 @@ model ClientProfile {
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
-  orders     Order[]
-  locations  Location[]
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders    Order[]
+  locations Location[]
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("client_profiles")
 }
 
 model Location {
-  id              String @id @default(uuid())
+  id              String        @id @default(uuid())
   clientProfileId String
-  governmentId String
-  cityId       String
-  address      String
-  addressNotes String
-  isMain       Boolean
-  clientProfile ClientProfile @relation(fields: [clientProfileId], references: [id])
-  government    Government    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
-  city          City          @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  governmentId    String
+  cityId          String
+  address         String
+  addressNotes    String
+  isMain          Boolean
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
+  government      Government    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  city            City          @relation(fields: [cityId], references: [id], onDelete: Cascade)
 }
 
 model WorkerProfile {
@@ -85,7 +85,7 @@ model WorkerProfile {
   userId String @unique
 
   portfolioId       String? @unique
-  experienceYears   Int @default(0)
+  experienceYears   Int     @default(0)
   isInTeam          Boolean @default(false)
   acceptsUrgentJobs Boolean @default(false)
   bio               String?
@@ -98,7 +98,7 @@ model WorkerProfile {
   user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders                Order[]
   chosenSpecializations ChosenSpecialization[]
-  workGovernments           Government[]
+  workGovernments       Government[]
   badges                WorkerBadge[]
 
   @@map("worker_profiles")
@@ -178,9 +178,9 @@ model ChosenSpecialization {
 model Specialization {
   id String @id @default(uuid())
 
-  name   String
-  nameAr String
-  svgId  String
+  name     String
+  nameAr   String
+  category SpecializationCategory
 
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
@@ -198,7 +198,6 @@ model SubSpecialization {
 
   name   String
   nameAr String
-  svgId  String
 
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
@@ -219,9 +218,9 @@ model Government {
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
-  workers  WorkerProfile[]
+  workers   WorkerProfile[]
   locations Location[]
-  citys    City[]
+  citys     City[]
 
   @@map("governments")
 }
@@ -231,12 +230,12 @@ model City {
   governmentId String
   name         String
   nameAr       String
-  long      String
-  lat       String
+  long         String
+  lat          String
   updatedAt    DateTime @updatedAt
   createdAt    DateTime @default(now())
 
-  locations   Location[]
+  locations  Location[]
   government Government @relation(fields: [governmentId], references: [id], onDelete: Cascade)
 
   @@map("cities")
@@ -287,6 +286,22 @@ enum WorkerProfileStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum SpecializationCategory {
+  ELECTRICITY
+  PLUMBING
+  AC
+  CARPENTRY
+  GENERALMAINTENANCE
+  PAINTING
+  CONSTRUCTION
+  CLEANING
+  INSTALLATION
+  FURNITURETRANSPORT
+  DRILLING
+  ELECTRICALAPPLIANCES
+  DEFAULTCATEGORY
 }
 
 // ─── Chat ────────────────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@
 import SuccessResponse from '../responses/successResponse.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { chatService } from '../state.js';
+import { matchedData } from 'express-validator';
 
 /**
  * POST /api/chat/conversations
@@ -14,7 +15,7 @@ import { chatService } from '../state.js';
  * clientId is derived from authenticated user (req.userState.userId).
  */
 export const getOrCreateConversation = asyncHandler(async (req, res) => {
-  const { workerId } = req.body;
+  const { workerId } = matchedData(req, { includeOptionals: true });
   const clientId = req.userState.userId;
 
   const conversation = await chatService.getOrCreateConversation({
@@ -32,11 +33,7 @@ export const getOrCreateConversation = asyncHandler(async (req, res) => {
  */
 export const getConversations = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const skip = parseInt(String(req.query.skip ?? '0'), 10);
-  const take = Math.min(
-    parseInt(String(req.query.take ?? '30'), 10),
-    30,
-  );
+  const { skip, take } = matchedData(req, { includeOptionals: true });
 
   const conversations = await chatService.getConversations({
     userId,
@@ -54,12 +51,7 @@ export const getConversations = asyncHandler(async (req, res) => {
  */
 export const getMessages = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const conversationId = String(req.params.conversationId);
-  const after = parseInt(String(req.query.after ?? '0'), 10);
-  const limit = Math.min(
-    parseInt(String(req.query.limit) ?? '30', 10),
-    100,
-  );
+  const { conversationId, limit, after } = matchedData(req, { includeOptionals: true });
 
   const messages = await chatService.getMessages({
     conversationId,
@@ -78,11 +70,7 @@ export const getMessages = asyncHandler(async (req, res) => {
  */
 export const getUnreadSummary = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const offset = parseInt(String(req.query.offset ?? '0'), 10);
-  const limit = Math.min(
-    parseInt(String(req.query.limit) ?? '30', 10),
-    100,
-  );
+  const { offset, limit } = matchedData(req, { includeOptionals: true });
 
   const conversations = await chatService.getConversations({
     userId,
@@ -102,8 +90,7 @@ export const getUnreadSummary = asyncHandler(async (req, res) => {
  */
 export const getMissedMessages = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const conversationId = String(req.params.conversationId);
-  const after = parseInt(String(req.query.after) ?? '0', 10);
+  const { conversationId, after } = matchedData(req, { includeOptionals: true });
 
   const messages = await chatService.getMissedMessages({
     conversationId,

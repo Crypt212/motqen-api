@@ -30,7 +30,8 @@ const options = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          description: 'JWT token — use the token returned by /auth/otp/verify, /auth/login, or /auth/access depending on the endpoint',
+          description:
+            'JWT token — use the token returned by /auth/otp/verify, /auth/login, or /auth/access depending on the endpoint',
         },
       },
       parameters: {
@@ -63,7 +64,8 @@ const options = {
             type: 'string',
             example: 'Bearer <register_token_from_otp_verify>',
           },
-          description: 'Register token from /auth/otp/verify (tokenType: "register"). Format: Bearer <token>',
+          description:
+            'Register token from /auth/otp/verify (tokenType: "register"). Format: Bearer <token>',
         },
         LoginToken: {
           in: 'header',
@@ -73,7 +75,8 @@ const options = {
             type: 'string',
             example: 'Bearer <login_token_from_otp_verify>',
           },
-          description: 'Login token from /auth/otp/verify (tokenType: "login"). Format: Bearer <token>',
+          description:
+            'Login token from /auth/otp/verify (tokenType: "login"). Format: Bearer <token>',
         },
         AccessToken: {
           in: 'header',
@@ -83,7 +86,8 @@ const options = {
             type: 'string',
             example: 'Bearer <access_token>',
           },
-          description: 'Access token from /auth/login or /auth/access. Format: Bearer <token>',
+          description:
+            'Access token from /auth/login or /auth/access. Format: Bearer <token>',
         },
         RefreshToken: {
           in: 'header',
@@ -156,13 +160,20 @@ const options = {
             clientProfile: {
               type: 'string',
               description: 'JSON string containing client profile data',
-              example: '{"address":"123 Main St","addressNotes":"Near the park"}',
+              example:
+                '{"address":"123 Main St","addressNotes":"Near the park"}',
             },
           },
         },
         RegisterClientUserData: {
           type: 'object',
-          required: ['firstName', 'middleName', 'lastName', 'governmentId', 'city'],
+          required: [
+            'firstName',
+            'middleName',
+            'lastName',
+            'governmentId',
+            'city',
+          ],
           properties: {
             firstName: {
               type: 'string',
@@ -285,7 +296,8 @@ const options = {
                   },
                 },
               },
-              description: 'Specialization tree with main and sub specializations',
+              description:
+                'Specialization tree with main and sub specializations',
             },
             workGovernmentIds: {
               type: 'array',
@@ -297,13 +309,15 @@ const options = {
         },
         Login: {
           type: 'object',
-          description: 'Login token is sent via Authorization header. Device fingerprint via x-device-fingerprint header.',
+          description:
+            'Login token is sent via Authorization header. Device fingerprint via x-device-fingerprint header.',
           properties: {},
         },
         // ─── User Request Schemas ───────────────────────────────
         UpdateUser: {
           type: 'object',
-          description: 'All fields are optional — only provide fields to update',
+          description:
+            'All fields are optional — only provide fields to update',
           properties: {
             firstName: {
               type: 'string',
@@ -341,7 +355,8 @@ const options = {
         },
         UpdateWorkerProfile: {
           type: 'object',
-          description: 'All fields are optional — only provide fields to update',
+          description:
+            'All fields are optional — only provide fields to update',
           properties: {
             experienceYears: {
               type: 'integer',
@@ -433,7 +448,8 @@ const options = {
         },
         UpdateClientProfile: {
           type: 'object',
-          description: 'All fields are optional — only provide fields to update',
+          description:
+            'All fields are optional — only provide fields to update',
           properties: {
             address: {
               type: 'string',
@@ -466,34 +482,113 @@ const options = {
         // ─── Government / Specialization Request Schemas ────────
         GovernmentInput: {
           type: 'object',
-          required: ['name'],
+          required: ['name', 'nameAr', 'long', 'lat'],
           properties: {
             name: {
               type: 'string',
+              example: 'Cairo',
+              description: 'Government name in English (2-100 characters)',
+            },
+            nameAr: {
+              type: 'string',
               example: 'القاهرة',
-              description: 'Government name (2-100 characters)',
+              description: 'Government name in Arabic (2-100 characters)',
+            },
+            long: {
+              type: 'string',
+              example: '31.2357',
+              description: 'Longitude coordinate',
+            },
+            lat: {
+              type: 'string',
+              example: '30.0444',
+              description: 'Latitude coordinate',
+            },
+          },
+        },
+        CityInput: {
+          type: 'object',
+          required: ['name', 'nameAr', 'long', 'lat', 'governmentId'],
+          properties: {
+            name: {
+              type: 'string',
+              example: 'Maadi',
+              description: 'City name in English (2-100 characters)',
+            },
+            nameAr: {
+              type: 'string',
+              example: 'المعادي',
+              description: 'City name in Arabic (2-100 characters)',
+            },
+            long: {
+              type: 'string',
+              example: '31.2571',
+              description: 'Longitude coordinate',
+            },
+            lat: {
+              type: 'string',
+              example: '29.9592',
+              description: 'Latitude coordinate',
+            },
+            governmentId: {
+              type: 'string',
+              format: 'uuid',
+              example: '123e4567-e89b-12d3-a456-426614174000',
+              description: 'Government UUID (required)',
             },
           },
         },
         SpecializationInput: {
           type: 'object',
-          required: ['name'],
+          required: ['name', 'nameAr', 'category'],
           properties: {
             name: {
               type: 'string',
+              example: 'Plumbing',
+              description: 'Specialization name in English (2-100 characters)',
+            },
+            nameAr: {
+              type: 'string',
               example: 'سباكة',
-              description: 'Specialization name (2-100 characters)',
+              description: 'Specialization name in Arabic (2-100 characters)',
+            },
+            category: {
+              type: 'string',
+              enum: [
+                'ELECTRICITY',
+                'PLUMBING',
+                'AC',
+                'CARPENTRY',
+                'GENERALMAINTENANCE',
+                'PAINTING',
+                'CONSTRUCTION',
+                'CLEANING',
+                'INSTALLATION',
+                'FURNITURETRANSPORT',
+                'DRILLING',
+                'ELECTRICALAPPLIANCES',
+                'DEFAULTCATEGORY',
+              ],
+              example: 'PLUMBING',
+              description: 'Specialization category',
             },
           },
         },
         SubSpecializationInput: {
           type: 'object',
-          required: ['name'],
+          required: ['name', 'nameAr'],
           properties: {
             name: {
               type: 'string',
+              example: 'Installation',
+              description:
+                'Sub-specialization name in English (2-100 characters)',
+            },
+            nameAr: {
+              type: 'string',
               example: 'تركيب',
-              description: 'Sub-specialization name (2-100 characters)',
+              description:
+                'Sub-specialization name in Arabic (2-100 characters)',
             },
           },
         },
@@ -615,7 +710,27 @@ const options = {
             },
             name: {
               type: 'string',
+              example: 'Cairo',
+            },
+            nameAr: {
+              type: 'string',
               example: 'القاهرة',
+            },
+            long: {
+              type: 'string',
+              example: '31.2357',
+            },
+            lat: {
+              type: 'string',
+              example: '30.0444',
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
             },
           },
         },
@@ -632,7 +747,27 @@ const options = {
             },
             name: {
               type: 'string',
-              example: 'المنصورة',
+              example: 'Maadi',
+            },
+            nameAr: {
+              type: 'string',
+              example: 'المعادي',
+            },
+            long: {
+              type: 'string',
+              example: '31.2571',
+            },
+            lat: {
+              type: 'string',
+              example: '29.9592',
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
             },
           },
         },
@@ -645,7 +780,38 @@ const options = {
             },
             name: {
               type: 'string',
+              example: 'Plumbing',
+            },
+            nameAr: {
+              type: 'string',
               example: 'سباكة',
+            },
+            category: {
+              type: 'string',
+              enum: [
+                'ELECTRICITY',
+                'PLUMBING',
+                'AC',
+                'CARPENTRY',
+                'GENERALMAINTENANCE',
+                'PAINTING',
+                'CONSTRUCTION',
+                'CLEANING',
+                'INSTALLATION',
+                'FURNITURETRANSPORT',
+                'DRILLING',
+                'ELECTRICALAPPLIANCES',
+                'DEFAULTCATEGORY',
+              ],
+              example: 'PLUMBING',
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
             },
           },
         },
@@ -658,11 +824,23 @@ const options = {
             },
             name: {
               type: 'string',
+              example: 'Installation',
+            },
+            nameAr: {
+              type: 'string',
               example: 'تركيب',
             },
             mainSpecializationId: {
               type: 'string',
               format: 'uuid',
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
             },
           },
         },
@@ -799,18 +977,37 @@ const options = {
             id: { type: 'string', format: 'uuid' },
             firstName: { type: 'string', example: 'أحمد' },
             lastName: { type: 'string', example: 'محمد' },
-            profileImageUrl: { type: 'string', nullable: true, example: 'https://res.cloudinary.com/.../avatar.jpg' },
-            isOnline: { type: 'boolean', description: 'Whether the partner is currently online' },
+            profileImageUrl: {
+              type: 'string',
+              nullable: true,
+              example: 'https://res.cloudinary.com/.../avatar.jpg',
+            },
+            isOnline: {
+              type: 'boolean',
+              description: 'Whether the partner is currently online',
+            },
           },
         },
         Message: {
           type: 'object',
           properties: {
-            id: { type: 'string', format: 'uuid', example: '3fa85f64-5717-4562-b3fc-2c963f66afa6' },
+            id: {
+              type: 'string',
+              format: 'uuid',
+              example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+            },
             conversationId: { type: 'string', format: 'uuid' },
             senderId: { type: 'string', format: 'uuid' },
-            messageNumber: { type: 'integer', example: 42, description: 'Per-conversation sequential number — used as cursor' },
-            content: { type: 'string', example: 'Hello, are you available today?' },
+            messageNumber: {
+              type: 'integer',
+              example: 42,
+              description:
+                'Per-conversation sequential number — used as cursor',
+            },
+            content: {
+              type: 'string',
+              example: 'Hello, are you available today?',
+            },
             type: { type: 'string', enum: ['TEXT', 'IMAGE'], example: 'TEXT' },
             createdAt: { type: 'string', format: 'date-time' },
             sender: { $ref: '#/components/schemas/PartnerUser' },
@@ -818,14 +1015,35 @@ const options = {
         },
         ConversationSummary: {
           type: 'object',
-          description: 'Conversation list item with unread count derived from counter difference',
+          description:
+            'Conversation list item with unread count derived from counter difference',
           properties: {
             id: { type: 'string', format: 'uuid' },
-            messageCounter: { type: 'integer', example: 42, description: 'Total messages sent in this conversation' },
-            unreadCount: { type: 'integer', example: 5, description: 'messageCounter − lastReadMessageNumber' },
-            partnerLastReceivedMessageNumber: { type: 'integer', example: 40, description: 'Last messageNumber the partner has received (delivered)' },
-            partnerLastReadMessageNumber: { type: 'integer', example: 38, description: 'Last messageNumber the partner has read' },
-            lastMessage: { nullable: true, $ref: '#/components/schemas/Message' },
+            messageCounter: {
+              type: 'integer',
+              example: 42,
+              description: 'Total messages sent in this conversation',
+            },
+            unreadCount: {
+              type: 'integer',
+              example: 5,
+              description: 'messageCounter − lastReadMessageNumber',
+            },
+            partnerLastReceivedMessageNumber: {
+              type: 'integer',
+              example: 40,
+              description:
+                'Last messageNumber the partner has received (delivered)',
+            },
+            partnerLastReadMessageNumber: {
+              type: 'integer',
+              example: 38,
+              description: 'Last messageNumber the partner has read',
+            },
+            lastMessage: {
+              nullable: true,
+              $ref: '#/components/schemas/Message',
+            },
             partner: { $ref: '#/components/schemas/PartnerUser' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
@@ -845,7 +1063,8 @@ const options = {
       },
       responses: {
         BadRequest: {
-          description: 'Bad Request - Operation failed due to invalid data or business logic',
+          description:
+            'Bad Request - Operation failed due to invalid data or business logic',
           content: {
             'application/json': {
               schema: {
@@ -859,7 +1078,8 @@ const options = {
           },
         },
         ValidationError: {
-          description: 'Validation Error - Request body did not pass validation',
+          description:
+            'Validation Error - Request body did not pass validation',
           content: {
             'application/json': {
               schema: {
@@ -870,14 +1090,18 @@ const options = {
                 message: 'Validation failed',
                 errors: [
                   { type: 'field', message: 'Phone number is required' },
-                  { type: 'field', message: 'Method must be either SMS or WhatsApp' },
+                  {
+                    type: 'field',
+                    message: 'Method must be either SMS or WhatsApp',
+                  },
                 ],
               },
             },
           },
         },
         Unauthorized: {
-          description: 'Unauthorized - Invalid, expired, or missing access token',
+          description:
+            'Unauthorized - Invalid, expired, or missing access token',
           content: {
             'application/json': {
               schema: {
@@ -919,7 +1143,8 @@ const options = {
           },
         },
         Conflict: {
-          description: 'Conflict - Resource already exists (e.g., phone number already registered)',
+          description:
+            'Conflict - Resource already exists (e.g., phone number already registered)',
           content: {
             'application/json': {
               schema: {
@@ -972,10 +1197,34 @@ const options = {
       },
     },
     tags: [
-      { name: 'Auth',            description: 'Authentication endpoints (OTP, registration, login, logout, token refresh)' },
-      { name: 'Users',           description: 'User profile management (basic info, profile image, client/worker profiles)' },
-      { name: 'Governments',     description: 'Government & city lookup and management' },
-      { name: 'Specializations', description: 'Specialization & sub-specialization lookup and management' },
+      {
+        name: 'Auth',
+        description:
+          'Authentication endpoints (OTP, registration, login, logout, token refresh)',
+      },
+      {
+        name: 'Users',
+        description:
+          'User profile management (basic info, profile image, client/worker profiles)',
+      },
+      {
+        name: 'Governments',
+        description: 'Government & city lookup and management',
+      },
+      {
+        name: 'Specializations',
+        description:
+          'Specialization & sub-specialization lookup and management',
+      },
+      {
+        name: 'Worker Search',
+        description:
+          'Public worker search endpoints (no authentication required)',
+      },
+      {
+        name: 'Explore',
+        description: 'Explore workers by specialization (authenticated)',
+      },
       {
         name: 'Chat',
         description:

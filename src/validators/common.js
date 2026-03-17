@@ -67,8 +67,7 @@ export const validateField = (fieldName, required = false) => {
   const b = body(fieldName).trim();
 
   if (required) b.notEmpty().withMessage(fieldName + ' is required');
-  else !required;
-  b.optional({ nullable: true, checkFalsy: true });
+  else b.optional({ nullable: true, checkFalsy: true });
 
   return b;
 };

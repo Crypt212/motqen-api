@@ -15,6 +15,7 @@ import {
   WORKER_GOVERNMENTS_QUERY_CONFIG,
   WORKER_SPECIALIZATIONS_QUERY_CONFIG,
 } from '../validators/dashboard.js';
+import { Repository } from '../repositories/database/Repository.js';
 
 /** @template T @typedef {import("../types/asyncHandler.js").RequestHandler} RequestHandler */
 
@@ -55,7 +56,7 @@ export const updateUser = asyncHandler(async (req, res) => {
 /**
  */
 export const createClientProfile = asyncHandler(async (req, res) => {
-  const { address, addressNotes } = matchedData(req, {
+  const { address, addressNotes, governmentId, cityId } = matchedData(req, {
     includeOptionals: true,
   });
   const userId = req.userState.userId;
@@ -63,6 +64,8 @@ export const createClientProfile = asyncHandler(async (req, res) => {
   const clientProfile = await clientService.create({
     userId,
     data: {
+      governmentId,
+      cityId,
       address,
       addressNotes,
     },
@@ -228,12 +231,11 @@ export const getWorkerGovernments = asyncHandler(async (req, res) => {
     WORKER_GOVERNMENTS_QUERY_CONFIG
   );
 
+  filter.orderBy = Repository.handleOrder(orderBy);
   const result = await workerService.getWorkGovernments({
-    workerProfileId: req.userState.worker.id,
+    userId: req.userState.userId,
     pagination,
     filter,
-    orderBy,
-    paginate,
   });
 
   // Check if paginated response
@@ -276,15 +278,15 @@ export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
 
   let deletedGovernmentsCount = 0;
   if (all)
-    deletedGovernmentsCount = await workerService.deleteWorkGovernments({
+    deletedGovernmentsCount = (await workerService.deleteWorkGovernments({
       workerProfileId: req.userState.worker.id,
       governmentIds,
-    });
+    })).count;
   else if (governmentIds)
-    deletedGovernmentsCount = await workerService.deleteWorkGovernments({
+    deletedGovernmentsCount = (await workerService.deleteWorkGovernments({
       workerProfileId: req.userState.worker.id,
       governmentIds,
-    });
+    })).count;
 
   new SuccessResponse(
     'deleted worker working governments successfully',
@@ -306,13 +308,12 @@ export const getWorkerSpecializations = asyncHandler(async (req, res) => {
     WORKER_SPECIALIZATIONS_QUERY_CONFIG
   );
 
+  filter.orderBy = Repository.handleOrder(orderBy);
   const result = await workerService.getSpecializations({
-    workerProfileId: req.userState.worker.id,
+    userId: req.userState.userId,
     mainSpecializationIds: specializationIds,
     pagination,
     filter,
-    orderBy,
-    paginate,
   });
 
   // Check if paginated response
@@ -357,23 +358,23 @@ export const deleteWorkerSpecializations = asyncHandler(async (req, res) => {
 
   let deletedSpecializationsCount = 0;
   if (all)
-    deletedSpecializationsCount = await workerService.deleteSpecializations({
-      workerProfileId: req.userState.worker.id,
+    deletedSpecializationsCount = (await workerService.deleteSpecializations({
+      userId: req.userState.userId,
       mainSpecializationIds: undefined,
-    });
+    })).count;
   else {
     if (mainSpecializationIds)
-      deletedSpecializationsCount = await workerService.deleteSpecializations({
-        workerProfileId: req.userState.worker.id,
+      deletedSpecializationsCount += (await workerService.deleteSpecializations({
+        userId: req.userState.userId,
         mainSpecializationIds,
-      });
+      })).count;
 
     if (specializationsTree)
-      deletedSpecializationsCount =
-        await workerService.deleteSubSpecializations({
-          workerProfileId: req.userState.worker.id,
+      deletedSpecializationsCount +=
+        (await workerService.deleteSubSpecializations({
+          userId: req.userState.userId,
           specializationsTree,
-        });
+        })).count;
   }
 
   new SuccessResponse(

@@ -3,6 +3,7 @@
  * @module controllers/WorkerController
  */
 
+import { matchedData } from 'express-validator';
 import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { workerRepository } from '../state.js';
@@ -23,7 +24,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     acceptsUrgentJobs,
     page,
     limit,
-  } = req.query;
+  } = matchedData(req, { includeOptionals: true });
 
   // Support both new API names and legacy names
   const subSpecId =
@@ -75,9 +76,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
  * @param {import('../types/asyncHandler.js').Response} res
  */
 export const getWorkerById = asyncHandler(async (req, res) => {
-  const workerId = Array.isArray(req.params.id)
-    ? req.params.id[0]
-    : req.params.id;
+  const { id: workerId } = matchedData(req, { includeOptionals: true });
 
   const worker = await workerRepository.getWorkerById({ workerId });
 
