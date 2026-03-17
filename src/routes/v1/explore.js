@@ -10,7 +10,108 @@ import { validateExploreSearch, validateExploreWorkerId } from "../../validators
 
 const exploreRouter = Router();
 
+/**
+ * @swagger
+ * /explore:
+ *   get:
+ *     summary: Explore workers by specialization
+ *     description: |
+ *       Returns a paginated list of approved workers for the requested specialization.
+ *       Supports optional sorting and filtering flags used by the Explore UI.
+ *     tags: [Explore]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: specializationId
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Main specialization used as the base explore search.
+ *       - name: subSpecializationId
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Optional sub-specialization filter.
+ *       - name: highestRated
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *         description: Prioritize highest rated workers first.
+ *       - name: nearest
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *         description: Prioritize nearest workers based on customer and worker governments.
+ *       - name: governmentId
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter workers by a specific government.
+ *       - name: acceptsUrgentJobs
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *         description: Return only workers who accept urgent jobs.
+ *       - name: availableNow
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *         description: |
+ *           Return only workers available now.
+ *           Supported aliases: availability, AvailableNow, AvailbleNow.
+ *       - name: page
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: limit
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - $ref: '#/components/parameters/DeviceFingerprint'
+ *     responses:
+ *       200:
+ *         description: Explore results retrieved successfully.
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
 exploreRouter.get("/", validateExploreSearch, validateRequest, searchWorkers);
+
+/**
+ * @swagger
+ * /explore/{id}:
+ *   get:
+ *     summary: Get explored worker details
+ *     description: |
+ *       Returns the full public profile for the selected worker card from Explore.
+ *       Only approved workers with active accounts are returned.
+ *     tags: [Explore]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/UUIDPathId'
+ *       - $ref: '#/components/parameters/DeviceFingerprint'
+ *     responses:
+ *       200:
+ *         description: Worker details retrieved successfully.
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
+ */
 exploreRouter.get("/:id", validateExploreWorkerId, validateRequest, getWorkerById);
 
 export default exploreRouter;
