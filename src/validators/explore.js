@@ -48,6 +48,11 @@ export const validateExploreSearch = [
     .isBoolean()
     .withMessage('acceptsUrgentJobs must be a boolean')
     .toBoolean(),
+  query(['availability', 'availableNow', 'AvailableNow', 'AvailbleNow'])
+    .optional({ nullable: true, checkFalsy: true })
+    .isBoolean()
+    .withMessage('availableNow must be a boolean')
+    .toBoolean(),
 ];
 
 export const validateExploreWorkerId = [

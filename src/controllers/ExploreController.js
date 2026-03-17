@@ -18,6 +18,22 @@ function getFirstString(...values) {
   return undefined;
 }
 
+function getFirstDefinedValue(...values) {
+  for (const value of values) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+
+    if (typeof value === 'string' && value.trim() === '') {
+      continue;
+    }
+
+    return value;
+  }
+
+  return undefined;
+}
+
 function parseBooleanFlag(value) {
   if (typeof value === 'boolean') {
     return value;
@@ -41,6 +57,9 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     category_id,
     city,
     availability,
+    availableNow,
+    AvailableNow,
+    AvailbleNow,
     specializationId,
     specialization_id,
     subSpecializationId,
@@ -60,7 +79,15 @@ export const searchWorkers = asyncHandler(async (req, res) => {
 
   const areaFilter = getFirstString(city, governmentId);
 
-  const isAvailableNow = parseBooleanFlag(availability) || undefined;
+  const availabilityFilter = getFirstDefinedValue(
+    availableNow,
+    AvailableNow,
+    AvailbleNow,
+    availability,
+  );
+  const isAvailableNow = availabilityFilter === undefined
+    ? undefined
+    : parseBooleanFlag(availabilityFilter);
 
   const acceptsUrgentJobsFlag = parseBooleanFlag(acceptsUrgentJobs);
 
@@ -102,8 +129,8 @@ export const searchWorkers = asyncHandler(async (req, res) => {
   const result = await workerRepository.searchWorkers({
     specializationId: mainSpecializationId,
     subSpecializationId: subSpecId,
-    area: areaFilter,
-    availability: isAvailableNow || undefined,
+    city: areaFilter,
+    availability: isAvailableNow,
     acceptsUrgentJobs: acceptsUrgentJobsFlag,
     highestRated: highestRatedFlag,
     nearest: nearestFlag,
