@@ -13,6 +13,7 @@ import chatRouter from "./chat.js";
 import { isActive, authenticateAccess } from "../../middlewares/authMiddleware.js";
 import { sensitiveIpRateLimiter } from "../../middlewares/rateLimitMiddleware.js";
 import workerRouter from "./worker.js";
+import exploreRouter from "./explore.js";
 
 const mainRouter = Router();
 
@@ -24,6 +25,7 @@ mainRouter.use("/me", authenticateAccess, isActive, dashboardRouter);
 mainRouter.use("/chat", authenticateAccess, isActive, chatRouter);
 mainRouter.use("/client", clientRouter);
 mainRouter.use("/worker", workerRouter);
+mainRouter.use("/explore", authenticateAccess, isActive, exploreRouter);
 mainRouter.use("/governments", governmentRouter);
 mainRouter.use("/specializations", specializationRouter);
 

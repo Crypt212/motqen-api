@@ -32,8 +32,14 @@ export default class WorkerRepository extends Repository {
  */
   async searchWorkers({
     categoryId = undefined,
+    specializationId = undefined,
+    subSpecializationId = undefined,
     area = undefined,
+    city = undefined,
     availability = undefined,
+    acceptsUrgentJobs = false,
+    highestRated = false,
+    nearest = false,
     page = 1,
     limit = 10,
   }) {
@@ -58,23 +64,32 @@ export default class WorkerRepository extends Repository {
       whereClause.isAvailableNow = availability === true;
     }
 
-    if (categoryId) {
+    const selectedSubSpecializationId = subSpecializationId || categoryId;
+
+    if (specializationId || selectedSubSpecializationId) {
       whereClause.chosenSpecializations = {
         some: {
-          subSpecializationId: categoryId,
+          ...(specializationId ? { mainSpecializationId: specializationId } : {}),
+          ...(selectedSubSpecializationId ? { subSpecializationId: selectedSubSpecializationId } : {}),
         },
       };
     }
 
-    if (area) {
+    if (acceptsUrgentJobs === true) {
+      whereClause.acceptsUrgentJobs = true;
+    }
+
+    const areaFilter = city || area;
+
+    if (areaFilter) {
       whereClause.governments = {
         some: {
           OR: [
-            { governmentId: area },
+            { governmentId: areaFilter },
             {
               government: {
                 name: {
-                  equals: area,
+                  equals: areaFilter,
                   mode: 'insensitive',
                 },
               },
@@ -128,12 +143,9 @@ export default class WorkerRepository extends Repository {
           },
         },
       },
-      orderBy: [
-        { rating: 'desc' },
-        { completedServices: 'desc' },
-        { experienceYears: 'desc' },
-        { id: 'desc' },
-      ],
+      orderBy: highestRated
+        ? [{ rating: 'desc' }, { completedServices: 'desc' }, { experienceYears: 'desc' }, { id: 'desc' }]
+        : [{ completedServices: 'desc' }, { experienceYears: 'desc' }, { rating: 'desc' }, { id: 'desc' }],
       skip,
       take: normalizedLimit,
     });
