@@ -1,4 +1,4 @@
-import { mockDeep, mockReset } from "jest-mock-extended";
+import { mockDeep } from "jest-mock-extended";
 import { jest } from "@jest/globals";
 
 import prisma from "../src/libs/database.js";
@@ -12,7 +12,7 @@ jest.mock("../src/libs/database.js", () => ({
 }));
 
 beforeEach(() => {
-  mockReset(prismaMock);
+  jest.clearAllMocks();
 });
 
 /** @type {any} */
