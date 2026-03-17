@@ -46,11 +46,12 @@ export default class UserRepository extends Repository {
    */
   async findFirst({ id, phoneNumber }) {
     try {
+      const where = {
+        ...(id && { id }),
+        ...(phoneNumber && { phoneNumber }),
+      }
       return await this.prismaClient.user.findFirst({
-        where: {
-          ...(id && { id }),
-          ...(phoneNumber && { phoneNumber }),
-        },
+        where
       });
     } catch (error) {
       handlePrismaError(error, 'findFirst');

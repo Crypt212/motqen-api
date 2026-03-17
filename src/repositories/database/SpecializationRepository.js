@@ -22,22 +22,6 @@ export default class SpecializationRepository extends Repository {
   // ============================================
 
   /**
-   * Find specialization by ID
-   * @param {Object} params
-   * @param {string} params.id
-   * @returns {Promise<pkg.Specialization | null>}
-   */
-  async findById({ id }) {
-    try {
-      return await this.prismaClient.specialization.findUnique({
-        where: { id },
-      });
-    } catch (error) {
-      handlePrismaError(error, 'findById');
-    }
-  }
-
-  /**
    * Check if specialization exists
    * @param {pkg.Prisma.SpecializationCountArgs} filter
    * @returns {Promise<boolean>}
@@ -47,6 +31,19 @@ export default class SpecializationRepository extends Repository {
       return (await this.prismaClient.specialization.count(filter)) > 0;
     } catch (error) {
       handlePrismaError(error, 'exists');
+    }
+  }
+
+  /**
+   * Find specialization by ID
+   * @param {pkg.Prisma.SpecializationFindFirstArgs} filter
+   * @returns {Promise<pkg.Specialization | null>}
+   */
+  async findFirst(filter) {
+    try {
+      return await this.prismaClient.specialization.findFirst(filter);
+    } catch (error) {
+      handlePrismaError(error, 'findFirst');
     }
   }
 
@@ -116,15 +113,34 @@ export default class SpecializationRepository extends Repository {
   }
 
   /**
-   * Update specializations matching filter
-   * @param {pkg.Prisma.SpecializationWhereInput} filter
-   * @param {pkg.Prisma.SpecializationUpdateInput} data
+   * Update first specialization matching filter
+   * @param {Object} params
+   * @param {pkg.Prisma.SpecializationWhereInput} params.where
+   * @param {pkg.Prisma.SpecializationUpdateInput} params.data
    * @returns {Promise<pkg.Prisma.BatchPayload>}
    */
-  async updateMany(filter, data) {
+  async update({ where, data }) {
     try {
       return await this.prismaClient.specialization.updateMany({
-        where: filter,
+        where,
+        data,
+      });
+    } catch (error) {
+      handlePrismaError(error, 'updateMany');
+    }
+  }
+
+  /**
+   * Update specializations matching filter
+   * @param {Object} params
+   * @param {pkg.Prisma.SpecializationWhereInput} params.where
+   * @param {pkg.Prisma.SpecializationUpdateInput} params.data
+   * @returns {Promise<pkg.Prisma.BatchPayload>}
+   */
+  async updateMany({ where, data }) {
+    try {
+      return await this.prismaClient.specialization.updateMany({
+        where,
         data,
       });
     } catch (error) {
@@ -134,14 +150,25 @@ export default class SpecializationRepository extends Repository {
 
   /**
    * Delete specializations matching filter
-   * @param {pkg.Prisma.SpecializationWhereInput} filter
+   * @param {pkg.Prisma.SpecializationDeleteManyArgs} filter
+   * @returns {Promise<pkg.Prisma.BatchPayload>}
+   */
+  async delete(filter) {
+    try {
+      return await this.prismaClient.specialization.deleteMany(filter);
+    } catch (error) {
+      handlePrismaError(error, 'deleteMany');
+    }
+  }
+
+  /**
+   * Delete specializations matching filter
+   * @param {pkg.Prisma.SpecializationDeleteManyArgs} filter
    * @returns {Promise<pkg.Prisma.BatchPayload>}
    */
   async deleteMany(filter) {
     try {
-      return await this.prismaClient.specialization.deleteMany({
-        where: filter,
-      });
+      return await this.prismaClient.specialization.deleteMany(filter);
     } catch (error) {
       handlePrismaError(error, 'deleteMany');
     }
@@ -161,6 +188,64 @@ export default class SpecializationRepository extends Repository {
       return (await this.prismaClient.subSpecialization.count(filter)) > 0;
     } catch (error) {
       handlePrismaError(error, 'existsSubSpecialization');
+    }
+  }
+
+  /**
+   * Find sub-specialization
+   * @param {Object} params
+   * @param {pkg.Prisma.SubSpecializationFindFirstArgs} [params.filter]
+   * @returns {Promise<pkg.SubSpecialization>}
+   */
+  async findSubSpecialization({ filter }) {
+    try {
+
+      const subSpecialization = await this.prismaClient.subSpecialization.findFirst(filter);
+      return subSpecialization;
+    } catch (error) {
+      handlePrismaError(error, 'findSubSpecializations');
+    }
+  }
+
+  /**
+   * Update sub-specialization
+   * @param {pkg.Prisma.SubSpecializationWhereUniqueInput} where
+   * @param {pkg.Prisma.SubSpecializationUpdateInput} data
+   * @returns {Promise<pkg.SubSpecialization>}
+   */
+  async updateSubSpecialization(where, data) {
+    try {
+      return await this.prismaClient.subSpecialization.update({ where, data, });
+    } catch (error) {
+      handlePrismaError(error, 'updateSubSpecializations');
+    }
+  }
+
+  /**
+   * Create sub-specialization
+   * @param {string} mainSpecializationId
+   * @param {pkg.Prisma.SubSpecializationCreateInput} data
+   * @returns {Promise<pkg.SubSpecialization>}
+   */
+  async createSubSpecialization(mainSpecializationId, data) {
+    try {
+      data.mainSpecialization = { connect: { id: mainSpecializationId } };
+      return await this.prismaClient.subSpecialization.create({ data });
+    } catch (error) {
+      handlePrismaError(error, 'createSubSpecializations');
+    }
+  }
+
+  /**
+   * Delete sub-specialization
+   * @param {pkg.Prisma.SubSpecializationDeleteArgs} filter
+   * @returns {Promise<pkg.SubSpecialization>}
+   */
+  async deleteSubSpecialization(filter) {
+    try {
+      return await this.prismaClient.subSpecialization.delete(filter);
+    } catch (error) {
+      handlePrismaError(error, 'deleteSubSpecializations');
     }
   }
 
@@ -201,16 +286,13 @@ export default class SpecializationRepository extends Repository {
 
   /**
    * Update sub-specializations
-   * @param {pkg.Prisma.SubSpecializationWhereInput} filter
+   * @param {pkg.Prisma.SubSpecializationWhereInput} where
    * @param {pkg.Prisma.SubSpecializationUpdateInput} data
    * @returns {Promise<pkg.Prisma.BatchPayload>}
    */
-  async updateSubSpecializations(filter, data) {
+  async updateSubSpecializations(where, data) {
     try {
-      return await this.prismaClient.subSpecialization.updateMany({
-        where: filter,
-        data,
-      });
+      return await this.prismaClient.subSpecialization.updateMany({ where, data, });
     } catch (error) {
       handlePrismaError(error, 'updateSubSpecializations');
     }
@@ -237,14 +319,12 @@ export default class SpecializationRepository extends Repository {
 
   /**
    * Delete sub-specializations
-   * @param {pkg.Prisma.SubSpecializationWhereInput} filter
+   * @param {pkg.Prisma.SubSpecializationDeleteManyArgs} filter
    * @returns {Promise<pkg.Prisma.BatchPayload>}
    */
   async deleteSubSpecializations(filter) {
     try {
-      return await this.prismaClient.subSpecialization.deleteMany({
-        where: filter,
-      });
+      return await this.prismaClient.subSpecialization.deleteMany(filter);
     } catch (error) {
       handlePrismaError(error, 'deleteSubSpecializations');
     }

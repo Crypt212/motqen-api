@@ -90,12 +90,12 @@ export const registerClient = asyncHandler(async (req, res) => {
       firstName,
       middleName,
       lastName,
-      governmentId,
       role: "USER",
-      cityId,
       profileImageBuffer: image?.buffer ?? undefined,
     },
     clientProfileData: {
+      governmentId,
+      cityId,
       address,
       addressNotes,
     }
@@ -131,8 +131,6 @@ export const registerWorker = asyncHandler(async (req, res) => {
       firstName,
       middleName,
       lastName,
-      governmentId,
-      cityId
     },
     workerProfile: {
       experienceYears,
@@ -162,8 +160,6 @@ export const registerWorker = asyncHandler(async (req, res) => {
       firstName,
       middleName,
       lastName,
-      governmentId,
-      cityId,
       role: "USER",
       profileImageBuffer: images['personal_image'][0].buffer,
     },

@@ -9,6 +9,7 @@ import SuccessResponse from "../responses/successResponse.js";
 import { specializationRepository } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
 import { parseQueryParams } from '../validators/common.js';
+import { Repository } from "../repositories/database/Repository.js";
 
 /**
  * Configuration for specialization query validation
@@ -39,10 +40,11 @@ const SUB_SPECIALIZATION_QUERY_CONFIG = {
 export const getSpecializations = asyncHandler(async (req, res) => {
   const { pagination, filter, orderBy } = parseQueryParams(req.query, SPECIALIZATION_QUERY_CONFIG);
 
+  filter.orderBy = Repository.handleOrder(orderBy);
+
   const result = await specializationRepository.findMany({
-    where: filter,
+    filter,
     pagination,
-    orderBy,
     paginate: true
   });
 
@@ -61,7 +63,7 @@ export const getSpecializations = asyncHandler(async (req, res) => {
  */
 export const getSpecializationById = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
-  const specialization = await specializationRepository.findFirst({ id });
+  const specialization = await specializationRepository.findFirst({ where: { id } });
 
   if (!specialization) {
     throw new AppError("Specialization not found", 404);
@@ -81,15 +83,16 @@ export const getSubSpecializations = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
   const { pagination, filter, orderBy } = parseQueryParams(req.query, SUB_SPECIALIZATION_QUERY_CONFIG);
 
-  const specialization = await specializationRepository.findFirst({ id });
+  const specialization = await specializationRepository.findFirst({ where: { id } });
   if (!specialization) {
     throw new AppError("Specialization not found", 404);
   }
 
+  filter.mainSpecializationId = id;
+  filter.orderBy = Repository.handleOrder(orderBy);
   const subSpecializationsResult = await specializationRepository.findSubSpecializations({
-    filter: { ...filter, mainSpecializationId: id },
+    filter,
     pagination,
-    orderBy,
     paginate: true
   });
 
@@ -107,9 +110,9 @@ export const getSubSpecializations = asyncHandler(async (req, res) => {
  * Create a new specialization (Admin only)
  */
 export const createSpecialization = asyncHandler(async (req, res) => {
-  const { name } = matchedData(req, { includeOptionals: true });
+  const { name, nameAr, svgId } = matchedData(req, { includeOptionals: true });
 
-  const specialization = await specializationRepository.create({ name });
+  const specialization = await specializationRepository.create({ name, nameAr, svgId });
 
   new SuccessResponse(
     "Specialization created successfully",
@@ -123,14 +126,14 @@ export const createSpecialization = asyncHandler(async (req, res) => {
  */
 export const updateSpecialization = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
-  const { name } = matchedData(req, { includeOptionals: true });
+  const { name, nameAr, svgId } = matchedData(req, { includeOptionals: true });
 
-  const existing = await specializationRepository.findFirst({ id });
+  const existing = await specializationRepository.findFirst({ where: { id } });
   if (!existing) {
     throw new AppError("Specialization not found", 404);
   }
 
-  const specialization = await specializationRepository.updateById(id, { name });
+  const specialization = await specializationRepository.update({ where: { id }, data: { name, nameAr, svgId } });
 
   new SuccessResponse(
     "Specialization updated successfully",
@@ -145,12 +148,12 @@ export const updateSpecialization = asyncHandler(async (req, res) => {
 export const deleteSpecialization = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
 
-  const existing = await specializationRepository.findFirst({ id });
+  const existing = await specializationRepository.findFirst({ where: { id } });
   if (!existing) {
     throw new AppError("Specialization not found", 404);
   }
 
-  await specializationRepository.deleteById(id);
+  await specializationRepository.delete({ where: { id } });
 
   new SuccessResponse(
     "Specialization deleted successfully",
@@ -164,14 +167,14 @@ export const deleteSpecialization = asyncHandler(async (req, res) => {
  */
 export const createSubSpecialization = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
-  const { name } = matchedData(req, { includeOptionals: true });
+  const { name, nameAr, svgId } = matchedData(req, { includeOptionals: true });
 
-  const parent = await specializationRepository.findFirst({ id });
+  const parent = await specializationRepository.findFirst({ where: { id } });
   if (!parent) {
     throw new AppError("Parent specialization not found", 404);
   }
 
-  const subSpecialization = await specializationRepository.createSubSpecializations(id, [{ name }]);
+  const subSpecialization = await specializationRepository.createSubSpecialization(id, { name, nameAr, svgId, mainSpecialization: { connect: { id } } });
 
   new SuccessResponse(
     "Sub-specialization created successfully",
@@ -187,14 +190,16 @@ export const deleteSubSpecialization = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
   const subId = String(req.params.subId);
 
-  const existing = await specializationRepository.findSubSpecializations({ filter: { id: subId } });
-  if (!existing || existing.data.length === 0) {
+  const existing = await specializationRepository.findSubSpecialization({ filter: { where: { id: subId } } });
+  if (!existing) {
     throw new AppError("Sub-specialization not found", 404);
   }
 
-  await specializationRepository.deleteSubSpecializations({
-    id: subId,
-    mainSpecializationId: id
+  await specializationRepository.deleteSubSpecialization({
+    where: {
+      id: subId,
+      mainSpecializationId: id
+    }
   });
 
   new SuccessResponse(

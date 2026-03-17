@@ -75,7 +75,7 @@ export const ipRateLimiter = rateLimit({
  *   RATE_LIMIT_SENSITIVE_WINDOW_MS  (default: 15 minutes)
  *   RATE_LIMIT_SENSITIVE_MAX        (default: 10 requests)
  */
-export const sensitiveIpRateLimiter = rateLimit({
+export const sensitiveIpRateLimiter = environment.nodeEnv === "development" ? asyncHandler((_, __, next) => next()) : rateLimit({
   windowMs:        environment.rateLimit.sensitiveWindowMs ?? 15 * 60 * 1000,
   limit:           environment.rateLimit.sensitiveMax      ?? 10,
   standardHeaders: "draft-7",

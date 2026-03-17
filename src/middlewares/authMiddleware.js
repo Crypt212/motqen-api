@@ -56,9 +56,9 @@ export const authenticateAccess = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
   try {
     const payload = verifyHeaderToken(authHeader, "access");
-    req.userState = (await redisRetreiveOrCache("access:" + payload.userId, async () => {
+    req.userState = await redisRetreiveOrCache("access:" + payload.userId, async () => {
       return await userService.getStatus({ userId: payload.userId });
-    }));
+    });
   } catch (err) {
     return next(new AppError("Invalid access token", 401));
   }

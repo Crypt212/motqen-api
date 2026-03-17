@@ -65,6 +65,8 @@ export default class AuthService extends Service {
   #workerRepository;
   /** @type {ClientRepository} */
   #clientRepository;
+  /** @type {GovernmentRepository} */
+  #governmentRepository;
   /** @type {OtpCache} */
   #otpCache;
   /** @type {SessionRepository} */
@@ -86,6 +88,7 @@ export default class AuthService extends Service {
     userRepository,
     workerRepository,
     clientRepository,
+    governmentRepository,
     otpCache,
     sessionRepository,
     rateLimitCache,
@@ -94,6 +97,7 @@ export default class AuthService extends Service {
     this.#userRepository = userRepository;
     this.#workerRepository = workerRepository;
     this.#clientRepository = clientRepository;
+    this.#governmentRepository = governmentRepository;
     this.#sessionRepository = sessionRepository;
     this.#rateLimitCache = rateLimitCache;
     this.#otpCache = otpCache;
@@ -235,6 +239,18 @@ export default class AuthService extends Service {
     return tryCatch(async () => {
       // Note: governmentId and cityId validation moved to location handling
       // For clients, location data is handled separately via the Location model
+      
+      const government = await this.#governmentRepository.findFirst({ id: governmentId });
+
+      if (!government) {
+        throw new AppError('Government not found', 404);
+      }
+
+      const city = await this.#governmentRepository.findCity({ filter: { where: {id: cityId } } });
+
+      if (!city) {
+        throw new AppError('City not found', 404);
+      }
 
       const user = await this.#userRepository.create({
         data: {
@@ -248,8 +264,8 @@ export default class AuthService extends Service {
             create: {
               locations: {
                 create: {
-                  governmentId,
-                  cityId,
+                  government: { connect: { id: governmentId } },
+                  city: { connect: { id: cityId } },
                   address,
                   addressNotes,
                   isMain: true,

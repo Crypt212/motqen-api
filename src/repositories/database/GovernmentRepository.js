@@ -22,18 +22,15 @@ export default class GovernmentRepository extends Repository {
   // ============================================
 
   /**
-   * Find government by ID
-   * @param {Object} params
-   * @param {string} params.id
-   * @returns {Promise<pkg.Government | null>}
+   * Check if government exists
+   * @param {pkg.Prisma.GovernmentCountArgs} filter
+   * @returns {Promise<boolean>}
    */
-  async findById({ id }) {
+  async exists(filter) {
     try {
-      return await this.prismaClient.government.findUnique({
-        where: { id },
-      });
+      return (await this.prismaClient.government.count(filter)) > 0;
     } catch (error) {
-      handlePrismaError(error, 'findById');
+      handlePrismaError(error, 'exists');
     }
   }
 
@@ -44,24 +41,12 @@ export default class GovernmentRepository extends Repository {
    */
   async findFirst(filter) {
     try {
-      return await this.prismaClient.government.findFirst({
+      const data = await this.prismaClient.government.findFirst({
         where: filter,
       });
+        return data;
     } catch (error) {
       handlePrismaError(error, 'findFirst');
-    }
-  }
-
-  /**
-   * Check if government exists
-   * @param {pkg.Prisma.GovernmentCountArgs} filter
-   * @returns {Promise<boolean>}
-   */
-  async exists(filter) {
-    try {
-      return (await this.prismaClient.government.count(filter)) > 0;
-    } catch (error) {
-      handlePrismaError(error, 'exists');
     }
   }
 
@@ -131,6 +116,23 @@ export default class GovernmentRepository extends Repository {
   }
 
   /**
+   * Update government matching filter
+   * @param {pkg.Prisma.GovernmentWhereUniqueInput} filter
+   * @param {pkg.Prisma.GovernmentUpdateArgs} data
+   * @returns {Promise<pkg.Government>}
+   */
+  async update(filter, data) {
+    try {
+      return await this.prismaClient.government.update({
+        where: filter,
+        data,
+      });
+    } catch (error) {
+      handlePrismaError(error, 'updateMany');
+    }
+  }
+
+  /**
    * Update governments matching filter
    * @param {pkg.Prisma.GovernmentWhereInput} filter
    * @param {pkg.Prisma.GovernmentUpdateInput} data
@@ -144,6 +146,21 @@ export default class GovernmentRepository extends Repository {
       });
     } catch (error) {
       handlePrismaError(error, 'updateMany');
+    }
+  }
+
+  /**
+   * Delete government matching filter
+   * @param {pkg.Prisma.GovernmentWhereUniqueInput} filter
+   * @returns {Promise<pkg.Government>}
+   */
+  async delete(filter) {
+    try {
+      return await this.prismaClient.government.delete({
+        where: filter,
+      });
+    } catch (error) {
+      handlePrismaError(error, 'deleteMany');
     }
   }
 
@@ -176,6 +193,66 @@ export default class GovernmentRepository extends Repository {
       return (await this.prismaClient.city.count(filter)) > 0;
     } catch (error) {
       handlePrismaError(error, 'existsCity');
+    }
+  }
+
+  /**
+   * Find city
+   * @param {Object} params
+   * @param {pkg.Prisma.CityFindFirstArgs} [params.filter]
+   * @returns {Promise<pkg.City>}
+   */
+  async findCity({ filter = {} }) {
+    try {
+      const data = await this.prismaClient.city.findFirst(filter);
+      return data;
+    } catch (error) {
+      handlePrismaError(error, 'findCities');
+    }
+  }
+
+  /**
+   * Update cities
+   * @param {pkg.Prisma.CityWhereUniqueInput} filter
+   * @param {pkg.Prisma.CityUpdateInput} data
+   * @returns {Promise<pkg.City>}
+   */
+  async updateCity(filter, data) {
+    try {
+      return await this.prismaClient.city.update({
+        where: filter,
+        data,
+      });
+    } catch (error) {
+      handlePrismaError(error, 'updateCities');
+    }
+  }
+
+  /**
+   * Create cities
+   * @param {string} governmentId
+   * @param {pkg.Prisma.CityCreateInput} data
+   * @returns {Promise<pkg.City>}
+   */
+  async createCity(governmentId, data) {
+    try {
+      data.government = { connect: { id: governmentId } };
+      return await this.prismaClient.city.create({ data });
+    } catch (error) {
+      handlePrismaError(error, 'createCities');
+    }
+  }
+
+  /**
+   * Delete cities
+   * @param {pkg.Prisma.CityWhereUniqueInput} filter
+   * @returns {Promise<pkg.City>}
+   */
+  async deleteCity(filter) {
+    try {
+      return await this.prismaClient.city.delete({ where: filter, });
+    } catch (error) {
+      handlePrismaError(error, 'deleteCities');
     }
   }
 

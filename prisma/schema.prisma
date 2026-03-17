@@ -214,6 +214,8 @@ model Government {
   id        String   @id @default(uuid())
   name      String
   nameAr    String
+  long      String
+  lat       String
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
@@ -229,6 +231,8 @@ model City {
   governmentId String
   name         String
   nameAr       String
+  long      String
+  lat       String
   updatedAt    DateTime @updatedAt
   createdAt    DateTime @default(now())
 

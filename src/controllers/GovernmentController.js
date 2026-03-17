@@ -9,6 +9,7 @@ import SuccessResponse from "../responses/successResponse.js";
 import { governmentRepository } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
 import { parseQueryParams } from '../validators/common.js';
+import { Repository } from "../repositories/database/Repository.js";
 
 /**
  * Configuration for government query validation
@@ -39,10 +40,11 @@ const CITY_QUERY_CONFIG = {
 export const getGovernments = asyncHandler(async (req, res) => {
   const { pagination, filter, orderBy } = parseQueryParams(req.query, GOVERNMENT_QUERY_CONFIG);
 
+  const orderByClause = Repository.handleOrder(orderBy);
+  filter.orderBy = orderByClause;
   const result = await governmentRepository.findMany({
-    where: filter,
+    filter,
     pagination,
-    orderBy,
     paginate: true
   });
 
@@ -60,7 +62,7 @@ export const getGovernments = asyncHandler(async (req, res) => {
  * Get government by ID
  */
 export const getGovernmentById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const { id } = matchedData(req, { includeOptionals: true });
   const government = await governmentRepository.findFirst({ id });
 
   if (!government) {
@@ -78,9 +80,9 @@ export const getGovernmentById = asyncHandler(async (req, res) => {
  * Create a new government (Admin only)
  */
 export const createGovernment = asyncHandler(async (req, res) => {
-  const { name } = matchedData(req, { includeOptionals: true });
+  const { name, nameAr, long, lat } = matchedData(req, { includeOptionals: true });
 
-  const government = await governmentRepository.create({ name });
+  const government = await governmentRepository.create({ name, nameAr, long, lat });
 
   new SuccessResponse(
     "Government created successfully",
@@ -93,15 +95,14 @@ export const createGovernment = asyncHandler(async (req, res) => {
  * Update government (Admin only)
  */
 export const updateGovernment = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { name } = matchedData(req, { includeOptionals: true });
+  const { id, name, nameAr, long, lat } = matchedData(req, { includeOptionals: true });
 
   const existing = await governmentRepository.findFirst({ id });
   if (!existing) {
     throw new AppError("Government not found", 404);
   }
 
-  await governmentRepository.updateMany({ name: name }, { id });
+  await governmentRepository.updateMany({ name, nameAr, long, lat }, { id });
   const government = await governmentRepository.findFirst({ id });
 
   new SuccessResponse(
@@ -143,13 +144,11 @@ export const getCitiesByGovernment = asyncHandler(async (req, res) => {
     throw new AppError('Government not found', 404);
   }
 
-  console.log(government);
-
+  filter.where = { governmentId };
+  filter.orderBy = Repository.handleOrder(orderBy);
   const citiesResult = await governmentRepository.findCities({
-    filter: { ...filter, governmentId },
+    filter,
     pagination,
-    orderBy,
-    paginate: true
   });
 
   new SuccessResponse('Cities retrieved', {

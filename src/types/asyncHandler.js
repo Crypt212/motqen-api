@@ -8,7 +8,7 @@ import pkg from '@prisma/client';
 /** @typedef {import('../repositories/database/Repository').IDType} IDType */
 // Map token types to the payload that should be attached to request
 
-/** @typedef {{ userId: IDType, phoneNumber: string, role: pkg.$Enums.Role, accountStatus: pkg.$Enums.AccountStatus, worker?: { id: IDType, verification: { status: pkg.$Enums.VerificationStatus, reason: string } }, client?: { id: IDType } }} UserState */
+/** @typedef {{ userId: IDType, phoneNumber: string, role: pkg.$Enums.Role, accountStatus: pkg.$Enums.AccountStatus, worker?: { id: IDType, verification: { status: pkg.$Enums.VerificationStatus, reason?: string } }, client?: { id: IDType } }} UserState */
 
 /**
  * @typedef {{fieldname: string, originalname: string, encoding: string, mimetype: string, buffer: Buffer, size: number}} MulterFile

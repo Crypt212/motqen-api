@@ -42,7 +42,6 @@ const client = twilio(accountSid, authToken);
  */
 async function sendViaSMS(message, to) {
   try {
-    console.log(virtualNumber)
     const messageResponse = await client.messages.create({
       body: message,
       from: virtualNumber,
