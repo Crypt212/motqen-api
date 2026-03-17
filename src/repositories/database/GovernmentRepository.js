@@ -51,35 +51,15 @@ export default class GovernmentRepository extends Repository {
   }
 
   /**
-   * Find governments with pagination, filtering, and ordering
+   * Find governments
    * @param {Object} params
    * @param {pkg.Prisma.GovernmentFindManyArgs} [params.filter]
-   * @param {import('./Repository.js').PaginationOptions} [params.pagination]
-   * @param {boolean} [params.paginate]
-   * @returns {Promise<{ data: pkg.Government[], pagination: import('./Repository.js').PaginatedResult }>}
+   * @returns {Promise<pkg.Government[]>}
    */
-  async findMany({ filter = {}, pagination = undefined }) {
+  async findMany({ filter = {}}) {
     try {
-      const query = { ...filter };
-      let paginationResult = undefined;
-
-      if (pagination) {
-        const total = await this.prismaClient.government.count({
-          where: query.where,
-        });
-        const res = Repository.handlePagination({
-          total,
-          pagination,
-        });
-        const paginationQuery = res.paginationQuery;
-        paginationResult = res.paginationResult;
-
-        query.skip = paginationQuery.skip;
-        query.take = paginationQuery.take;
-      }
-
-      const data = await this.prismaClient.government.findMany(query);
-      return { data, pagination: paginationResult };
+      const data = await this.prismaClient.government.findMany(filter);
+      return data;
     } catch (error) {
       handlePrismaError(error, 'findMany');
     }
@@ -257,35 +237,15 @@ export default class GovernmentRepository extends Repository {
   }
 
   /**
-   * Find cities with pagination, filtering, and ordering
+   * Find cities
    * @param {Object} params
    * @param {pkg.Prisma.CityFindManyArgs} [params.filter]
-   * @param {import('./Repository.js').PaginationOptions} [params.pagination]
-   * @param {boolean} [params.paginate]
-   * @returns {Promise<{ data: pkg.City[], pagination: import('./Repository.js').PaginatedResult }>}
+   * @returns {Promise<pkg.City[]>}
    */
-  async findCities({ filter = {}, pagination = undefined }) {
+  async findCities({ filter = {} }) {
     try {
-      const query = { ...filter };
-      let paginationResult = undefined;
-
-      if (pagination) {
-        const total = await this.prismaClient.city.count({
-          where: query.where,
-        });
-        const res = Repository.handlePagination({
-          total,
-          pagination,
-        });
-        const paginationQuery = res.paginationQuery;
-        paginationResult = res.paginationResult;
-
-        query.skip = paginationQuery.skip;
-        query.take = paginationQuery.take;
-      }
-
-      const data = await this.prismaClient.city.findMany(query);
-      return { data, pagination: paginationResult };
+      const data = await this.prismaClient.city.findMany(filter);
+      return data;
     } catch (error) {
       handlePrismaError(error, 'findCities');
     }

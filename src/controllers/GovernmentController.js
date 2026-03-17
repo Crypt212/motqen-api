@@ -10,6 +10,7 @@ import { governmentRepository } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
 import { parseQueryParams } from '../validators/common.js';
 import { Repository } from "../repositories/database/Repository.js";
+import { handleQuery } from "../utils/handleFilteration.js";
 
 /**
  * Configuration for government query validation
@@ -44,20 +45,15 @@ const CITY_QUERY_CONFIG = {
  */
 export const getGovernments = asyncHandler(async (req, res) => {
   const { pagination, filter, orderBy } = matchedData(req, { includeOptionals: true });
+  const { finalFilter, paginationResult } = await handleQuery({ filter, pagination, orderBy, model: governmentRepository });
 
-  const orderByClause = Repository.handleOrder(orderBy);
-  filter.orderBy = orderByClause;
-  const result = await governmentRepository.findMany({
-    filter,
-    pagination,
-    paginate: true
-  });
+  const result = await governmentRepository.findMany({ filter: finalFilter});
 
   new SuccessResponse(
     "Governments retrieved successfully",
     {
-      governments: result.data,
-      pagination: result.pagination,
+      governments: result,
+      pagination: paginationResult,
     },
     200
   ).send(res);
@@ -143,20 +139,14 @@ export const deleteGovernment = asyncHandler(async (req, res) => {
 export const getCitiesByGovernment = asyncHandler(async (req, res) => {
   const { governmentId, pagination, filter, orderBy } = matchedData(req, { includeOptionals: true });
 
-  const government = await governmentRepository.findFirst({ id: governmentId });
-  if (!government) {
-    throw new AppError('Government not found', 404);
-  }
-
-  filter.where = { governmentId };
-  filter.orderBy = Repository.handleOrder(orderBy);
+  const { finalFilter, paginationResult } = await handleQuery({ filter, pagination, orderBy, model: governmentRepository  });
+  finalFilter.where.governmentId = governmentId;
   const citiesResult = await governmentRepository.findCities({
-    filter,
-    pagination,
+    filter: finalFilter,
   });
 
   new SuccessResponse('Cities retrieved', {
-    cities: citiesResult.data,
-    pagination: citiesResult.pagination,
+    cities: citiesResult,
+    pagination: paginationResult,
   }).send(res);
 });
