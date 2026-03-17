@@ -151,7 +151,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
  * @param {import('../types/asyncHandler.js').Response} res
  */
 export const getWorkerById = asyncHandler(async (req, res) => {
-  const { workerId } = matchedData(req, { includeOptionals: true });
+  const { id: workerId } = matchedData(req, { includeOptionals: true });
 
   const worker = await workerRepository.getWorkerById({ workerId });
 

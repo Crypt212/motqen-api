@@ -73,8 +73,11 @@ const governmentLongValidation = (prefix, required = false) => {
   const fieldName = prefix + 'long';
   return validateField(fieldName, required)
     .trim()
-    .matches(/^-?\d+(\.\d+)?$/)
-    .withMessage('long must be a valid longitude coordinate');
+    .custom((value) => {
+      const n = Number(value);
+      return Number.isFinite(n) && n >= -180 && n <= 180;
+    })
+    .withMessage('long must be between -180 and 180');
 };
 
 /**
@@ -87,8 +90,11 @@ const governmentLatValidation = (prefix, required = false) => {
   const fieldName = prefix + 'lat';
   return validateField(fieldName, required)
     .trim()
-    .matches(/^-?\d+(\.\d+)?$/)
-    .withMessage('lat must be a valid latitude coordinate');
+    .custom((value) => {
+      const n = Number(value);
+      return Number.isFinite(n) && n >= -90 && n <= 90;
+    })
+    .withMessage('lat must be between -90 and 90');
 };
 
 /**

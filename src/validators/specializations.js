@@ -22,26 +22,29 @@ const CATEGORIES = [
   'DEFAULTCATEGORY',
 ];
 
-export const SPECIALIZATION_QUERY_CONFIG = {
+/**
+ * Configuration for specialization query validation
+ */
+const SPECIALIZATION_QUERY_CONFIG = {
   allowedFilterFields: ['name', 'nameAr', 'category'],
   filterFieldTypes: {
     name: { type: 'string', minLength: 2, maxLength: 100 },
     nameAr: { type: 'string', minLength: 2, maxLength: 100 },
-    category: { type: 'enum', enumValues: CATEGORIES },
+    category: { type: 'enum', enumValues: CATEGORIES }
   },
-  allowedOrderByFields: ['createdAt', 'id', 'name', 'nameAr', 'category'],
-  allowedSearchFields: ['name', 'nameAr', 'category'],
+  allowedOrderByFields: ['name', 'nameAr', 'category', 'createdAt', 'updatedAt'],
+  allowedSearchFields: ['name', 'nameAr', 'category']
 };
 
-export const SUB_SPECIALIZATION_QUERY_CONFIG = {
+const SUB_SPECIALIZATION_QUERY_CONFIG = {
   allowedFilterFields: ['name', 'nameAr', 'mainSpecializationId'],
   filterFieldTypes: {
     name: { type: 'string', minLength: 2, maxLength: 100 },
     nameAr: { type: 'string', minLength: 2, maxLength: 100 },
-    mainSpecializationId: { type: 'uuid' },
+    mainSpecializationId: { type: 'uuid' }
   },
-  allowedOrderByFields: ['createdAt', 'id', 'name', 'nameAr'],
-  allowedSearchFields: ['name', 'nameAr'],
+  allowedOrderByFields: ['name', 'nameAr', 'createdAt', 'updatedAt'],
+  allowedSearchFields: ['name', 'nameAr']
 };
 
 /**

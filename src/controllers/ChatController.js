@@ -90,7 +90,7 @@ export const getUnreadSummary = asyncHandler(async (req, res) => {
  */
 export const getMissedMessages = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const { conversationId, after } = matchedData(req, { includeOptionals: true }).conversationId;
+  const { conversationId, after } = matchedData(req, { includeOptionals: true });
 
   const messages = await chatService.getMissedMessages({
     conversationId,

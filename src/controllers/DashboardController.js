@@ -364,13 +364,13 @@ export const deleteWorkerSpecializations = asyncHandler(async (req, res) => {
     })).count;
   else {
     if (mainSpecializationIds)
-      deletedSpecializationsCount = (await workerService.deleteSpecializations({
+      deletedSpecializationsCount += (await workerService.deleteSpecializations({
         userId: req.userState.userId,
         mainSpecializationIds,
       })).count;
 
     if (specializationsTree)
-      deletedSpecializationsCount =
+      deletedSpecializationsCount +=
         (await workerService.deleteSubSpecializations({
           userId: req.userState.userId,
           specializationsTree,

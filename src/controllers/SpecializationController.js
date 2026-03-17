@@ -8,49 +8,7 @@ import AppError from "../errors/AppError.js";
 import SuccessResponse from "../responses/successResponse.js";
 import { specializationRepository } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
-import { parseQueryParams } from '../validators/common.js';
 import { Repository } from "../repositories/database/Repository.js";
-
-/**
- * Configuration for specialization query validation
- */
-const SPECIALIZATION_QUERY_CONFIG = {
-  allowedFilterFields: ['name', 'nameAr', 'category'],
-  filterFieldTypes: {
-    name: { type: 'string', minLength: 2, maxLength: 100 },
-    nameAr: { type: 'string', minLength: 2, maxLength: 100 },
-    category: {
-      type: 'enum', enumValues: [
-        'ELECTRICITY',
-        'PLUMBING',
-        'AC',
-        'CARPENTRY',
-        'GENERALMAINTENANCE',
-        'PAINTING',
-        'CONSTRUCTION',
-        'CLEANING',
-        'INSTALLATION',
-        'FURNITURETRANSPORT',
-        'DRILLING',
-        'ELECTRICALAPPLIANCES',
-        'DEFAULTCATEGORY',
-      ]
-    }
-  },
-  allowedOrderByFields: ['name', 'nameAr', 'category', 'createdAt', 'updatedAt'],
-  allowedSearchFields: ['name', 'nameAr', 'category']
-};
-
-const SUB_SPECIALIZATION_QUERY_CONFIG = {
-  allowedFilterFields: ['name', 'nameAr', 'mainSpecializationId'],
-  filterFieldTypes: {
-    name: { type: 'string', minLength: 2, maxLength: 100 },
-    nameAr: { type: 'string', minLength: 2, maxLength: 100 },
-    mainSpecializationId: { type: 'uuid' }
-  },
-  allowedOrderByFields: ['name', 'nameAr', 'createdAt', 'updatedAt'],
-  allowedSearchFields: ['name', 'nameAr']
-};
 
 /**
  * Get all specializations with pagination, filtering, and ordering
