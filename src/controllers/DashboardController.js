@@ -8,16 +8,7 @@ import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { clientService, userService, workerService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
-import { parseQueryParams } from '../validators/common.js';
-
-// Import query configs for validation
-import {
-  WORKER_GOVERNMENTS_QUERY_CONFIG,
-  WORKER_SPECIALIZATIONS_QUERY_CONFIG,
-} from '../validators/dashboard.js';
-import { Repository } from '../repositories/database/Repository.js';
-
-/** @template T @typedef {import("../types/asyncHandler.js").RequestHandler} RequestHandler */
+import { handleManyQuery } from '../utils/handleFilteration.js';
 
 /**
  */
@@ -101,7 +92,7 @@ export const updateClientProfile = asyncHandler(async (req, res) => {
 /**
  */
 export const deleteClientProfile = asyncHandler(async (req, res) => {
-  const {} = matchedData(req, { includeOptionals: true });
+  const { } = matchedData(req, { includeOptionals: true });
 
   const clientProfile = await clientService.delete({
     clientProfileId: req.userState.client.id,
@@ -207,7 +198,7 @@ export const updateWorkerProfile = asyncHandler(async (req, res) => {
 /**
  */
 export const deleteWorkerProfile = asyncHandler(async (req, res) => {
-  const {} = matchedData(req, { includeOptionals: true });
+  const { } = matchedData(req, { includeOptionals: true });
 
   const workerProfile = await workerService.delete({
     workerProfileId: req.userState.worker.id,
@@ -223,35 +214,20 @@ export const deleteWorkerProfile = asyncHandler(async (req, res) => {
 /**
  */
 export const getWorkerGovernments = asyncHandler(async (req, res) => {
-  const queryData = matchedData(req, { includeOptionals: true });
+  const { filter, sortBy, sortOrder, page, limit } = matchedData(req, { includeOptionals: true });
 
-  // Parse query parameters (pagination, filtering, ordering)
-  const { pagination, filter, orderBy, paginate } = parseQueryParams(
-    queryData,
-    WORKER_GOVERNMENTS_QUERY_CONFIG
-  );
+  const { finalFilter, paginationResult } = await handleManyQuery({ filter, sortBy, sortOrder, page, limit, modelName: "government" });
 
-  filter.orderBy = Repository.handleOrder(orderBy);
   const result = await workerService.getWorkGovernments({
     userId: req.userState.userId,
-    pagination,
-    filter,
+    filter: finalFilter,
   });
 
-  // Check if paginated response
-  if (paginate && result.data) {
-    new SuccessResponse(
-      'retrieved worker working governments successfully',
-      result,
-      200
-    ).send(res);
-  } else {
-    new SuccessResponse(
-      'retrieved worker working governments successfully',
-      { governments: result },
-      200
-    ).send(res);
-  }
+  new SuccessResponse(
+    'retrieved worker working governments successfully',
+    { governments: result, pagination: paginationResult },
+    200
+  ).send(res);
 });
 
 /**
@@ -298,38 +274,20 @@ export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
 /**
  */
 export const getWorkerSpecializations = asyncHandler(async (req, res) => {
-  const { specializationIds, ...queryData } = matchedData(req, {
-    includeOptionals: true,
-  });
+  const { specializationIds, page, limit, sortBy, sortOrder, filter } = matchedData(req, { includeOptionals: true, });
+  const { finalFilter, paginationResult } = await handleManyQuery({ filter, sortBy, sortOrder, page, limit, modelName: "specialization" });
 
-  // Parse query parameters (pagination, filtering, ordering)
-  const { pagination, filter, orderBy, paginate } = parseQueryParams(
-    queryData,
-    WORKER_SPECIALIZATIONS_QUERY_CONFIG
-  );
-
-  filter.orderBy = Repository.handleOrder(orderBy);
   const result = await workerService.getSpecializations({
-    userId: req.userState.userId,
     mainSpecializationIds: specializationIds,
-    pagination,
-    filter,
+    userId: req.userState.userId,
+    filter: finalFilter,
   });
 
-  // Check if paginated response
-  if (paginate && result.data) {
-    new SuccessResponse(
-      'retrieved worker specialization tree successfully',
-      result,
-      200
-    ).send(res);
-  } else {
-    new SuccessResponse(
-      'retrieved worker specialization tree successfully',
-      { specializationsTree: result },
-      200
-    ).send(res);
-  }
+  new SuccessResponse(
+    'retrieved worker specialization tree successfully',
+    { specializationsTree: result, pagination: paginationResult },
+    200
+  ).send(res);
 });
 
 /**

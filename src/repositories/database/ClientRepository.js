@@ -80,31 +80,12 @@ export default class ClientRepository extends Repository {
    * Find many client profiles with pagination, filtering, and ordering
    * @param {Object} params
    * @param {pkg.Prisma.ClientProfileFindManyArgs} [params.filter]
-   * @param {import('./Repository.js').PaginationOptions} [params.pagination]
-   * @returns {Promise<{ data: pkg.ClientProfile[], pagination: import('./Repository.js').PaginatedResult }>}
+   * @returns {Promise<pkg.ClientProfile[]>}
    */
-  async findMany({ filter = {}, pagination = undefined }) {
+  async findMany({ filter = {}, }) {
     try {
-      const query = { ...filter };
-      let paginationResult = undefined;
-
-      if (pagination) {
-        const total = await this.prismaClient.clientProfile.count({
-          where: query.where,
-        });
-        const res = Repository.handlePagination({
-          total,
-          pagination,
-        });
-        const paginationQuery = res.paginationQuery;
-        paginationResult = res.paginationResult;
-
-        query.skip = paginationQuery.skip;
-        query.take = paginationQuery.take;
-      }
-
-      const data = await this.prismaClient.clientProfile.findMany(query);
-      return { data, pagination: paginationResult };
+      const data = await this.prismaClient.clientProfile.findMany(filter);
+      return data;
     } catch (error) {
       handlePrismaError(error, 'findMany');
     }

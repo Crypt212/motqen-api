@@ -80,31 +80,12 @@ export default class WorkerRepository extends Repository {
    * Find many worker profiles with pagination, filtering, and ordering
    * @param {Object} params
    * @param {pkg.Prisma.WorkerProfileFindManyArgs} [params.filter]
-   * @param {import('./Repository.js').PaginationOptions} [params.pagination]
-   * @returns {Promise<{ data: pkg.WorkerProfile[], pagination: import('./Repository.js').PaginatedResult }>}
+   * @returns {Promise<pkg.WorkerProfile[]>}
    */
-  async findMany({ filter = {}, pagination = undefined }) {
+  async findMany({ filter = {} }) {
     try {
-      const query = { ...filter };
-      let paginationResult = undefined;
-
-      if (pagination) {
-        const total = await this.prismaClient.workerProfile.count({
-          where: query.where,
-        });
-        const res = Repository.handlePagination({
-          total,
-          pagination,
-        });
-        const paginationQuery = res.paginationQuery;
-        paginationResult = res.paginationResult;
-
-        query.skip = paginationQuery.skip;
-        query.take = paginationQuery.take;
-      }
-
-      const data = await this.prismaClient.workerProfile.findMany(query);
-      return { data, pagination: paginationResult };
+      const data = await this.prismaClient.workerProfile.findMany(filter);
+      return data;
     } catch (error) {
       handlePrismaError(error, 'findMany');
     }
@@ -323,40 +304,15 @@ export default class WorkerRepository extends Repository {
    * @param {Object} params
    * @param {import('./Repository.js').IDType} params.userId
    * @param {pkg.Prisma.GovernmentFindManyArgs} [params.filter]
-   * @param {import('./Repository.js').PaginationOptions} [params.pagination]
-   * @returns {Promise<{ data: pkg.Government[], pagination: import('./Repository.js').PaginatedResult }>}
+   * @returns {Promise<pkg.Government[]>}
    */
-  async findWorkingGovernments({
-    userId,
-    filter = {},
-    pagination = undefined,
-  }) {
+  async findWorkingGovernments({ userId, filter = {}, }) {
     try {
-      const query = { ...filter };
-      query.where = {
-        ...query.where,
-        workers: { some: { userId } },
-      };
-
-      let paginationResult = undefined;
-
-      if (pagination) {
-        const total = await this.prismaClient.government.count({
-          where: query.where,
-        });
-        const res = Repository.handlePagination({
-          total,
-          pagination,
-        });
-        const paginationQuery = res.paginationQuery;
-        paginationResult = res.paginationResult;
-
-        query.skip = paginationQuery.skip;
-        query.take = paginationQuery.take;
-      }
-
-      const data = await this.prismaClient.government.findMany(query);
-      return { data, pagination: paginationResult };
+      if (!filter) filter = {};
+      if (!filter.where) filter.where = {};
+      filter.where.workers = { some: { userId } };
+      const data = await this.prismaClient.government.findMany(filter);
+      return data;
     } catch (error) {
       handlePrismaError(error, 'findWorkerProfileGovernments');
     }
@@ -371,47 +327,23 @@ export default class WorkerRepository extends Repository {
    * @param {Object} params
    * @param {import('./Repository.js').IDType} params.userId
    * @param {import('./Repository.js').IDType[]} [params.mainSpecializationIds]
-   * @param {import('./Repository.js').PaginationOptions} [params.pagination]
    * @param {pkg.Prisma.ChosenSpecializationFindManyArgs} [params.filter]
-   * @returns {Promise<{ data: { mainId: import('./Repository.js').IDType, subIds: import('./Repository.js').IDType[] }[], pagination: import('./Repository.js').PaginatedResult }>}
+   * @returns {Promise<{ mainId: import('./Repository.js').IDType, subIds: import('./Repository.js').IDType[] }[]>}
    */
   async findSpecializations({
     userId,
     mainSpecializationIds,
-    pagination = undefined,
     filter = {},
   }) {
     try {
-      const whereClause = {
+      filter.where = {
+        ...filter.where,
         workerProfile: { userId },
         ...(mainSpecializationIds && {
           specializationId: { in: mainSpecializationIds },
         }),
       };
-
-      let paginationResult = undefined;
-      const query = {
-        where: whereClause,
-        include: { subSpecialization: true },
-        ...filter,
-      };
-
-      if (pagination) {
-        const total = await this.prismaClient.chosenSpecialization.count({
-          where: whereClause,
-        });
-        const res = Repository.handlePagination({
-          total,
-          pagination,
-        });
-        const paginationQuery = res.paginationQuery;
-        paginationResult = res.paginationResult;
-
-        query.skip = paginationQuery.skip;
-        query.take = paginationQuery.take;
-      }
-
-      const data = await this.prismaClient.chosenSpecialization.findMany(query);
+      const data = await this.prismaClient.chosenSpecialization.findMany(filter);
 
       const tree = [];
       const map = new Map();
@@ -426,7 +358,7 @@ export default class WorkerRepository extends Repository {
         tree.push(branch);
       }
 
-      return { data: tree, pagination: paginationResult };
+      return tree;
     } catch (error) {
       handlePrismaError(error, 'findWorkerProfileSpecializations');
     }

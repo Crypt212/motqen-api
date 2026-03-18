@@ -8,27 +8,24 @@ import AppError from "../errors/AppError.js";
 import SuccessResponse from "../responses/successResponse.js";
 import { specializationRepository } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
-import { Repository } from "../repositories/database/Repository.js";
+import { handleManyQuery } from "../utils/handleFilteration.js";
 
 /**
  * Get all specializations with pagination, filtering, and ordering
  */
 export const getSpecializations = asyncHandler(async (req, res) => {
-  const { pagination, filter, orderBy } = matchedData(req, { includeOptionals: true });
-
-  filter.orderBy = Repository.handleOrder(orderBy);
+  const { filter, sortBy, sortOrder, page, limit } = matchedData(req, { includeOptionals: true });
+  const { finalFilter, paginationResult } = await handleManyQuery({filter, sortBy, sortOrder, page, limit, modelName: "specialization"});
 
   const result = await specializationRepository.findMany({
-    filter,
-    pagination,
-    paginate: true
+    filter: finalFilter,
   });
 
   new SuccessResponse(
     "Specializations retrieved successfully",
     {
-      specializations: result.data,
-      pagination: result.pagination,
+      specializations: result,
+      pagination: paginationResult,
     },
     200
   ).send(res);
@@ -56,26 +53,23 @@ export const getSpecializationById = asyncHandler(async (req, res) => {
  * Get sub-specializations by parent ID with pagination
  */
 export const getSubSpecializations = asyncHandler(async (req, res) => {
-  const { id, pagination, filter, orderBy } = matchedData(req, { includeOptionals: true });
+  const { id, page, limit, sortBy, sortOrder, filter} = matchedData(req, { includeOptionals: true });
 
   const specialization = await specializationRepository.findFirst({ where: { id } });
   if (!specialization) {
     throw new AppError("Specialization not found", 404);
   }
-
   filter.mainSpecializationId = id;
-  filter.orderBy = Repository.handleOrder(orderBy);
+  const { finalFilter, paginationResult } = await handleManyQuery({filter, sortBy, sortOrder, page, limit, modelName: "subSpecialization"});
   const subSpecializationsResult = await specializationRepository.findSubSpecializations({
-    filter,
-    pagination,
-    paginate: true
+    filter: finalFilter,
   });
 
   new SuccessResponse(
     "Sub-specializations retrieved successfully",
     {
-      subSpecializations: subSpecializationsResult.data,
-      pagination: subSpecializationsResult.pagination,
+      subSpecializations: subSpecializationsResult,
+      pagination: paginationResult,
     },
     200
   ).send(res);

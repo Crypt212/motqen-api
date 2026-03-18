@@ -16,8 +16,8 @@ import RepositoryError, {
 /**
  * Ordering options for queries
  * @typedef {{
- *   field: string;
- *   direction?: 'asc' | 'desc';
+ *   sortBy: string;
+ *   sortOrder?: 'asc' | 'desc';
  * }} OrderingOptions
  */
 
@@ -37,6 +37,7 @@ import RepositoryError, {
  * @typedef {{
  *     page: number;
  *     limit: number;
+ *     count: number;
  *     total: number;
  *     totalPages: number;
  *     hasNext: boolean;
@@ -177,51 +178,5 @@ export class Repository {
       repositories.forEach((repository) => repository.resetPrismaClient());
       await catchHandler(error);
     }
-  }
-
-  /**
-   * Handle pagination logic
-   * @param {Object} params - Pagination parameters
-   * @param {number} params.total - Total number of records
-   * @param {PaginationOptions} params.pagination - Pagination options (page, limit)
-   * @returns {{ paginationResult: PaginatedResult, paginationQuery: {skip: number, take: number}}}
-   */
-  static handlePagination({ total, pagination }) {
-    try {
-      pagination.page = Math.max(pagination.page || 1, 1);
-      pagination.limit = Math.max(pagination.limit || 20, 1);
-      const skip = (pagination.page - 1) * pagination.limit;
-
-      return {
-        paginationQuery: {
-          skip,
-          take: pagination.limit,
-        },
-        paginationResult: {
-          page: pagination.page,
-          limit: pagination.limit,
-          total,
-          totalPages: Math.ceil(total / pagination.limit),
-          hasNext: pagination.page * pagination.limit < total,
-          hasPrev: pagination.page > 1,
-        },
-      };
-    } catch (error) {
-      throw handlePrismaError(error, 'handlePagination');
-    }
-  }
-
-  /**
-   * Handle ordering logic
-   * @param {OrderingOptions[]} orderBy - Ordering options (field, direction)
-   * @returns {{ [x: string]: 'asc' | 'desc'}[]}
-   */
-  static handleOrder(orderBy) {
-    return orderBy
-      .map(({ field, direction }) => {
-        const order = direction;
-        return { [field]: order };
-      })
-      .filter(Boolean);
   }
 }
