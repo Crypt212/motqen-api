@@ -8,44 +8,14 @@ import AppError from "../errors/AppError.js";
 import SuccessResponse from "../responses/successResponse.js";
 import { governmentRepository } from "../state.js";
 import { asyncHandler } from '../types/asyncHandler.js';
-import { parseQueryParams } from '../validators/common.js';
-import { Repository } from "../repositories/database/Repository.js";
-import { handleQuery } from "../utils/handleFilteration.js";
-
-/**
- * Configuration for government query validation
- */
-const GOVERNMENT_QUERY_CONFIG = {
-  allowedFilterFields: ['name', 'nameAr', 'long', 'lat'],
-  filterFieldTypes: {
-    name: { type: 'string', minLength: 2, maxLength: 100 },
-    nameAr: { type: 'string', minLength: 2, maxLength: 100 },
-    long: { type: 'string', minLength: 2, maxLength: 100 },
-    lat: { type: 'string', minLength: 2, maxLength: 100 },
-  },
-  allowedOrderByFields: ['name', 'nameAr', 'long', 'lat', 'createdAt', 'updatedAt'],
-  allowedSearchFields: ['name', 'nameAr', 'long', 'lat']
-};
-
-const CITY_QUERY_CONFIG = {
-  allowedFilterFields: ['name', 'nameAr', 'long', 'lat', 'governmentId'],
-  filterFieldTypes: {
-    name: { type: 'string', minLength: 2, maxLength: 100 },
-    nameAr: { type: 'string', minLength: 2, maxLength: 100 },
-    long: { type: 'string', minLength: 2, maxLength: 100 },
-    lat: { type: 'string', minLength: 2, maxLength: 100 },
-    governmentId: { type: 'uuid' }
-  },
-  allowedOrderByFields: ['name', 'nameAr', 'long', 'lat', 'createdAt', 'updatedAt'],
-  allowedSearchFields: ['name', 'nameAr', 'long', 'lat']
-};
+import { handleManyQuery } from "../utils/handleFilteration.js";
 
 /**
  * Get all governments with pagination, filtering, and ordering
  */
 export const getGovernments = asyncHandler(async (req, res) => {
-  const { pagination, filter, orderBy } = matchedData(req, { includeOptionals: true });
-  const { finalFilter, paginationResult } = await handleQuery({ filter, pagination, orderBy, model: governmentRepository });
+  const { filter, sortBy, sortOrder, page, limit } = matchedData(req, { includeOptionals: true });
+  const { finalFilter, paginationResult } = await handleManyQuery({filter, sortBy, sortOrder, page, limit, modelName: "government"});
 
   const result = await governmentRepository.findMany({ filter: finalFilter});
 
@@ -137,10 +107,9 @@ export const deleteGovernment = asyncHandler(async (req, res) => {
  * Get all cities under a specific government with pagination
  */
 export const getCitiesByGovernment = asyncHandler(async (req, res) => {
-  const { governmentId, pagination, filter, orderBy } = matchedData(req, { includeOptionals: true });
+  const { filter, sortBy, sortOrder, page, limit } = matchedData(req, { includeOptionals: true });
+  const { finalFilter, paginationResult } = await handleManyQuery({filter, sortBy, sortOrder, page, limit, modelName: "city"}); 
 
-  const { finalFilter, paginationResult } = await handleQuery({ filter, pagination, orderBy, model: governmentRepository  });
-  finalFilter.where.governmentId = governmentId;
   const citiesResult = await governmentRepository.findCities({
     filter: finalFilter,
   });

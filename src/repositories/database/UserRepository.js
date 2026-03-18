@@ -83,31 +83,12 @@ export default class UserRepository extends Repository {
    * Find many users with pagination, filtering
    * @param {Object} params
    * @param {pkg.Prisma.UserFindManyArgs} [params.filter]
-   * @param {import('./Repository.js').PaginationOptions} [params.pagination]
-   * @returns {Promise<{ data: pkg.User[], pagination: import('./Repository.js').PaginatedResult }>}
+   * @returns {Promise<pkg.User[]>}
    */
-  async findMany({ filter = {}, pagination = undefined }) {
+  async findMany({ filter = {} }) {
     try {
-      const query = { ...filter };
-      let paginationResult = undefined;
-
-      if (pagination) {
-        const total = await this.prismaClient.user.count({
-          where: query.where,
-        });
-        const res = Repository.handlePagination({
-          total,
-          pagination,
-        });
-        const paginationQuery = res.paginationQuery;
-        paginationResult = res.paginationResult;
-
-        query.skip = paginationQuery.skip;
-        query.take = paginationQuery.take;
-      }
-
-      const data = await this.prismaClient.user.findMany(query);
-      return { data, pagination: paginationResult };
+      const data = await this.prismaClient.user.findMany(filter);
+      return data;
     } catch (error) {
       handlePrismaError(error, 'findMany');
     }

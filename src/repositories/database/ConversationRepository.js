@@ -72,32 +72,12 @@ export default class ConversationRepository extends Repository {
    * Find many conversations with pagination, filtering, and ordering
    * @param {Object} params
    * @param {pkg.Prisma.ConversationFindManyArgs} [params.filter]
-   * @param {import('./Repository.js').PaginationOptions} [params.pagination]
-   * @param {boolean} [params.paginate]
-   * @returns {Promise<{ data: pkg.Conversation[], pagination: import('./Repository.js').PaginatedResult }>}
+   * @returns {Promise<pkg.Conversation[]>}
    */
-  async findMany({ filter = {}, pagination = undefined }) {
+  async findMany({ filter = {} }) {
     try {
-      const query = { ...filter };
-      let paginationResult = undefined;
-
-      if (pagination) {
-        const total = await this.prismaClient.conversation.count({
-          where: query.where,
-        });
-        const res = Repository.handlePagination({
-          total,
-          pagination,
-        });
-        const paginationQuery = res.paginationQuery;
-        paginationResult = res.paginationResult;
-
-        query.skip = paginationQuery.skip;
-        query.take = paginationQuery.take;
-      }
-
-      const data = await this.prismaClient.conversation.findMany(query);
-      return { data, pagination: paginationResult };
+      const data = await this.prismaClient.conversation.findMany(filter);
+      return data;
     } catch (error) {
       handlePrismaError(error, 'findMany');
     }
@@ -260,7 +240,7 @@ export default class ConversationRepository extends Repository {
    * @param {import('./Repository.js').IDType} params.userId
    * @param {number} [params.skip]
    * @param {number} [params.take]
-   * @returns {Promise<pkg.Prisma.ConversationGetPayload<{include: {messages: true, participants: {include: {user: true} }}}>[]>}
+   * @returns {Promise<pkg.Prisma.ConversationGetPayload<{include: {messages: { orderBy: { createdAt: 'desc' }, take: 1, }, participants: {include: {user: true} }}}>[]>}
    */
   async findAllByUserId({ userId, skip = 0, take = 30 }) {
     try {

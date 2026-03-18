@@ -16,8 +16,8 @@ import RepositoryError, {
 /**
  * Ordering options for queries
  * @typedef {{
- *   field: string;
- *   direction?: 'asc' | 'desc';
+ *   sortBy: string;
+ *   sortOrder?: 'asc' | 'desc';
  * }} OrderingOptions
  */
 
@@ -37,6 +37,7 @@ import RepositoryError, {
  * @typedef {{
  *     page: number;
  *     limit: number;
+ *     count: number;
  *     total: number;
  *     totalPages: number;
  *     hasNext: boolean;
