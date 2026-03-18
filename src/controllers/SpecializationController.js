@@ -94,7 +94,8 @@ export const createSpecialization = asyncHandler(async (req, res) => {
  * Update specialization (Admin only)
  */
 export const updateSpecialization = asyncHandler(async (req, res) => {
-  const { id, name, nameAr, category } = matchedData(req, { includeOptionals: true });
+  const { name, nameAr, category } = matchedData(req, { includeOptionals: true });
+  const id = String(req.params.id);
 
   const existing = await specializationRepository.findFirst({ where: { id } });
   if (!existing) {
@@ -114,7 +115,7 @@ export const updateSpecialization = asyncHandler(async (req, res) => {
  * Delete specialization (Admin only)
  */
 export const deleteSpecialization = asyncHandler(async (req, res) => {
-  const { id } = matchedData(req, { includeOptionals: true });
+  const id = String(req.params.id);
 
   const existing = await specializationRepository.findFirst({ where: { id } });
   if (!existing) {
@@ -134,7 +135,8 @@ export const deleteSpecialization = asyncHandler(async (req, res) => {
  * Create a new sub-specialization (Admin only)
  */
 export const createSubSpecialization = asyncHandler(async (req, res) => {
-  const { id, name, nameAr } = matchedData(req, { includeOptionals: true });
+  const { name, nameAr } = matchedData(req, { includeOptionals: true });
+  const id = String(req.params.id);
 
   const parent = await specializationRepository.findFirst({ where: { id } });
   if (!parent) {
@@ -154,7 +156,9 @@ export const createSubSpecialization = asyncHandler(async (req, res) => {
  * Delete sub-specialization (Admin only)
  */
 export const deleteSubSpecialization = asyncHandler(async (req, res) => {
-  const { id, subId } = matchedData(req, { includeOptionals: true });
+  const subId = String(req.params.subId);
+  const id = String(req.params.id);
+
 
   const existing = await specializationRepository.findSubSpecialization({ filter: { where: { id: subId } } });
   if (!existing) {

@@ -108,7 +108,11 @@ export const deleteGovernment = asyncHandler(async (req, res) => {
  */
 export const getCitiesByGovernment = asyncHandler(async (req, res) => {
   const { filter, sortBy, sortOrder, page, limit } = matchedData(req, { includeOptionals: true });
-  const { finalFilter, paginationResult } = await handleManyQuery({filter, sortBy, sortOrder, page, limit, modelName: "city"}); 
+  let { finalFilter, paginationResult } = await handleManyQuery({filter, sortBy, sortOrder, page, limit, modelName: "city"});
+
+  if (!finalFilter) finalFilter = {};
+  if (!finalFilter.where) finalFilter.where = {};
+  finalFilter.where.governmentId = req.params.governmentId;
 
   const citiesResult = await governmentRepository.findCities({
     filter: finalFilter,
