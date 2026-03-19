@@ -59,7 +59,7 @@ export const checkVerifyLimit = asyncHandler(async (req, _, next) => {
  *   RATE_LIMIT_WINDOW_MS  (default: 15 minutes)
  *   RATE_LIMIT_MAX        (default: 100 requests)
  */
-export const ipRateLimiter = rateLimit({
+export const ipRateLimiter = environment.nodeEnv === "development" ? asyncHandler((_, __, next) => next()) : rateLimit({
   windowMs:        environment.rateLimit.windowMs ?? 15 * 60 * 1000,
   limit:           environment.rateLimit.max      ?? 100,
   standardHeaders: "draft-7", // RateLimit headers (RFC 9110)

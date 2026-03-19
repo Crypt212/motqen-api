@@ -1,7 +1,7 @@
-import "dotenv/config";
-import pkg from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pg from "pg";
+import 'dotenv/config';
+import pkg, { $Enums } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 const { PrismaClient } = pkg;
 
 const { Pool } = pg;
@@ -14,118 +14,138 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({
   adapter,
-  log: ["error", "warn"],
+  log: ['error', 'warn'],
 });
 
 // Craftsman Specializations Data
 const specializations = [
   {
-    name: "Carpentry",
+    name: 'Carpentry',
+    nameAr: 'النجارة',
+    category: $Enums.SpecializationCategory.CARPENTRY,
     subSpecializations: [
-      "Furniture Making",
-      "Wood Carving",
-      "Cabinet Making",
-      "Door & Window Installation",
-      "Kitchen Cabinets",
+      { name: 'Furniture Making', nameAr: 'صنع الأثاث' },
+      { name: 'Wood Carving', nameAr: 'نقش الخشب' },
+      { name: 'Cabinet Making', nameAr: 'صنع الخزائن' },
+      { name: 'Door & Window Installation', nameAr: 'تركيب الأبواب والنوافذ' },
+      { name: 'Kitchen Cabinets', nameAr: 'خزائن المطبخ' },
     ],
   },
   {
-    name: "Plumbing",
+    name: 'Plumbing',
+    nameAr: 'السباكة',
+    category: $Enums.SpecializationCategory.PLUMBING,
     subSpecializations: [
-      "Water Piping",
-      "Drainage Systems",
-      "Water Heater Installation",
-      "Bathroom Fixtures",
-      "Pipe Leak Repair",
+      { name: 'Water Piping', nameAr: 'تمديدات المياه' },
+      { name: 'Drainage Systems', nameAr: 'أنظمة الصرف' },
+      { name: 'Water Heater Installation', nameAr: 'تركيب سخانات المياه' },
+      { name: 'Bathroom Fixtures', nameAr: 'تجهيزات الحمامات' },
+      { name: 'Pipe Leak Repair', nameAr: 'إصلاح تسريبات الأنابيب' },
     ],
   },
   {
-    name: "Electrical",
+    name: 'Electrical',
+    nameAr: 'الكهرباء',
+    category: $Enums.SpecializationCategory.ELECTRICITY,
     subSpecializations: [
-      "Wiring & Rewiring",
-      "Switchboard Installation",
-      "Lighting Installation",
-      "AC Installation",
-      "Generator Installation",
+      { name: 'Wiring & Rewiring', nameAr: 'تمديد وأسلاك الكهرباء' },
+      { name: 'Switchboard Installation', nameAr: 'تركيب لوحات الكهرباء' },
+      { name: 'Lighting Installation', nameAr: 'تركيب الإضاءة' },
+      { name: 'AC Installation', nameAr: 'تركيب التكييف' },
+      { name: 'Generator Installation', nameAr: 'تركيب المولدات' },
     ],
   },
   {
-    name: "Painting",
+    name: 'Painting',
+    nameAr: 'الدهان',
+    category: $Enums.SpecializationCategory.PAINTING,
     subSpecializations: [
-      "Interior Painting",
-      "Exterior Painting",
-      "Wall Textures",
-      "Decorative Painting",
-      "Waterproofing",
+      { name: 'Interior Painting', nameAr: 'دهان داخلي' },
+      { name: 'Exterior Painting', nameAr: 'دهان خارجي' },
+      { name: 'Wall Textures', nameAr: 'دهان الجدران بالملمس' },
+      { name: 'Decorative Painting', nameAr: 'الدهان الزخرفي' },
+      { name: 'Waterproofing', nameAr: 'العزل المائي' },
     ],
   },
   {
-    name: "Tiling",
+    name: 'Tiling',
+    nameAr: 'البلاط',
+    category: $Enums.SpecializationCategory.CONSTRUCTION,
     subSpecializations: [
-      "Floor Tiling",
-      "Wall Tiling",
-      "Mosaic Work",
-      "Marble Installation",
-      "Grouting & Sealing",
+      { name: 'Floor Tiling', nameAr: 'تركيب بلاط الأرضيات' },
+      { name: 'Wall Tiling', nameAr: 'تركيب بلاط الجدران' },
+      { name: 'Mosaic Work', nameAr: 'أعمال الفسيفساء' },
+      { name: 'Marble Installation', nameAr: 'تركيب الرخام' },
+      { name: 'Grouting & Sealing', nameAr: 'السلستير والعزل' },
     ],
   },
   {
-    name: "Masonry",
+    name: 'Masonry',
+    nameAr: 'البناء',
+    category: $Enums.SpecializationCategory.CONSTRUCTION,
     subSpecializations: [
-      "Bricklaying",
-      "Block Work",
-      "Stone Masonry",
-      "Concrete Work",
-      "Wall Repair",
+      { name: 'Bricklaying', nameAr: 'البناء بالطوب' },
+      { name: 'Block Work', nameAr: 'البناء بالبلوك' },
+      { name: 'Stone Masonry', nameAr: 'البناء بالحجر' },
+      { name: 'Concrete Work', nameAr: 'الأعمال الخرسانية' },
+      { name: 'Wall Repair', nameAr: 'إصلاح الجدران' },
     ],
   },
   {
-    name: "Aluminum",
+    name: 'Aluminum',
+    nameAr: 'الألمنيوم',
+    category: $Enums.SpecializationCategory.INSTALLATION,
     subSpecializations: [
-      "Window Frames",
-      "Door Frames",
-      "Glass Work",
-      "Curtain Walls",
-      "Partition Walls",
+      { name: 'Window Frames', nameAr: 'إطارات النوافذ' },
+      { name: 'Door Frames', nameAr: 'إطارات الأبواب' },
+      { name: 'Glass Work', nameAr: 'أعمال الزجاج' },
+      { name: 'Curtain Walls', nameAr: 'الجدران الستارية' },
+      { name: 'Partition Walls', nameAr: 'الجدران الفاصلة' },
     ],
   },
   {
-    name: "Welding",
+    name: 'Welding',
+    nameAr: 'اللحام',
+    category: $Enums.SpecializationCategory.GENERALMAINTENANCE,
     subSpecializations: [
-      "Iron Work",
-      "Steel Structures",
-      "Gate & Fence",
-      "Metal Furniture",
-      "Pipe Welding",
+      { name: 'Iron Work', nameAr: 'أعمال الحديد' },
+      { name: 'Steel Structures', nameAr: 'الهياكل الفولاذية' },
+      { name: 'Gate & Fence', nameAr: 'البوابات والأسوار' },
+      { name: 'Metal Furniture', nameAr: 'الأثاث المعدني' },
+      { name: 'Pipe Welding', nameAr: 'لحام الأنابيب' },
     ],
   },
   {
-    name: "HVAC",
+    name: 'HVAC',
+    nameAr: 'التكييف والتبريد',
+    category: $Enums.SpecializationCategory.AC,
     subSpecializations: [
-      "AC Installation",
-      "AC Repair",
-      "Ventilation Systems",
-      "Central Heating",
-      "Refrigeration",
+      { name: 'AC Installation', nameAr: 'تركيب التكييف' },
+      { name: 'AC Repair', nameAr: 'إصلاح التكييف' },
+      { name: 'Ventilation Systems', nameAr: 'أنظمة التهوية' },
+      { name: 'Central Heating', nameAr: 'التدفئة المركزية' },
+      { name: 'Refrigeration', nameAr: 'التبريد' },
     ],
   },
   {
-    name: "Flooring",
+    name: 'Flooring',
+    nameAr: 'الأرضيات',
+    category: $Enums.SpecializationCategory.INSTALLATION,
     subSpecializations: [
-      "Wood Flooring",
-      "Laminate Flooring",
-      "Vinyl Flooring",
-      "Carpet Installation",
-      "Parquet",
+      { name: 'Wood Flooring', nameAr: 'أرضيات خشبية' },
+      { name: 'Laminate Flooring', nameAr: 'أرضيات ملامين' },
+      { name: 'Vinyl Flooring', nameAr: 'أرضيات فينيل' },
+      { name: 'Carpet Installation', nameAr: 'تركيب السجاد' },
+      { name: 'Parquet', nameAr: 'الباركيه' },
     ],
   },
 ];
 
 async function main() {
-  console.log("Starting database seeding...");
+  console.log('Starting database seeding...');
 
   try {
-    console.log("\n--- Seeding Specializations and Sub-specializations ---");
+    console.log('\n--- Seeding Specializations and Sub-specializations ---');
 
     for (const spec of specializations) {
       // Check if specialization already exists
@@ -135,38 +155,37 @@ async function main() {
 
       if (!existingSpec) {
         const createdSpec = await prisma.specialization.create({
-          data: { 
+          data: {
             name: spec.name,
-            nameAr: spec.nameAr || spec.name,
-            category: spec.category || 'DEFAULTCATEGORY'
+            nameAr: spec.nameAr,
+            category: spec.category,
           },
         });
         console.log(`Created specialization: ${createdSpec.name}`);
 
         // Create sub-specializations
-        for (const subSpecName of spec.subSpecializations) {
+        for (const subSpec of spec.subSpecializations) {
           await prisma.subSpecialization.create({
             data: {
-              name: subSpecName,
-              nameAr: subSpecName,
+              name: subSpec.name,
+              nameAr: subSpec.nameAr,
               mainSpecializationId: createdSpec.id,
             },
           });
-          console.log(`  - Created sub-specialization: ${subSpecName}`);
+          console.log(`  - Created sub-specialization: ${subSpec.name}`);
         }
       } else {
         console.log(`Specialization already exists: ${spec.name}`);
       }
     }
 
-    console.log("\n--- Database seeding completed successfully! ---");
+    console.log('\n--- Database seeding completed successfully! ---');
   } catch (error) {
-    console.error("Error seeding database:", error);
+    console.error('Error seeding database:', error);
     throw error;
   } finally {
     await prisma.$disconnect();
   }
-
 }
 
 main();

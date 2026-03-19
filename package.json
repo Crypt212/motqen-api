@@ -9,7 +9,14 @@
         "start": "node src/server.js",
         "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
         "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-        "seed": "node seeds/samples/createTestUsers.js"
+        "db:migrate": "npx prisma migrate dev --name init",
+        "db:generate": "npx prisma generate",
+        "db:reset": "npx prisma migrate reset --force",
+        "seed": "node run seed:users && node run seed:conversations && node run seed:governments && node run seed:specializations",
+        "seed:users": "node seeds/samples/createTestUsers.js",
+        "seed:conversations": "node ./seeds/samples/createConversations.js",
+        "seed:governments": "node seeds/governments/createGovernments.js",
+        "seed:specializations": "node seeds/specializations/createSpecializations.js"
     },
     "keywords": [],
     "author": "",
