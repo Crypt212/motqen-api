@@ -152,6 +152,7 @@ export default class RateLimitCache {
    */
   async isSendOnCooldown(phone, method) {
     const key = this.#keys.sendCooldown(phone, method);
+    console.log(key);
     const found = await this.#client.exists(key);
     return found === 1;
   }

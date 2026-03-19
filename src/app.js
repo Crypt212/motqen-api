@@ -5,7 +5,6 @@ import v1Router from "./routes/v1/api.js";
 import errorHandler from "./middlewares/errorMiddleware.js";
 import { ipRateLimiter } from "./middlewares/rateLimitMiddleware.js";
 import redisClient from "./libs/redis.js";
-import environment from "./configs/environment.js";
 import prismaClient from "./libs/database.js";
 import swaggerSpec from "./configs/swagger.js";
 import swaggerUi from "swagger-ui-express";
@@ -35,7 +34,7 @@ const initApp = async () => {
 
   app.use("/api/v1",
     verifyDeviceId,
-    // ipRateLimiter,
+    ipRateLimiter,
     v1Router);
 
   // Health check
