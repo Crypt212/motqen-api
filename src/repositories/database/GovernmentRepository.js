@@ -58,6 +58,7 @@ export default class GovernmentRepository extends Repository {
    */
   async findMany({ filter = {}}) {
     try {
+      console.log(filter);
       const data = await this.prismaClient.government.findMany(filter);
       return data;
     } catch (error) {

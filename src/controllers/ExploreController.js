@@ -115,19 +115,33 @@ export const searchWorkers = asyncHandler(async (req, res) => {
   if (req.userState?.userId) {
     const currentUser = await userRepository.prismaClient.user.findUnique({
       where: { id: req.userState.userId },
-      select: {
-        government: {
+      select: /** @type {import('@prisma/client').Prisma.UserSelect} */ ({
+        id: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        profileImageUrl: true,
+        isOnline: true,
+        clientProfile: {
           select: {
-            name: true,
+            locations: {
+              select: {
+                government: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
           },
         },
-      },
+      }),
     });
 
-    customerGovernmentName = currentUser?.government?.name;
+    customerGovernmentName = /** @type {any} */ (currentUser)?.clientProfile?.locations?.[0]?.government?.name;
   }
 
-  const result = await workerRepository.searchWorkers({
+  const result = await workerRepository.searchWorkers(/** @type {any} */ ({
     specializationId: mainSpecializationId,
     subSpecializationId: subSpecId,
     city: areaFilter,
@@ -139,7 +153,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     currentUserId: req.userState?.userId,
     page: pageNum,
     limit: limitNum,
-  });
+  }));
 
   new SuccessResponse('Explore results retrieved successfully', result, 200).send(res);
 });

@@ -15,6 +15,7 @@ import environment from '../configs/environment.js';
 import { logger } from '../libs/winston.js';
 import { socketAuth } from '../middlewares/socketMiddleware.js';
 import { registerSocketHandlers } from './socketHandlers.js';
+import { initEmitter } from './socket-emitter.js';
 import { chatService, conversationRepository } from '../state.js';
 import prisma from '../libs/database.js';
 
@@ -32,6 +33,8 @@ export async function initSocketServer(httpServer) {
     pingTimeout: 60000,
     pingInterval: 25000,
   });
+
+  initEmitter(io);
 
   // ─── Redis Adapter (multi-node pub/sub) ─────────────────────────────────────
   // Use two separate Redis clients as required by the adapter

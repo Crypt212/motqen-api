@@ -20,8 +20,8 @@ const options = {
     },
     servers: [
       {
-        url: `http://localhost:${environment.backend.port || 3000}/api/v1`,
-        description: 'API version 1',
+        url: `http://localhost:${environment.backend.port || 3000}/api/${environment.api.version || 'v1'}`,
+        description: `API version ${environment.api.version || 'v1'}`,
       },
     ],
     components: {
@@ -1053,8 +1053,6 @@ const options = {
           type: 'object',
           properties: {
             id: { type: 'string', format: 'uuid' },
-            workerId: { type: 'string', format: 'uuid' },
-            clientId: { type: 'string', format: 'uuid' },
             messageCounter: { type: 'integer', example: 0 },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
@@ -1208,6 +1206,11 @@ const options = {
           'User profile management (basic info, profile image, client/worker profiles)',
       },
       {
+        name: 'Dashboard',
+        description:
+          'Authenticated user dashboard endpoints (profiles, settings, management)',
+      },
+      {
         name: 'Governments',
         description: 'Government & city lookup and management',
       },
@@ -1218,8 +1221,11 @@ const options = {
       },
       {
         name: 'Worker Search',
-        description:
-          'Public worker search endpoints (no authentication required)',
+        description: 'Public worker search endpoints (no authentication required)',
+      },
+      {
+        name: 'Workers',
+        description: 'Worker profile management and details',
       },
       {
         name: 'Explore',

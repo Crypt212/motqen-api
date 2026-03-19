@@ -35,7 +35,7 @@ export const validateImageFile = (fieldName, required = false) => {
       return true;
     }
 
-    const file = req.file || req.files?.[fieldName];
+    const file = req.file || req.files?.[fieldName][0];
 
     if (!file) {
       if (required) {
@@ -80,7 +80,6 @@ export const validateJSONField = (fieldName, required = false) => {
   return body(fieldName)
     .custom((_, { req }) => {
       const fieldValue = req.body[fieldName];
-
       if (!fieldValue && required) {
         throw new Error(`${fieldName} is required`);
       }
@@ -104,7 +103,6 @@ export const validateJSONField = (fieldName, required = false) => {
  */
 export const specializationsTreeValidation = (prefix, required = false) => {
   const fieldName = prefix + 'specializationsTree';
-
   return validateJSONField(fieldName, required)
     .isArray({ min: 1 })
     .withMessage(fieldName + ' must be a non-empty array')

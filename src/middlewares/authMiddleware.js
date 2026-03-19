@@ -28,7 +28,7 @@ export const verifyDeviceId = asyncHandler(async (req, _, next) => {
  */
 export const authenticateLogin = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
-
+console.log(authHeader)
   try {
     verifyHeaderToken(authHeader, "login");
   } catch (err) {

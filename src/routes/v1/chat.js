@@ -40,9 +40,8 @@ const chatRouter = Router();
  *       the given Worker + Client pair. Creates a new one otherwise.
  *
  *       **Business rules:**
- *       - Only Worker ↔ Client pairs are allowed (enforced at DB level)
+ *       - Only Worker ↔ Client pairs are allowed (enforced at service level)
  *       - `workerId` must belong to a user with a `WorkerProfile`
- *       - `clientId` must belong to a user with a `ClientProfile`
  *       - A user cannot start a conversation with themselves
  *     security:
  *       - bearerAuth: []
@@ -86,8 +85,6 @@ const chatRouter = Router();
  *               data:
  *                 conversation:
  *                   id: 550e8400-e29b-41d4-a716-446655440000
- *                   workerId: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
- *                   clientId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
  *                   messageCounter: 0
  *                   createdAt: "2026-03-01T17:00:00.000Z"
  *                   updatedAt: "2026-03-01T17:00:00.000Z"

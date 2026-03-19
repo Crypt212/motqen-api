@@ -26,7 +26,7 @@ const workerRouter = Router();
  *       Results are sorted by experience years (descending).
  *
  *       Only returns **APPROVED** workers. Unapproved workers are excluded from results.
- *     tags: [Worker Search]
+ *     tags: [Workers]
  *     parameters:
  *       - name: subSpecializationId
  *         in: query
@@ -143,7 +143,7 @@ workerRouter.get('/', validateSearchWorkers, validateRequest, searchWorkers);
  *       - Operating governments/areas
  *
  *       Only returns data for **APPROVED** workers.
- *     tags: [Worker Search]
+ *     tags: [Workers]
  *     parameters:
  *       - name: id
  *         in: path

@@ -228,13 +228,18 @@ export default class SessionRepository extends Repository {
    * Revoke all sessions for a user
    * @param {Object} params
    * @param {string} params.userId
+   * @param {string} [params.revokedBy]
    * @returns {Promise<pkg.Prisma.BatchPayload>}
    */
-  async revokeAllForUser({ userId }) {
+  async revokeAllForUser({ userId, revokedBy }) {
     try {
       return await this.prismaClient.session.updateMany({
         where: { userId, isRevoked: false },
-        data: { isRevoked: true },
+        data: {
+          isRevoked: true,
+          revokedAt: new Date(),
+          revokedBy,
+        },
       });
     } catch (error) {
       handlePrismaError(error, 'revokeAllForUser');

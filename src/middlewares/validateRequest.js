@@ -15,7 +15,9 @@ import { logger } from "../libs/winston.js";
  * @returns {void}
  */
 export const validateRequest = (req, res, next) => {
+  
   const errors = validationResult(req);
+  
   if (!errors.isEmpty()) {
     const formattedErrors = errors.array().map((err) => ({
       type: err.type,
