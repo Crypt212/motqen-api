@@ -9,7 +9,7 @@ import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 import UserRepository from '../repositories/database/UserRepository.js';
 import ClientRepository from '../repositories/database/ClientRepository.js';
 import WorkerRepository from '../repositories/database/WorkerRepository.js';
-import { Repository } from '../repositories/database/Repository.js';
+import { handleOrder } from '../utils/handleFilteration.js';
 
 /**
  * @typedef {Object} InputUserData
@@ -90,12 +90,11 @@ export default class UserService extends Service {
     pagination = { page: 1, limit: 20 },
     orderBy = [],
   }) {
-    filter.orderBy = Repository.handleOrder(orderBy);
+    filter.orderBy = /** @type {import('@prisma/client').Prisma.UserOrderByWithRelationInput[]} */ (handleOrder({ sortBy: orderBy[0]?.sortBy, sortOrder: orderBy[0]?.sortOrder }));
 
-    return await this.#userRepository.findMany({
-      filter,
-      pagination,
-    });
+    return /** @type {any} */ (await this.#userRepository.findMany({
+      filter: /** @type {pkg.Prisma.UserFindManyArgs} */ ({ ...filter, pagination }),
+    }));
   }
 
   /**

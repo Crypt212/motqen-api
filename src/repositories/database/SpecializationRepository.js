@@ -232,11 +232,12 @@ export default class SpecializationRepository extends Repository {
   /**
    * Find sub-specializations with pagination, filtering, and ordering
    * @param {Object} params
-   * @param {pkg.Prisma.SubSpecializationFindManyArgs} [params.filter]
+   * @param {pkg.Prisma.SubSpecializationFindManyArgs} params.filter
    * @returns {Promise<pkg.SubSpecialization[]>}
    */
   async findSubSpecializations({ filter = {} }) {
     try {
+      
       const data = await this.prismaClient.subSpecialization.findMany(filter);
       return data;
     } catch (error) {

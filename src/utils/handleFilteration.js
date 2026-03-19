@@ -4,10 +4,10 @@ import prisma from '../libs/database.js';
  * Handle pagination logic
  * @param {Object} params - Pagination parameters
  * @param {number} params.total - Total number of records
- * @param {import("../repositories/database/Repository").PaginationOptions} params.pagination - Pagination options (page, limit)
- * @returns {{ paginationResult: import("../repositories/database/Repository").PaginatedResult, paginationQuery: {skip: number, take: number}}}
+ * @param {import("../repositories/database/Repository.js").PaginationOptions} params.pagination - Pagination options (page, limit)
+ * @returns {{ paginationResult: import("../repositories/database/Repository.js").PaginatedResult, paginationQuery: {skip: number, take: number}}}
  */
-function handlePagination({ total, pagination }) {
+export function handlePagination({ total, pagination }) {
   pagination.limit = Math.max(pagination.limit || 10, 1);
 
   const totalPages = Math.ceil(total / pagination.limit);
@@ -40,10 +40,10 @@ function handlePagination({ total, pagination }) {
 
 /**
  * Handle ordering logic
- * @param {import("../repositories/database/Repository").OrderingOptions} orderOptions - Ordering options (field, direction)
+ * @param {import("../repositories/database/Repository.js").OrderingOptions} orderOptions - Ordering options (field, direction)
  * @returns {{ [x: string]: 'asc' | 'desc'}[]}
  */
-function handleOrder(orderOptions) {
+export function handleOrder(orderOptions) {
   if (!orderOptions || !orderOptions.sortBy) return [];
 
   const order = orderOptions.sortOrder || "asc";
@@ -59,7 +59,7 @@ function handleOrder(orderOptions) {
  * @param {string | undefined} params.sortBy - The key to sort by
  * @param {("asc" | "desc") | undefined} params.sortOrder - Sorting direction
  * @param {string} params.modelName - The model to be filtered
- * @returns {Promise<{ finalFilter: Record<string, any>, paginationResult: import("../repositories/database/Repository").PaginatedResult | null }>}
+ * @returns {Promise<{ finalFilter: Record<string, any>, paginationResult: import("../repositories/database/Repository.js").PaginatedResult | null }>}
  */
 export async function handleManyQuery({ filter = {}, page, limit, sortBy, sortOrder, modelName }) {
 

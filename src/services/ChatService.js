@@ -11,6 +11,8 @@ import ChatPresenceCache from '../repositories/cache/ChatPresenceCache.js';
 import prisma from '../libs/database.js';
 import WorkerRepository from '../repositories/database/WorkerRepository.js';
 import ClientRepository from '../repositories/database/ClientRepository.js';
+import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
+import { handleManyQuery } from '../utils/handleFilteration.js';
 
 /**
  * @typedef {Object} ConversationWithMeta
@@ -72,10 +74,10 @@ export default class ChatService extends Service {
    * Validates that workerId has a workerProfile and clientId has a clientProfile.
    * Returns the existing conversation if the pair already has one (idempotent).
    *
-   * @param {{ workerId: IDType, clientId: IDType }} params
+   * @param {{ workerId: import('../types/asyncHandler.js').IDType, clientId: import('../types/asyncHandler.js').IDType }} params
    * @returns {Promise<import('@prisma/client').Conversation>}
    * @throws {AppError} 400 if profiles are missing or same user is both roles
-   * @throws {AppError} 409 if DB race creates duplicate (caught from UNIQUE constraint)
+   * @throws {RepositoryError} 409 if DB race creates duplicate (caught from UNIQUE constraint)
    */
   async getOrCreateConversation({ workerId, clientId }) {
     if (workerId === clientId)
@@ -85,22 +87,16 @@ export default class ChatService extends Service {
       );
 
     // Validate roles at the profile level
-    const [workerProfile, clientProfile] = await Promise.all([
-      this.#workerRepository.findFirst({ userId: workerId }),
-      this.#clientRepository.findFirst({ userId: clientId }),
-    ]);
+    const workerProfile = await this.#workerRepository.findFirst({ userId: workerId })
 
     if (!workerProfile) throw new AppError('Worker profile not found', 400);
-    if (!clientProfile) throw new AppError('Client profile not found', 400);
 
-    // Check if conversation already exists
     const existing = await this.#conversationRepository.findByPair({
       workerId,
       clientId,
     });
     if (existing) return existing;
 
-    // Create the conversation + both participant rows atomically
     try {
       const { conversation } =
         await this.#conversationRepository.createWithParticipants({
@@ -108,39 +104,50 @@ export default class ChatService extends Service {
           clientId,
         });
       return conversation;
-    } catch (err) {
+    } catch (error) {
       // P2002 = UNIQUE constraint violation — race condition, another request
       // already created this conversation. Return the existing one.
-      if (err.code === 'P2002') {
-        const existing = await this.#conversationRepository.findByPair({
+      if (error instanceof RepositoryError && error.code === RepositoryErrorType.DUPLICATE_KEY) {
+        const existingAfterRace = await this.#conversationRepository.findByPair({
           workerId,
           clientId,
         });
-        if (existing) return existing;
+        if (existingAfterRace) return existingAfterRace;
       }
-      throw err;
+      throw error;
     }
   }
 
   /**
    * List all conversations for a user with derived unreadCount.
-   * @param {{ userId: IDType, skip?: number, take?: number }} params
-   * @returns {Promise<{ id: IDType, messageCounter: number, unreadCount: number, lastMessage: import('@prisma/client').Message | null, partner: import('@prisma/client').User | null, createdAt: Date, updatedAt: Date}[]>}
+   * @param {{ userId: import('../types/asyncHandler.js').IDType, skip?: number, take?: number }} params
+   * @returns {Promise<{ id: import('../types/asyncHandler.js').IDType, messageCounter: number, unreadCount: number, lastMessage: import('@prisma/client').Message | null, partner: import('@prisma/client').User | null, createdAt: Date, updatedAt: Date}[]>}
    */
   async getConversations({ userId, skip = 0, take = 30 }) {
     return tryCatch(async () => {
+      const { finalFilter, paginationResult } = await handleManyQuery({
+        filter: { where: { participants: { some: { userId } }, messageCounter: { gt: 0 } } }, limit: 20
+        , page: 1, sortBy: 'updatedAt', sortOrder: 'desc', modelName: "conversation"
+      });
+
       const convs = await this.#conversationRepository.findAllByUserId({
         userId,
-        skip,
-        take,
+        filter: {
+          where: finalFilter.where || finalFilter,
+          skip: Math.max(0, finalFilter.skip || 0),
+          take: finalFilter.take,
+          orderBy: finalFilter.orderBy,
+        },
       });
 
       const conversations = convs.map((conv) => {
-        const myParticipant = conv.participants.find(
-          (p) => p.userId === userId
-        );
-        const partnerParticipant = conv.participants.find(
-          (p) => p.userId !== userId
+        const [myParticipant, partnerParticipant] = conv.participants.reduce(
+          (acc, p) => {
+            if (p.userId === userId) acc[0] = p;
+            else acc[1] = p;
+            return acc;
+          },
+          [null, null]
         );
         const unreadCount = Math.max(
           0,
@@ -177,7 +184,7 @@ export default class ChatService extends Service {
    *   - emitting the message to the recipient room
    *   - checking presence and auto-updating lastReadMessageNumber if inChat
    *
-   * @param {{ conversationId: IDType, senderId: IDType, content: string, type?: import('@prisma/client').$Enums.MessageType }} params
+   * @param {{ conversationId: import('../types/asyncHandler.js').IDType, senderId: import('../types/asyncHandler.js').IDType, content: string, type?: import('@prisma/client').$Enums.MessageType }} params
    * @returns {Promise<import('@prisma/client').Message>}
    */
   async sendMessage({ conversationId, senderId, content, type = 'TEXT' }) {
@@ -223,7 +230,7 @@ export default class ChatService extends Service {
    * Validates that the message belongs to the conversation (prevents cross-conv attacks).
    * Uses GREATEST so the value never decrements.
    *
-   * @param {{ conversationId: IDType, userId: IDType, lastMessageId: IDType }} params
+   * @param {{ conversationId: import('../types/asyncHandler.js').IDType, userId: import('../types/asyncHandler.js').IDType, lastMessageId: import('../types/asyncHandler.js').IDType }} params
    * @returns {Promise<{ readUpTo: number }>}
    * @throws {AppError} 404 if message not found
    * @throws {AppError} 400 if message belongs to a different conversation
@@ -250,13 +257,13 @@ export default class ChatService extends Service {
   /**
    * Auto-mark all messages as read up to the conversation's current messageCounter.
    * Called when a user enters a chat screen.
-   * @param {{ conversationId: IDType, userId: IDType }} params
+   * @param {{ conversationId: import('../types/asyncHandler.js').IDType, userId: import('../types/asyncHandler.js').IDType }} params
    * @returns {Promise<void>}
    */
   async markAllAsRead({ conversationId, userId }) {
     return tryCatch(async () => {
       const conv = await this.#conversationRepository.findFirst({
-        id: conversationId,
+        where: { id: conversationId },
       });
       if (!conv) throw new AppError('Conversation not found', 404);
 
@@ -280,7 +287,7 @@ export default class ChatService extends Service {
 
   /**
    * Paginated message history — cursor-based by messageNumber.
-   * @param {{ conversationId: IDType, userId: IDType, after?: number, limit?: number }} params
+   * @param {{ conversationId: import('../types/asyncHandler.js').IDType, userId: import('../types/asyncHandler.js').IDType, after?: number, limit?: number }} params
    * @returns {Promise<import('@prisma/client').Message[]>}
    */
   async getMessages({ conversationId, userId, after = 0, limit = 30 }) {
@@ -290,7 +297,7 @@ export default class ChatService extends Service {
         conversationId,
         userId,
       });
-      if (!participant) throw new AppError('Conversation not found', 404);
+      if (!participant) throw new AppError('Conversation not found or you are not participate', 404);
 
       return this.#messageRepository.findPage({ conversationId, after, limit });
     });
@@ -298,7 +305,7 @@ export default class ChatService extends Service {
 
   /**
    * Missed messages since a given messageNumber (for offline catch-up).
-   * @param {{ conversationId: IDType, userId: IDType, afterMessageNumber: number }} params
+   * @param {{ conversationId: import('../types/asyncHandler.js').IDType, userId: import('../types/asyncHandler.js').IDType, afterMessageNumber: number }} params
    * @returns {Promise<import('@prisma/client').Message[]>}
    */
   async getMissedMessages({ conversationId, userId, afterMessageNumber }) {
@@ -322,7 +329,7 @@ export default class ChatService extends Service {
   /**
    * Validate that a user is a participant in a conversation.
    * Used by socket handlers before any operation. DB-based — authoritative.
-   * @param {{ conversationId: IDType, userId: IDType }} params
+   * @param {{ conversationId: import('../types/asyncHandler.js').IDType, userId: import('../types/asyncHandler.js').IDType }} params
    * @returns {Promise<import('@prisma/client').ConversationParticipant>}
    * @throws {AppError} 403 if not a participant
    */
@@ -343,7 +350,7 @@ export default class ChatService extends Service {
   /**
    * Mark messages as delivered for a recipient up to a given messageNumber.
    * Uses GREATEST semantics to never decrement.
-   * @param {{ conversationId: IDType, userId: IDType, messageNumber: number }} params
+   * @param {{ conversationId: import('../types/asyncHandler.js').IDType, userId: import('../types/asyncHandler.js').IDType, messageNumber: number }} params
    * @returns {Promise<import('@prisma/client').ConversationParticipant>}
    */
   async markAsDelivered({ conversationId, userId, messageNumber }) {

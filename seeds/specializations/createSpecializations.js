@@ -135,7 +135,11 @@ async function main() {
 
       if (!existingSpec) {
         const createdSpec = await prisma.specialization.create({
-          data: { name: spec.name },
+          data: { 
+            name: spec.name,
+            nameAr: spec.nameAr || spec.name,
+            category: spec.category || 'DEFAULTCATEGORY'
+          },
         });
         console.log(`Created specialization: ${createdSpec.name}`);
 
@@ -144,6 +148,7 @@ async function main() {
           await prisma.subSpecialization.create({
             data: {
               name: subSpecName,
+              nameAr: subSpecName,
               mainSpecializationId: createdSpec.id,
             },
           });

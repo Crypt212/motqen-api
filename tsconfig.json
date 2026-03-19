@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    /* Language & Environment */
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+
+    /* JavaScript support (no .ts files — JS only) */
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+
+    /* Strictness — practical level for existing JS codebase */
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+
+    /* Interop */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+
+    "types": ["jest", "node"],
+
+    /* Source */
+    "baseUrl": ".",
+    "paths": {}
+  },
+  "include": [
+    "src/**/*.js",
+    "tests/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "node_modules/@jest/environment",
+    "prisma"
+  ]
+}

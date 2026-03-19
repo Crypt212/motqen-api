@@ -88,7 +88,8 @@ export default class ClientService extends Service {
         async () => {
           const clientProfile = await this.#clientRepository.createByUserId({
             userId,
-            data: {
+            data: /** @type {import('@prisma/client').Prisma.ClientProfileCreateInput} */ ({
+              user: { connect: { id: userId } },
               locations: {
                 create: {
                   governmentId: data.governmentId,
@@ -98,7 +99,7 @@ export default class ClientService extends Service {
                   isMain: true,
                 },
               },
-            },
+            }),
           });
 
           return clientProfile;
@@ -122,7 +123,7 @@ export default class ClientService extends Service {
    */
   async update({ clientProfileId, data }) {
     return tryCatch(async () => {
-      return await this.#clientRepository.update({ id: clientProfileId, data });
+      return await this.#clientRepository.update({ id: clientProfileId, data: /** @type {import('@prisma/client').Prisma.ClientProfileUpdateInput} */ (data) });
     });
   }
 

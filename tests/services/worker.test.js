@@ -3,6 +3,7 @@
  * @module tests/services/worker
  */
 
+import { mockDeep } from 'jest-mock-extended';
 import WorkerService from '../../src/services/WorkerService.js';
 
 describe('WorkerService', () => {
@@ -15,7 +16,7 @@ describe('WorkerService', () => {
   });
 
   test('should have constructor that accepts workerRepository', () => {
-    const mockWorkerRepository = {};
+    const mockWorkerRepository = mockDeep();
     const service = new WorkerService({
       workerRepository: mockWorkerRepository,
     });

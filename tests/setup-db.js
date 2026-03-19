@@ -1,13 +1,10 @@
-import { mockDeep } from "jest-mock-extended";
-import { jest } from "@jest/globals";
+import { mockDeep } from 'jest-mock-extended';
+import { jest } from '@jest/globals';
 
-import prisma from "../src/libs/database.js";
-import pkg from "@prisma/client";
-const { PrismaClient } = pkg;
+import prisma from '../src/libs/database.js';
 
-jest.mock("../src/libs/database.js", () => ({
+jest.mock('../src/libs/database.js', () => ({
   __esModule: true,
-  /** @type {PrismaClient} */
   default: mockDeep(),
 }));
 
@@ -18,5 +15,4 @@ beforeEach(() => {
 /** @type {any} */
 const untypedPrisma = prisma;
 
-/** @type {import("jest-mock-extended").DeepMockProxy<PrismaClient>} */
 export const prismaMock = untypedPrisma;

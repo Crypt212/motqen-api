@@ -7,11 +7,44 @@ import {
 } from '../utils/exampleData.js';
 import loadLocalImage from '../utils/imageLoader.js';
 import prisma from '../../src/libs/database.js';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+export async function seedAll() {
+  try {
+    console.log('Starting complete database seeding...');
+
+    // Step 1: Seed Governments and Cities
+    console.log('\n=== Step 1: Seeding Governments and Cities ===');
+    await execAsync('node seeds/governments/createGovernments.js');
+
+    // Step 2: Seed Specializations
+    console.log('\n=== Step 2: Seeding Specializations ===');
+    await execAsync('node seeds/specializations/createSpecializations.js');
+
+    // Step 3: Seed Test Users
+    console.log('\n=== Step 3: Seeding Test Users ===');
+    await createUsers();
+
+    // Step 4: Seed Conversations
+    console.log('\n=== Step 4: Seeding Conversations ===');
+    await execAsync('node seeds/samples/createConversations.js');
+
+    console.log('\n--- Complete database seeding finished successfully! ---');
+
+  } catch (error) {
+    console.error('Error during database seeding:', error);
+    throw error;
+  }
+}
 
 export async function createMains() {
   const exampleGovernmentIds = await getExampleGovernmentIds();
   const exampleGovernmentId = (await getExampleGovernmentIds(1))[0];
   const exampleCityId = (await getExampleCityIds(exampleGovernmentId, 1))[0];
+
   const exampleSpecializationTree = await getExampleSpecializationTree();
 
   const exampleImage = await loadLocalImage(
@@ -75,13 +108,13 @@ export async function createUsers() {
 
   // Check if test user already exists
   const existingTestUser = await prisma.user.findFirst({
-    where: { phoneNumber: '+201001234567' },
+    where: { phoneNumber: '01001234567' },
   });
 
   if (!existingTestUser) {
     const testUser = await prisma.user.create({
       data: {
-        phoneNumber: '+201001234567',
+        phoneNumber: '01001234567',
         firstName: 'محمد',
         middleName: 'أحمد',
         lastName: 'علي',
@@ -149,13 +182,13 @@ export async function createUsers() {
 
   // Worker 1: Approved Carpenter
   const existingWorker1 = await prisma.user.findFirst({
-    where: { phoneNumber: '+201111111111' },
+    where: { phoneNumber: '01111111111' },
   });
 
   if (!existingWorker1 && cairo && carpentry && furnitureMaking) {
     const worker1 = await prisma.user.create({
       data: {
-        phoneNumber: '+201111111111',
+        phoneNumber: '01111111111',
         firstName: 'أحمد',
         middleName: 'محمود',
         lastName: 'حسن',
@@ -202,13 +235,13 @@ export async function createUsers() {
 
   // Worker 2: Approved Plumber
   const existingWorker2 = await prisma.user.findFirst({
-    where: { phoneNumber: '+201222222222' },
+    where: { phoneNumber: '01222222222' },
   });
 
   if (!existingWorker2 && giza && plumbing && waterPiping) {
     const worker2 = await prisma.user.create({
       data: {
-        phoneNumber: '+201222222222',
+        phoneNumber: '01222222222',
         firstName: 'محمد',
         middleName: 'علي',
         lastName: 'عبدالله',
@@ -255,13 +288,13 @@ export async function createUsers() {
 
   // Worker 3: Approved Electrician (accepts urgent jobs)
   const existingWorker3 = await prisma.user.findFirst({
-    where: { phoneNumber: '+201333333333' },
+    where: { phoneNumber: '01333333333' },
   });
 
   if (!existingWorker3 && cairo && electrical && wiring) {
     const worker3 = await prisma.user.create({
       data: {
-        phoneNumber: '+201333333333',
+        phoneNumber: '01333333333',
         firstName: 'خالد',
         middleName: 'حسين',
         lastName: 'إبراهيم',
@@ -300,13 +333,13 @@ export async function createUsers() {
 
   // Worker 4: Pending approval (for testing filters)
   const existingWorker4 = await prisma.user.findFirst({
-    where: { phoneNumber: '+201444444444' },
+    where: { phoneNumber: '01444444444' },
   });
 
   if (!existingWorker4 && cairo && carpentry && furnitureMaking) {
     const worker4 = await prisma.user.create({
       data: {
-        phoneNumber: '+201444444444',
+        phoneNumber: '01444444444',
         firstName: 'يوسف',
         middleName: 'سعيد',
         lastName: 'محمد',
@@ -336,4 +369,5 @@ export async function createUsers() {
   }
 }
 
-createMains();
+// Run the unified seeding function
+seedAll();

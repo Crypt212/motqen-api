@@ -582,18 +582,19 @@ export default class WorkerRepository extends Repository {
     page = 1,
     limit = 10,
   }) {
-    try {
-      const parsedLimit =
-        typeof limit === 'string' ? parseInt(limit, 10) : limit;
-      const parsedPage = typeof page === 'string' ? parseInt(page, 10) : page;
-      const normalizedLimit = Math.min(Math.max(parsedLimit || 10, 1), 50);
-      const normalizedPage = Math.max(parsedPage || 1, 1);
-      const skip = (normalizedPage - 1) * normalizedLimit;
+    const parsedLimit =
+      typeof limit === 'string' ? parseInt(limit, 10) : limit;
+    const parsedPage = typeof page === 'string' ? parseInt(page, 10) : page;
+    const normalizedLimit = Math.min(Math.max(parsedLimit || 10, 1), 50);
+    const normalizedPage = Math.max(parsedPage || 1, 1);
+    const skip = (normalizedPage - 1) * normalizedLimit;
 
-      const whereClause = {
-        verification: { status: pkg.VerificationStatus.APPROVED },
-        user: { status: pkg.AccountStatus.ACTIVE },
-      };
+    const whereClause = {
+      verification: { status: pkg.VerificationStatus.APPROVED },
+      user: { status: pkg.AccountStatus.ACTIVE },
+    };
+
+    try {
 
       if (availability !== undefined && availability !== null) {
         whereClause.user.isOnline = availability === true;
@@ -643,10 +644,9 @@ export default class WorkerRepository extends Repository {
     });
 
     // Fetch workers with relations
-    /** @type {any} */
     const workers = await this.prismaClient.workerProfile.findMany({
       where: whereClause,
-      select: {
+      select: /** @type {any} */ ({
         id: true,
         experienceYears: true,
         rating: true,
@@ -680,16 +680,17 @@ export default class WorkerRepository extends Repository {
             },
           },
         },
-      },
-      orderBy: highestRated
+      }),
+      orderBy: /** @type {any} */ (highestRated
         ? [{ rating: 'desc' }, { completedServices: 'desc' }, { experienceYears: 'desc' }, { id: 'desc' }]
-        : [{ completedServices: 'desc' }, { experienceYears: 'desc' }, { rating: 'desc' }, { id: 'desc' }],
+        : [{ completedServices: 'desc' }, { experienceYears: 'desc' }, { rating: 'desc' }, { id: 'desc' }]
+      ),
       skip,
       take: normalizedLimit,
     });
 
     // Transform data to response format
-    const data = workers.map((worker) => ({
+    const data = /** @type {any[]} */ (workers).map((worker) => ({
       workerId: worker.id,
       name: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
       profileImage: worker.user.profileImageUrl,

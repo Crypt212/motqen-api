@@ -197,11 +197,12 @@ export default class WorkerService extends Service {
     filter = {},
   }) {
     return tryCatch(async () => {
-      const result = await this.#workerRepository.findWorkingGovernments({
-        userId,
-        pagination,
-        filter,
-      });
+      const result = await this.#workerRepository.findWorkingGovernments(
+        /** @type {{userId: string, filter?: pkg.Prisma.GovernmentFindManyArgs, pagination?: import('../repositories/database/Repository.js').PaginationOptions}} */ ({
+          userId,
+          pagination,
+        })
+      );
       return result;
     });
   }
@@ -265,12 +266,14 @@ export default class WorkerService extends Service {
   }) {
     return tryCatch(async () => {
       const result =
-        await this.#workerRepository.findSpecializations({
-          userId,
-          mainSpecializationIds,
-          pagination,
-          filter,
-        });
+        await this.#workerRepository.findSpecializations(
+          /** @type {{userId: string, mainSpecializationIds?: string[], pagination?: import('../repositories/database/Repository.js').PaginationOptions, filter?: pkg.Prisma.ChosenSpecializationFindManyArgs}} */ ({
+            userId,
+            mainSpecializationIds,
+            pagination,
+            filter,
+          })
+        );
       return result;
     });
   }

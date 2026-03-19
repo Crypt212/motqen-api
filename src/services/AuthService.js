@@ -21,6 +21,7 @@ import { logger } from '../libs/winston.js';
 import GovernmentRepository from '../repositories/database/GovernmentRepository.js';
 import ClientRepository from '../repositories/database/ClientRepository.js';
 import WorkerRepository from '../repositories/database/WorkerRepository.js';
+import { emitToUser } from '../socket/socket-emitter.js';
 
 const MAX_VERIFY_ATTEMPTS = 5;
 
@@ -363,7 +364,7 @@ export default class AuthService extends Service {
         deviceId
       );
       const user = await this.#userRepository.findFirst({ phoneNumber });
-
+      
       /** @type {string} */
       let token;
       /** @type {"register" | "login"} */
@@ -397,6 +398,7 @@ export default class AuthService extends Service {
             });
           workerShit.isWorkerSignedUp = verification.status === 'APPROVED';
         }
+        workerShit.isWorkerSignedUp=false
       } else {
         workerShit.isWorker = false;
         workerShit.isWorkerSignedUp = false;
@@ -484,8 +486,18 @@ export default class AuthService extends Service {
    * @description Creates a new session, revokes existing ones for the same device
    */
   async login({ phoneNumber, deviceId: deviceFingerprint, expiresAt }) {
-    await this.#sessionRepository.deleteMany({ deviceId: deviceFingerprint });
     const user = await this.#userRepository.findFirst({ phoneNumber });
+
+    emitToUser(user.id, 'force_logout', {
+      reason: 'NEW_SESSION',
+      at: new Date().toISOString(),
+    });
+
+    await this.#sessionRepository.revokeAllForUser({
+      userId: user.id,
+      revokedBy: 'NEW_LOGIN',
+    });
+
     const unHashedRefreshToken = generateToken({
       type: 'refresh',
       userId: user.id,
@@ -522,10 +534,14 @@ export default class AuthService extends Service {
    */
   async logout(userId, deviceFingerprint) {
     try {
-      await this.#sessionRepository.deleteMany({
-        userId,
-        deviceId: deviceFingerprint,
-      });
+      await this.#sessionRepository.updateMany(
+        { userId, deviceId: deviceFingerprint, isRevoked: false },
+        {
+          isRevoked: true,
+          revokedAt: new Date(),
+          revokedBy: 'LOGOUT',
+        }
+      );
     } catch (err) {
       logger.error('Failed to revoke session:', err);
       throw err;

@@ -53,14 +53,16 @@ export const getSpecializationById = asyncHandler(async (req, res) => {
  * Get sub-specializations by parent ID with pagination
  */
 export const getSubSpecializations = asyncHandler(async (req, res) => {
-  const { id, page, limit, sortBy, sortOrder, filter} = matchedData(req, { includeOptionals: true });
+  const { id, page, limit, sortBy, sortOrder, filter={}} = matchedData(req, { includeOptionals: true });
 
   const specialization = await specializationRepository.findFirst({ where: { id } });
   if (!specialization) {
     throw new AppError("Specialization not found", 404);
   }
-  filter.mainSpecializationId = id;
+  filter.where={mainSpecializationId :id};
+  
   const { finalFilter, paginationResult } = await handleManyQuery({filter, sortBy, sortOrder, page, limit, modelName: "subSpecialization"});
+  console.log(finalFilter)
   const subSpecializationsResult = await specializationRepository.findSubSpecializations({
     filter: finalFilter,
   });

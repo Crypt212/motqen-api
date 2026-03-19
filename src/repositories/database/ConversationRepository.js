@@ -169,7 +169,7 @@ export default class ConversationRepository extends Repository {
   // ============================================
 
   /**
-   * Find a conversation between a specific worker and client.
+   * Find a conversation between a specific pair of users.
    * @param {Object} params
    * @param {import('./Repository.js').IDType} params.workerId
    * @param {import('./Repository.js').IDType} params.clientId
@@ -177,8 +177,13 @@ export default class ConversationRepository extends Repository {
    */
   async findByPair({ workerId, clientId }) {
     try {
-      return await this.prismaClient.conversation.findUnique({
-        where: { workerId_clientId: { workerId, clientId } },
+      return await this.prismaClient.conversation.findFirst({
+        where: {
+          AND: [
+            { participants: { some: { userId: workerId } } },
+            { participants: { some: { userId: clientId } } },
+          ],
+        },
       });
     } catch (error) {
       handlePrismaError(error, 'findByPair');
@@ -196,8 +201,6 @@ export default class ConversationRepository extends Repository {
     try {
       const conversation = await this.prismaClient.conversation.create({
         data: {
-          workerId,
-          clientId,
           participants: {
             createMany: {
               data: [
@@ -237,41 +240,47 @@ export default class ConversationRepository extends Repository {
   /**
    * Find all conversations for a user
    * @param {Object} params
-   * @param {import('./Repository.js').IDType} params.userId
-   * @param {number} [params.skip]
-   * @param {number} [params.take]
-   * @returns {Promise<pkg.Prisma.ConversationGetPayload<{include: {messages: { orderBy: { createdAt: 'desc' }, take: 1, }, participants: {include: {user: true} }}}>[]>}
+   * @param {import('./Repository.js').IDType} [params.userId]
+   * @param {pkg.Prisma.ConversationFindManyArgs} [params.filter]
+   * @returns {Promise<pkg.Prisma.ConversationGetPayload<{ include: { participants: { include: { user: { select: { id: true, firstName: true, lastName: true, profileImageUrl: true, isOnline: true } } } }, messages: { orderBy: { createdAt: 'desc' }, take: 1 } } }>[]>}
    */
-  async findAllByUserId({ userId, skip = 0, take = 30 }) {
-    try {
-      return await this.prismaClient.conversation.findMany({
-        where: {
-          participants: { some: { userId } },
-          messageCounter: { gt: 0 },
-        },
+  async findAllByUserId({ userId, filter } = {}) {
+    /** @type {pkg.Prisma.ConversationFindManyArgs} */
+    const args = filter ? { ...filter } : {};
+
+    if (userId) {
+      args.where = {
+        ...(args.where ?? {}),
+        participants: { some: { userId } },
+      };
+    }
+
+    args.include = {
+      ...(args.include ?? {}),
+      participants: {
         include: {
-          participants: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  profileImageUrl: true,
-                  isOnline: true,
-                },
-              },
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              profileImageUrl: true,
+              isOnline: true,
             },
           },
-          messages: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          },
         },
-        orderBy: { updatedAt: 'desc' },
-        skip,
-        take,
-      });
+      },
+      messages: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+    };
+
+
+    try {
+      return /** @type {any} */ (await this.prismaClient.conversation.findMany({
+        ...args
+      }));
     } catch (error) {
       handlePrismaError(error, 'findAllByUserId');
     }
@@ -282,7 +291,7 @@ export default class ConversationRepository extends Repository {
    * @param {Object} params
    * @param {import('./Repository.js').IDType} params.conversationId
    * @param {import('./Repository.js').IDType} params.userId
-   * @returns {Promise<pkg.Conversation | null>}
+   * @returns {Promise<pkg.Prisma.ConversationGetPayload<{ include: { participants: true } }> | null>}
    */
   async findWithParticipant({ conversationId, userId }) {
     try {
