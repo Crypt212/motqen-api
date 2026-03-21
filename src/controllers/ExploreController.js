@@ -112,6 +112,8 @@ export const searchWorkers = asyncHandler(async (req, res) => {
   }
 
   let customerGovernmentName;
+  let customerGovernmentLatitude;
+  let customerGovernmentLongitude;
   if (req.userState?.userId) {
     const currentUser = await userRepository.prismaClient.user.findUnique({
       where: { id: req.userState.userId },
@@ -125,10 +127,16 @@ export const searchWorkers = asyncHandler(async (req, res) => {
         clientProfile: {
           select: {
             locations: {
+              where: {
+                isMain: true,
+              },
+              take: 1,
               select: {
                 government: {
                   select: {
                     name: true,
+                    lat: true,
+                    long: true,
                   },
                 },
               },
@@ -139,6 +147,8 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     });
 
     customerGovernmentName = /** @type {any} */ (currentUser)?.clientProfile?.locations?.[0]?.government?.name;
+    customerGovernmentLatitude = /** @type {any} */ (currentUser)?.clientProfile?.locations?.[0]?.government?.lat;
+    customerGovernmentLongitude = /** @type {any} */ (currentUser)?.clientProfile?.locations?.[0]?.government?.long;
   }
 
   const result = await workerRepository.searchWorkers(/** @type {any} */ ({
@@ -150,6 +160,8 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     highestRated: highestRatedFlag,
     nearest: nearestFlag,
     customerGovernmentName,
+    customerGovernmentLatitude,
+    customerGovernmentLongitude,
     currentUserId: req.userState?.userId,
     page: pageNum,
     limit: limitNum,
