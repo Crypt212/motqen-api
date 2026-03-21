@@ -21,6 +21,8 @@ import ClientRepository from '../repositories/database/ClientRepository.js';
  * @typedef {Object} InputClientUpdateData
  * @property {string} [address]
  * @property {string} [addressNotes]
+ * @property {import('../repositories/database/Repository.js').IDType} [governmentId]
+ * @property {import('../repositories/database/Repository.js').IDType} [cityId]
  */
 
 /**
@@ -59,8 +61,17 @@ export default class ClientService extends Service {
       const user = await this.#userRepository.findFirst({ id: userId });
       if (!user) throw new AppError('User not found', 404);
 
-      const clientProfile = await this.#clientRepository.findByUserId({
-        userId,
+      const clientProfile = await this.#clientRepository.prismaClient.clientProfile.findUnique({
+        where: { userId },
+        include: {
+          locations: {
+            include: {
+              government: { select: { id: true, name: true, nameAr: true } },
+              city: { select: { id: true, name: true, nameAr: true } },
+            },
+            orderBy: [{ isMain: 'desc' }, { createdAt: 'asc' }],
+          },
+        },
       });
       if (!clientProfile) throw new AppError('Client profile not found', 404);
 
@@ -123,7 +134,50 @@ export default class ClientService extends Service {
    */
   async update({ clientProfileId, data }) {
     return tryCatch(async () => {
-      return await this.#clientRepository.update({ id: clientProfileId, data: /** @type {import('@prisma/client').Prisma.ClientProfileUpdateInput} */ (data) });
+      const mainLocation = await this.#clientRepository.prismaClient.location.findFirst({
+        where: { clientProfileId },
+        orderBy: [{ isMain: 'desc' }, { createdAt: 'asc' }],
+      });
+
+      if (!mainLocation) {
+        if (!data.governmentId || !data.cityId || !data.address) {
+          throw new AppError('Main location not found. governmentId, cityId and address are required to create one.', 400);
+        }
+
+        await this.#clientRepository.prismaClient.location.create({
+          data: {
+            clientProfileId,
+            governmentId: data.governmentId,
+            cityId: data.cityId,
+            address: data.address,
+            addressNotes: data.addressNotes || '',
+            isMain: true,
+          },
+        });
+      } else {
+        await this.#clientRepository.prismaClient.location.update({
+          where: { id: mainLocation.id },
+          data: {
+            ...(data.address !== undefined ? { address: data.address } : {}),
+            ...(data.addressNotes !== undefined ? { addressNotes: data.addressNotes } : {}),
+            ...(data.governmentId !== undefined ? { governmentId: data.governmentId } : {}),
+            ...(data.cityId !== undefined ? { cityId: data.cityId } : {}),
+          },
+        });
+      }
+
+      return await this.#clientRepository.prismaClient.clientProfile.findUnique({
+        where: { id: clientProfileId },
+        include: {
+          locations: {
+            include: {
+              government: { select: { id: true, name: true, nameAr: true } },
+              city: { select: { id: true, name: true, nameAr: true } },
+            },
+            orderBy: [{ isMain: 'desc' }, { createdAt: 'asc' }],
+          },
+        },
+      });
     });
   }
 

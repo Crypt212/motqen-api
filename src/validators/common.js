@@ -256,6 +256,12 @@ export const clientProfileValidation = (prefix, required = false) => {
   return [
     validateJSONField('clientProfile'),
     validateField(fieldName + '.address', required).trim(),
+    validateField(fieldName + '.governmentId', required)
+      .isUUID()
+      .withMessage(fieldName + '.governmentId must be a valid UUID'),
+    validateField(fieldName + '.cityId', required)
+      .isUUID()
+      .withMessage(fieldName + '.cityId must be a valid UUID'),
 
     validateField(fieldName + '.addressNotes', false).trim(),
   ];

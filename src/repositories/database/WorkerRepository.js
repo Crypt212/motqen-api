@@ -605,7 +605,7 @@ export default class WorkerRepository extends Repository {
       if (specializationId || selectedSubSpecializationId) {
         whereClause.chosenSpecializations = {
           some: {
-            ...(specializationId ? { mainSpecializationId: specializationId } : {}),
+            ...(specializationId ? { specializationId } : {}),
             ...(selectedSubSpecializationId ? { subSpecializationId: selectedSubSpecializationId } : {}),
           },
         };
@@ -621,16 +621,14 @@ export default class WorkerRepository extends Repository {
     const areaFilter = city || area;
 
     if (areaFilter) {
-      whereClause.governments = {
+      whereClause.workGovernments = {
         some: {
           OR: [
-            { governmentId: areaFilter },
+            { id: areaFilter },
             {
-              government: {
-                name: {
-                  equals: areaFilter,
-                  mode: 'insensitive',
-                },
+              name: {
+                equals: areaFilter,
+                mode: 'insensitive',
               },
             },
           ],
@@ -649,9 +647,6 @@ export default class WorkerRepository extends Repository {
       select: /** @type {any} */ ({
         id: true,
         experienceYears: true,
-        rating: true,
-        isAvailableNow: true,
-        completedServices: true,
         acceptsUrgentJobs: true,
         user: {
           select: {
@@ -660,15 +655,18 @@ export default class WorkerRepository extends Repository {
             middleName: true,
             lastName: true,
             profileImageUrl: true,
+            isOnline: true,
           },
         },
-        governments: {
+        orders: {
           select: {
-            government: {
-              select: {
-                name: true,
-              },
-            },
+            rating: true,
+            status: true,
+          },
+        },
+        workGovernments: {
+          select: {
+            name: true,
           },
         },
         chosenSpecializations: {
@@ -681,26 +679,46 @@ export default class WorkerRepository extends Repository {
           },
         },
       }),
-      orderBy: /** @type {any} */ (highestRated
-        ? [{ rating: 'desc' }, { completedServices: 'desc' }, { experienceYears: 'desc' }, { id: 'desc' }]
-        : [{ completedServices: 'desc' }, { experienceYears: 'desc' }, { rating: 'desc' }, { id: 'desc' }]
-      ),
+      orderBy: /** @type {any} */ ([{ experienceYears: 'desc' }, { id: 'desc' }]),
       skip,
       take: normalizedLimit,
     });
 
+    const computedWorkers = /** @type {any[]} */ (workers).map((worker) => {
+      const ratedOrders = worker.orders.filter((order) => typeof order.rating === 'number');
+      const rating = ratedOrders.length > 0
+        ? ratedOrders.reduce((sum, order) => sum + order.rating, 0) / ratedOrders.length
+        : 0;
+      const completedServices = worker.orders.filter(
+        (order) => order.status === pkg.OrderStatus.COMPLETED || order.status === pkg.OrderStatus.REVIEWED
+      ).length;
+
+      return {
+        worker,
+        rating,
+        completedServices,
+      };
+    });
+
+    const sortedWorkers = computedWorkers.sort((a, b) => {
+      if (highestRated && b.rating !== a.rating) return b.rating - a.rating;
+      if (b.completedServices !== a.completedServices) return b.completedServices - a.completedServices;
+      return b.worker.experienceYears - a.worker.experienceYears;
+    });
+
     // Transform data to response format
-    const data = /** @type {any[]} */ (workers).map((worker) => ({
+    const data = sortedWorkers.map(({ worker, rating, completedServices }) => ({
       workerId: worker.id,
       name: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
       profileImage: worker.user.profileImageUrl,
       service_title: worker.chosenSpecializations.length > 0
         ? worker.chosenSpecializations[0].subSpecialization.name
         : null,
-      rating: worker.rating,
-      area: worker.governments.length > 0 ? worker.governments[0].government.name : null,
-      isAvailableNow: worker.isAvailableNow,
-      completedServices: worker.completedServices,
+      rating,
+      area: worker.workGovernments.length > 0 ? worker.workGovernments[0].name : null,
+      isAvailableNow: worker.user.isOnline,
+      completedServices,
+      acceptsUrgentJobs: worker.acceptsUrgentJobs,
     }));
 
     const totalPages = Math.ceil(total / normalizedLimit);
