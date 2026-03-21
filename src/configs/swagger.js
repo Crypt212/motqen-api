@@ -1058,6 +1058,205 @@ const options = {
             updatedAt: { type: 'string', format: 'date-time' },
           },
         },
+        // ─── Explore Schemas ────────────────────────────────────
+        ExploreWorkerCard: {
+          type: 'object',
+          description: 'Worker card data for Explore search results',
+          properties: {
+            workerId: {
+              type: 'string',
+              format: 'uuid',
+              example: '123e4567-e89b-12d3-a456-426614174000',
+              description: 'Worker user ID',
+            },
+            name: {
+              type: 'string',
+              example: 'أحمد علي محمد',
+              description: 'Worker full name',
+            },
+            profileImage: {
+              type: 'string',
+              nullable: true,
+              example: 'https://res.cloudinary.com/.../avatar.jpg',
+              description: 'Worker profile image URL',
+            },
+            service_title: {
+              type: 'string',
+              example: 'تركيب الأنابيب',
+              description: 'Main specialization name',
+            },
+            rating: {
+              type: 'number',
+              format: 'float',
+              example: 4.5,
+              description: 'Average rating from completed orders (0-5)',
+            },
+            area: {
+              type: 'string',
+              example: 'القاهرة',
+              description: 'Main work government/area',
+            },
+            isAvailableNow: {
+              type: 'boolean',
+              example: true,
+              description: 'Whether worker is currently available',
+            },
+            completedServices: {
+              type: 'integer',
+              example: 15,
+              description: 'Number of completed or reviewed orders',
+            },
+            acceptsUrgentJobs: {
+              type: 'boolean',
+              example: true,
+              description: 'Whether worker accepts urgent jobs',
+            },
+            distanceKm: {
+              type: 'number',
+              format: 'float',
+              nullable: true,
+              example: 5.2,
+              description: 'Distance in kilometers (only when nearest=true)',
+            },
+          },
+        },
+        ExploreSearchResponse: {
+          type: 'object',
+          description: 'Paginated list of worker cards',
+          properties: {
+            data: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/ExploreWorkerCard' },
+              description: 'List of worker cards',
+            },
+            meta: {
+              type: 'object',
+              properties: {
+                total: {
+                  type: 'integer',
+                  example: 50,
+                  description: 'Total number of matching workers',
+                },
+                page: {
+                  type: 'integer',
+                  example: 1,
+                  description: 'Current page number',
+                },
+                limit: {
+                  type: 'integer',
+                  example: 10,
+                  description: 'Results per page',
+                },
+                totalPages: {
+                  type: 'integer',
+                  example: 5,
+                  description: 'Total number of pages',
+                },
+              },
+            },
+          },
+        },
+        WorkerPortfolioImage: {
+          type: 'object',
+          description: 'Portfolio project image',
+          properties: {
+            imageUrl: {
+              type: 'string',
+              example: 'https://res.cloudinary.com/.../project1.jpg',
+              description: 'Image URL',
+            },
+          },
+        },
+        WorkerPortfolioProject: {
+          type: 'object',
+          description: 'Portfolio project entry',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              example: 'proj-id-1',
+            },
+            description: {
+              type: 'string',
+              example: 'مشروع تركيب مواسير دقيقة',
+              description: 'Project description',
+            },
+            projectImages: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/WorkerPortfolioImage' },
+              description: 'Project images',
+            },
+          },
+        },
+        WorkerBadge: {
+          type: 'string',
+          enum: ['TOP_RATED', 'VERIFIED', 'EXPERT', 'TRUSTED'],
+          example: 'TOP_RATED',
+          description: 'Worker achievement badge',
+        },
+        WorkerDetailResponse: {
+          type: 'object',
+          description: 'Full public profile of a worker',
+          properties: {
+            workerId: {
+              type: 'string',
+              format: 'uuid',
+              example: '123e4567-e89b-12d3-a456-426614174000',
+            },
+            name: {
+              type: 'string',
+              example: 'أحمد علي محمد',
+            },
+            profileImage: {
+              type: 'string',
+              nullable: true,
+              example: 'https://res.cloudinary.com/.../avatar.jpg',
+            },
+            specializations: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['تركيب الأنابيب', 'إصلاح الأنابيب'],
+              description: 'List of specialization names',
+            },
+            experienceYears: {
+              type: 'integer',
+              example: 5,
+              description: 'Years of experience',
+            },
+            area: {
+              type: 'string',
+              example: 'القاهرة',
+              description: 'Primary work area',
+            },
+            workGovernments: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['القاهرة', 'الجيزة'],
+              description: 'List of work governments/areas',
+            },
+            badges: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/WorkerBadge' },
+              description: 'Achievement badges',
+            },
+            verificationStatus: {
+              type: 'string',
+              enum: ['PENDING', 'APPROVED', 'REJECTED'],
+              example: 'APPROVED',
+              description: 'Verification status',
+            },
+            bio: {
+              type: 'string',
+              example: 'متخصص في السباكة لمدة 5 سنوات',
+              description: 'Worker bio',
+            },
+            portfolio: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/WorkerPortfolioProject' },
+              description: 'Portfolio projects',
+            },
+          },
+        },
       },
       responses: {
         BadRequest: {

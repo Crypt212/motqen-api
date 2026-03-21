@@ -567,6 +567,8 @@ export default class WorkerRepository extends Repository {
    * @param {string | undefined} [params.specializationId] - Filter by specialization
    * @param {string | undefined} [params.subSpecializationId] - Filter by sub-specialization
    * @param {string | undefined} [params.city] - Filter by city
+  * @param {string | number | undefined} [params.customerGovernmentLatitude] - Customer government latitude from DB
+  * @param {string | number | undefined} [params.customerGovernmentLongitude] - Customer government longitude from DB
    * @returns {Promise<{data: Array, meta: {total: number, page: number, limit: number, totalPages: number}}>}
    */
   async searchWorkers({
@@ -579,6 +581,8 @@ export default class WorkerRepository extends Repository {
     acceptsUrgentJobs = false,
     highestRated = false,
     nearest = false,
+    customerGovernmentLatitude = undefined,
+    customerGovernmentLongitude = undefined,
     page = 1,
     limit = 10,
   }) {
@@ -666,7 +670,10 @@ export default class WorkerRepository extends Repository {
         },
         workGovernments: {
           select: {
+            id: true,
             name: true,
+            lat: true,
+            long: true,
           },
         },
         chosenSpecializations: {
@@ -684,30 +691,78 @@ export default class WorkerRepository extends Repository {
       take: normalizedLimit,
     });
 
+    const toRadians = (value) => (value * Math.PI) / 180;
+    const calcDistanceKm = (originLat, originLong, destinationLat, destinationLong) => {
+      const earthRadiusKm = 6371;
+      const deltaLatitude = toRadians(destinationLat - originLat);
+      const deltaLongitude = toRadians(destinationLong - originLong);
+      const a =
+        Math.sin(deltaLatitude / 2) * Math.sin(deltaLatitude / 2) +
+        Math.cos(toRadians(originLat)) *
+          Math.cos(toRadians(destinationLat)) *
+          Math.sin(deltaLongitude / 2) *
+          Math.sin(deltaLongitude / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+      return earthRadiusKm * c;
+    };
+
+    const customerLat = Number.parseFloat(String(customerGovernmentLatitude ?? ''));
+    const customerLong = Number.parseFloat(String(customerGovernmentLongitude ?? ''));
+    const hasCustomerCoordinates = Number.isFinite(customerLat) && Number.isFinite(customerLong);
+
     const computedWorkers = /** @type {any[]} */ (workers).map((worker) => {
       const ratedOrders = worker.orders.filter((order) => typeof order.rating === 'number');
       const rating = ratedOrders.length > 0
         ? ratedOrders.reduce((sum, order) => sum + order.rating, 0) / ratedOrders.length
         : 0;
       const completedServices = worker.orders.filter(
-        (order) => order.status === pkg.OrderStatus.COMPLETED || order.status === pkg.OrderStatus.REVIEWED
+        (order) => order.status === 'COMPLETED' || order.status === 'REVIEWED'
       ).length;
+
+      let nearestDistanceKm = null;
+      if (hasCustomerCoordinates) {
+        for (const government of worker.workGovernments) {
+          const governmentLat = Number.parseFloat(String(government.lat ?? ''));
+          const governmentLong = Number.parseFloat(String(government.long ?? ''));
+          if (!Number.isFinite(governmentLat) || !Number.isFinite(governmentLong)) {
+            continue;
+          }
+
+          const distance = calcDistanceKm(customerLat, customerLong, governmentLat, governmentLong);
+          if (nearestDistanceKm === null || distance < nearestDistanceKm) {
+            nearestDistanceKm = distance;
+          }
+        }
+      }
 
       return {
         worker,
         rating,
         completedServices,
+        nearestDistanceKm,
       };
     });
 
     const sortedWorkers = computedWorkers.sort((a, b) => {
+      if (nearest && hasCustomerCoordinates) {
+        const aDistance = a.nearestDistanceKm;
+        const bDistance = b.nearestDistanceKm;
+
+        if (aDistance === null && bDistance !== null) return 1;
+        if (aDistance !== null && bDistance === null) return -1;
+        if (aDistance !== null && bDistance !== null && aDistance !== bDistance) {
+          return aDistance - bDistance;
+        }
+      }
+
       if (highestRated && b.rating !== a.rating) return b.rating - a.rating;
       if (b.completedServices !== a.completedServices) return b.completedServices - a.completedServices;
       return b.worker.experienceYears - a.worker.experienceYears;
     });
 
     // Transform data to response format
-    const data = sortedWorkers.map(({ worker, rating, completedServices }) => ({
+    const data = sortedWorkers.map(({ worker, rating, completedServices, nearestDistanceKm }) => ({
       workerId: worker.id,
       name: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
       profileImage: worker.user.profileImageUrl,
@@ -719,6 +774,7 @@ export default class WorkerRepository extends Repository {
       isAvailableNow: worker.user.isOnline,
       completedServices,
       acceptsUrgentJobs: worker.acceptsUrgentJobs,
+      ...(nearestDistanceKm !== null ? { distanceKm: Number(nearestDistanceKm.toFixed(1)) } : {}),
     }));
 
     const totalPages = Math.ceil(total / normalizedLimit);

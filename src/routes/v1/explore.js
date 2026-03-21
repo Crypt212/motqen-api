@@ -83,6 +83,41 @@ const exploreRouter = Router();
  *     responses:
  *       200:
  *         description: Explore results retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       enum: [success]
+ *                     message:
+ *                       type: string
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/ExploreSearchResponse'
+ *             example:
+ *               status: success
+ *               message: Explore results retrieved successfully
+ *               data:
+ *                 data:
+ *                   - workerId: 123e4567-e89b-12d3-a456-426614174000
+ *                     name: أحمد علي محمد
+ *                     profileImage: https://res.cloudinary.com/.../avatar.jpg
+ *                     service_title: تركيب الأنابيب
+ *                     rating: 4.5
+ *                     area: القاهرة
+ *                     isAvailableNow: true
+ *                     completedServices: 15
+ *                     acceptsUrgentJobs: true
+ *                     distanceKm: 5.2
+ *                 meta:
+ *                   total: 50
+ *                   page: 1
+ *                   limit: 10
+ *                   totalPages: 5
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  *       401:
@@ -107,6 +142,46 @@ exploreRouter.get("/", validateExploreSearch, validateRequest, searchWorkers);
  *     responses:
  *       200:
  *         description: Worker details retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       enum: [success]
+ *                     message:
+ *                       type: string
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/WorkerDetailResponse'
+ *             example:
+ *               status: success
+ *               message: Explore worker retrieved successfully
+ *               data:
+ *                 workerId: 123e4567-e89b-12d3-a456-426614174000
+ *                 name: أحمد علي محمد
+ *                 profileImage: https://res.cloudinary.com/.../avatar.jpg
+ *                 specializations:
+ *                   - تركيب الأنابيب
+ *                   - إصلاح الأنابيب
+ *                 experienceYears: 5
+ *                 area: القاهرة
+ *                 workGovernments:
+ *                   - القاهرة
+ *                   - الجيزة
+ *                 badges:
+ *                   - TOP_RATED
+ *                   - VERIFIED
+ *                 verificationStatus: APPROVED
+ *                 bio: متخصص في السباكة لمدة 5 سنوات
+ *                 portfolio:
+ *                   - id: proj-id-1
+ *                     description: مشروع تركيب مواسير دقيقة
+ *                     projectImages:
+ *                       - imageUrl: https://res.cloudinary.com/.../project1.jpg
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
