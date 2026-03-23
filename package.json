@@ -12,7 +12,7 @@
         "db:migrate": "npx prisma migrate dev --name init",
         "db:generate": "npx prisma generate",
         "db:reset": "npx prisma migrate reset --force",
-        "seed": "node run seed:users && node run seed:conversations && node run seed:governments && node run seed:specializations",
+        "seed": "npm run seed:users && npm run seed:conversations && npm run seed:governments && npm run seed:specializations",
         "seed:users": "node seeds/samples/createTestUsers.js",
         "seed:conversations": "node ./seeds/samples/createConversations.js",
         "seed:governments": "node seeds/governments/createGovernments.js",

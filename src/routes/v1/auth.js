@@ -223,7 +223,7 @@ authRouter.post(
 authRouter.post(
   '/register-client',
   upload.single("personal_image"),
-  ...validateRegisterClient,
+  // ...validateRegisterClient,
   authenticateRegister,
   validateRequest,
   registerClient
@@ -328,7 +328,7 @@ authRouter.post(
     { name: "id_image", maxCount: 1 },
     { name: "personal_with_id_image", maxCount: 1 }
   ]),
-  ...validateRegisterWorker,
+  // ...validateRegisterWorker,
   validateRequest,
   authenticateRegister,
   registerWorker
