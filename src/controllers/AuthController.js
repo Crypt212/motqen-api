@@ -71,9 +71,9 @@ export const registerClient = asyncHandler(async (req, res) => {
     firstName,
     middleName,
     lastName,
+  }, clientProfile: {
     governmentId,
     cityId,
-  }, clientProfile: {
     address,
     addressNotes,
   } } = matchedData(req, { includeOptionals: true });
