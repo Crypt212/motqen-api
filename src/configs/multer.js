@@ -1,13 +1,14 @@
 import multer from "multer";
 import AppError from "../errors/AppError.js";
 const storage = multer.memoryStorage();
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image/")) {
+  if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
     return cb(null, true);
   }
   cb(
     new AppError(
-      `Not an image! Please upload an image.`,
+      `Unsupported image format. Allowed: JPEG, PNG, WebP, GIF`,
       400
     ),
     false

@@ -20,8 +20,10 @@ import {
   getMessages,
   getUnreadSummary,
   getMissedMessages,
+  uploadChatImage,
 } from '../../controllers/ChatController.js';
-import { authenticateAccess } from '../../middlewares/authMiddleware.js';
+import { authenticateAccess, isActive } from '../../middlewares/authMiddleware.js';
+import upload from '../../configs/multer.js';
 
 const chatRouter = Router();
 
@@ -472,6 +474,112 @@ chatRouter.get(
   ],
   validateRequest,
   getMissedMessages,
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /chat/conversations/:conversationId/upload-image
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /chat/conversations/{conversationId}/upload-image:
+ *   post:
+ *     tags: [Chat]
+ *     summary: Upload an image and send it as a chat message
+ *     description: |
+ *       Uploads an image to Cloudinary and creates a new message with
+ *       `type: IMAGE` in the specified conversation. The Cloudinary URL
+ *       is stored as the message `content`.
+ *
+ *       **Real-time delivery:**
+ *       After creating the message, the server checks the partner's presence
+ *       and emits `new_message`, `messages_delivered`, and auto-read events
+ *       via Socket.IO — identical to the socket `send_message` flow.
+ *
+ *       **Constraints:**
+ *       - Max file size: 5 MB
+ *       - Allowed formats: JPEG, PNG, WebP, GIF
+ *       - Sender must be a participant of the conversation
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/DeviceFingerprint'
+ *       - in: path
+ *         name: conversationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: 550e8400-e29b-41d4-a716-446655440000
+ *         description: Conversation UUID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [image]
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file (JPEG, PNG, WebP, or GIF, max 5 MB)
+ *     responses:
+ *       201:
+ *         description: Image uploaded and message created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: Image message sent
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       $ref: '#/components/schemas/Message'
+ *             example:
+ *               status: success
+ *               message: Image message sent
+ *               data:
+ *                 message:
+ *                   id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+ *                   conversationId: 550e8400-e29b-41d4-a716-446655440000
+ *                   senderId: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+ *                   messageNumber: 5
+ *                   content: "https://res.cloudinary.com/xxx/image/upload/v1/Motqen/chat-images/abc.jpg"
+ *                   type: IMAGE
+ *                   createdAt: "2026-03-23T18:00:00.000Z"
+ *       400:
+ *         description: |
+ *           Bad Request — one of:
+ *           - No image file provided
+ *           - File exceeds 5 MB
+ *           - Unsupported image format
+ *         $ref: '#/components/responses/BadRequest'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         description: Not a participant in this conversation
+ *         $ref: '#/components/responses/Forbidden'
+ *       422:
+ *         $ref: '#/components/responses/ValidationError'
+ */
+chatRouter.post(
+  '/conversations/:conversationId/upload-image',
+  authenticateAccess,
+  isActive,
+  [
+    param('conversationId').isUUID().withMessage('conversationId must be a valid UUID'),
+  ],
+  validateRequest,
+  upload.single('image'),
+  uploadChatImage,
 );
 
 export default chatRouter;

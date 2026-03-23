@@ -13,6 +13,7 @@ import WorkerRepository from '../repositories/database/WorkerRepository.js';
 import ClientRepository from '../repositories/database/ClientRepository.js';
 import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
 import { handleManyQuery } from '../utils/handleFilteration.js';
+import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 
 /**
  * @typedef {Object} ConversationWithMeta
@@ -189,13 +190,19 @@ export default class ChatService extends Service {
    */
   async sendMessage({ conversationId, senderId, content, type = 'TEXT' }) {
     return tryCatch(async () => {
-      if (!content?.trim())
-        throw new AppError('Message content cannot be empty', 400);
-      if (content.length > 2000)
-        throw new AppError(
-          'Message content cannot exceed 2000 characters',
-          400
-        );
+      const ALLOWED_TYPES = ['TEXT', 'IMAGE'];
+      if (!ALLOWED_TYPES.includes(type))
+        throw new AppError(`Invalid message type. Allowed: ${ALLOWED_TYPES.join(', ')}`, 400);
+
+      if (type === 'TEXT') {
+        if (!content?.trim())
+          throw new AppError('Message content cannot be empty', 400);
+        if (content.length > 2000)
+          throw new AppError(
+            'Message content cannot exceed 2000 characters',
+            400
+          );
+      }
 
       const message = await prisma.$transaction(async (tx) => {
         // Atomic increment — returns new counter value
@@ -220,6 +227,30 @@ export default class ChatService extends Service {
       });
 
       return message;
+    });
+  }
+
+  /**
+   * Upload an image to Cloudinary and send it as an IMAGE message.
+   * Wraps `sendMessage` so the atomic counter + insert logic is reused.
+   *
+   * @param {{ conversationId: import('../types/asyncHandler.js').IDType, senderId: import('../types/asyncHandler.js').IDType, imageBuffer: Buffer }} params
+   * @returns {Promise<import('@prisma/client').Message>}
+   * @throws {AppError} 400 if imageBuffer is missing
+   */
+  async sendImageMessage({ conversationId, senderId, imageBuffer }) {
+    return tryCatch(async () => {
+      if (!imageBuffer)
+        throw new AppError('Image buffer is required', 400);
+
+      const { url } = await uploadToCloudinary(imageBuffer, 'Motqen/chat-images');
+
+      return this.sendMessage({
+        conversationId,
+        senderId,
+        content: url,
+        type: 'IMAGE',
+      });
     });
   }
 

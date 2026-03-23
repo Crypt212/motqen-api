@@ -3,7 +3,7 @@ import { jest } from '@jest/globals';
 
 import prisma from '../src/libs/database.js';
 
-jest.mock('../src/libs/database.js', () => ({
+jest.mock('../src/libs/database', () => ({
   __esModule: true,
   default: mockDeep(),
 }));

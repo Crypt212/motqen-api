@@ -78,6 +78,17 @@ export function registerSocketHandlers(io, socket) {
   // ─── send_message ───────────────────────────────────────────────────────────
   socket.on('send_message', async ({ conversationId, content, type = 'TEXT' }, ack) => {
     try {
+      // 0. Validate message type and content shape
+      const ALLOWED_TYPES = ['TEXT', 'IMAGE'];
+      if (!ALLOWED_TYPES.includes(type)) {
+        if (typeof ack === 'function') ack({ ok: false, error: `Invalid message type. Allowed: ${ALLOWED_TYPES.join(', ')}` });
+        return;
+      }
+      if (type === 'IMAGE' && !/^https?:\/\/.+/.test(content)) {
+        if (typeof ack === 'function') ack({ ok: false, error: 'IMAGE content must be a valid URL' });
+        return;
+      }
+
       // 1. DB-based participant validation (authoritative)
       const participant = await chatService.validateParticipant({ conversationId, userId });
 
