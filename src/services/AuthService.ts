@@ -32,28 +32,28 @@ import { SpecializationsTree } from '../domain/specialization.entity.js';
 const MAX_VERIFY_ATTEMPTS = 5;
 
 interface InputUserType {
-  phoneNumber: string,
-  firstName: string,
-  middleName: string,
-  lastName: string,
-  profileImageBuffer: Buffer
+  phoneNumber: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  profileImageBuffer: Buffer;
 }
 
 interface InputWorkerType {
-  isInTeam: boolean,
-  experienceYears: number,
-  acceptsUrgentJobs: boolean,
-  workGovernmentIds: IDType[],
-  specializationsTree: SpecializationsTree,
-  idImageBuffer: Buffer,
-  profileWithIdImageBuffer: Buffer,
+  isInTeam: boolean;
+  experienceYears: number;
+  acceptsUrgentJobs: boolean;
+  workGovernmentIds: IDType[];
+  specializationsTree: SpecializationsTree;
+  idImageBuffer: Buffer;
+  profileWithIdImageBuffer: Buffer;
 }
 
 interface InputClientType {
-  address: string,
-  addressNotes: string,
-  governmentId: IDType,
-  cityId: IDType,
+  address: string;
+  addressNotes: string;
+  governmentId: IDType;
+  cityId: IDType;
 }
 
 /**
@@ -62,33 +62,33 @@ interface InputClientType {
  * @extends Service
  */
 export default class AuthService extends Service {
-    private userRepository: IUserRepository
-    private workerProfileRepository: IWorkerProfileRepository
-    private clientProfileRepository: IClientProfileRepository
-    private governmentRepository: IGovernmentRepository
-    private sessionRepository: ISessionRepository
-    private rateLimitCache: IRateLimitCache
-    private otpCache: IOtpCache
+  private userRepository: IUserRepository;
+  private workerProfileRepository: IWorkerProfileRepository;
+  private clientProfileRepository: IClientProfileRepository;
+  private governmentRepository: IGovernmentRepository;
+  private sessionRepository: ISessionRepository;
+  private rateLimitCache: IRateLimitCache;
+  private otpCache: IOtpCache;
 
   /**
    */
   constructor(params: {
-    userRepository: IUserRepository,
-    workerProfileRepository: IWorkerProfileRepository,
-    clientProfileRepository: IClientProfileRepository,
-    governmentRepository: IGovernmentRepository,
-    sessionRepository: ISessionRepository,
-    rateLimitCache: IRateLimitCache,
-    otpCache: IOtpCache,
+    userRepository: IUserRepository;
+    workerProfileRepository: IWorkerProfileRepository;
+    clientProfileRepository: IClientProfileRepository;
+    governmentRepository: IGovernmentRepository;
+    sessionRepository: ISessionRepository;
+    rateLimitCache: IRateLimitCache;
+    otpCache: IOtpCache;
   }) {
     super();
     this.userRepository = params.userRepository;
-    this.workerProfileRepository= params.workerProfileRepository;
-    this.clientProfileRepository= params.clientProfileRepository;
-    this.governmentRepository= params.governmentRepository;
-    this.sessionRepository= params.sessionRepository;
-    this.rateLimitCache= params.rateLimitCache;
-    this.otpCache= params.otpCache;
+    this.workerProfileRepository = params.workerProfileRepository;
+    this.clientProfileRepository = params.clientProfileRepository;
+    this.governmentRepository = params.governmentRepository;
+    this.sessionRepository = params.sessionRepository;
+    this.rateLimitCache = params.rateLimitCache;
+    this.otpCache = params.otpCache;
   }
 
   /**
@@ -96,13 +96,7 @@ export default class AuthService extends Service {
    * @throws {AppError} If government or city not found
    */
   async registerWorker(
-    {
-      phoneNumber,
-      firstName,
-      middleName,
-      lastName,
-      profileImageBuffer,
-    }: InputUserType,
+    { phoneNumber, firstName, middleName, lastName, profileImageBuffer }: InputUserType,
     {
       idImageBuffer,
       profileWithIdImageBuffer,
@@ -111,8 +105,8 @@ export default class AuthService extends Service {
       acceptsUrgentJobs,
       specializationsTree,
       workGovernmentIds,
-    }: InputWorkerType,
-  ): Promise<{ user: User, profile: WorkerProfile }> {
+    }: InputWorkerType
+  ): Promise<{ user: User; profile: WorkerProfile }> {
     return tryCatch(async () => {
       // Note: governmentId and cityId validation moved to location handling
       // For workers, government associations are handled via workGovernmentIds
@@ -120,12 +114,12 @@ export default class AuthService extends Service {
       const user = await this.userRepository.create({
         user: {
           phoneNumber,
-          role: "USER",
+          role: 'USER',
           firstName,
           middleName,
           lastName,
-          status: "ACTIVE",
-        }
+          status: 'ACTIVE',
+        },
       });
       const profile = await this.workerProfileRepository.create({
         userId: user.id,
@@ -137,11 +131,7 @@ export default class AuthService extends Service {
       });
 
       const nationalID = (
-        await uploadToCloudinary(
-          idImageBuffer,
-          `${user.id}/verification_info`,
-          'nationalID'
-        )
+        await uploadToCloudinary(idImageBuffer, `${user.id}/verification_info`, 'nationalID')
       ).url;
 
       const selfiWithID = (
@@ -152,18 +142,17 @@ export default class AuthService extends Service {
         )
       ).url;
 
-      await this.workerProfileRepository.find({ filter: { userId: user.id }, });
+      await this.workerProfileRepository.find({ filter: { userId: user.id } });
 
-      const verification =
-        await this.workerProfileRepository.setVerification({
-          workerProfileId: profile.id,
-          verification: {
-            idWithPersonalImageUrl: nationalID,
-            idDocumentUrl: selfiWithID,
-            status: "PENDING",
-            reason: 'Waiting for verification',
-          },
-        });
+      const verification = await this.workerProfileRepository.setVerification({
+        workerProfileId: profile.id,
+        verification: {
+          idWithPersonalImageUrl: nationalID,
+          idDocumentUrl: selfiWithID,
+          status: 'PENDING',
+          reason: 'Waiting for verification',
+        },
+      });
 
       await this.workerProfileRepository.insertWorkGovernments({
         filter: {
@@ -204,15 +193,9 @@ export default class AuthService extends Service {
    * @throws {AppError} If government or city not found
    */
   async registerClient(
-    {
-      firstName,
-      middleName,
-      lastName,
-      phoneNumber,
-      profileImageBuffer,
-    }: InputUserType,
-    { governmentId, cityId, address, addressNotes }: InputClientType,
-  ): Promise<{ user: User, profile: ClientProfile }> {
+    { firstName, middleName, lastName, phoneNumber, profileImageBuffer }: InputUserType,
+    { governmentId, cityId, address, addressNotes }: InputClientType
+  ): Promise<{ user: User; profile: ClientProfile }> {
     return tryCatch(async () => {
       // Note: governmentId and cityId validation moved to location handling
       // For clients, location data is handled separately via the Location model
@@ -232,11 +215,11 @@ export default class AuthService extends Service {
       const user = await this.userRepository.create({
         user: {
           phoneNumber,
-          role: "USER",
+          role: 'USER',
           firstName,
           middleName,
           lastName,
-          status: "ACTIVE",
+          status: 'ACTIVE',
         },
       });
 
@@ -268,7 +251,9 @@ export default class AuthService extends Service {
         user.profileImageUrl = url;
       }
 
-      const profile = await this.clientProfileRepository.findWithPrimaryLocation({ filter: { userId: user.id } });
+      const profile = await this.clientProfileRepository.findWithPrimaryLocation({
+        filter: { userId: user.id },
+      });
 
       return { profile, user };
     });
@@ -282,12 +267,7 @@ export default class AuthService extends Service {
     const OTP = generateOTP();
     const hashedOTP = hashOTP(OTP);
 
-    await this.otpCache.setOtp(
-      phoneNumber,
-      method,
-      hashedOTP,
-      environment.otps.expiresIn
-    );
+    await this.otpCache.setOtp(phoneNumber, method, hashedOTP, environment.otps.expiresIn);
 
     await SendOTPProvider(method, OTP, phoneNumber);
 
@@ -302,7 +282,16 @@ export default class AuthService extends Service {
    * Validate an OTP
    * @description Checks if the provided OTP is valid and not expired
    */
-  async verifyOTP(phoneNumber: string, method: Method, OTP: string, deviceId: IDType): Promise<{ tokenType: "register" | "login", token: string, workerShit: { isWorker: boolean, isWorkerSignedUp: boolean } | {} }> {
+  async verifyOTP(
+    phoneNumber: string,
+    method: Method,
+    OTP: string,
+    deviceId: IDType
+  ): Promise<{
+    tokenType: 'register' | 'login';
+    token: string;
+    workerShit: { isWorker: boolean; isWorkerSignedUp: boolean } | {};
+  }> {
     // in production -> Invalid or expired OTP only
 
     try {
@@ -321,15 +310,11 @@ export default class AuthService extends Service {
 
       await this.rateLimitCache.incrementVerify(phoneNumber, method);
 
-      await this.rateLimitCache.resetAfterSuccess(
-        phoneNumber,
-        method,
-        deviceId
-      );
+      await this.rateLimitCache.resetAfterSuccess(phoneNumber, method, deviceId);
       const user = await this.userRepository.find({ filter: { phoneNumber } });
 
       let token: string;
-      let tokenType: "register" | "login";
+      let tokenType: 'register' | 'login';
       if (user) {
         const payload: LoginTokenPayload = { type: 'login', phoneNumber };
         tokenType = 'login';
@@ -340,14 +325,21 @@ export default class AuthService extends Service {
         token = generateToken(payload);
       }
 
-      let workerShit: { isWorker: boolean, isWorkerSignedUp: boolean } = { isWorker: false, isWorkerSignedUp: false };
+      let workerShit: { isWorker: boolean; isWorkerSignedUp: boolean } = {
+        isWorker: false,
+        isWorkerSignedUp: false,
+      };
       if (tokenType === 'login') {
-        const user = await this.userRepository.find({ filter: { phoneNumber: phoneNumber, } });
-        const workProfile = await this.workerProfileRepository.find({ filter: { userId: user.id, } });
+        const user = await this.userRepository.find({ filter: { phoneNumber: phoneNumber } });
+        const workProfile = await this.workerProfileRepository.find({
+          filter: { userId: user.id },
+        });
         workerShit.isWorker = workProfile ? true : false;
         if (workerShit.isWorker) {
-          const verification = await this.workerProfileRepository.findVerification({ filter: { userId: user.id, } });
-          workerShit.isWorkerSignedUp = verification.status === "APPROVED";
+          const verification = await this.workerProfileRepository.findVerification({
+            filter: { userId: user.id },
+          });
+          workerShit.isWorkerSignedUp = verification.status === 'APPROVED';
         }
       } else {
         workerShit.isWorker = false;
@@ -356,12 +348,8 @@ export default class AuthService extends Service {
 
       return { tokenType, token, workerShit };
     } catch (error) {
-      if (!(error instanceof AppError && error.errors.type === 'OTP'))
-        throw error;
-      const record = await this.rateLimitCache.incrementVerify(
-        phoneNumber,
-        method
-      );
+      if (!(error instanceof AppError && error.details.type === 'OTP')) throw error;
+      const record = await this.rateLimitCache.incrementVerify(phoneNumber, method);
 
       const limitStatus = {
         attempts: record.attempts,
@@ -380,18 +368,20 @@ export default class AuthService extends Service {
    * Generates a new access token based on the provided refresh token.
    * @throws {AppError} If refresh token is invalid, revoked, or expired
    */
-  async generateAccessToken(params: { refreshToken: string, deviceId: IDType, userId: IDType, role: Role }): Promise<string> {
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(params.refreshToken)
-      .digest('hex');
+  async generateAccessToken(params: {
+    refreshToken: string;
+    deviceId: IDType;
+    userId: IDType;
+    role: Role;
+  }): Promise<string> {
+    const hashedToken = crypto.createHash('sha256').update(params.refreshToken).digest('hex');
 
     const session = await this.sessionRepository.find({
       filter: {
         userId: params.userId,
         deviceId: params.deviceId,
         token: hashedToken,
-      }
+      },
     });
 
     if (!session) {
@@ -420,9 +410,13 @@ export default class AuthService extends Service {
    * Creates a new refresh token for the given user ID and device fingerprint.
    * @description Creates a new session, revokes existing ones for the same device
    */
-  async login(params: { phoneNumber: string, deviceId: IDType, expiresAt: Date }): Promise<{ session: Session, user: User, unHashedRefreshToken: string }> {
+  async login(params: {
+    phoneNumber: string;
+    deviceId: IDType;
+    expiresAt: Date;
+  }): Promise<{ session: Session; user: User; unHashedRefreshToken: string }> {
     await this.sessionRepository.delete({ filter: { deviceId: params.deviceId } });
-    const user = await this.userRepository.find({ filter: { phoneNumber: params.phoneNumber }, });
+    const user = await this.userRepository.find({ filter: { phoneNumber: params.phoneNumber } });
     const unHashedRefreshToken = generateToken({
       type: 'refresh',
       userId: user.id,
@@ -432,10 +426,7 @@ export default class AuthService extends Service {
 
     logger.info('Generated Refresh Token:', params.expiresAt);
 
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(unHashedRefreshToken)
-      .digest('hex');
+    const hashedToken = crypto.createHash('sha256').update(unHashedRefreshToken).digest('hex');
 
     const session = await this.sessionRepository.create({
       userId: user.id,
@@ -445,7 +436,7 @@ export default class AuthService extends Service {
         deviceId: params.deviceId,
         expiresAt: params.expiresAt,
         token: hashedToken,
-      }
+      },
     });
     return { session, user, unHashedRefreshToken: unHashedRefreshToken };
   }
@@ -453,13 +444,13 @@ export default class AuthService extends Service {
   /**
    * Revokes all sessions for a given user ID and device fingerprint.
    */
-  async logout(params: { userId: IDType, deviceId: string }): Promise<void> {
+  async logout(params: { userId: IDType; deviceId: string }): Promise<void> {
     try {
       await this.sessionRepository.delete({
         filter: {
           userId: params.userId,
           deviceId: params.deviceId,
-        }
+        },
       });
     } catch (err) {
       logger.error('Failed to revoke session:', err);
