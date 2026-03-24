@@ -14,6 +14,7 @@ import ClientRepository from '../repositories/database/ClientRepository.js';
 import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
 import { handleManyQuery } from '../utils/handleFilteration.js';
 import uploadToCloudinary from '../providers/cloudinaryProvider.js';
+import { cli } from 'winston/lib/winston/config/index.js';
 
 /**
  * @typedef {Object} ConversationWithMeta
@@ -89,9 +90,9 @@ export default class ChatService extends Service {
 
     // Validate roles at the profile level
     const workerProfile = await this.#workerRepository.findFirst({ userId: workerId })
+      console.log("workerProfile", workerProfile , "workerID", workerId);
 
     if (!workerProfile) throw new AppError('Worker profile not found', 400);
-
     const existing = await this.#conversationRepository.findByPair({
       workerId,
       clientId,

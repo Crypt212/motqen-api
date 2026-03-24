@@ -214,6 +214,17 @@ export default class ConversationRepository extends Repository {
       });
       return { conversation, participants: conversation.participants };
     } catch (error) {
+        // Handle unique constraint violation (e.g. conversation already exists between these users)
+        if (error instanceof pkg.Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          return this.findByPair({ workerId, clientId }).then(conversation => {
+            if (!conversation) {
+              throw new Error('Conversation already exists but could not be found');
+            }
+            return { conversation, participants: conversation.participants };
+          });
+
+        }
+
       handlePrismaError(error, 'createWithParticipants');
     }
   }

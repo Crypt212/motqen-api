@@ -158,8 +158,8 @@ export default class UserService extends Service {
         ? {
             id: worker.id,
             verification: {
-              status: verification.status,
-              reason: verification.reason,
+              status: verification?.status,
+              reason: verification?.reason,
             },
           }
         : undefined,

@@ -27,6 +27,10 @@ import prisma from '../libs/database.js';
 export async function initSocketServer(httpServer) {
   // ─── Create Socket.IO server ────────────────────────────────────────────────
   const io = new Server(httpServer, {
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST'],
+    },
     // Recommended: only use WebSocket transport after upgrade to avoid
     // sticky-session requirements when scaling
     transports: ['websocket', 'polling'],

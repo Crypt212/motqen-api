@@ -396,7 +396,8 @@ export default class AuthService extends Service {
             await this.#workerRepository.findVerification({
               workerProfileId: workProfile.id,
             });
-          workerShit.isWorkerSignedUp = verification.status === 'APPROVED';
+            
+          workerShit.isWorkerSignedUp = verification?.status === 'APPROVED';
         }
         workerShit.isWorkerSignedUp=false
       } else {
