@@ -165,5 +165,5 @@ export const uploadChatImage = asyncHandler(async (req, res) => {
     emitToUser(partnerId, 'new_message', { message, conversationId });
   }
 
-  new SuccessResponse('Image message sent', { message }, 201).send(res);
+  new SuccessResponse('Image message sent', { ...message }, 201).send(res);
 });
