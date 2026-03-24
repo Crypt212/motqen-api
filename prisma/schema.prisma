@@ -282,12 +282,6 @@ enum VerificationStatus {
   REJECTED
 }
 
-enum WorkerProfileStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 enum SpecializationCategory {
   ELECTRICITY
   PLUMBING

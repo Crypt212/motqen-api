@@ -1,0 +1,58 @@
+import { $Enums } from '@prisma/client';
+import { IDType } from '../repositories/interfaces/Repository.js';
+import { User } from './user.entity.js';
+
+export type ConversationRole = $Enums.ConversationRole;
+
+export type Conversation = {
+  id: IDType;
+  messageCounter: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type ConversationCreateInput = {
+  workerId: IDType;
+  clientId: IDType;
+};
+
+export type ConversationUpdateInput = {
+  messageCounter?: number;
+  workerId?: IDType;
+  clientId?: IDType;
+};
+
+export type ConversationFilter = {
+  id?: IDType;
+  workerId?: IDType;
+  clientId?: IDType;
+};
+
+export type ConversationParticipant = {
+  id: IDType;
+  conversationId: IDType;
+  userId: IDType;
+  role: ConversationRole;
+  lastReadMessageNumber: number;
+  lastReceivedMessageNumber: number;
+  createdAt: Date;
+  updatedAt: Date;
+  user?: Omit<Omit<User, 'createdAt'>, 'updatedAt'>,
+};
+
+export type ConversationWithParticipantsAndMessages = Conversation & {
+  // unreadCount: number;
+  participants: ConversationParticipant[];
+  messages?: Message[];
+};
+
+export type Message = {
+  id: IDType;
+  conversationId: IDType;
+  senderId: IDType;
+  messageNumber: number;
+  content: string;
+  type: string;
+  createdAt: Date;
+  updatedAt: Date;
+};

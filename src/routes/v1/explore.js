@@ -5,7 +5,7 @@
 
 import { Router } from "express";
 import { getWorkerById, searchWorkers } from "../../controllers/ExploreController.js";
-import { validateRequest } from "../../middlewares/validateRequest.js";
+import { validateExpress } from "../../middlewares/validateRequest.js";
 import { validateExploreSearch, validateExploreWorkerId } from "../../validators/explore.js";
 
 const exploreRouter = Router();
@@ -123,7 +123,7 @@ const exploreRouter = Router();
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
-exploreRouter.get("/", validateExploreSearch, validateRequest, searchWorkers);
+exploreRouter.get("/", validateExploreSearch, validateExpress, searchWorkers);
 
 /**
  * @swagger
@@ -187,6 +187,6 @@ exploreRouter.get("/", validateExploreSearch, validateRequest, searchWorkers);
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
-exploreRouter.get("/:id", validateExploreWorkerId, validateRequest, getWorkerById);
+exploreRouter.get("/:id", validateExploreWorkerId, validateExpress, getWorkerById);
 
 export default exploreRouter;

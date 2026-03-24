@@ -12,7 +12,7 @@
     "noEmit": true,
 
     /* Strictness — practical level for existing JS codebase */
-    "strict": false,
+    "strict": true,
     "noImplicitAny": false,
     "strictNullChecks": false,
 
@@ -23,16 +23,32 @@
 
     "types": ["jest", "node"],
 
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+
     /* Source */
     "baseUrl": ".",
-    "paths": {}
+    "paths": {},
+    "typeRoots": ["./src/types", "./node_modules/@types"]
   },
   "include": [
-    "src/**/*.js",
-    "tests/**/*.js"
+    "src/**/*",
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",
+    "dist",
+    "tests",
+    "seeds",
     "node_modules/@jest/environment",
     "prisma"
   ]

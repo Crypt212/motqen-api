@@ -6,7 +6,7 @@
 import { matchedData } from 'express-validator';
 import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
-import { userRepository, workerRepository } from '../state.js';
+import { userRepository, workerProfileRepository } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 
 function getFirstString(...values) {
@@ -51,7 +51,7 @@ function parseBooleanFlag(value) {
  * GET /explore
  * Search for approved workers by specialization with optional UI flags.
  * @param {import('../types/asyncHandler.js').Request} req
- * @param {import('../types/asyncHandler.js').Response} res
+ * @param {import('express').Response} res
  */
 export const searchWorkers = asyncHandler(async (req, res) => {
   const {
@@ -151,7 +151,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     customerGovernmentLongitude = /** @type {any} */ (currentUser)?.clientProfile?.locations?.[0]?.government?.long;
   }
 
-  const result = await workerRepository.searchWorkers(/** @type {any} */ ({
+  const result = await workerProfileRepository.searchWorkers(/** @type {any} */ ({
     specializationId: mainSpecializationId,
     subSpecializationId: subSpecId,
     city: areaFilter,
@@ -179,7 +179,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
 export const getWorkerById = asyncHandler(async (req, res) => {
   const { id: workerId } = matchedData(req, { includeOptionals: true });
 
-  const worker = await workerRepository.getWorkerById({ workerId });
+  const worker = await workerProfileRepository.getWorkerById({ workerId });
 
   if (!worker) {
     throw new AppError('Worker not found or not approved', 404);
