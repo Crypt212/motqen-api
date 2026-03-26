@@ -11,7 +11,7 @@ import {
   LocationUpdateInput,
 } from '../../domain/clientProfile.entity.js';
 import { isEmptyFilter } from './utils.js';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from 'src/generated/prisma/client.js';
 
 export default class ClientProfileRepository
   extends Repository

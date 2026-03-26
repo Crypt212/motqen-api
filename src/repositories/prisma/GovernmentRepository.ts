@@ -12,7 +12,7 @@ import {
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { isEmptyFilter } from './utils.js';
 import { PaginationOptions, SortOptions, PaginatedResultMeta } from '../../types/query.js';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../generated/prisma/client.js';
 
 export default class GovernmentRepository extends Repository implements IGovernmentRepository {
   constructor(prisma: PrismaClient) {

@@ -189,7 +189,7 @@ export default class AuthService extends Service {
    * Register a new client user
    * @async
    * @method registerClient
-   * @returns {Promise<{ user: import("../repositories/database/UserRepository.js").User, profile: import("@prisma/client").ClientProfile }>} Created user object
+   * @returns {Promise<{ user: import("../repositories/database/UserRepository.js").User, profile: import("../generated/prisma/client.js").ClientProfile }>} Created user object
    * @throws {AppError} If government or city not found
    */
   async registerClient(

@@ -1,3 +1,3 @@
-import { $Enums } from '@prisma/client';
+import { $Enums } from '../generated/prisma/client.js';
 
 export type Method = $Enums.Method;

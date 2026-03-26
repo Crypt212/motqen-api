@@ -13,13 +13,13 @@ import {
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
-import * as pkg from '@prisma/client';
+import { AccountStatus, PrismaClient, VerificationStatus } from 'src/generated/prisma/client.js';
 
 export default class WorkerRepositoryRepository
   extends Repository
   implements IWorkerProfileRepository
 {
-  constructor(prisma: pkg.PrismaClient) {
+  constructor(prisma: PrismaClient) {
     super(prisma);
   }
 
@@ -634,10 +634,10 @@ export default class WorkerRepositoryRepository
 
     const whereClause: {
       verification: {
-        status: pkg.VerificationStatus;
+        status: VerificationStatus;
       };
       user: {
-        status: pkg.AccountStatus;
+        status: AccountStatus;
         isOnline?: boolean;
       };
       chosenSpecializations?: {
@@ -646,8 +646,8 @@ export default class WorkerRepositoryRepository
       acceptsUrgentJobs?: boolean;
       workGovernments?: unknown;
     } = {
-      verification: { status: pkg.VerificationStatus.APPROVED },
-      user: { status: pkg.AccountStatus.ACTIVE },
+      verification: { status: VerificationStatus.APPROVED },
+      user: { status: AccountStatus.ACTIVE },
     };
 
     try {

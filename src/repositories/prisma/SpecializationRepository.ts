@@ -13,13 +13,13 @@ import {
   SubSpecializationFilter,
 } from '../../domain/specialization.entity.js';
 import { PaginatedResultMeta } from '../../types/query.js';
-import * as pkg from '@prisma/client';
+import { PrismaClient } from 'src/generated/prisma/client.js';
 
 export default class SpecializationRepository
   extends Repository
   implements ISpecializationRepository
 {
-  constructor(prisma: pkg.PrismaClient) {
+  constructor(prisma: PrismaClient) {
     super(prisma);
   }
 

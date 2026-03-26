@@ -20,7 +20,7 @@ import {
 } from '../domain/conversation.entity.js';
 import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
 import prisma from '../libs/database.js';
-import pkg from '@prisma/client';
+import { $Enums } from '../generated/prisma/client.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../types/query.js';
 
 export type ConversationWithMeta = {
@@ -207,7 +207,7 @@ export default class ChatService extends Service {
             senderId,
             messageNumber,
             content,
-            type: pkg.$Enums.MessageType[type],
+            type: $Enums.MessageType[type],
           },
         });
       });

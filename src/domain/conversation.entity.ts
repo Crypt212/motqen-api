@@ -1,4 +1,4 @@
-import { $Enums } from '@prisma/client';
+import { $Enums } from '../generated/prisma/client.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { User } from './user.entity.js';
 import { FilterFromDescriptor } from '../schemas/common.js';

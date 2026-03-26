@@ -107,7 +107,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
   if (req.userState?.userId) {
     const currentUser = await userRepository.prismaClient.user.findUnique({
       where: { id: req.userState.userId },
-      select: /** @type {import('@prisma/client').Prisma.UserSelect} */ ({
+      select: /** @type {import('../generated/prisma/client.js').Prisma.UserSelect} */ ({
         id: true,
         firstName: true,
         middleName: true,

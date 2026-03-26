@@ -57,7 +57,7 @@ async function emitToPartners(
 
 /**
  * Get the partner userId inside a conversation.
- * @param {import('@prisma/client').Conversation & { participants: import('@prisma/client').ConversationParticipant[] }} conv
+ * @param {import('../generated/prisma/client.js').Conversation & { participants: import('../generated/prisma/client.js').ConversationParticipant[] }} conv
  */
 function getPartnerId(
   conv: ConversationWithParticipantsAndMessages,

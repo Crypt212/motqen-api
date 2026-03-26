@@ -1,5 +1,4 @@
-import pkg from '@prisma/client';
-const { Prisma } = pkg;
+import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import RepositoryError, { RepositoryErrorType } from '../../errors/RepositoryError.js';
 import IRepository from '../interfaces/Repository.js';
 
@@ -9,7 +8,7 @@ import IRepository from '../interfaces/Repository.js';
 export function handlePrismaError(error: unknown, operation: string): RepositoryError | unknown {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return error;
 
-  const prismaError: pkg.Prisma.PrismaClientKnownRequestError = error;
+  const prismaError: Prisma.PrismaClientKnownRequestError = error;
   const errorCode = prismaError.code;
   const errorMessage = prismaError.message || error.message;
 
@@ -72,5 +71,5 @@ export function handlePrismaError(error: unknown, operation: string): Repository
  * Base repository class with common functionality
  */
 export class Repository implements IRepository {
-  constructor(public prismaClient: pkg.PrismaClient | pkg.Prisma.TransactionClient) {}
+  constructor(public prismaClient: PrismaClient | Prisma.TransactionClient) {}
 }

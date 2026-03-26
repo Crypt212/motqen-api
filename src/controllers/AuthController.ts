@@ -6,7 +6,6 @@
 import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { authService, rateLimitService } from '../state.js';
-
 import { asyncHandler } from '../types/asyncHandler.js';
 import { verifyAndDecodeToken } from '../utils/tokens.js';
 

@@ -3,10 +3,10 @@ import { handlePrismaError, Repository } from './Repository.js';
 import { IDType } from '../interfaces/Repository.js';
 import { Session, SessionCreateInput, SessionFilter } from '../../domain/session.entity.js';
 import { isEmptyFilter } from './utils.js';
-import * as pkg from '@prisma/client';
+import { PrismaClient } from 'src/generated/prisma/client.js';
 
 export default class SessionRepository extends Repository implements ISessionRepository {
-  constructor(prisma: pkg.PrismaClient) {
+  constructor(prisma: PrismaClient) {
     super(prisma);
   }
 

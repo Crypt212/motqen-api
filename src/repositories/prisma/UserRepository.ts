@@ -1,13 +1,13 @@
 import IUserRepository from '../interfaces/UserRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
-import * as pkg from '@prisma/client';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
 import { User, UserCreateInput, UserFilter } from '../../domain/user.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
+import { PrismaClient } from 'src/generated/prisma/client.js';
 
 export default class UserRepository extends Repository implements IUserRepository {
-  constructor(prisma: pkg.PrismaClient) {
+  constructor(prisma: PrismaClient) {
     super(prisma);
   }
 
