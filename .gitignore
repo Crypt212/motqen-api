@@ -2,6 +2,8 @@ node_modules
 dist
 .env
 
+package-lock.json
+
 **/coverage
 **/logs
 
