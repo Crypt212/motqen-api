@@ -1,33 +1,7 @@
-import { z } from 'zod';
-import { UUIDSchema } from './common.js';
+import { z } from '../libs/zod.js';
+import { buildFilterSchema, UUIDSchema } from './common.js';
 import { NameSchema, LongitudeSchema, LatitudeSchema, createQuerySchema } from './common.js';
-
-// ============================================
-// Query configs
-// ============================================
-
-export const GOVERNMENT_QUERY_CONFIG = {
-  allowedFilterFields: ['id', 'name', 'nameAr'],
-  filterFieldTypes: {
-    id: { type: 'uuid' as const },
-    name: { type: 'string' as const, minLength: 2, maxLength: 100 },
-    nameAr: { type: 'string' as const, minLength: 2, maxLength: 100 },
-  },
-  allowedOrderByFields: ['createdAt', 'id', 'name', 'nameAr'],
-  allowedSearchFields: ['id', 'name', 'nameAr'],
-};
-
-export const CITY_QUERY_CONFIG = {
-  allowedFilterFields: ['id', 'governmentId', 'name', 'nameAr'],
-  filterFieldTypes: {
-    id: { type: 'uuid' as const },
-    name: { type: 'string' as const, minLength: 2, maxLength: 100 },
-    nameAr: { type: 'string' as const, minLength: 2, maxLength: 100 },
-    governmentId: { type: 'uuid' as const },
-  },
-  allowedOrderByFields: ['createdAt', 'governmentId', 'id', 'name', 'nameAr'],
-  allowedSearchFields: ['id', 'governmentId', 'name', 'nameAr'],
-};
+import { CityFilterDescriptor, GovernmentFilterDescriptor } from 'src/domain/government.entity.js';
 
 // ============================================
 // Government schemas
@@ -68,10 +42,12 @@ export const CityIdParamsSchema = z.object({ cityId: UUIDSchema });
 // Query schemas
 // ============================================
 
-export const GovernmentQuerySchema = createQuerySchema(GOVERNMENT_QUERY_CONFIG);
+export const GovernmentFilterSchema = buildFilterSchema(GovernmentFilterDescriptor);
+
+export const GovernmentQuerySchema = createQuerySchema(GovernmentFilterSchema);
 export type GovernmentQuery = z.infer<typeof GovernmentQuerySchema>;
 
-export const CityQuerySchema = createQuerySchema(CITY_QUERY_CONFIG);
+export const CityFilterSchema = buildFilterSchema(CityFilterDescriptor);
+
+export const CityQuerySchema = createQuerySchema(CityFilterSchema);
 export type CityQuery = z.infer<typeof CityQuerySchema>;
-
-

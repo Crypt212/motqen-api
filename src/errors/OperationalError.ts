@@ -1,5 +1,4 @@
-export default class OperationalError extends Error{
-
+export default class OperationalError extends Error {
   constructor(message: string) {
     super(message);
 

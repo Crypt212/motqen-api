@@ -13,23 +13,27 @@ import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerReposito
 import IMessageRepository from 'src/repositories/interfaces/MessageRepository.js';
 import IConversationRepository from 'src/repositories/interfaces/ConversationRepository.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
-import { Conversation, ConversationParticipant, ConversationWithParticipantsAndMessages } from 'src/domain/conversation.entity.js';
+import {
+  Conversation,
+  ConversationParticipant,
+  ConversationWithParticipantsAndMessages,
+} from 'src/domain/conversation.entity.js';
 import RepositoryError, { RepositoryErrorType } from 'src/errors/RepositoryError.js';
 import prisma from 'src/libs/database.js';
 import pkg from '@prisma/client';
-import { PaginatedResult, PaginationOptions, SortOptions } from 'src/types/query.js';
+import { PaginatedResultMeta, PaginationOptions, SortOptions } from 'src/types/query.js';
 
 export type ConversationWithMeta = {
-  id: string,
-  messageCounter: number,
-  unreadCount: number,
-  lastMessage?: Message,
-  partner?: User,
-  partnerLastReceivedMessageNumber: number,
-  partnerLastReadMessageNumber: number,
-  createdAt: Date,
-  updatedAt: Date,
-}
+  id: string;
+  messageCounter: number;
+  unreadCount: number;
+  lastMessage?: Message;
+  partner?: User;
+  partnerLastReceivedMessageNumber: number;
+  partnerLastReadMessageNumber: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 /**
  * ChatService — all chat business logic (conversation creation, messaging, read state)
@@ -44,11 +48,11 @@ export default class ChatService extends Service {
   private presencee: IChatPresenceCache;
 
   constructor(params: {
-    conversationRepository: IConversationRepository,
-    messageRepository: IMessageRepository,
-    clientProfileRepository: IClientProfileRepository,
-    workerProfileRepository: IWorkerProfileRepository,
-    presence: IChatPresenceCache,
+    conversationRepository: IConversationRepository;
+    messageRepository: IMessageRepository;
+    clientProfileRepository: IClientProfileRepository;
+    workerProfileRepository: IWorkerProfileRepository;
+    presence: IChatPresenceCache;
   }) {
     super();
     this.conversationRepository = params.conversationRepository;
@@ -67,16 +71,18 @@ export default class ChatService extends Service {
    * @throws {AppError} 400 if profiles are missing or same user is both roles
    * @throws {RepositoryError} 409 if DB race creates duplicate (caught from UNIQUE constraint)
    */
-  async getOrCreateConversation(params: { workerId: IDType, clientId: IDType }): Promise<Conversation> {
+  async getOrCreateConversation(params: {
+    workerId: IDType;
+    clientId: IDType;
+  }): Promise<Conversation> {
     const { workerId, clientId } = params;
     if (workerId === clientId)
-      throw new AppError(
-        'A user cannot start a conversation with themselves',
-        400
-      );
+      throw new AppError('A user cannot start a conversation with themselves', 400);
 
     // Validate roles at the profile level
-    const workerProfile = await this.workerProfileRepository.find({ filter: { userId: workerId } })
+    const workerProfile = await this.workerProfileRepository.find({
+      workerFilter: { userId: workerId },
+    });
 
     if (!workerProfile) throw new AppError('Worker profile not found', 400);
 
@@ -87,11 +93,10 @@ export default class ChatService extends Service {
     if (existing) return existing;
 
     try {
-      const { conversation } =
-        await this.conversationRepository.createWithParticipants({
-          workerId,
-          clientId,
-        });
+      const { conversation } = await this.conversationRepository.createWithParticipants({
+        workerId,
+        clientId,
+      });
       return conversation;
     } catch (error) {
       // P2002 = UNIQUE constraint violation — race condition, another request
@@ -110,20 +115,30 @@ export default class ChatService extends Service {
   /**
    * List all conversations for a user with derived unreadCount.
    */
-  async getConversations(params: { userId: IDType, pagination: PaginationOptions, sort: SortOptions<ConversationWithParticipantsAndMessages> }): Promise<PaginatedResult<ConversationWithParticipantsAndMessages>> {
+  async getConversations(params: {
+    userId: IDType;
+    pagination: PaginationOptions;
+    sort: SortOptions<ConversationWithParticipantsAndMessages>;
+  }): Promise<
+    PaginatedResultMeta & {
+      conversationsWithParticipantsAndMessages: ConversationWithParticipantsAndMessages[];
+    }
+  > {
     const { userId, pagination, sort } = params;
     return tryCatch(async () => {
-      const convs = await this.conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
-        userId,
-        filter: {},
-        pagination,
-        sort,
+      const convs =
+        await this.conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
+          userId,
+          filter: {},
+          pagination,
+          sort,
+        });
 
-
-      });
-
-      const conversations = convs.data.map((conv) => {
-        const [myParticipant, partnerParticipant]: [ConversationParticipant, ConversationParticipant] = conv.participants.reduce(
+      const conversations = convs.conversationParticipantsWithMessages.map((conv) => {
+        const [myParticipant, partnerParticipant]: [
+          ConversationParticipant,
+          ConversationParticipant,
+        ] = conv.participants.reduce(
           (acc, p) => {
             if (p.userId === userId) acc[0] = p;
             else acc[1] = p;
@@ -142,10 +157,8 @@ export default class ChatService extends Service {
           unreadCount,
           lastMessage: conv.messages[0] ?? null,
           partner: partnerParticipant?.user ?? null,
-          partnerLastReceivedMessageNumber:
-            partnerParticipant?.lastReceivedMessageNumber ?? 0,
-          partnerLastReadMessageNumber:
-            partnerParticipant?.lastReadMessageNumber ?? 0,
+          partnerLastReceivedMessageNumber: partnerParticipant?.lastReceivedMessageNumber ?? 0,
+          partnerLastReadMessageNumber: partnerParticipant?.lastReadMessageNumber ?? 0,
           createdAt: conv.createdAt,
           updatedAt: conv.updatedAt,
         };
@@ -166,16 +179,17 @@ export default class ChatService extends Service {
    *   - emitting the message to the recipient room
    *   - checking presence and auto-updating lastReadMessageNumber if inChat
    */
-  async sendMessage(params: { conversationId: IDType, senderId: IDType, content: string, type?: MessageType }): Promise<Message> {
+  async sendMessage(params: {
+    conversationId: IDType;
+    senderId: IDType;
+    content: string;
+    type?: MessageType;
+  }): Promise<Message> {
     const { conversationId, senderId, content, type } = params;
     return tryCatch(async () => {
-      if (!content?.trim())
-        throw new AppError('Message content cannot be empty', 400);
+      if (!content?.trim()) throw new AppError('Message content cannot be empty', 400);
       if (content.length > 2000)
-        throw new AppError(
-          'Message content cannot exceed 2000 characters',
-          400
-        );
+        throw new AppError('Message content cannot exceed 2000 characters', 400);
 
       const message = await prisma.$transaction(async (tx) => {
         // Atomic increment — returns new counter value
@@ -188,7 +202,13 @@ export default class ChatService extends Service {
 
         // Insert the message with that number
         return tx.message.create({
-          data: { conversationId, senderId, messageNumber, content, type: pkg.$Enums.MessageType[type] },
+          data: {
+            conversationId,
+            senderId,
+            messageNumber,
+            content,
+            type: pkg.$Enums.MessageType[type],
+          },
         });
       });
 
@@ -213,7 +233,11 @@ export default class ChatService extends Service {
    * @throws {AppError} 404 if message not found
    * @throws {AppError} 400 if message belongs to a different conversation
    */
-  async markAsRead(params: { conversationId: IDType, userId: IDType, lastMessageId: IDType }): Promise<{ readUpTo: number }> {
+  async markAsRead(params: {
+    conversationId: IDType;
+    userId: IDType;
+    lastMessageId: IDType;
+  }): Promise<{ readUpTo: number }> {
     const { conversationId, userId, lastMessageId } = params;
     return tryCatch(async () => {
       const message = await this.messageRepository.findById({
@@ -237,13 +261,13 @@ export default class ChatService extends Service {
    * Auto-mark all messages as read up to the conversation's current messageCounter.
    * Called when a user enters a chat screen.
    */
-  async markAllAsRead(params: { conversationId: IDType, userId: IDType }): Promise<void> {
+  async markAllAsRead(params: { conversationId: IDType; userId: IDType }): Promise<void> {
     const { conversationId, userId } = params;
     return tryCatch(async () => {
       const conv = await this.conversationRepository.find({
         filter: {
           id: conversationId,
-        }
+        },
       });
       if (!conv) throw new AppError('Conversation not found', 404);
 
@@ -268,8 +292,13 @@ export default class ChatService extends Service {
   /**
    * Paginated message history — cursor-based by messageNumber.
    */
-  async getMessages(params: { conversationId: IDType, userId: IDType, after: number, limit: number }): Promise<Message[]> {
-    const { conversationId, userId, } = params;
+  async getMessages(params: {
+    conversationId: IDType;
+    userId: IDType;
+    after: number;
+    limit: number;
+  }): Promise<Message[]> {
+    const { conversationId, userId } = params;
     const after = params.after ?? 0;
     const limit = params.limit ?? 30;
     return tryCatch(async () => {
@@ -278,7 +307,8 @@ export default class ChatService extends Service {
         conversationId,
         userId,
       });
-      if (!participant) throw new AppError('Conversation not found or you are not participate', 404);
+      if (!participant)
+        throw new AppError('Conversation not found or you are not participate', 404);
 
       return this.messageRepository.findPage({ conversationId, after, limit });
     });
@@ -287,7 +317,11 @@ export default class ChatService extends Service {
   /**
    * Missed messages since a given messageNumber (for offline catch-up).
    */
-  async getMissedMessages(params: { conversationId: IDType, userId: IDType, afterMessageNumber: number }): Promise<Message[]> {
+  async getMissedMessages(params: {
+    conversationId: IDType;
+    userId: IDType;
+    afterMessageNumber: number;
+  }): Promise<Message[]> {
     const { conversationId, userId, afterMessageNumber } = params;
     return tryCatch(async () => {
       const participant = await this.conversationRepository.findParticipant({
@@ -311,15 +345,17 @@ export default class ChatService extends Service {
    * Used by socket handlers before any operation. DB-based — authoritative.
    * @throws {AppError} 403 if not a participant
    */
-  async validateParticipant(params: { conversationId: IDType, userId: IDType }): Promise<ConversationParticipant> {
+  async validateParticipant(params: {
+    conversationId: IDType;
+    userId: IDType;
+  }): Promise<ConversationParticipant> {
     const { conversationId, userId } = params;
     return tryCatch(async () => {
       const participant = await this.conversationRepository.findParticipant({
         conversationId,
         userId,
       });
-      if (!participant)
-        throw new AppError('Not a participant in this conversation', 403);
+      if (!participant) throw new AppError('Not a participant in this conversation', 403);
       return participant;
     });
   }
@@ -330,7 +366,11 @@ export default class ChatService extends Service {
    * Mark messages as delivered for a recipient up to a given messageNumber.
    * Uses GREATEST semantics to never decrement.
    */
-  async markAsDelivered(params: { conversationId: IDType, userId: IDType, messageNumber: number }): Promise<ConversationParticipant> {
+  async markAsDelivered(params: {
+    conversationId: IDType;
+    userId: IDType;
+    messageNumber: number;
+  }): Promise<ConversationParticipant> {
     const { conversationId, userId, messageNumber } = params;
     return tryCatch(async () => {
       return this.conversationRepository.updateLastReceived({

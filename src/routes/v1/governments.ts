@@ -7,7 +7,12 @@ import { Router } from 'express';
 import { governmentController } from '../../state.js';
 import { isActive, authorizeAdmin } from '../../middlewares/authMiddleware.js';
 import { validateBody, validateParams, validateQuery } from 'src/middlewares/validateRequest.js';
-import { CreateGovernmentSchema, GovernmentIdParamsSchema, GovernmentQuerySchema, UpdateGovernmentSchema } from 'src/schemas/governments.js';
+import {
+  CreateGovernmentSchema,
+  GovernmentIdParamsSchema,
+  GovernmentQuerySchema,
+  UpdateGovernmentSchema,
+} from 'src/schemas/governments.js';
 
 const governmentRouter = Router();
 
@@ -42,7 +47,7 @@ const governmentRouter = Router();
  */
 governmentRouter.get(
   '/',
-  // validateQuery(GovernmentQuerySchema),
+  validateQuery(GovernmentQuerySchema),
   governmentController.getGovernments
 );
 

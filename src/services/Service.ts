@@ -3,18 +3,14 @@
  * @module services/Service
  */
 
-import AppError from '../errors/AppError.js';
-
 /**
  * Wrapper to catch errors and convert RepositoryError to AppError
  * @throws {AppError} If RepositoryError is caught, converts to AppError
  */
-export const tryCatch = async (fn: Function): Promise<any> => {
+export const tryCatch = async <T>(fn: Function): Promise<T> => {
   try {
     return await fn();
   } catch (err) {
-    if (err instanceof AppError) throw err;
-    if (err instanceof Error) throw new AppError(err.message, 500);
     throw err;
   }
 };

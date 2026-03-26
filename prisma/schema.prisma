@@ -73,7 +73,7 @@ model Location {
   governmentId    String
   cityId          String
   address         String
-  addressNotes    String
+  addressNotes    String?
   isMain          Boolean
   clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
   government      Government    @relation(fields: [governmentId], references: [id], onDelete: Cascade)

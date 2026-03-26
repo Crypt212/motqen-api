@@ -3,8 +3,8 @@ import { handlePrismaError, Repository } from './Repository.js';
 import * as pkg from '@prisma/client';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
-import { User, UserCreateInput, UsersFilter } from '../../domain/user.entity.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
+import { User, UserCreateInput, UserFilter } from '../../domain/user.entity.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 
 export default class UserRepository extends Repository implements IUserRepository {
   constructor(prisma: pkg.PrismaClient) {
@@ -27,7 +27,7 @@ export default class UserRepository extends Repository implements IUserRepositor
     };
   }
 
-  async exists({ filter }: { filter: UsersFilter }): Promise<boolean> {
+  async exists({ filter }: { filter: UserFilter }): Promise<boolean> {
     try {
       if (isEmptyFilter(filter)) return false;
       const count = await this.prismaClient.user.count({
@@ -39,13 +39,21 @@ export default class UserRepository extends Repository implements IUserRepositor
     }
   }
 
-  async find({ filter }: { filter: UsersFilter }): Promise<User | null> {
+  async find({
+    filter,
+  }: {
+    filter: UserFilter;
+  }): Promise<(User & { isClient: boolean; isWorker: boolean }) | null> {
     try {
       if (isEmptyFilter(filter)) return null;
       const record = await this.prismaClient.user.findFirst({
         where: filter,
       });
-      return record ? this.toDomain(record) : null;
+      const isWorker =
+        (await this.prismaClient.workerProfile.count({ where: { userId: record.id } })) > 0;
+      const isClient =
+        (await this.prismaClient.clientProfile.count({ where: { userId: record.id } })) > 0;
+      return record ? { ...this.toDomain(record), isClient, isWorker } : null;
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'find');
     }
@@ -56,12 +64,12 @@ export default class UserRepository extends Repository implements IUserRepositor
     pagination,
     sort,
   }: {
-    filter: UsersFilter;
+    filter: UserFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<User>;
-  }): Promise<PaginatedResult<User>> {
+  }): Promise<PaginatedResultMeta & { users: User[] }> {
     try {
-      if (isEmptyFilter(filter)) return getEmptyPaginatedResult();
+      if (isEmptyFilter(filter)) return { users: [], ...getEmptyPaginatedResult() };
 
       const total = await this.prismaClient.user.count({
         where: filter,
@@ -79,7 +87,7 @@ export default class UserRepository extends Repository implements IUserRepositor
       });
 
       return {
-        data: users.map((u) => this.toDomain(u)),
+        users: users.map((u) => this.toDomain(u)),
         ...paginationResult,
         count: users.length,
         hasNext: paginationResult.page < paginationResult.totalPages,
@@ -95,12 +103,12 @@ export default class UserRepository extends Repository implements IUserRepositor
     pagination,
     sort,
   }: {
-    filter: UsersFilter;
+    filter: UserFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<User>;
-  }): Promise<PaginatedResult<User>> {
+  }): Promise<PaginatedResultMeta & { users: User[] }> {
     try {
-      if (isEmptyFilter(filter)) return getEmptyPaginatedResult();
+      if (isEmptyFilter(filter)) return { users: [], ...getEmptyPaginatedResult() };
 
       const whereCondition = {
         ...filter,
@@ -123,7 +131,7 @@ export default class UserRepository extends Repository implements IUserRepositor
       });
 
       return {
-        data: users.map((u) => this.toDomain(u)),
+        users: users.map((u) => this.toDomain(u)),
         ...paginationResult,
         count: users.length,
         hasNext: paginationResult.page < paginationResult.totalPages,
@@ -145,7 +153,7 @@ export default class UserRepository extends Repository implements IUserRepositor
     }
   }
 
-  async update({ filter, user }: { filter: UsersFilter; user: Partial<User> }): Promise<User> {
+  async update({ filter, user }: { filter: UserFilter; user: Partial<User> }): Promise<User> {
     try {
       if (isEmptyFilter(filter)) {
         throw new Error('User not found');
@@ -168,7 +176,7 @@ export default class UserRepository extends Repository implements IUserRepositor
     }
   }
 
-  async delete({ filter }: { filter: UsersFilter }): Promise<void> {
+  async delete({ filter }: { filter: UserFilter }): Promise<void> {
     try {
       if (isEmptyFilter(filter)) return;
       const existingUser = await this.prismaClient.user.findFirst({

@@ -1,6 +1,10 @@
 import cloudinary from '../configs/cloudinary.js';
 
-const uploadToCloudinary = (buffer: Buffer, folder: string = 'Motqen', publicId: string | null = null): Promise<{ url: string; publicId: string }> => {
+const uploadToCloudinary = (
+  buffer: Buffer,
+  folder: string = 'Motqen',
+  publicId: string | null = null
+): Promise<{ url: string; publicId: string }> => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       { folder, ...(publicId && { public_id: publicId, overwrite: true }) },

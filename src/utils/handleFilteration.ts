@@ -1,14 +1,20 @@
-import { PaginationOptions, PaginatedResult, SortOptions } from '../types/query.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/query.js';
 
 /**
  * Handle pagination logic
  */
-export function handlePagination(params: { total: number, paginationOptions: PaginationOptions }): { paginationResult: Omit<PaginatedResult<number>, 'data'>, paginationQuery: { skip: number, take: number } } {
+export function handlePagination(params: { total: number; paginationOptions: PaginationOptions }): {
+  paginationResult: PaginatedResultMeta;
+  paginationQuery: { skip: number; take: number };
+} {
   params.paginationOptions.limit = Math.max(params.paginationOptions.limit || 10, 1);
 
   const totalPages = Math.ceil(params.total / params.paginationOptions.limit);
 
-  params.paginationOptions.page = Math.min(Math.max(params.paginationOptions.page || 1, 1), totalPages);
+  params.paginationOptions.page = Math.min(
+    Math.max(params.paginationOptions.page || 1, 1),
+    totalPages
+  );
 
   const skip = (params.paginationOptions.page - 1) * params.paginationOptions.limit;
 
@@ -37,11 +43,11 @@ export function handlePagination(params: { total: number, paginationOptions: Pag
 /**
  * Handle ordering logic
  */
-export function handleSort<T>(sortOptions: SortOptions<T>): {[x: string]: 'asc' | 'desc'}[] {
+export function handleSort<T>(sortOptions: SortOptions<T>): { [x: string]: 'asc' | 'desc' }[] {
   if (!sortOptions || !sortOptions.sortBy) return [];
 
-  const order = sortOptions.sortOrder || "asc";
-  return [{ [sortOptions.sortBy]: order }]
+  const order = sortOptions.sortOrder || 'asc';
+  return [{ [sortOptions.sortBy]: order }];
 }
 //
 // /**

@@ -86,8 +86,7 @@ const options = {
             type: 'string',
             example: 'Bearer <access_token>',
           },
-          description:
-            'Access token from /auth/login or /auth/access. Format: Bearer <token>',
+          description: 'Access token from /auth/login or /auth/access. Format: Bearer <token>',
         },
         RefreshToken: {
           in: 'header',
@@ -160,20 +159,13 @@ const options = {
             clientProfile: {
               type: 'string',
               description: 'JSON string containing client profile data',
-              example:
-                '{"address":"123 Main St","addressNotes":"Near the park"}',
+              example: '{"address":"123 Main St","addressNotes":"Near the park"}',
             },
           },
         },
         RegisterClientUserData: {
           type: 'object',
-          required: [
-            'firstName',
-            'middleName',
-            'lastName',
-            'governmentId',
-            'city',
-          ],
+          required: ['firstName', 'middleName', 'lastName', 'governmentId', 'city'],
           properties: {
             firstName: {
               type: 'string',
@@ -296,8 +288,7 @@ const options = {
                   },
                 },
               },
-              description:
-                'Specialization tree with main and sub specializations',
+              description: 'Specialization tree with main and sub specializations',
             },
             workGovernmentIds: {
               type: 'array',
@@ -316,8 +307,7 @@ const options = {
         // ─── User Request Schemas ───────────────────────────────
         UpdateUser: {
           type: 'object',
-          description:
-            'All fields are optional — only provide fields to update',
+          description: 'All fields are optional — only provide fields to update',
           properties: {
             firstName: {
               type: 'string',
@@ -355,8 +345,7 @@ const options = {
         },
         UpdateWorkerProfile: {
           type: 'object',
-          description:
-            'All fields are optional — only provide fields to update',
+          description: 'All fields are optional — only provide fields to update',
           properties: {
             experienceYears: {
               type: 'integer',
@@ -448,8 +437,7 @@ const options = {
         },
         UpdateClientProfile: {
           type: 'object',
-          description:
-            'All fields are optional — only provide fields to update',
+          description: 'All fields are optional — only provide fields to update',
           properties: {
             address: {
               type: 'string',
@@ -581,14 +569,12 @@ const options = {
             name: {
               type: 'string',
               example: 'Installation',
-              description:
-                'Sub-specialization name in English (2-100 characters)',
+              description: 'Sub-specialization name in English (2-100 characters)',
             },
             nameAr: {
               type: 'string',
               example: 'تركيب',
-              description:
-                'Sub-specialization name in Arabic (2-100 characters)',
+              description: 'Sub-specialization name in Arabic (2-100 characters)',
             },
           },
         },
@@ -1001,8 +987,7 @@ const options = {
             messageNumber: {
               type: 'integer',
               example: 42,
-              description:
-                'Per-conversation sequential number — used as cursor',
+              description: 'Per-conversation sequential number — used as cursor',
             },
             content: {
               type: 'string',
@@ -1015,8 +1000,7 @@ const options = {
         },
         ConversationSummary: {
           type: 'object',
-          description:
-            'Conversation list item with unread count derived from counter difference',
+          description: 'Conversation list item with unread count derived from counter difference',
           properties: {
             id: { type: 'string', format: 'uuid' },
             messageCounter: {
@@ -1032,8 +1016,7 @@ const options = {
             partnerLastReceivedMessageNumber: {
               type: 'integer',
               example: 40,
-              description:
-                'Last messageNumber the partner has received (delivered)',
+              description: 'Last messageNumber the partner has received (delivered)',
             },
             partnerLastReadMessageNumber: {
               type: 'integer',
@@ -1260,8 +1243,7 @@ const options = {
       },
       responses: {
         BadRequest: {
-          description:
-            'Bad Request - Operation failed due to invalid data or business logic',
+          description: 'Bad Request - Operation failed due to invalid data or business logic',
           content: {
             'application/json': {
               schema: {
@@ -1275,8 +1257,7 @@ const options = {
           },
         },
         ValidationError: {
-          description:
-            'Validation Error - Request body did not pass validation',
+          description: 'Validation Error - Request body did not pass validation',
           content: {
             'application/json': {
               schema: {
@@ -1297,8 +1278,7 @@ const options = {
           },
         },
         Unauthorized: {
-          description:
-            'Unauthorized - Invalid, expired, or missing access token',
+          description: 'Unauthorized - Invalid, expired, or missing access token',
           content: {
             'application/json': {
               schema: {
@@ -1340,8 +1320,7 @@ const options = {
           },
         },
         Conflict: {
-          description:
-            'Conflict - Resource already exists (e.g., phone number already registered)',
+          description: 'Conflict - Resource already exists (e.g., phone number already registered)',
           content: {
             'application/json': {
               schema: {
@@ -1396,18 +1375,11 @@ const options = {
     tags: [
       {
         name: 'Auth',
-        description:
-          'Authentication endpoints (OTP, registration, login, logout, token refresh)',
-      },
-      {
-        name: 'Users',
-        description:
-          'User profile management (basic info, profile image, client/worker profiles)',
+        description: 'Authentication endpoints (OTP, registration, login, logout, token refresh)',
       },
       {
         name: 'Dashboard',
-        description:
-          'Authenticated user dashboard endpoints (profiles, settings, management)',
+        description: 'Authenticated user dashboard endpoints (profiles, settings, management)',
       },
       {
         name: 'Governments',
@@ -1415,20 +1387,11 @@ const options = {
       },
       {
         name: 'Specializations',
-        description:
-          'Specialization & sub-specialization lookup and management',
-      },
-      {
-        name: 'Worker Search',
-        description: 'Public worker search endpoints (no authentication required)',
+        description: 'Specialization & sub-specialization lookup and management',
       },
       {
         name: 'Workers',
         description: 'Worker profile management and details',
-      },
-      {
-        name: 'Explore',
-        description: 'Explore workers by specialization (authenticated)',
       },
       {
         name: 'Chat',
@@ -1438,7 +1401,7 @@ const options = {
       },
     ],
   },
-  apis: ['./src/routes/v1/**/*.js'],
+  apis: ['./src/routes/v1/**/*.{ts,js}'],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

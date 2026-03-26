@@ -14,14 +14,11 @@ interface FormattedError {
 
 export const validateZod = (schema: z.ZodTypeAny, location: Location) =>
   asyncHandler((req: Request, _: Response, next: NextFunction): void => {
-    const result = schema.safeParse(req.body);
-    console.log(result);
-    console.log(result.error.issues, result.error.type);
+    const result = schema.safeParse(req[location]);
     if (!result.success) {
-      next(new ValidationError("Validation failed", result.error));
+      next(new ValidationError('Validation failed', result.error));
       return;
     }
-      req[location] = result.data;
     next();
   });
 
@@ -45,15 +42,13 @@ export const validateExpress = asyncHandler((req: Request, res: Response, next: 
   next();
 });
 
-
 /**
  * Validates req.body against a Zod schema.
  *
  * @example
  * router.post('/auth/login', validateBody(LoginSchema), authController.login);
  */
-export const validateBody = (schema: z.ZodTypeAny) =>
-  validateZod(schema, 'body');
+export const validateBody = (schema: z.ZodTypeAny) => validateZod(schema, 'body');
 
 /**
  * Validates req.query against a Zod schema.
@@ -62,8 +57,7 @@ export const validateBody = (schema: z.ZodTypeAny) =>
  * @example
  * router.get('/users', validateQuery(UsersQuerySchema), userController.list);
  */
-export const validateQuery = (schema: z.ZodTypeAny) =>
-  validateZod(schema, 'query');
+export const validateQuery = (schema: z.ZodTypeAny) => validateZod(schema, 'query');
 
 /**
  * Validates req.params against a Zod schema.
@@ -71,7 +65,6 @@ export const validateQuery = (schema: z.ZodTypeAny) =>
  * @example
  * router.get('/users/:id', validateParams(UserIdParamsSchema), userController.get);
  */
-export const validateParams = (schema: z.ZodTypeAny) =>
-  validateZod(schema, 'params');
+export const validateParams = (schema: z.ZodTypeAny) => validateZod(schema, 'params');
 
 type NextFunction = (err?: Error) => void;

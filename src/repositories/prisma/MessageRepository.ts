@@ -1,8 +1,13 @@
 import IMessageRepository from '../interfaces/MessageRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
-import { Message, MessageCreateInput, MessageFilter, MessageType } from '../../domain/message.entity.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
+import {
+  Message,
+  MessageCreateInput,
+  MessageFilter,
+  MessageType,
+} from '../../domain/message.entity.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { IDType } from '../interfaces/Repository.js';
 import { PrismaClient } from '@prisma/client/extension';
@@ -79,10 +84,10 @@ export default class MessageRepository extends Repository implements IMessageRep
     filter?: MessageFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Message>;
-  }): Promise<PaginatedResult<Message>> {
+  }): Promise<PaginatedResultMeta & { messages: Message[] }> {
     try {
       const { filter, pagination, sort } = params;
-      if (!filter || isEmptyFilter(filter)) return getEmptyPaginatedResult();
+      if (!filter || isEmptyFilter(filter)) return { ...getEmptyPaginatedResult(), messages: [] };
 
       const total = await this.prismaClient.message.count({
         where: filter,
@@ -100,7 +105,7 @@ export default class MessageRepository extends Repository implements IMessageRep
       });
 
       return {
-        data: messages.map((m) => this.toDomain(m)),
+        messages: messages.map((m) => this.toDomain(m)),
         ...paginationResult,
         count: messages.length,
         hasNext: paginationResult.page < paginationResult.totalPages,
@@ -183,7 +188,7 @@ export default class MessageRepository extends Repository implements IMessageRep
           senderId: params.message.senderId,
           messageNumber: params.message.messageNumber,
           content: params.message.content,
-          type: (params.message.type) || "TEXT",
+          type: params.message.type || 'TEXT',
         },
       });
       return this.toDomain(record);
@@ -200,7 +205,7 @@ export default class MessageRepository extends Repository implements IMessageRep
           senderId: m.senderId,
           messageNumber: m.messageNumber,
           content: m.content,
-          type: (m.type) || "TEXT",
+          type: m.type || 'TEXT',
         })),
       });
       return records.map((r) => this.toDomain(r));
@@ -223,7 +228,7 @@ export default class MessageRepository extends Repository implements IMessageRep
           senderId: params.senderId,
           messageNumber: params.messageNumber,
           content: params.content,
-          type: (params.type) || "TEXT",
+          type: params.type || 'TEXT',
         },
       });
       return this.toDomain(record);

@@ -13,7 +13,10 @@ import {
 import { isEmptyFilter } from './utils.js';
 import { PrismaClient } from '@prisma/client';
 
-export default class ClientProfileRepository extends Repository implements IClientProfileRepository {
+export default class ClientProfileRepository
+  extends Repository
+  implements IClientProfileRepository
+{
   constructor(prisma: PrismaClient) {
     super(prisma);
   }
@@ -104,7 +107,7 @@ export default class ClientProfileRepository extends Repository implements IClie
       const record = await this.prismaClient.clientProfile.create({
         data: {
           userId: params.userId,
-          ...(params.clientProfile),
+          ...params.clientProfile,
         },
       });
       return this.toDomain(record);
@@ -122,10 +125,10 @@ export default class ClientProfileRepository extends Repository implements IClie
       const clientProfile = await this.prismaClient.clientProfile.create({
         data: {
           userId: params.userId,
-          ...(params.clientProfile),
+          ...params.clientProfile,
           locations: {
             create: {
-              ...(params.location),
+              ...params.location,
             },
           },
         },

@@ -14,10 +14,7 @@ import {
   generateAccessToken,
   reviewStatus,
 } from '../../controllers/AuthController.js';
-import {
-  checkSendOtpLimit,
-  checkVerifyLimit,
-} from '../../middlewares/rateLimitMiddleware.js';
+import { checkSendOtpLimit, checkVerifyLimit } from '../../middlewares/rateLimitMiddleware.js';
 
 import upload from '../../configs/multer.js';
 
@@ -27,7 +24,13 @@ import {
   RegisterClientSchema,
   RegisterWorkerSchema,
 } from '../../schemas/auth.js';
-import { authenticateAccess, authenticateLogin, authenticateRefresh, authenticateRegister, isActive } from '../../middlewares/authMiddleware.js';
+import {
+  authenticateAccess,
+  authenticateLogin,
+  authenticateRefresh,
+  authenticateRegister,
+  isActive,
+} from '../../middlewares/authMiddleware.js';
 import { validateBody } from '../../middlewares/validateRequest.js';
 
 const authRouter = Router();
@@ -78,12 +81,7 @@ const authRouter = Router();
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-authRouter.post(
-  '/otp/request',
-  validateBody(RequestOTPSchema),
-  checkSendOtpLimit,
-  requestOTP
-);
+authRouter.post('/otp/request', validateBody(RequestOTPSchema), checkSendOtpLimit, requestOTP);
 /**
  * @swagger
  * /auth/otp/verify:
@@ -128,12 +126,7 @@ authRouter.post(
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-authRouter.post(
-  '/otp/verify',
-  validateBody(VerifyOTPSchema),
-  checkVerifyLimit,
-  verifyOTP
-);
+authRouter.post('/otp/verify', validateBody(VerifyOTPSchema), checkVerifyLimit, verifyOTP);
 /**
  * @swagger
  * /auth/register-client:
@@ -216,7 +209,7 @@ authRouter.post(
  */
 authRouter.post(
   '/register-client',
-  upload.single("personal_image"),
+  upload.single('personal_image'),
   authenticateRegister,
   validateBody(RegisterClientSchema),
   registerClient
@@ -315,9 +308,9 @@ authRouter.post(
 authRouter.post(
   '/register-worker',
   upload.fields([
-    { name: "personal_image", maxCount: 1 },
-    { name: "id_image", maxCount: 1 },
-    { name: "personal_with_id_image", maxCount: 1 }
+    { name: 'personal_image', maxCount: 1 },
+    { name: 'id_image', maxCount: 1 },
+    { name: 'personal_with_id_image', maxCount: 1 },
   ]),
   authenticateRegister,
   validateBody(RegisterWorkerSchema),
@@ -362,11 +355,7 @@ authRouter.post(
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-authRouter.post(
-  '/login',
-  authenticateLogin,
-  login
-);
+authRouter.post('/login', authenticateLogin, login);
 /**
  * @swagger
  * /auth/logout:
@@ -397,12 +386,7 @@ authRouter.post(
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-authRouter.post(
-  '/logout',
-  authenticateAccess,
-  isActive,
-  logout
-);
+authRouter.post('/logout', authenticateAccess, isActive, logout);
 /**
  * @swagger
  * /auth/access:
@@ -436,12 +420,7 @@ authRouter.post(
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-authRouter.get(
-  '/access',
-  authenticateRefresh,
-  isActive,
-  generateAccessToken
-);
+authRouter.get('/access', authenticateRefresh, isActive, generateAccessToken);
 /**
  * @swagger
  * /auth/review-status:
@@ -465,9 +444,5 @@ authRouter.get(
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-authRouter.get(
-  '/review-status',
-  authenticateAccess,
-  reviewStatus
-);
+authRouter.get('/review-status', authenticateAccess, reviewStatus);
 export default authRouter;

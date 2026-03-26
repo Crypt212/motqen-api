@@ -32,11 +32,18 @@ import { ConversationWithParticipantsAndMessages } from 'src/domain/conversation
 /**
  * Emit an event to all partner rooms of a user across all their conversations.
  */
-async function emitToPartners(io: import('socket.io').Server, userId: IDType, event: string, payload: Object) {
+async function emitToPartners(
+  io: import('socket.io').Server,
+  userId: IDType,
+  event: string,
+  payload: Object
+) {
   try {
-    const convs = await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({ userId, filter: 'All' });
+    const convs = await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages(
+      { userId, filter: 'All' }
+    );
     const partnersEmitted = new Set();
-    for (const conv of convs.data) {
+    for (const conv of convs.conversationParticipantsWithMessages) {
       const partner = conv.participants.find((p) => p.userId !== userId);
       if (partner && !partnersEmitted.has(partner.userId)) {
         io.to(`user:${partner.userId}`).emit(event, payload);
@@ -52,20 +59,26 @@ async function emitToPartners(io: import('socket.io').Server, userId: IDType, ev
  * Get the partner userId inside a conversation.
  * @param {import('@prisma/client').Conversation & { participants: import('@prisma/client').ConversationParticipant[] }} conv
  */
-function getPartnerId(conv: ConversationWithParticipantsAndMessages, myUserId: IDType): string | undefined {
+function getPartnerId(
+  conv: ConversationWithParticipantsAndMessages,
+  myUserId: IDType
+): string | undefined {
   return conv.participants.find((p) => p.userId !== myUserId)?.userId;
 }
 
 /**
  * Register all event handlers for a connected socket.
  */
-export function registerSocketHandlers(io: import("socket.io").Server, socket: import("socket.io").Socket) {
+export function registerSocketHandlers(
+  io: import('socket.io').Server,
+  socket: import('socket.io').Socket
+) {
   const { userId } = socket.data;
   const presence = chatService.presence;
 
   // ─── ping / pong (keep-alive + TTL refresh) ────────────────────────────────
   socket.on('ping', async () => {
-    presence.refreshPresence({ userId });
+    void presence.refreshPresence({ userId });
     socket.emit('pong');
   });
 
@@ -81,7 +94,12 @@ export function registerSocketHandlers(io: import("socket.io").Server, socket: i
 
       // 3. Send the message (atomic counter increment + insert in tx)
       //    sendMessage also auto-updates sender's lastReceivedMessageNumber
-      const message = await chatService.sendMessage({ conversationId, senderId: userId, content, type });
+      const message = await chatService.sendMessage({
+        conversationId,
+        senderId: userId,
+        content,
+        type,
+      });
 
       // 4. Check recipient presence
       const [delivered, recipientInChat] = await Promise.all([
@@ -124,9 +142,9 @@ export function registerSocketHandlers(io: import("socket.io").Server, socket: i
           read: recipientInChat,
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('[socket] send_message error', err);
-      if (typeof ack === 'function') ack({ ok: false, error: err.message });
+      if (err instanceof Error && typeof ack === 'function') ack({ ok: false, error: err.message });
     }
   });
 
@@ -147,9 +165,9 @@ export function registerSocketHandlers(io: import("socket.io").Server, socket: i
       }
 
       if (typeof ack === 'function') ack({ ok: true, readUpTo });
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('[socket] read error', err);
-      if (typeof ack === 'function') ack({ ok: false, error: err.message });
+      if (err instanceof Error && typeof ack === 'function') ack({ ok: false, error: err.message });
     }
   });
 
@@ -161,9 +179,9 @@ export function registerSocketHandlers(io: import("socket.io").Server, socket: i
       if (!inChat) return; // silently ignore if not in chat
 
       if (isTyping) {
-        presence.setTyping({ conversationId, userId });
+        void presence.setTyping({ conversationId, userId });
       } else {
-        presence.clearTyping({ conversationId, userId });
+        void presence.clearTyping({ conversationId, userId });
       }
 
       // Emit to partner only
@@ -184,7 +202,7 @@ export function registerSocketHandlers(io: import("socket.io").Server, socket: i
       await chatService.validateParticipant({ conversationId, userId });
 
       // 2. Track per-socket inChat (multi-device safe)
-      presence.enterChat({ conversationId, userId, socketId: socket.id });
+      void presence.enterChat({ conversationId, userId, socketId: socket.id });
 
       // 3. Auto-mark all messages as read (also bumps lastReceivedMessageNumber)
       await chatService.markAllAsRead({ conversationId, userId });
@@ -203,9 +221,9 @@ export function registerSocketHandlers(io: import("socket.io").Server, socket: i
       }
 
       if (typeof ack === 'function') ack({ ok: true });
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('[socket] enter_chat error', err);
-      if (typeof ack === 'function') ack({ ok: false, error: err.message });
+      if (err instanceof Error && typeof ack === 'function') ack({ ok: false, error: err.message });
     }
   });
 
@@ -213,7 +231,7 @@ export function registerSocketHandlers(io: import("socket.io").Server, socket: i
   socket.on('leave_chat', async ({ conversationId }, ack) => {
     try {
       // Remove only this socket from inChat set
-      presence.leaveChat({ conversationId, userId, socketId: socket.id });
+      void presence.leaveChat({ conversationId, userId, socketId: socket.id });
 
       // Notify partner
       const conv = await conversationRepository.findWithParticipant({ conversationId, userId });
@@ -223,9 +241,9 @@ export function registerSocketHandlers(io: import("socket.io").Server, socket: i
       }
 
       if (typeof ack === 'function') ack({ ok: true });
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('[socket] leave_chat error', err);
-      if (typeof ack === 'function') ack({ ok: false, error: err.message });
+      if (err instanceof Error && typeof ack === 'function') ack({ ok: false, error: err.message });
     }
   });
 
@@ -233,12 +251,16 @@ export function registerSocketHandlers(io: import("socket.io").Server, socket: i
   socket.on('disconnect', async () => {
     try {
       // 1. Remove socket from online set
-      presence.removeSocket({ userId, socketId: socket.id });
+      void presence.removeSocket({ userId, socketId: socket.id });
 
       // 2. Remove socket from all inChat sets
-      const convs = await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({ userId, filter: 'All' });
-      const conversationIds = convs.data.map((c) => c.id);
-      presence.leaveAllChats({ userId, socketId: socket.id, conversationIds });
+      const convs =
+        await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
+          userId,
+          filter: 'All',
+        });
+      const conversationIds = convs.conversationParticipantsWithMessages.map((c) => c.id);
+      void presence.leaveAllChats({ userId, socketId: socket.id, conversationIds });
 
       // 3. Check if all devices are now offline
       const remaining = await presence.countSockets({ userId });

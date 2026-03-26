@@ -1,9 +1,5 @@
-import {
-  Message,
-  MessageCreateInput,
-  MessageFilter,
-} from '../../domain/message.entity.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
+import { Message, MessageCreateInput, MessageFilter } from '../../domain/message.entity.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 
 export default interface IMessageRepository {
   /**
@@ -19,7 +15,11 @@ export default interface IMessageRepository {
   /**
    * Find messages
    */
-  findMany(params: { filter?: MessageFilter, pagination?: PaginationOptions, sort?: SortOptions<Message> }): Promise<PaginatedResult<Message>>;
+  findMany(params: {
+    filter?: MessageFilter;
+    pagination?: PaginationOptions;
+    sort?: SortOptions<Message>;
+  }): Promise<PaginatedResultMeta & { messages: Message[] }>;
 
   /**
    * Find a message by ID
@@ -29,19 +29,12 @@ export default interface IMessageRepository {
   /**
    * Find paginated messages in a conversation (newer than a specific message number)
    */
-  findPage(params: {
-    conversationId: string;
-    after?: number;
-    limit?: number;
-  }): Promise<Message[]>;
+  findPage(params: { conversationId: string; after?: number; limit?: number }): Promise<Message[]>;
 
   /**
    * Find latest messages in a conversation
    */
-  findLatest(params: {
-    conversationId: string;
-    limit?: number;
-  }): Promise<Message[]>;
+  findLatest(params: { conversationId: string; limit?: number }): Promise<Message[]>;
 
   /**
    * Create a message
@@ -67,10 +60,7 @@ export default interface IMessageRepository {
   /**
    * Update messages
    */
-  updateMany(params: {
-    filter: MessageFilter;
-    message: Partial<Message>;
-  }): Promise<Message[]>;
+  updateMany(params: { filter: MessageFilter; message: Partial<Message> }): Promise<Message[]>;
 
   /**
    * Delete messages

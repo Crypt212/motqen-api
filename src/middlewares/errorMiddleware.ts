@@ -7,7 +7,7 @@ import environment from 'src/configs/environment.js';
 import ValidationError from 'src/errors/ValidationError.js';
 
 const errorHandler: ErrorRequestHandler = function (
-  err: any,
+  err: unknown,
   _: Request,
   res: Response,
   __: NextFunction
@@ -51,14 +51,17 @@ const errorHandler: ErrorRequestHandler = function (
     err.status = err.status || 'error';
 
     if (err.statusCode === 429) {
-      res.setHeader('Retry-After', String(Math.max(1, Math.ceil(err.retryAfter))));
+      const details = err.details && err.details.toJSON();
+      if (details && 'retryAfter' in details && typeof details.retryAfter === 'number') {
+        res.setHeader('Retry-After', String(Math.max(1, Math.ceil(details.retryAfter))));
+      }
     }
 
     return res.status(err.statusCode).json({
       status: err.status,
       message: err.message,
       error: err,
-      details: err.details,
+      details: err.details && err.details.toJSON(),
       stack: environment.nodeEnv === 'development' ? err.stack : undefined,
     });
   }

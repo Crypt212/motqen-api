@@ -41,7 +41,11 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
   logger.info('✅ Socket.IO Redis adapter connected');
 
   // ─── Auth middleware (runs before every connection) ──────────────────────────
-  io.use(socketAuth);
+  io.use((socket, next) => {
+    socketAuth(socket, next)
+      .then(() => logger.info(`[socket] authenticated: ${socket.data.userId}`))
+      .catch(() => logger.warn('[socket] authentication failed'));
+  });
 
   // ─── Connection handler ──────────────────────────────────────────────────────
   io.on('connection', async (socket) => {
@@ -51,23 +55,28 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
     logger.info(`[socket] connected: ${userId} (${socket.id})`);
 
     // 1. Join user room — all devices of this user share one room
-    socket.join(`user:${userId}`);
+    await socket.join(`user:${userId}`);
 
     // 2. Register socket in Redis presence Set
-    presence.addSocket({ userId, socketId: socket.id });
+    const addSocketPromise = presence.addSocket({ userId, socketId: socket.id });
 
     // 3. Mark user as available in DB
+    await addSocketPromise;
     try {
       await prisma.user.update({
         where: { id: userId },
         data: { isOnline: true },
       });
 
-      const convs = await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({ userId, filter: {} });
+      const convs =
+        await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
+          userId,
+          filter: {},
+        });
 
       // 4. Mark all pending messages as delivered & notify senders
       //    Coming online = all messages in every conversation are now delivered
-      for (const conv of convs.data) {
+      for (const conv of convs.conversationParticipantsWithMessages) {
         if (conv.messageCounter > 0) {
           // Update this user's lastReceivedMessageNumber
           await chatService.markAsDelivered({
@@ -89,7 +98,7 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
 
       // 5. Emit missed_messages_available for each conversation with unread messages
       //    Client will pull missed messages via HTTP after receiving this event.
-      for (const conv of convs.data) {
+      for (const conv of convs.conversationParticipantsWithMessages) {
         const myParticipant = conv.participants.find((p) => p.userId === userId);
         const unreadCount = conv.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0);
         if (unreadCount > 0) {
@@ -102,7 +111,6 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
     } catch (err) {
       logger.error('[socket] onConnection initialization error', err);
     }
-
     // 5. Register all event handlers for this socket
     registerSocketHandlers(io, socket);
   });

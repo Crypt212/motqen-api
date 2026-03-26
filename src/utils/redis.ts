@@ -1,6 +1,9 @@
-import redisClient from "../libs/redis.js";
+import redisClient from '../libs/redis.js';
 
-export async function redisRetreiveOrCache<T>(key: string, createCacheCallback: () => Promise<T>): Promise<T> {
+export async function redisRetreiveOrCache<T>(
+  key: string,
+  createCacheCallback: () => Promise<T>
+): Promise<T> {
   const stringifiedResult = await redisClient.get(key);
   if (!stringifiedResult) {
     const result = await createCacheCallback();
@@ -9,4 +12,8 @@ export async function redisRetreiveOrCache<T>(key: string, createCacheCallback: 
   } else {
     return JSON.parse(String(stringifiedResult));
   }
+}
+
+export async function redisClearCache(key: string): Promise<void> {
+  await redisClient.del(key);
 }

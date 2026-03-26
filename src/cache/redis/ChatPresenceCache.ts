@@ -25,10 +25,7 @@ import IChatPresenceCache from '../interfaces/ChatPresenceCache.js';
 const PRESENCE_TTL: number = 300;
 
 export default class ChatPresenceCache implements IChatPresenceCache {
-
-  constructor(
-    private readonly client: RedisClientType
-  ) {}
+  constructor(private readonly client: RedisClientType) {}
 
   // ─── Online / Socket tracking ──────────────────────────────────────────────
 

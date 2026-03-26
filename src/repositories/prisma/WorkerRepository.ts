@@ -12,10 +12,13 @@ import {
   WorkerProfileVerification,
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import * as pkg from '@prisma/client';
 
-export default class WorkerRepositoryRepository extends Repository implements IWorkerProfileRepository {
+export default class WorkerRepositoryRepository
+  extends Repository
+  implements IWorkerProfileRepository
+{
   constructor(prisma: pkg.PrismaClient) {
     super(prisma);
   }
@@ -46,11 +49,11 @@ export default class WorkerRepositoryRepository extends Repository implements IW
     };
   }
 
-  async exists({ filter }: { filter: WorkerProfileFilter }): Promise<boolean> {
+  async exists({ workerFilter }: { workerFilter: WorkerProfileFilter }): Promise<boolean> {
     try {
-      if (isEmptyFilter(filter)) return false;
+      if (isEmptyFilter(workerFilter)) return false;
       const count = await this.prismaClient.workerProfile.count({
-        where: filter,
+        where: workerFilter,
       });
       return count > 0;
     } catch (error: unknown) {
@@ -58,11 +61,15 @@ export default class WorkerRepositoryRepository extends Repository implements IW
     }
   }
 
-  async find({ filter }: { filter: WorkerProfileFilter }): Promise<WorkerProfile | null> {
+  async find({
+    workerFilter,
+  }: {
+    workerFilter: WorkerProfileFilter;
+  }): Promise<WorkerProfile | null> {
     try {
-      if (isEmptyFilter(filter)) return null;
+      if (isEmptyFilter(workerFilter)) return null;
       const record = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
       });
       return record ? this.toDomain(record) : null;
     } catch (error: unknown) {
@@ -71,20 +78,20 @@ export default class WorkerRepositoryRepository extends Repository implements IW
   }
 
   async findOnline({
-    filter,
+    workerFilter,
     pagination,
     sort,
   }: {
-    filter: WorkerProfileFilter;
+    workerFilter: WorkerProfileFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<WorkerProfile>;
-  }): Promise<PaginatedResult<WorkerProfile>> {
+  }): Promise<PaginatedResultMeta & { workerProfiles: WorkerProfile[] }> {
     try {
-      if (isEmptyFilter(filter)) return getEmptyPaginatedResult();
+      if (isEmptyFilter(workerFilter)) return { ...getEmptyPaginatedResult(), workerProfiles: [] };
 
       const whereCondition = {
         user: { isOnline: true },
-        ...filter,
+        ...workerFilter,
       };
 
       const total = await this.prismaClient.workerProfile.count({
@@ -103,7 +110,7 @@ export default class WorkerRepositoryRepository extends Repository implements IW
       });
 
       return {
-        data: profiles.map((p) => this.toDomain(p)),
+        workerProfiles: profiles.map((p) => this.toDomain(p)),
         ...paginationResult,
         count: profiles.length,
         hasNext: paginationResult.page < paginationResult.totalPages,
@@ -115,22 +122,22 @@ export default class WorkerRepositoryRepository extends Repository implements IW
   }
 
   async findWorkGovernments({
-    filter,
+    workerFilter,
     pagination,
   }: {
-    filter: WorkerProfileFilter;
+    workerFilter: WorkerProfileFilter;
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResult<IDType>> {
+  }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }> {
     try {
-      if (isEmptyFilter(filter)) return getEmptyPaginatedResult();
+      if (isEmptyFilter(workerFilter)) return { ...getEmptyPaginatedResult(), governmentIds: [] };
 
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
         include: { workGovernments: true },
       });
 
       if (!workerProfile) {
-        return getEmptyPaginatedResult();
+        return { ...getEmptyPaginatedResult(), governmentIds: [] };
       }
 
       const governmentIds = workerProfile.workGovernments.map((g) => g.id);
@@ -140,7 +147,7 @@ export default class WorkerRepositoryRepository extends Repository implements IW
       const totalPages = Math.ceil(total / limit);
 
       return {
-        data: governmentIds,
+        governmentIds,
         page,
         limit,
         count: governmentIds.length,
@@ -155,14 +162,14 @@ export default class WorkerRepositoryRepository extends Repository implements IW
   }
 
   async findVerification({
-    filter,
+    workerFilter,
   }: {
-    filter: WorkerProfileFilter;
+    workerFilter: WorkerProfileFilter;
   }): Promise<WorkerProfileVerification | null> {
     try {
-      if (isEmptyFilter(filter)) return null;
+      if (isEmptyFilter(workerFilter)) return null;
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
       });
 
       if (!workerProfile) return null;
@@ -185,9 +192,9 @@ export default class WorkerRepositoryRepository extends Repository implements IW
     mainSpecializationIds: IDType[];
     filter: WorkerProfileFilter;
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResult<IDType>> {
+  }): Promise<PaginatedResultMeta & { specializationIds: IDType[] }> {
     try {
-      if (isEmptyFilter(filter)) return getEmptyPaginatedResult();
+      if (isEmptyFilter(filter)) return { ...getEmptyPaginatedResult(), specializationIds: [] };
 
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
         where: filter,
@@ -195,7 +202,7 @@ export default class WorkerRepositoryRepository extends Repository implements IW
       });
 
       if (!workerProfile) {
-        return getEmptyPaginatedResult();
+        return { ...getEmptyPaginatedResult(), specializationIds: [] };
       }
 
       let specializationIds = workerProfile.chosenSpecializations.map((s) => s.specializationId);
@@ -211,7 +218,7 @@ export default class WorkerRepositoryRepository extends Repository implements IW
       const totalPages = Math.ceil(total / limit);
 
       return {
-        data: uniqueIds,
+        specializationIds: uniqueIds,
         page,
         limit,
         count: uniqueIds.length,
@@ -246,17 +253,17 @@ export default class WorkerRepositoryRepository extends Repository implements IW
   }
 
   async insertWorkGovernments({
-    filter,
+    workerFilter,
     governmentIds,
   }: {
-    filter: WorkerProfileFilter;
+    workerFilter: WorkerProfileFilter;
     governmentIds: IDType[];
   }): Promise<void> {
     try {
-      if (isEmptyFilter(filter)) return;
+      if (isEmptyFilter(workerFilter)) return;
 
       const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
       });
 
       if (!existingProfile) return;
@@ -275,17 +282,17 @@ export default class WorkerRepositoryRepository extends Repository implements IW
   }
 
   async insertSpecializations({
-    filter,
+    workerFilter,
     specializations,
   }: {
-    filter: WorkerProfileFilter;
+    workerFilter: WorkerProfileFilter;
     specializations: IDType[];
   }): Promise<void> {
     try {
-      if (isEmptyFilter(filter)) return;
+      if (isEmptyFilter(workerFilter)) return;
 
       const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
       });
 
       if (!existingProfile) return;
@@ -306,17 +313,17 @@ export default class WorkerRepositoryRepository extends Repository implements IW
   }
 
   async insertSubSpecializations({
-    filter,
+    workerFilter,
     specializationsTree,
   }: {
-    filter: WorkerProfileFilter;
+    workerFilter: WorkerProfileFilter;
     specializationsTree: SpecializationsTree;
   }): Promise<void> {
     try {
-      if (isEmptyFilter(filter)) return;
+      if (isEmptyFilter(workerFilter)) return;
 
       const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
       });
 
       if (!existingProfile) return;
@@ -384,19 +391,19 @@ export default class WorkerRepositoryRepository extends Repository implements IW
   }
 
   async update({
-    filter,
+    workerFilter,
     workerProfile,
   }: {
-    filter: WorkerProfileFilter;
+    workerFilter: WorkerProfileFilter;
     workerProfile: WorkerProfileUpdateInput;
   }): Promise<WorkerProfile> {
     try {
-      if (isEmptyFilter(filter)) {
+      if (isEmptyFilter(workerFilter)) {
         throw new Error('Worker profile not found');
       }
 
       const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
       });
 
       if (!existingProfile) {
@@ -413,12 +420,12 @@ export default class WorkerRepositoryRepository extends Repository implements IW
     }
   }
 
-  async delete({ filter }: { filter: WorkerProfileFilter }): Promise<void> {
+  async delete({ workerFilter }: { workerFilter: WorkerProfileFilter }): Promise<void> {
     try {
-      if (isEmptyFilter(filter)) return;
+      if (isEmptyFilter(workerFilter)) return;
 
       const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
       });
 
       if (!existingProfile) return;
@@ -432,17 +439,17 @@ export default class WorkerRepositoryRepository extends Repository implements IW
   }
 
   async deleteWorkGovernments({
-    filter,
+    workerFilter,
     governmentIds,
   }: {
-    filter: WorkerProfileFilter;
+    workerFilter: WorkerProfileFilter;
     governmentIds: IDType[];
   }): Promise<void> {
     try {
-      if (isEmptyFilter(filter)) return;
+      if (isEmptyFilter(workerFilter)) return;
 
       const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
       });
 
       if (!existingProfile) return;
@@ -461,17 +468,17 @@ export default class WorkerRepositoryRepository extends Repository implements IW
   }
 
   async deleteSpecializations({
-    filter,
+    workerFilter,
     specializations,
   }: {
-    filter: WorkerProfileFilter;
+    workerFilter: WorkerProfileFilter;
     specializations: IDType[];
   }): Promise<void> {
     try {
-      if (isEmptyFilter(filter)) return;
+      if (isEmptyFilter(workerFilter)) return;
 
       const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
       });
 
       if (!existingProfile) return;
@@ -488,17 +495,17 @@ export default class WorkerRepositoryRepository extends Repository implements IW
   }
 
   async deleteSubSpecializations({
-    filter,
+    workerFilter,
     specializationsTree,
   }: {
-    filter: WorkerProfileFilter;
+    workerFilter: WorkerProfileFilter;
     specializationsTree: SpecializationsTree;
   }): Promise<void> {
     try {
-      if (isEmptyFilter(filter)) return;
+      if (isEmptyFilter(workerFilter)) return;
 
       const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
       });
 
       if (!existingProfile) return;
@@ -517,12 +524,16 @@ export default class WorkerRepositoryRepository extends Repository implements IW
     }
   }
 
-  async deleteAllWorkGovernments({ filter }: { filter: WorkerProfileFilter }): Promise<void> {
+  async deleteAllWorkGovernments({
+    workerFilter,
+  }: {
+    workerFilter: WorkerProfileFilter;
+  }): Promise<void> {
     try {
-      if (isEmptyFilter(filter)) return;
+      if (isEmptyFilter(workerFilter)) return;
 
       const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
       });
 
       if (!existingProfile) return;
@@ -540,12 +551,16 @@ export default class WorkerRepositoryRepository extends Repository implements IW
     }
   }
 
-  async deleteAllSpecializations({ filter }: { filter: WorkerProfileFilter }): Promise<void> {
+  async deleteAllSpecializations({
+    workerFilter,
+  }: {
+    workerFilter: WorkerProfileFilter;
+  }): Promise<void> {
     try {
-      if (isEmptyFilter(filter)) return;
+      if (isEmptyFilter(workerFilter)) return;
 
       const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
+        where: workerFilter,
       });
 
       if (!existingProfile) return;
@@ -558,5 +573,282 @@ export default class WorkerRepositoryRepository extends Repository implements IW
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'deleteAllSpecializations');
     }
+  }
+
+  // ============================================
+  // Search Operations
+  // ============================================
+
+  /**
+   * Search for approved workers with pagination, filtering, and sorting
+   */
+  async searchWorkers({
+    categoryId = undefined,
+    specializationId = undefined,
+    subSpecializationId = undefined,
+    area = undefined,
+    city = undefined,
+    availability = undefined,
+    acceptsUrgentJobs = false,
+    highestRated = false,
+    nearest = false,
+    customerGovernmentLatitude = undefined,
+    customerGovernmentLongitude = undefined,
+    page = 1,
+    limit = 10,
+  }: {
+    categoryId: string;
+    specializationId?: string;
+    subSpecializationId?: string;
+    area: string;
+    city?: string;
+    availability: boolean;
+    acceptsUrgentJobs: boolean;
+    highestRated: boolean;
+    nearest: boolean;
+    customerGovernmentLatitude?: string | number;
+    customerGovernmentLongitude?: string | number;
+    page: number;
+    limit: number;
+  }): Promise<
+    PaginatedResultMeta & {
+      workers: {
+        distanceKm?: number;
+        workerId: string;
+        name: string;
+        profileImage: string;
+        service_title: string;
+        rating: number;
+        area: string;
+        isAvailableNow: boolean;
+        completedServices: number;
+        acceptsUrgentJobs: boolean;
+      }[];
+    }
+  > {
+    const parsedLimit = typeof limit === 'string' ? parseInt(limit, 10) : limit;
+    const parsedPage = typeof page === 'string' ? parseInt(page, 10) : page;
+    const normalizedLimit = Math.min(Math.max(parsedLimit || 10, 1), 50);
+    const normalizedPage = Math.max(parsedPage || 1, 1);
+    const skip = (normalizedPage - 1) * normalizedLimit;
+
+    const whereClause: {
+      verification: {
+        status: pkg.VerificationStatus;
+      };
+      user: {
+        status: pkg.AccountStatus;
+        isOnline?: boolean;
+      };
+      chosenSpecializations?: {
+        some: unknown;
+      };
+      acceptsUrgentJobs?: boolean;
+      workGovernments?: unknown;
+    } = {
+      verification: { status: pkg.VerificationStatus.APPROVED },
+      user: { status: pkg.AccountStatus.ACTIVE },
+    };
+
+    try {
+      if (availability !== undefined && availability !== null) {
+        whereClause.user.isOnline = availability === true;
+      }
+
+      const selectedSubSpecializationId = subSpecializationId || categoryId;
+
+      if (specializationId || selectedSubSpecializationId) {
+        whereClause.chosenSpecializations = {
+          some: {
+            ...(specializationId ? { specializationId } : {}),
+            ...(selectedSubSpecializationId
+              ? { subSpecializationId: selectedSubSpecializationId }
+              : {}),
+          },
+        };
+      }
+    } catch (error: unknown) {
+      handlePrismaError(error, 'searchWorkers');
+    }
+
+    if (acceptsUrgentJobs === true) {
+      whereClause.acceptsUrgentJobs = true;
+    }
+
+    const areaFilter = city || area;
+
+    if (areaFilter) {
+      whereClause.workGovernments = {
+        some: {
+          OR: [
+            { id: areaFilter },
+            {
+              name: {
+                equals: areaFilter,
+                mode: 'insensitive',
+              },
+            },
+          ],
+        },
+      };
+    }
+
+    // Get total count
+    const total = await this.prismaClient.workerProfile.count({
+      where: whereClause,
+    });
+
+    // Fetch workers with relations
+    const workers = await this.prismaClient.workerProfile.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        experienceYears: true,
+        acceptsUrgentJobs: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            profileImageUrl: true,
+            isOnline: true,
+          },
+        },
+        orders: {
+          select: {
+            rating: true,
+            status: true,
+          },
+        },
+        workGovernments: {
+          select: {
+            id: true,
+            name: true,
+            lat: true,
+            long: true,
+          },
+        },
+        chosenSpecializations: {
+          select: {
+            subSpecialization: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ experienceYears: 'desc' }, { id: 'desc' }],
+      skip,
+      take: normalizedLimit,
+    });
+
+    const toRadians = (value: number) => (value * Math.PI) / 180;
+    const calcDistanceKm = (
+      originLat: number,
+      originLong: number,
+      destinationLat: number,
+      destinationLong: number
+    ) => {
+      const earthRadiusKm = 6371;
+      const deltaLatitude = toRadians(destinationLat - originLat);
+      const deltaLongitude = toRadians(destinationLong - originLong);
+      const a =
+        Math.sin(deltaLatitude / 2) * Math.sin(deltaLatitude / 2) +
+        Math.cos(toRadians(originLat)) *
+          Math.cos(toRadians(destinationLat)) *
+          Math.sin(deltaLongitude / 2) *
+          Math.sin(deltaLongitude / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+      return earthRadiusKm * c;
+    };
+
+    const customerLat = Number.parseFloat(String(customerGovernmentLatitude ?? ''));
+    const customerLong = Number.parseFloat(String(customerGovernmentLongitude ?? ''));
+    const hasCustomerCoordinates = Number.isFinite(customerLat) && Number.isFinite(customerLong);
+
+    const computedWorkers = workers.map((worker) => {
+      const ratedOrders = worker.orders.filter((order) => typeof order.rating === 'number');
+      const rating =
+        ratedOrders.length > 0
+          ? ratedOrders.reduce((sum, order) => sum + order.rating, 0) / ratedOrders.length
+          : 0;
+      const completedServices = worker.orders.filter(
+        (order) => order.status === 'COMPLETED' || order.status === 'REVIEWED'
+      ).length;
+
+      let nearestDistanceKm = null;
+      if (hasCustomerCoordinates) {
+        for (const government of worker.workGovernments) {
+          const governmentLat = Number.parseFloat(String(government.lat ?? ''));
+          const governmentLong = Number.parseFloat(String(government.long ?? ''));
+          if (!Number.isFinite(governmentLat) || !Number.isFinite(governmentLong)) {
+            continue;
+          }
+
+          const distance = calcDistanceKm(customerLat, customerLong, governmentLat, governmentLong);
+          if (nearestDistanceKm === null || distance < nearestDistanceKm) {
+            nearestDistanceKm = distance;
+          }
+        }
+      }
+
+      return {
+        worker,
+        rating,
+        completedServices,
+        nearestDistanceKm,
+      };
+    });
+
+    const sortedWorkers = computedWorkers.sort((a, b) => {
+      if (nearest && hasCustomerCoordinates) {
+        const aDistance = a.nearestDistanceKm;
+        const bDistance = b.nearestDistanceKm;
+
+        if (aDistance === null && bDistance !== null) return 1;
+        if (aDistance !== null && bDistance === null) return -1;
+        if (aDistance !== null && bDistance !== null && aDistance !== bDistance) {
+          return aDistance - bDistance;
+        }
+      }
+
+      if (highestRated && b.rating !== a.rating) return b.rating - a.rating;
+      if (b.completedServices !== a.completedServices)
+        return b.completedServices - a.completedServices;
+      return b.worker.experienceYears - a.worker.experienceYears;
+    });
+
+    // Transform data to response format
+    const data = sortedWorkers.map(({ worker, rating, completedServices, nearestDistanceKm }) => ({
+      workerId: worker.id,
+      name: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
+      profileImage: worker.user.profileImageUrl,
+      service_title:
+        worker.chosenSpecializations.length > 0
+          ? worker.chosenSpecializations[0].subSpecialization.name
+          : null,
+      rating,
+      area: worker.workGovernments.length > 0 ? worker.workGovernments[0].name : null,
+      isAvailableNow: worker.user.isOnline,
+      completedServices,
+      acceptsUrgentJobs: worker.acceptsUrgentJobs,
+      ...(nearestDistanceKm !== null ? { distanceKm: Number(nearestDistanceKm.toFixed(1)) } : {}),
+    }));
+
+    const totalPages = Math.ceil(total / normalizedLimit);
+
+    return {
+      workers: data,
+      total,
+      page: normalizedPage,
+      limit: normalizedLimit,
+      count: data.length,
+      hasNext: page != totalPages,
+      hasPrev: page != 1,
+      totalPages,
+    };
   }
 }

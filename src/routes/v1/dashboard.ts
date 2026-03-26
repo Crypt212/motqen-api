@@ -22,39 +22,28 @@ import {
   updateClientProfile,
   deleteClientProfile,
 } from '../../controllers/DashboardController.js';
-import {
-  authorizeWorker,
-  unAuthorizeWorker,
-} from '../../middlewares/workerMiddleware.js';
-import {
-  authorizeClient,
-  unAuthorizeClient,
-} from '../../middlewares/clientMiddleware.js';
+import { authorizeWorker, unAuthorizeWorker } from '../../middlewares/workerMiddleware.js';
+import { authorizeClient, unAuthorizeClient } from '../../middlewares/clientMiddleware.js';
 import upload from '../../configs/multer.js';
 
 // Import validators
 import {
   UpdateUserSchema,
-
   CreateWorkerProfileSchema,
   UpdateWorkerProfileSchema,
-
-  DeleteWorkerGovernmentsParamsSchema,
+  DeleteWorkerGovernmentsQuerySchema,
   AddWorkerGovernmentsSchema,
   DeleteWorkerGovernmentsSchema,
-
   AddWorkerSpecializationsSchema,
   DeleteWorkerSpecializationsSchema,
-  DeleteWorkerSpecializationsParamsSchema,
-
+  DeleteWorkerSpecializationsQuerySchema,
   CreateClientProfileSchema,
   UpdateClientProfileSchema,
-
-  WorkerGovernmentsQuerySchema,
-  WorkerSpecializationsQuerySchema,
+  WorkerGovernmentQuerySchema,
+  WorkerSpecializationQuerySchema,
 } from '../../schemas/dashboard.js';
 import { isActive } from '../../middlewares/authMiddleware.js';
-import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
+import { validateBody, validateQuery } from '../../middlewares/validateRequest.js';
 
 const usersRouter = Router();
 
@@ -64,7 +53,7 @@ const usersRouter = Router();
  *   get:
  *     summary: Get current user
  *     description: Returns the authenticated user's profile information.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -97,7 +86,7 @@ usersRouter.get('/', isActive, getUser);
  *   put:
  *     summary: Update current user
  *     description: Updates the authenticated user's basic info. All fields are optional.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -138,7 +127,7 @@ usersRouter.put(
  *     description: |
  *       Creates a worker profile for the authenticated user (who must not already be a worker).
  *       Send as multipart/form-data with three required image files.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -205,7 +194,7 @@ usersRouter.post(
  *       - Availability status for urgent jobs
  *
  *       User must be registered as a **Worker** (craftsman) to access this endpoint.
- *     tags: [Craftsman Profile]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -317,12 +306,7 @@ usersRouter.post(
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.get(
-  '/worker-profile',
-  isActive,
-  authorizeWorker,
-  getWorkerProfile
-);
+usersRouter.get('/worker-profile', isActive, authorizeWorker, getWorkerProfile);
 
 /**
  * @swagger
@@ -330,7 +314,7 @@ usersRouter.get(
  *   put:
  *     summary: Update worker profile
  *     description: Updates the authenticated worker's profile. All fields are optional.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -371,7 +355,7 @@ usersRouter.put(
  *   delete:
  *     summary: Delete worker profile
  *     description: Deletes the authenticated worker's profile. All fields are optional.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -412,7 +396,7 @@ usersRouter.delete(
  *   get:
  *     summary: Get worker governments
  *     description: Returns the list of governments where the authenticated worker operates.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -443,7 +427,7 @@ usersRouter.delete(
  *   post:
  *     summary: Add worker governments
  *     description: Adds governments where the authenticated worker operates.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -482,7 +466,7 @@ usersRouter.delete(
  *   delete:
  *     summary: Delete worker governments
  *     description: Removes governments from the authenticated worker's operating regions.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -530,7 +514,7 @@ usersRouter.get(
   '/worker-profile/work-governments',
   isActive,
   authorizeWorker,
-  validateQuery(WorkerGovernmentsQuerySchema),
+  validateQuery(WorkerGovernmentQuerySchema),
   getWorkerGovernments
 );
 
@@ -546,7 +530,7 @@ usersRouter.delete(
   '/worker-profile/work-governments',
   isActive,
   authorizeWorker,
-  validateParams(DeleteWorkerGovernmentsParamsSchema),
+  validateQuery(DeleteWorkerGovernmentsQuerySchema),
   validateBody(DeleteWorkerGovernmentsSchema),
   deleteWorkerGovernments
 );
@@ -557,7 +541,7 @@ usersRouter.delete(
  *   get:
  *     summary: Get worker specializations
  *     description: Returns the list of specializations for the authenticated worker.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -588,7 +572,7 @@ usersRouter.delete(
  *   post:
  *     summary: Add worker specializations
  *     description: Adds specializations for the authenticated worker.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -633,7 +617,7 @@ usersRouter.delete(
  *   delete:
  *     summary: Delete worker specializations
  *     description: Removes specializations from the authenticated worker.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -697,7 +681,7 @@ usersRouter.get(
   '/worker-profile/specializations',
   isActive,
   authorizeWorker,
-  validateQuery(WorkerSpecializationsQuerySchema),
+  validateQuery(WorkerSpecializationQuerySchema),
   getWorkerSpecializations
 );
 
@@ -713,7 +697,7 @@ usersRouter.delete(
   '/worker-profile/specializations',
   isActive,
   authorizeWorker,
-  validateQuery(DeleteWorkerSpecializationsParamsSchema),
+  validateQuery(DeleteWorkerSpecializationsQuerySchema),
   validateBody(DeleteWorkerSpecializationsSchema),
   deleteWorkerSpecializations
 );
@@ -724,7 +708,7 @@ usersRouter.delete(
  *   post:
  *     summary: Create client profile
  *     description: Creates a client profile for the authenticated user (who must not already be a client).
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -771,7 +755,7 @@ usersRouter.post(
  *   get:
  *     summary: Get client profile
  *     description: Returns the authenticated client's profile. User must have a client profile.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -798,12 +782,7 @@ usersRouter.post(
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-usersRouter.get(
-  '/client-profile',
-  isActive,
-  authorizeClient,
-  getClientProfile
-);
+usersRouter.get('/client-profile', isActive, authorizeClient, getClientProfile);
 
 /**
  * @swagger
@@ -811,7 +790,7 @@ usersRouter.get(
  *   put:
  *     summary: Update client profile
  *     description: Updates the authenticated client's profile. All fields are optional.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -860,7 +839,7 @@ usersRouter.put(
  *   delete:
  *     summary: Delete client profile
  *     description: Deletes the authenticated client's profile. All fields are optional.
- *     tags: [Dashboards]
+ *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
  *     parameters:

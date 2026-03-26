@@ -35,17 +35,16 @@ export const socketAuth = async (socket: Socket, next: (err?: ExtendedError) => 
   }
 
   // Load user state from Redis cache (same pattern as authenticateAccess)
-  const userState = await redisRetreiveOrCache(
-    `access:${payload.userId}`,
-    async () => userService.getStatus({ filter: { id: payload.userId } }),
+  const userState = await redisRetreiveOrCache(`access:${payload.userId}`, async () =>
+    userService.getStatus({ filter: { id: payload.userId } })
   );
 
   if (!userState) {
-    return next(new AppError("Not authenticated", 401));
+    return next(new AppError('Not authenticated', 401));
   }
 
   if (userState.accountStatus !== 'ACTIVE') {
-    return next(new AppError("Unauthorized access for users with no active account", 403));
+    return next(new AppError('Unauthorized access for users with no active account', 403));
   }
 
   // Attach to socket for use in all handlers

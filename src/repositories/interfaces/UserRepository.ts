@@ -1,23 +1,31 @@
-import { User, UserCreateInput, UsersFilter, UserUpdateInput } from '../../domain/user.entity.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
+import { User, UserCreateInput, UserFilter, UserUpdateInput } from '../../domain/user.entity.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 
 export default interface IUserRepository {
   /**
    * Check if user exists
    */
-  exists(params: { filter: UsersFilter }): Promise<boolean>;
+  exists(params: { filter: UserFilter }): Promise<boolean>;
   /**
    * Find user
    */
-  find(params: { filter: UsersFilter }): Promise<User | null>;
+  find(params: { filter: UserFilter }): Promise<User | null>;
   /**
    * Find users
    */
-  findMany(params: { filter: UsersFilter, pagination?: PaginationOptions, sort?: SortOptions<User> }): Promise<PaginatedResult<User>>;
+  findMany(params: {
+    filter: UserFilter;
+    pagination?: PaginationOptions;
+    sort?: SortOptions<User>;
+  }): Promise<PaginatedResultMeta & { users: User[] }>;
   /**
    * Find many online users' worker profiles
    */
-  findOnline(params: { filter: UsersFilter, pagination?: PaginationOptions, sort?: SortOptions<User> }): Promise<PaginatedResult<User>>;
+  findOnline(params: {
+    filter: UserFilter;
+    pagination?: PaginationOptions;
+    sort?: SortOptions<User>;
+  }): Promise<PaginatedResultMeta & { users: User[] }>;
 
   /**
    * Create a user
@@ -26,10 +34,10 @@ export default interface IUserRepository {
   /**
    * Update a user
    */
-  update(params: { filter: UsersFilter, user: UserUpdateInput }): Promise<User>;
+  update(params: { filter: UserFilter; user: UserUpdateInput }): Promise<User>;
 
   /**
    * Delete a user
    */
-  delete(params: { filter: UsersFilter }): Promise<void>;
+  delete(params: { filter: UserFilter }): Promise<void>;
 }

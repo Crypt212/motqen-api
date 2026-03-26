@@ -3,11 +3,15 @@
  * @module controllers/DashboardController
  */
 
-import { matchedData } from 'express-validator';
 import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { clientProfileService, userService, workerProfileService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
+import { parseQueryParams } from 'src/schemas/common.js';
+import {
+  WorkerGovernmentFilterSchema,
+  WorkerSpecializationFilterSchema,
+} from 'src/schemas/dashboard.js';
 
 export const getUser = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
@@ -17,9 +21,7 @@ export const getUser = asyncHandler(async (req, res) => {
 });
 
 export const updateUser = asyncHandler(async (req, res) => {
-  const { firstName, middleName, lastName } = matchedData(req, {
-    includeOptionals: true,
-  });
+  const { firstName, middleName, lastName } = req.body;
   const userId = req.userState.userId;
   const image = req.file;
 
@@ -39,9 +41,7 @@ export const updateUser = asyncHandler(async (req, res) => {
 });
 
 export const createClientProfile = asyncHandler(async (req, res) => {
-  const { address, addressNotes, governmentId, cityId } = matchedData(req, {
-    includeOptionals: true,
-  });
+  const { address, addressNotes, governmentId, cityId } = req.body;
   const userId = req.userState.userId;
 
   const clientProfile = await clientProfileService.create({
@@ -53,21 +53,15 @@ export const createClientProfile = asyncHandler(async (req, res) => {
         address,
         addressNotes,
         isMain: true,
-      }
+      },
     },
   });
 
-  new SuccessResponse(
-    'created client profile successfully',
-    { clientProfile },
-    200
-  ).send(res);
+  new SuccessResponse('created client profile successfully', { clientProfile }, 200).send(res);
 });
 
 export const updateClientProfile = asyncHandler(async (req, res) => {
-  const { address, addressNotes } = matchedData(req, {
-    includeOptionals: true,
-  });
+  const { address, addressNotes } = req.body;
   const clientProfileId = req.userState.client.id;
 
   const clientProfile = await clientProfileService.update({
@@ -75,23 +69,15 @@ export const updateClientProfile = asyncHandler(async (req, res) => {
     data: { location: { address, addressNotes } },
   });
 
-  new SuccessResponse(
-    'updated client profile successfully',
-    { clientProfile },
-    200
-  ).send(res);
+  new SuccessResponse('updated client profile successfully', { clientProfile }, 200).send(res);
 });
 
 export const deleteClientProfile = asyncHandler(async (req, res) => {
   const clientProfile = await clientProfileService.delete({
-    filter: { id: req.userState.client.id }
+    filter: { id: req.userState.client.id },
   });
 
-  new SuccessResponse(
-    'updated client profile successfully',
-    { clientProfile },
-    200
-  ).send(res);
+  new SuccessResponse('updated client profile successfully', { clientProfile }, 200).send(res);
 });
 
 export const getClientProfile = asyncHandler(async (req, res) => {
@@ -99,11 +85,7 @@ export const getClientProfile = asyncHandler(async (req, res) => {
 
   const clientProfile = await clientProfileService.get({ userId });
 
-  new SuccessResponse(
-    'retrieved client profile successfully',
-    { clientProfile },
-    200
-  ).send(res);
+  new SuccessResponse('retrieved client profile successfully', { clientProfile }, 200).send(res);
 });
 
 export const createWorkerProfile = asyncHandler(async (req, res) => {
@@ -113,7 +95,7 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
     acceptsUrgentJobs,
     specializationsTree: specializationsTree,
     workGovernmentIds,
-  } = matchedData(req, { includeOptionals: true });
+  } = req.body;
   const userId = req.userState.userId;
   const images = req.files;
 
@@ -126,7 +108,8 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
     throw new AppError('Please upload all required images', 400);
 
   const workerProfile = await workerProfileService.create({
-    userId, workerProfile: {
+    userId,
+    workerProfile: {
       experienceYears,
       isInTeam,
       acceptsUrgentJobs,
@@ -135,14 +118,10 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
       idImageBuffer: images['id_image'].buffer,
       profileWithIdImageBuffer: images['personal_with_id_image'].buffer,
       profileImageBuffer: images['personal_image'].buffer,
-    }
+    },
   });
 
-  new SuccessResponse(
-    'created worker profile successfully',
-    { workerProfile },
-    200
-  ).send(res);
+  new SuccessResponse('created worker profile successfully', { workerProfile }, 200).send(res);
 });
 
 export const getWorkerProfile = asyncHandler(async (req, res) => {
@@ -150,18 +129,11 @@ export const getWorkerProfile = asyncHandler(async (req, res) => {
 
   const workerProfile = await workerProfileService.get({ filter: { userId } });
 
-  new SuccessResponse(
-    'retrieved worker profile successfully',
-    { workerProfile },
-    200
-  ).send(res);
+  new SuccessResponse('retrieved worker profile successfully', { workerProfile }, 200).send(res);
 });
 
 export const updateWorkerProfile = asyncHandler(async (req, res) => {
-  const { experienceYears, isInTeam, acceptsUrgentJobs } = matchedData(req, {
-    includeOptionals: true,
-  });
-
+  const { experienceYears, isInTeam, acceptsUrgentJobs } = req.body;
   const workerProfile = await workerProfileService.update({
     workerProfileId: req.userState.worker.id,
     data: {
@@ -171,11 +143,7 @@ export const updateWorkerProfile = asyncHandler(async (req, res) => {
     },
   });
 
-  new SuccessResponse(
-    'updated worker profile successfully',
-    { workerProfile },
-    200
-  ).send(res);
+  new SuccessResponse('updated worker profile successfully', { workerProfile }, 200).send(res);
 });
 
 export const deleteWorkerProfile = asyncHandler(async (req, res) => {
@@ -183,31 +151,23 @@ export const deleteWorkerProfile = asyncHandler(async (req, res) => {
     workerProfileId: req.userState.worker.id,
   });
 
-  new SuccessResponse(
-    'deleted worker profile successfully',
-    { workerProfile },
-    200
-  ).send(res);
+  new SuccessResponse('deleted worker profile successfully', { workerProfile }, 200).send(res);
 });
 
 export const getWorkerGovernments = asyncHandler(async (req, res) => {
-  const { filter, page, limit } = matchedData(req, { includeOptionals: true });
+  const { filter, pagination } = parseQueryParams(req.query, WorkerGovernmentFilterSchema);
 
   const result = await workerProfileService.getWorkGovernments({
     filter: { id: req.userState.worker.id },
     GovernmentFilter: filter,
-    pagination: { page, limit },
+    pagination,
   });
 
-  new SuccessResponse(
-    'retrieved worker working governments successfully',
-    result,
-    200
-  ).send(res);
+  new SuccessResponse('retrieved worker working governments successfully', result, 200).send(res);
 });
 
 export const addWorkerGovernments = asyncHandler(async (req, res) => {
-  const { governmentIds } = matchedData(req, { includeOptionals: true });
+  const { governmentIds } = req.body;
 
   const addedGovernmentsCount = await workerProfileService.insertWorkGovernments({
     filter: { id: req.userState.worker.id },
@@ -222,62 +182,53 @@ export const addWorkerGovernments = asyncHandler(async (req, res) => {
 });
 
 export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
-  const { governmentIds, all } = matchedData(req, { includeOptionals: true });
+  const { governmentIds } = req.body;
+  const all = req.query.all === 'true';
 
   if (all)
     await workerProfileService.deleteAllWorkGovernments({
-      filter: { workerProfileId: req.userState.worker.id },
+      filter: { id: req.userState.worker.id },
     });
   else if (governmentIds)
     await workerProfileService.deleteWorkGovernments({
-      filter: { workerProfileId: req.userState.worker.id },
+      filter: { id: req.userState.worker.id },
       governmentIds,
     });
 
-  new SuccessResponse(
-    'deleted worker working governments successfully',
-    200
-  ).send(res);
+  new SuccessResponse('deleted worker working governments successfully', 200).send(res);
 });
 
 export const getWorkerSpecializations = asyncHandler(async (req, res) => {
-  const { specializationIds, page, limit } = matchedData(req, { includeOptionals: true, });
+  const { specializationIds } = req.body;
+  const { pagination } = parseQueryParams(req.query, WorkerSpecializationFilterSchema);
 
   const result = await workerProfileService.getSpecializations({
     filter: { id: req.userState.worker.id },
-    pagination: { page, limit },
+    pagination,
     mainSpecializationIds: specializationIds,
   });
 
-  new SuccessResponse(
-    'retrieved worker specialization tree successfully',
-    result,
-    200
-  ).send(res);
+  new SuccessResponse('retrieved worker specialization tree successfully', result, 200).send(res);
 });
 
 /**
  */
 export const addWorkerSpecializations = asyncHandler(async (req, res) => {
-  const { specializationsTree } = matchedData(req, { includeOptionals: true });
+  const { specializationsTree } = req.body;
 
   await workerProfileService.addSpecializations({
-    filter: { workerProfileId: req.userState.worker.id },
+    filter: { id: req.userState.worker.id },
     specializationsTree,
   });
 
-  new SuccessResponse(
-    'added worker specializations successfully',
-    200
-  ).send(res);
+  new SuccessResponse('added worker specializations successfully', 200).send(res);
 });
 
 /**
  */
 export const deleteWorkerSpecializations = asyncHandler(async (req, res) => {
-  const { mainSpecializationIds, specializationsTree, all } = matchedData(req, {
-    includeOptionals: true,
-  });
+  const { mainSpecializationIds, specializationsTree } = req.body;
+  const all = req.query.all === 'true';
 
   if (all)
     await workerProfileService.deleteAllSpecializations({
@@ -297,8 +248,5 @@ export const deleteWorkerSpecializations = asyncHandler(async (req, res) => {
       });
   }
 
-  new SuccessResponse(
-    'deleted worker specializations successfully',
-    200
-  ).send(res);
+  new SuccessResponse('deleted worker specializations successfully', 200).send(res);
 });

@@ -8,14 +8,14 @@ import { asyncHandler } from '../types/asyncHandler.js';
 import { verifyHeaderToken } from '../utils/tokens.js';
 import { getHeaderValue } from '../utils/HTTTHeaders.js';
 import { userService } from '../state.js';
-import { redisRetreiveOrCache } from '../utils/redis.js';
+import { redisClearCache, redisRetreiveOrCache } from '../utils/redis.js';
 
 /**
  */
 export const verifyDeviceId = asyncHandler(async (req, _, next) => {
   req.deviceId = getHeaderValue(req.headers['x-device-fingerprint']);
   if (!req.deviceId) {
-    next(new AppError("Device ID is required", 401));
+    next(new AppError('Device ID is required', 401));
     return;
   }
 
@@ -28,12 +28,11 @@ export const verifyDeviceId = asyncHandler(async (req, _, next) => {
  */
 export const authenticateLogin = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
-console.log(authHeader)
   try {
-    verifyHeaderToken(authHeader, "login");
-  } catch (err) {
-    next(new AppError("Invalid login token", 401));
-    return
+    verifyHeaderToken(authHeader, 'login');
+  } catch (err: unknown) {
+    next(err);
+    return;
   }
   next();
 });
@@ -44,9 +43,9 @@ export const authenticateRegister = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
 
   try {
-    verifyHeaderToken(authHeader, "register");
-  } catch (err) {
-    return next(new AppError("Invalid register token", 401));
+    verifyHeaderToken(authHeader, 'register');
+  } catch (err: unknown) {
+    return next(err);
   }
   next();
 });
@@ -56,14 +55,13 @@ export const authenticateRegister = asyncHandler(async (req, _, next) => {
 export const authenticateAccess = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
   try {
-    const payload = verifyHeaderToken(authHeader, "access");
-    req.userState = await redisRetreiveOrCache("access:" + payload.userId, async () => {
+    const payload = verifyHeaderToken(authHeader, 'access');
+    req.userState = await redisRetreiveOrCache('access:' + payload.userId, async () => {
       return await userService.getStatus({ filter: { id: payload.userId } });
     });
-  } catch (err) {
-    return next(new AppError("Invalid access token", 401));
+  } catch (err: unknown) {
+    return next(err);
   }
-
 
   next();
 });
@@ -73,14 +71,23 @@ export const authenticateAccess = asyncHandler(async (req, _, next) => {
 export const authenticateRefresh = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
   try {
-    const payload = verifyHeaderToken(authHeader, "refresh");
-    req.userState = (await redisRetreiveOrCache("access:" + payload.userId, async () => {
+    const payload = verifyHeaderToken(authHeader, 'refresh');
+    req.userState = await redisRetreiveOrCache('access:' + payload.userId, async () => {
       return await userService.getStatus({ filter: { id: payload.userId } });
-    }));
-  } catch (err) {
-    return next(new AppError("Invalid refresh token", 401));
+    });
+  } catch (err: unknown) {
+    return next(err);
   }
 
+  next();
+});
+
+export const clearCacheAuthenticationState = asyncHandler(async (req, _, next) => {
+  try {
+    await redisClearCache('access:' + req.userState.userId);
+  } catch (err: unknown) {
+    return next(err);
+  }
 
   next();
 });
@@ -92,10 +99,9 @@ export const authenticateRefresh = asyncHandler(async (req, _, next) => {
  */
 export const isActive = asyncHandler(async (req, _, next) => {
   if (req.userState) {
-    if (req.userState.accountStatus !== "ACTIVE")
-      return next(new AppError("Unauthorized access for users with no active account", 403));
-  } else
-    return next(new AppError("Not authenticated", 401));
+    if (req.userState.accountStatus !== 'ACTIVE')
+      return next(new AppError('Unauthorized access for users with no active account', 403));
+  } else return next(new AppError('Not authenticated', 401));
 
   next();
 });
@@ -107,8 +113,8 @@ export const isActive = asyncHandler(async (req, _, next) => {
  */
 export const authorizeAdmin = asyncHandler(async (req, _, next) => {
   if (req.userState) {
-    if (req.userState.role !== 'ADMIN') return next(new AppError('Unauthorized access for non-admins users', 403));
-  } else
-    return next(new AppError("Not authenticated", 401));
+    if (req.userState.role !== 'ADMIN')
+      return next(new AppError('Unauthorized access for non-admins users', 403));
+  } else return next(new AppError('Not authenticated', 401));
   next();
 });

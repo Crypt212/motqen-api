@@ -3,9 +3,9 @@
  * @module repositories/cache/OTPCache
  */
 
-import { RedisClientType } from "../../libs/redis.js";
-import IOtpCache from "../interfaces/otpCache.js";
-import { Method } from "../../domain/otp.entity.js";
+import { RedisClientType } from '../../libs/redis.js';
+import IOtpCache from '../interfaces/otpCache.js';
+import { Method } from '../../domain/otp.entity.js';
 
 /**
  * OTP Cache - Handles OTP caching operations using Redis
@@ -15,7 +15,7 @@ export default class OtpCache implements IOtpCache {
   /**
    * Key generators for OTP cache
    */
-  private keys: { otp: ((phone: string, method: Method) => string) };
+  private keys: { otp: (phone: string, method: Method) => string };
 
   /**
    * Creates an instance of OtpCache
@@ -29,7 +29,12 @@ export default class OtpCache implements IOtpCache {
   /**
    * Set OTP in cache with TTL
    */
-  async setOtp(phone: string, method: Method, hashedOtp: string, ttlSeconds: number): Promise<string | {}> {
+  async setOtp(
+    phone: string,
+    method: Method,
+    hashedOtp: string,
+    ttlSeconds: number
+  ): Promise<string | {}> {
     const key = this.keys.otp(phone, method);
     return await this.client.set(key, hashedOtp, { EX: ttlSeconds });
   }

@@ -3,13 +3,9 @@
  * @module controllers/AuthController
  */
 
-import { matchedData } from 'express-validator';
 import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
-import {
-  authService,
-  rateLimitService,
-} from '../state.js';
+import { authService, rateLimitService } from '../state.js';
 
 import { asyncHandler } from '../types/asyncHandler.js';
 import { verifyAndDecodeToken } from '../utils/tokens.js';
@@ -19,22 +15,14 @@ import { verifyAndDecodeToken } from '../utils/tokens.js';
  * @description Initiates OTP request by generating and sending OTP to the provided phone number
  */
 export const requestOTP = asyncHandler(async (req, res) => {
-  const { method, phoneNumber } = matchedData(req, { includeOptionals: true });
+  const { method, phoneNumber } = req.body;
   const deviceId = req.deviceId;
 
   await authService.requestOTP(phoneNumber, method);
 
-  const { cooldown } = await rateLimitService.incrementSend(
-    phoneNumber,
-    method,
-    deviceId
-  );
+  const { cooldown } = await rateLimitService.incrementSend(phoneNumber, method, deviceId);
 
-  new SuccessResponse(
-    'OTP sent successfully',
-    { phoneNumber, method, cooldown },
-    200
-  ).send(res);
+  new SuccessResponse('OTP sent successfully', { phoneNumber, method, cooldown }, 200).send(res);
 });
 
 /**
@@ -42,7 +30,7 @@ export const requestOTP = asyncHandler(async (req, res) => {
  * @description Verifies the OTP and returns either a login or register token based on user existence
  */
 export const verifyOTP = asyncHandler(async (req, res) => {
-  const { phoneNumber, otp, method } = matchedData(req, { includeOptionals: true });
+  const { phoneNumber, otp, method } = req.body;
   const deviceId = req.deviceId;
 
   const { tokenType, token, workerShit } = await authService.verifyOTP(
@@ -52,11 +40,9 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     deviceId
   );
 
-  new SuccessResponse(
-    'OTP verified successfully',
-    { tokenType, token, ...workerShit },
-    200
-  ).send(res);
+  new SuccessResponse('OTP verified successfully', { tokenType, token, ...workerShit }, 200).send(
+    res
+  );
 });
 
 /**
@@ -65,23 +51,19 @@ export const verifyOTP = asyncHandler(async (req, res) => {
  */
 export const registerClient = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
-  const { userData: {
-    firstName,
-    middleName,
-    lastName,
-  }, clientProfile: {
-    governmentId,
-    cityId,
-    address,
-    addressNotes,
-  } } = matchedData(req, { includeOptionals: true });
+  const { userData, clientProfile } = req.body;
+  const { firstName, middleName, lastName } = JSON.parse(userData);
+  const { cityId, governmentId, address, addressNotes } = JSON.parse(clientProfile);
 
-
-  const phoneNumber = verifyAndDecodeToken(req.headers['authorization'].split(' ')[1], "register").phoneNumber;
+  const phoneNumber = verifyAndDecodeToken(
+    req.headers['authorization'].split(' ')[1],
+    'register'
+  ).phoneNumber;
   const image = req.file;
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
+  console.log(req.body);
   const { user, profile } = await authService.registerClient(
     {
       phoneNumber,
@@ -123,23 +105,16 @@ export const registerClient = asyncHandler(async (req, res) => {
  * @description Registers a new worker user with professional profile information
  */
 export const registerWorker = asyncHandler(async (req, res) => {
-  const {
-    userData: {
-      firstName,
-      middleName,
-      lastName,
-    },
-    workerProfile: {
-      experienceYears,
-      isInTeam,
-      acceptsUrgentJobs,
-      specializationsTree,
-      workGovernmentIds,
-    }
-  } = matchedData(req, { includeOptionals: true });
+  const { userData, workerProfile } = req.body;
+  const { firstName, middleName, lastName } = JSON.parse(userData);
+  const { experienceYears, isInTeam, acceptsUrgentJobs, specializationsTree, workGovernmentIds } =
+    JSON.parse(workerProfile);
 
   const deviceId = req.deviceId;
-  const phoneNumber = verifyAndDecodeToken(req.headers['authorization'].split(' ')[1], "register").phoneNumber;
+  const phoneNumber = verifyAndDecodeToken(
+    req.headers['authorization'].split(' ')[1],
+    'register'
+  ).phoneNumber;
   const images = req.files;
 
   if (
@@ -150,8 +125,7 @@ export const registerWorker = asyncHandler(async (req, res) => {
   )
     throw new AppError('Please upload all required images', 400);
 
-
-  const { user, profile: workerProfile } = await authService.registerWorker(
+  const { user, profile } = await authService.registerWorker(
     {
       phoneNumber,
       firstName,
@@ -167,7 +141,8 @@ export const registerWorker = asyncHandler(async (req, res) => {
       acceptsUrgentJobs,
       specializationsTree,
       workGovernmentIds,
-    });
+    }
+  );
 
   const { unHashedRefreshToken } = await authService.login({
     phoneNumber,
@@ -184,7 +159,7 @@ export const registerWorker = asyncHandler(async (req, res) => {
 
   new SuccessResponse(
     'User created successfully',
-    { user, workerProfile, accessToken, refreshToken: unHashedRefreshToken },
+    { user, workerProfile: profile, accessToken, refreshToken: unHashedRefreshToken },
     201
   ).send(res);
 });
@@ -194,9 +169,11 @@ export const registerWorker = asyncHandler(async (req, res) => {
  * @description Authenticates user with login token and creates a new session
  */
 export const login = asyncHandler(async (req, res) => {
-
   const deviceId = req.deviceId;
-  const phoneNumber = verifyAndDecodeToken(req.headers['authorization'].split(' ')[1], "login").phoneNumber;
+  const phoneNumber = verifyAndDecodeToken(
+    req.headers['authorization'].split(' ')[1],
+    'login'
+  ).phoneNumber;
 
   const { unHashedRefreshToken, user } = await authService.login({
     phoneNumber,
@@ -247,35 +224,30 @@ export const generateAccessToken = asyncHandler(async (req, res) => {
     refreshToken,
   });
 
-  new SuccessResponse(
-    'Access token generated successfully',
-    { accessToken },
-    200
-  ).send(res);
+  new SuccessResponse('Access token generated successfully', { accessToken }, 200).send(res);
 });
-
 
 /**
  * Reviews the status of a user (pending, approved, rejected)
  */
 export const reviewStatus = asyncHandler(async (req, res) => {
+  console.log(req.userState);
   if (req.userState.client) {
     new SuccessResponse('You are a client, you can whatever you want <3', {}, 200).send(res);
     return;
   }
 
   if (req.userState.worker) {
-    const isApproved = req.userState.worker.verification.status === "APPROVED";
+    const isApproved = req.userState.worker.verification.status === 'APPROVED';
     const reason = req.userState.worker.verification.reason;
     const status = req.userState.worker.verification.status;
     if (!isApproved) {
       new SuccessResponse('You are not approved yet', { reason, status }, 200).send(res);
-      return
+      return;
     }
     new SuccessResponse('You have been approved by admin', { status }, 200).send(res);
     return;
   }
 
-
-  throw new AppError('Who the hell are you?!', 401);
+  throw new AppError('Who the hell are you?!', 403);
 });

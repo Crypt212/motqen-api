@@ -8,19 +8,19 @@ import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
-import { AccountStatus, Role, User, UsersFilter } from '../domain/user.entity.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../types/query.js';
+import { AccountStatus, Role, User, UserFilter } from '../domain/user.entity.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/query.js';
 import { UserState } from '../types/asyncHandler.js';
 
 type InputUserType = {
-  phoneNumber: string,
-  firstName: string,
-  middleName: string,
-  lastName: string,
-  role: Role,
-  status: AccountStatus,
-  profileImageBuffer: Buffer
-}
+  phoneNumber: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  role: Role;
+  status: AccountStatus;
+  profileImageBuffer: Buffer;
+};
 
 /**
  * User Service - Manages user-related operations
@@ -30,7 +30,11 @@ export default class UserService extends Service {
   private workerProfileRepository: IWorkerProfileRepository;
   private clientProfileRepository: IClientProfileRepository;
 
-  constructor(params: { userRepository: IUserRepository, workerProfileRepository: IWorkerProfileRepository, clientProfileRepository: IClientProfileRepository }) {
+  constructor(params: {
+    userRepository: IUserRepository;
+    workerProfileRepository: IWorkerProfileRepository;
+    clientProfileRepository: IClientProfileRepository;
+  }) {
     super();
     this.userRepository = params.userRepository;
     this.workerProfileRepository = params.workerProfileRepository;
@@ -40,7 +44,7 @@ export default class UserService extends Service {
   /**
    * Get a user by ID or phone number
    */
-  async get(params: { filter: UsersFilter }): Promise<User | null> {
+  async get(params: { filter: UserFilter }): Promise<User | null> {
     const { filter } = params;
     const user = await this.userRepository.find({ filter });
     return user;
@@ -49,7 +53,11 @@ export default class UserService extends Service {
   /**
    * Find many users with pagination, filtering, and ordering
    */
-  async findMany(params: { filter: UsersFilter, pagination: PaginationOptions, sort: SortOptions<User> }): Promise<PaginatedResult<User>> {
+  async findMany(params: {
+    filter: UserFilter;
+    pagination: PaginationOptions;
+    sort: SortOptions<User>;
+  }): Promise<PaginatedResultMeta & { users: User[] }> {
     const { filter, pagination, sort: orderBy } = params;
 
     return await this.userRepository.findMany({
@@ -62,7 +70,7 @@ export default class UserService extends Service {
   /**
    * Update a user's basic information
    */
-  async update(params: { filter: UsersFilter, data: Partial<InputUserType> }): Promise<User | null> {
+  async update(params: { filter: UserFilter; data: Partial<InputUserType> }): Promise<User | null> {
     const { filter, data } = params;
     let url = undefined;
     if (data.profileImageBuffer) {
@@ -91,13 +99,16 @@ export default class UserService extends Service {
   /**
    * Get all roles of a user
    */
-  async getStatus(params: { filter: UsersFilter }): Promise<UserState> {
+  async getStatus(params: { filter: UserFilter }): Promise<UserState> {
     const { filter } = params;
     const user = await this.userRepository.find({ filter });
-    const worker = await this.workerProfileRepository.find({ filter });
+    const worker = await this.workerProfileRepository.find({ workerFilter: { userId: user.id } });
+    console.log(user, worker, filter);
     let verification = null;
     if (worker)
-      verification = await this.workerProfileRepository.findVerification({ filter: { workerProfileId: worker.id } });
+      verification = await this.workerProfileRepository.findVerification({
+        workerFilter: { id: worker.id },
+      });
     const client = await this.clientProfileRepository.find({ filter: { userId: user.id } });
 
     const userState = {
@@ -107,12 +118,12 @@ export default class UserService extends Service {
       accountStatus: user.status,
       worker: worker
         ? {
-          id: worker.id,
-          verification: {
-            status: verification.status,
-            reason: verification.reason,
-          },
-        }
+            id: worker.id,
+            verification: {
+              status: verification.status,
+              reason: verification.reason,
+            },
+          }
         : undefined,
       client: client ? { id: client.id } : undefined,
     };
@@ -123,7 +134,7 @@ export default class UserService extends Service {
   /**
    * Check if user exists
    */
-  async exists(params: { filter: UsersFilter }): Promise<boolean> {
+  async exists(params: { filter: UserFilter }): Promise<boolean> {
     const { filter } = params;
     return await this.userRepository.exists({ filter });
   }

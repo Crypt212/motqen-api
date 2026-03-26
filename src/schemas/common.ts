@@ -1,13 +1,13 @@
 /**
  * @fileoverview Common Zod schemas and helpers
- * Replaces: src/validators/common.js
  * Place at: src/schemas/common.schema.ts
  */
 
-import { z } from 'zod';
+import { FieldTypeDefinition } from 'src/types/query.js';
+import { z } from '../libs/zod.js';
 
 // ============================================
-// Primitives — reusable building blocks
+// Primitives
 // ============================================
 
 export const UUIDSchema = z.string().uuid('must be a valid UUID');
@@ -16,9 +16,11 @@ export const EgyptianPhoneSchema = z
   .string()
   .trim()
   .regex(/^(010|011|012|015)\d{8}$/, 'Please provide a valid Egyptian phone number')
-  .transform(v => v.replace(/^\+20/, '0'));
+  .transform((v) => v.replace(/^\+20/, '0'));
 
-export const OTPMethodSchema = z.enum(['SMS', 'WHATSAPP'], { message: 'Method must be either SMS or WhatsApp' });
+export const OTPMethodSchema = z.enum(['SMS', 'WHATSAPP'], {
+  message: 'Method must be either SMS or WHATSAPP',
+});
 
 export const OTPCodeSchema = z
   .string()
@@ -34,7 +36,8 @@ export const NameSchema = (fieldName: string, min = 2, max = 100) =>
     .min(min, `${fieldName} must be between ${min} and ${max} characters`)
     .max(max, `${fieldName} must be between ${min} and ${max} characters`);
 
-export const LongitudeSchema = z.number({ message: 'long must be a number' })
+export const LongitudeSchema = z
+  .number({ message: 'long must be a number' })
   .min(-180, 'long must be between -180 and 180')
   .max(180, 'long must be between -180 and 180');
 
@@ -64,7 +67,6 @@ export const ClientProfileSchema = z.object({
 
 export const ClientProfileOptionalSchema = ClientProfileSchema.partial();
 
-// Specializations tree — mirrors specializationsTreeValidation in common.js
 export const SpecializationTreeItemSchema = z.object({
   mainId: UUIDSchema,
   subIds: z.array(UUIDSchema).optional(),
@@ -74,156 +76,174 @@ export const SpecializationsTreeSchema = z
   .array(SpecializationTreeItemSchema)
   .min(1, 'specializationsTree must be a non-empty array');
 
-// Work governments — mirrors workGovernmentsValidation in common.js
 export const WorkGovernmentsSchema = z
   .array(UUIDSchema)
   .min(1, 'workGovernments must contain at least one government ID');
 
 export const WorkerProfileSchema = z.object({
   specializationsTree: SpecializationsTreeSchema,
-  workGovernments: WorkGovernmentsSchema,
-  experienceYears: z
-    .number({ message: 'experienceYears must be a number' })
-    .int()
-    .min(0),
+  workGovernmentIds: WorkGovernmentsSchema,
+  experienceYears: z.number({ message: 'experienceYears must be a number' }).int().min(0),
   isInTeam: z.boolean({ message: 'isInTeam must be a boolean' }),
-  acceptsUrgentJobs: z.boolean({
-    message: 'acceptsUrgentJobs must be a boolean',
-  }),
+  acceptsUrgentJobs: z.boolean({ message: 'acceptsUrgentJobs must be a boolean' }),
 });
 
 export const WorkerProfileOptionalSchema = WorkerProfileSchema.partial();
 
 // ============================================
-// Query schemas — replaces createQueryValidator
+// Filter descriptor
 // ============================================
 
-// Base pagination — all query params arrive as strings, use z.coerce
-export const PaginationSchema = z.object({
-  page: z.coerce.number().int().min(1, 'page must be a positive integer').optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
-});
+type InferFieldType<F extends FieldTypeDefinition> = F extends { type: 'uuid' }
+  ? string
+  : F extends { type: 'string' }
+    ? string
+    : F extends { type: 'number' }
+      ? number
+      : F extends { type: 'boolean' }
+        ? boolean
+        : F extends { type: 'date' }
+          ? Date
+          : F extends { type: 'enum'; enumValues: infer E extends [string, ...string[]] }
+            ? E[number]
+            : never;
 
-export const SortOrderSchema = z.enum(['asc', 'desc'], {
-  message: 'sortOrder must be either "asc" or "desc"'
-});
+export type FilterFromDescriptor<D extends Record<string, FieldTypeDefinition>> = {
+  [K in keyof D]?: InferFieldType<D[K]>;
+};
 
 // ============================================
-// createQuerySchema — replaces createQueryValidator()
-//
-// Takes the same config shape your old JS function took,
-// returns a Zod schema instead of a ValidationChain[].
-//
-// Usage:
-//   export const SessionsQuerySchema = createQuerySchema(SESSIONS_QUERY_CONFIG);
-//   export type SessionsQuery = z.infer<typeof SessionsQuerySchema>;
+// buildFilterSchema
 // ============================================
 
-type FieldTypeDefinition =
-  | { type: 'uuid' }
-  | { type: 'string'; minLength?: number; maxLength?: number }
-  | { type: 'number'; min?: number; max?: number }
-  | { type: 'boolean' }
-  | { type: 'date' }
-  | { type: 'enum'; enumValues: [string, ...string[]] };
+const FILTER_META = Symbol('filterMeta');
 
-interface QueryValidationConfig {
-  allowedFilterFields?: string[];
-  filterFieldTypes?: Record<string, FieldTypeDefinition>;
-  allowedOrderByFields?: string[];
-  allowedSearchFields?: string[];
-  maxPageSize?: number;
+interface FilterMeta {
+  sortableFields: string[];
+  searchableFields: string[];
 }
 
-export const createQuerySchema = (config: QueryValidationConfig = {}) => {
-  const {
-    allowedFilterFields = [],
-    filterFieldTypes = {},
-    allowedOrderByFields = [],
-    allowedSearchFields = [],
-    maxPageSize = 100,
-  } = config;
+export type ZodFilterSchema<T extends z.ZodRawShape> = z.ZodObject<T> & {
+  [FILTER_META]: FilterMeta;
+};
 
-  const shape: Record<string, z.ZodTypeAny> = {
-    page: z.coerce.number().int().min(1, 'page must be a positive integer').optional(),
+export const buildFilterSchema = <D extends Record<string, FieldTypeDefinition>>(
+  descriptor: D
+): ZodFilterSchema<{ [K in keyof D]: z.ZodOptional<z.ZodTypeAny> }> => {
+  const shape: Record<string, z.ZodTypeAny> = {};
+  const sortableFields: string[] = [];
+  const searchableFields: string[] = [];
+
+  for (const [field, def] of Object.entries(descriptor)) {
+    if (def.sortable) sortableFields.push(field);
+    if (def.searchable) searchableFields.push(field);
+
+    switch (def.type) {
+      case 'uuid':
+        shape[field] = z.string().uuid(`${field} must be a valid UUID`).optional();
+        break;
+      case 'string': {
+        let s: z.ZodString = z.string();
+        if (def.minLength !== undefined)
+          s = s.min(def.minLength, `${field} must be at least ${def.minLength} characters`);
+        if (def.maxLength !== undefined)
+          s = s.max(def.maxLength, `${field} must be at most ${def.maxLength} characters`);
+        shape[field] = s.optional();
+        break;
+      }
+      case 'number': {
+        let s = z.coerce.number({ message: `${field} must be a number` });
+        if (def.min !== undefined) s = s.min(def.min, `${field} must be at least ${def.min}`);
+        if (def.max !== undefined) s = s.max(def.max, `${field} must be at most ${def.max}`);
+        shape[field] = s.optional();
+        break;
+      }
+      case 'boolean':
+        shape[field] = z.coerce.boolean({ message: `${field} must be a boolean` }).optional();
+        break;
+      case 'date':
+        shape[field] = z.coerce.date({ message: `${field} must be a valid date` }).optional();
+        break;
+      case 'enum':
+        shape[field] = z
+          .enum(def.enumValues, {
+            message: `${field} must be one of: ${def.enumValues.join(', ')}`,
+          })
+          .optional();
+        break;
+    }
+  }
+
+  const schema = z.object(shape) as ZodFilterSchema<{
+    [K in keyof D]: z.ZodOptional<z.ZodTypeAny>;
+  }>;
+
+  schema[FILTER_META] = { sortableFields, searchableFields };
+
+  return schema;
+};
+
+// ============================================
+// createQuerySchema
+// ============================================
+
+export const SortOrderSchema = z.enum(['asc', 'desc'], {
+  message: 'sortOrder must be either "asc" or "desc"',
+});
+
+export const createQuerySchema = <T extends z.ZodRawShape>(
+  filterSchema: ZodFilterSchema<T>,
+  options: { maxPageSize?: number } = {}
+) => {
+  const { maxPageSize = 100 } = options;
+  const { sortableFields, searchableFields } = filterSchema[FILTER_META];
+
+  const extras: Record<string, z.ZodTypeAny> = {
+    page: z.coerce
+      .number({ message: 'page must be a number' })
+      .int()
+      .min(1, 'page must be a positive integer')
+      .optional(),
     limit: z.coerce
-      .number()
+      .number({ message: 'limit must be a number' })
       .int()
       .min(1)
       .max(maxPageSize, `limit must be between 1 and ${maxPageSize}`)
       .optional(),
   };
 
-  if (allowedOrderByFields.length > 0) {
-    shape.sortBy = z
-      .enum(allowedOrderByFields as [string, ...string[]], {
-        message: `sortBy must be one of: ${allowedOrderByFields.join(', ')}`,
+  if (sortableFields.length > 0) {
+    extras.sortBy = z
+      .enum(sortableFields as [string, ...string[]], {
+        message: `sortBy must be one of: ${sortableFields.join(', ')}`,
       })
       .optional();
-    shape.sortOrder = SortOrderSchema.optional();
+    extras.sortOrder = SortOrderSchema.optional();
   }
 
-  if (allowedSearchFields.length > 0) {
-    shape.search = z.string().min(2, 'search must be at least 2 characters').optional();
+  if (searchableFields.length > 0) {
+    extras.search = z.string().min(2, 'search must be at least 2 characters').optional();
   }
 
-  for (const field of allowedFilterFields) {
-    const fieldType = filterFieldTypes[field];
-
-    if (!fieldType) {
-      shape[field] = z.string().optional();
-      continue;
-    }
-
-    switch (fieldType.type) {
-      case 'uuid':
-        shape[field] = UUIDSchema.optional();
-        break;
-      case 'number': {
-        let s = z.coerce.number();
-        if (fieldType.min !== undefined) s = s.min(fieldType.min, `${field} must be at least ${fieldType.min}`);
-        if (fieldType.max !== undefined) s = s.max(fieldType.max, `${field} must be at most ${fieldType.max}`);
-        shape[field] = s.optional();
-        break;
-      }
-      case 'boolean':
-        shape[field] = z.coerce.boolean().optional();
-        break;
-      case 'date':
-        shape[field] = z.coerce.date().optional();
-        break;
-      case 'enum':
-        shape[field] = z.enum(fieldType.enumValues).optional();
-        break;
-      case 'string': {
-        let s: z.ZodString = z.string();
-        if (fieldType.minLength !== undefined) s = s.min(fieldType.minLength);
-        if (fieldType.maxLength !== undefined) s = s.max(fieldType.maxLength);
-        shape[field] = s.optional();
-        break;
-      }
-    }
-  }
-
-  return z.object(shape);
+  return filterSchema.extend(extras);
 };
 
 // ============================================
-// parseQueryParams — identical output to the old JS helper
-// but now works with already-validated Zod data
+// parseQueryParams
+// Reads already-validated Zod query output and shapes it
+// for repository consumption. Works off filter schema metadata
+// instead of a separate config object.
 // ============================================
 
-export const parseQueryParams = (
+export const parseQueryParams = <T extends z.ZodRawShape>(
   query: Record<string, unknown>,
-  config: QueryValidationConfig = {},
+  filterSchema: ZodFilterSchema<T>
 ) => {
-  const {
-    allowedFilterFields = [],
-    allowedOrderByFields = [],
-    allowedSearchFields = [],
-  } = config;
+  console.log('inside parseQueryParams');
+  console.log('query: ', query);
 
-  const paginate = query.page !== undefined || query.limit !== undefined;
+  const { sortableFields, searchableFields } = filterSchema[FILTER_META];
+  const filterFields = Object.keys(filterSchema.shape);
 
   const pagination = {
     page: query.page ? Number(query.page) : 1,
@@ -232,25 +252,25 @@ export const parseQueryParams = (
 
   const filter: Record<string, unknown> = {};
 
-  for (const field of allowedFilterFields) {
+  for (const field of filterFields) {
     if (query[field] !== undefined && query[field] !== null && query[field] !== '') {
       filter[field] = query[field];
     }
   }
 
-  if (query.search && allowedSearchFields.length > 0) {
-    filter.OR = allowedSearchFields.map(field => ({
+  if (query.search && searchableFields.length > 0) {
+    filter.OR = searchableFields.map((field) => ({
       [field]: { contains: query.search, mode: 'insensitive' },
     }));
   }
 
-  const orderBy: { field: string; direction: string }[] = [];
-  if (query.sortBy && allowedOrderByFields.includes(query.sortBy as string)) {
-    orderBy.push({
-      field: query.sortBy as string,
-      direction: (query.sortOrder as string)?.toLowerCase() ?? 'asc',
+  const sort: { sortBy: keyof T; sortOrder: 'asc' | 'desc' }[] = [];
+  if (query.sortBy && sortableFields.includes(query.sortBy as string)) {
+    sort.push({
+      sortBy: query.sortBy as keyof T,
+      sortOrder: query.sortOrder === 'desc' ? 'desc' : 'asc',
     });
   }
 
-  return { filter, pagination, orderBy, paginate };
+  return { filter, pagination, sort };
 };

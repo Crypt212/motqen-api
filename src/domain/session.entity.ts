@@ -1,36 +1,40 @@
-import { IDType } from "../repositories/interfaces/Repository.js";
+import { IDType } from '../repositories/interfaces/Repository.js';
+import { FieldTypeDefinition } from 'src/types/query.js';
+import { FilterFromDescriptor } from 'src/schemas/common.js';
 
 export type Session = {
-  id: IDType,
-  userId: IDType,
+  id: IDType;
+  userId: IDType;
 
-  token: string,
-  isRevoked: boolean,
-  deviceId: string,
-  ipAddress: string,
-  userAgent: string,
-  lastUsedAt: Date,
-  expiresAt: Date,
+  token: string;
+  isRevoked: boolean;
+  deviceId: string;
+  ipAddress: string;
+  userAgent: string;
+  lastUsedAt: Date;
+  expiresAt: Date;
 
-  updatedAt: Date,
-  createdAt: Date,
-}
+  updatedAt: Date;
+  createdAt: Date;
+};
 
 export type SessionCreateInput = {
-  token: string,
-  isRevoked?: boolean,
-  deviceId: string,
-  ipAddress?: string,
-  userAgent?: string,
-  lastUsedAt?: Date,
-  expiresAt: Date,
-}
+  token: string;
+  isRevoked?: boolean;
+  deviceId: string;
+  ipAddress?: string;
+  userAgent?: string;
+  lastUsedAt?: Date;
+  expiresAt: Date;
+};
 
 export type SessionUpdateInput = Partial<SessionCreateInput>;
 
-export type SessionFilter = {
-  id?: IDType,
-  userId?: IDType,
-  deviceId?: string
-  token?: string
-}
+export const SessionFilterDescriptor = {
+  id: { type: 'uuid' as const },
+  userId: { type: 'uuid' as const },
+  deviceId: { type: 'string' as const },
+  token: { type: 'string' as const },
+} satisfies Record<string, FieldTypeDefinition>;
+
+export type SessionFilter = FilterFromDescriptor<typeof SessionFilterDescriptor>;

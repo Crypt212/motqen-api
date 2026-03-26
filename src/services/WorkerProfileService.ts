@@ -6,29 +6,34 @@
 import Service, { tryCatch } from './Service.js';
 import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
-import { WorkerProfile, WorkerProfileFilter, WorkerProfileVerification, WorkerProfileVerificationCreateInput } from '../domain/workerProfile.entity.js';
+import {
+  WorkerProfile,
+  WorkerProfileFilter,
+  WorkerProfileVerification,
+  WorkerProfileVerificationCreateInput,
+} from '../domain/workerProfile.entity.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
-import { PaginationOptions, PaginatedResult } from '../types/query.js';
-import { Government, GovernmentFilter } from '../domain/government.entity.js';
-import { SpecializationsTree, SpecializationsTreeNode } from '../domain/specialization.entity.js';
+import { PaginationOptions, PaginatedResultMeta } from '../types/query.js';
+import { GovernmentFilter } from '../domain/government.entity.js';
+import { SpecializationsTree } from '../domain/specialization.entity.js';
 
 type InputWorkerData = {
-  experienceYears: number,
-  isInTeam: boolean,
-  acceptsUrgentJobs: boolean,
-  governmentIds: IDType[],
-  specializationsTree: SpecializationsTree,
-  profileImageBuffer: Buffer
-  idImageBuffer: Buffer
-  profileWithIdImageBuffer: Buffer
-}
+  experienceYears: number;
+  isInTeam: boolean;
+  acceptsUrgentJobs: boolean;
+  governmentIds: IDType[];
+  specializationsTree: SpecializationsTree;
+  profileImageBuffer: Buffer;
+  idImageBuffer: Buffer;
+  profileWithIdImageBuffer: Buffer;
+};
 
 type InputWorkerUpdateData = {
-  experienceYears: number,
-  isInTeam: boolean,
-  acceptsUrgentJobs: boolean,
-}
+  experienceYears: number;
+  isInTeam: boolean;
+  acceptsUrgentJobs: boolean;
+};
 
 /**
  * Worker Service - Manages worker-related operations
@@ -37,7 +42,10 @@ export default class WorkerService extends Service {
   private workerProfileRepository: IWorkerProfileRepository;
   private userRepository: IUserRepository;
 
-  constructor(params: { workerProfileRepository: IWorkerProfileRepository, userRepository: IUserRepository }) {
+  constructor(params: {
+    workerProfileRepository: IWorkerProfileRepository;
+    userRepository: IUserRepository;
+  }) {
     super();
     this.workerProfileRepository = params.workerProfileRepository;
     this.userRepository = params.userRepository;
@@ -47,15 +55,23 @@ export default class WorkerService extends Service {
    * Create a worker profile for a user
    * @throws {AppError} If user not found or invalid data
    */
-  async create(params: { userId: IDType, workerProfile: InputWorkerData }): Promise<WorkerProfile> {
-    const { userId, workerProfile: { experienceYears, isInTeam, acceptsUrgentJobs, governmentIds, specializationsTree, profileImageBuffer, idImageBuffer, profileWithIdImageBuffer } } = params;
+  async create(params: { userId: IDType; workerProfile: InputWorkerData }): Promise<WorkerProfile> {
+    const {
+      userId,
+      workerProfile: {
+        experienceYears,
+        isInTeam,
+        acceptsUrgentJobs,
+        governmentIds,
+        specializationsTree,
+        profileImageBuffer,
+        idImageBuffer,
+        profileWithIdImageBuffer,
+      },
+    } = params;
     return tryCatch(async () => {
       const nationalID = (
-        await uploadToCloudinary(
-          idImageBuffer,
-          `${userId}/verification_info`,
-          'nationalID'
-        )
+        await uploadToCloudinary(idImageBuffer, `${userId}/verification_info`, 'nationalID')
       ).url;
       const selfiWithID = (
         await uploadToCloudinary(
@@ -75,11 +91,11 @@ export default class WorkerService extends Service {
       });
 
       await this.workerProfileRepository.insertWorkGovernments({
-        filter: { userId: workerProfile.userId },
+        workerFilter: { userId: workerProfile.userId },
         governmentIds,
       });
       await this.workerProfileRepository.insertSubSpecializations({
-        filter: { workerProfileId: workerProfile.id },
+        workerFilter: { id: workerProfile.id },
         specializationsTree,
       });
 
@@ -88,7 +104,7 @@ export default class WorkerService extends Service {
         verification: {
           idWithPersonalImageUrl: selfiWithID,
           idDocumentUrl: nationalID,
-          status: "PENDING",
+          status: 'PENDING',
           reason: 'Waiting for verification',
         },
       });
@@ -101,7 +117,7 @@ export default class WorkerService extends Service {
         );
         await this.userRepository.update({
           filter: { id: workerProfile.userId },
-          user: { profileImageUrl: url }
+          user: { profileImageUrl: url },
         });
       }
 
@@ -113,11 +129,17 @@ export default class WorkerService extends Service {
    * Update a worker's profile information
    * @throws {AppError} If profile not found
    */
-  async update(params: { workerProfileId: IDType, data: InputWorkerUpdateData, }): Promise<WorkerProfile> {
-    const { workerProfileId, data: { experienceYears, isInTeam, acceptsUrgentJobs } } = params;
+  async update(params: {
+    workerProfileId: IDType;
+    data: InputWorkerUpdateData;
+  }): Promise<WorkerProfile> {
+    const {
+      workerProfileId,
+      data: { experienceYears, isInTeam, acceptsUrgentJobs },
+    } = params;
     return tryCatch(async () => {
       return await this.workerProfileRepository.update({
-        filter: { id: workerProfileId },
+        workerFilter: { id: workerProfileId },
         workerProfile: {
           experienceYears,
           isInTeam,
@@ -134,7 +156,7 @@ export default class WorkerService extends Service {
   async delete(params: { workerProfileId: IDType }): Promise<WorkerProfile> {
     const { workerProfileId } = params;
     return tryCatch(async () => {
-      return await this.workerProfileRepository.delete({ filter: { id: workerProfileId } });
+      return await this.workerProfileRepository.delete({ workerFilter: { id: workerProfileId } });
     });
   }
 
@@ -142,15 +164,15 @@ export default class WorkerService extends Service {
    * Get working governments for worker
    */
   async getWorkGovernments(params: {
-    pagination: PaginationOptions,
-    filter: WorkerProfileFilter,
-    GovernmentFilter: GovernmentFilter,
-  }): Promise<PaginatedResult<Government>> {
+    pagination: PaginationOptions;
+    filter: WorkerProfileFilter;
+    GovernmentFilter: GovernmentFilter;
+  }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }> {
     const { pagination, GovernmentFilter: filter } = params;
     return tryCatch(async () => {
       const result = await this.workerProfileRepository.findWorkGovernments({
         pagination,
-        filter,
+        workerFilter: filter,
       });
       return result;
     });
@@ -159,11 +181,14 @@ export default class WorkerService extends Service {
   /**
    * Add working governments for worker
    */
-  async insertWorkGovernments(params: { filter: WorkerProfileFilter, governmentIds: IDType[] }): Promise<void> {
+  async insertWorkGovernments(params: {
+    filter: WorkerProfileFilter;
+    governmentIds: IDType[];
+  }): Promise<void> {
     const { filter, governmentIds } = params;
     return tryCatch(async () => {
       await this.workerProfileRepository.insertWorkGovernments({
-        filter,
+        workerFilter: filter,
         governmentIds,
       });
     });
@@ -176,7 +201,7 @@ export default class WorkerService extends Service {
     const { filter } = params;
     return tryCatch(async () => {
       await this.workerProfileRepository.deleteAllWorkGovernments({
-        filter,
+        workerFilter: filter,
       });
     });
   }
@@ -184,11 +209,14 @@ export default class WorkerService extends Service {
   /**
    * Delete working governments for worker
    */
-  async deleteWorkGovernments(params: { filter: WorkerProfileFilter, governmentIds: IDType[] }): Promise<void> {
+  async deleteWorkGovernments(params: {
+    filter: WorkerProfileFilter;
+    governmentIds: IDType[];
+  }): Promise<void> {
     const { filter, governmentIds } = params;
     return tryCatch(async () => {
       await this.workerProfileRepository.deleteWorkGovernments({
-        filter,
+        workerFilter: filter,
         governmentIds,
       });
     });
@@ -198,18 +226,17 @@ export default class WorkerService extends Service {
    * Get specialization tree for worker
    */
   async getSpecializations(params: {
-    mainSpecializationIds: IDType[],
-    pagination: PaginationOptions,
-    filter: WorkerProfileFilter
-  }): Promise<PaginatedResult<SpecializationsTreeNode>> {
+    mainSpecializationIds: IDType[];
+    pagination: PaginationOptions;
+    filter: WorkerProfileFilter;
+  }): Promise<PaginatedResultMeta & { specializationIds: IDType[] }> {
     const { mainSpecializationIds, pagination, filter } = params;
     return tryCatch(async () => {
-      const result =
-        await this.workerProfileRepository.findSpecializations({
-          mainSpecializationIds,
-          pagination,
-          filter,
-        });
+      const result = await this.workerProfileRepository.findSpecializations({
+        mainSpecializationIds,
+        pagination,
+        filter,
+      });
       return result;
     });
   }
@@ -217,11 +244,14 @@ export default class WorkerService extends Service {
   /**
    * Add specialization tree for worker
    */
-  async addSpecializations(params: { filter: WorkerProfileFilter, specializationsTree: SpecializationsTree }): Promise<void> {
+  async addSpecializations(params: {
+    filter: WorkerProfileFilter;
+    specializationsTree: SpecializationsTree;
+  }): Promise<void> {
     const { filter, specializationsTree } = params;
     return tryCatch(async () => {
       await this.workerProfileRepository.insertSubSpecializations({
-        filter,
+        workerFilter: filter,
         specializationsTree,
       });
     });
@@ -230,13 +260,11 @@ export default class WorkerService extends Service {
   /**
    * Delete all main specializations
    */
-  async deleteAllSpecializations(params: {
-    userId: IDType,
-  }): Promise<void> {
+  async deleteAllSpecializations(params: { userId: IDType }): Promise<void> {
     const { userId } = params;
     return tryCatch(async () => {
       await this.workerProfileRepository.deleteAllSpecializations({
-        filter: { userId },
+        workerFilter: { userId },
       });
     });
   }
@@ -245,13 +273,13 @@ export default class WorkerService extends Service {
    * Delete main specializations
    */
   async deleteSpecializations(params: {
-    userId: IDType,
-    mainSpecializationIds: IDType[],
+    userId: IDType;
+    mainSpecializationIds: IDType[];
   }): Promise<void> {
     const { userId, mainSpecializationIds } = params;
     return tryCatch(async () => {
       await this.workerProfileRepository.deleteSpecializations({
-        filter: { userId },
+        workerFilter: { userId },
         specializations: mainSpecializationIds,
       });
     });
@@ -260,12 +288,15 @@ export default class WorkerService extends Service {
   /**
    * Delete sub specializations
    */
-  async deleteSubSpecializations(params: { userId: IDType, specializationsTree: SpecializationsTree }): Promise<void> {
+  async deleteSubSpecializations(params: {
+    userId: IDType;
+    specializationsTree: SpecializationsTree;
+  }): Promise<void> {
     const { userId, specializationsTree } = params;
     return tryCatch(async () => {
       await this.workerProfileRepository.deleteSubSpecializations({
-        filter: { userId, },
-        specializationsTree
+        workerFilter: { userId },
+        specializationsTree,
       });
     });
   }
@@ -273,7 +304,10 @@ export default class WorkerService extends Service {
   /**
    * Create or update worker profile verification
    */
-  async createVerification(params: { workerProfileId: IDType, verification: WorkerProfileVerificationCreateInput }): Promise<WorkerProfileVerification | null> {
+  async createVerification(params: {
+    workerProfileId: IDType;
+    verification: WorkerProfileVerificationCreateInput;
+  }): Promise<WorkerProfileVerification | null> {
     const { workerProfileId, verification } = params;
     return tryCatch(async () => {
       return await this.workerProfileRepository.setVerification({
@@ -286,10 +320,12 @@ export default class WorkerService extends Service {
   /**
    * Get a worker profile's verification
    */
-  async getVerification(params: { filter: WorkerProfileFilter }): Promise<WorkerProfileVerification | null> {
+  async getVerification(params: {
+    filter: WorkerProfileFilter;
+  }): Promise<WorkerProfileVerification | null> {
     const { filter } = params;
     return tryCatch(async () => {
-      return await this.workerProfileRepository.findVerification({ filter });
+      return await this.workerProfileRepository.findVerification({ workerFilter: filter });
     });
   }
 
@@ -299,7 +335,7 @@ export default class WorkerService extends Service {
   async get(params: { filter: WorkerProfileFilter }): Promise<WorkerProfile | null> {
     const { filter } = params;
     return tryCatch(async () => {
-      return await this.workerProfileRepository.find({ filter });
+      return await this.workerProfileRepository.find({ workerFilter: filter });
     });
   }
 
@@ -308,6 +344,6 @@ export default class WorkerService extends Service {
    */
   async hasWorkerProfile(params: { filter: WorkerProfileFilter }): Promise<boolean> {
     const { filter } = params;
-    return await this.workerProfileRepository.exists({ filter });
+    return await this.workerProfileRepository.exists({ workerFilter: filter });
   }
 }

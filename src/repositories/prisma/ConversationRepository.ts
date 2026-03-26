@@ -10,7 +10,7 @@ import {
   ConversationWithParticipantsAndMessages,
 } from '../../domain/conversation.entity.js';
 import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PrismaClient } from '@prisma/client';
 
@@ -87,12 +87,12 @@ export default class ConversationRepository extends Repository implements IConve
           AND: [
             {
               participants: {
-                some: { userId: params.workerId, role: "WORKER" },
+                some: { userId: params.workerId, role: 'WORKER' },
               },
             },
             {
               participants: {
-                some: { userId: params.clientId, role: "CLIENT" },
+                some: { userId: params.clientId, role: 'CLIENT' },
               },
             },
           ],
@@ -131,13 +131,18 @@ export default class ConversationRepository extends Repository implements IConve
     userId: IDType;
     pagination?: PaginationOptions;
     sort?: SortOptions<ConversationWithParticipantsAndMessages>;
-  }): Promise<PaginatedResult<ConversationWithParticipantsAndMessages>> {
+  }): Promise<
+    PaginatedResultMeta & {
+      conversationParticipantsWithMessages: ConversationWithParticipantsAndMessages[];
+    }
+  > {
     try {
       const { filter, userId, pagination, sort } = params;
       let finalFilter = {};
 
       if (filter === 'All') finalFilter = {};
-      else if (isEmptyFilter(filter)) return getEmptyPaginatedResult();
+      else if (isEmptyFilter(filter))
+        return { ...getEmptyPaginatedResult(), conversationParticipantsWithMessages: [] };
 
       const total = await this.prismaClient.conversation.count({
         where: { ...finalFilter, participants: { some: { userId } }, messageCounter: { gt: 0 } },
@@ -182,7 +187,7 @@ export default class ConversationRepository extends Repository implements IConve
       });
 
       return {
-        data: conversations.map((c) => ({
+        conversationParticipantsWithMessages: conversations.map((c) => ({
           ...this.toDomain(c),
           participants: c.participants.map((p) => ({
             ...p,
@@ -216,10 +221,15 @@ export default class ConversationRepository extends Repository implements IConve
     userId: IDType;
     pagination?: PaginationOptions;
     sort?: SortOptions<ConversationWithParticipantsAndMessages>;
-  }): Promise<PaginatedResult<ConversationWithParticipantsAndMessages>> {
+  }): Promise<
+    PaginatedResultMeta & {
+      conversationParticipantsWithMessages: ConversationWithParticipantsAndMessages[];
+    }
+  > {
     try {
       const { filter, userId, pagination, sort } = params;
-      if (isEmptyFilter(filter)) return getEmptyPaginatedResult();
+      if (isEmptyFilter(filter))
+        return { ...getEmptyPaginatedResult(), conversationParticipantsWithMessages: [] };
 
       const total = await this.prismaClient.conversation.count({
         where: { ...filter, participants: { some: { userId } } },
@@ -263,7 +273,7 @@ export default class ConversationRepository extends Repository implements IConve
       });
 
       return {
-        data: conversations.map((c) => ({
+        conversationParticipantsWithMessages: conversations.map((c) => ({
           ...this.toDomain(c),
           participants: c.participants.map((p) => ({
             ...this.toDomainParticipant(p),
@@ -317,8 +327,8 @@ export default class ConversationRepository extends Repository implements IConve
         data: {
           participants: {
             create: [
-              { userId: params.conversation.workerId, role: "WORKER" },
-              { userId: params.conversation.clientId, role: "CLIENT" },
+              { userId: params.conversation.workerId, role: 'WORKER' },
+              { userId: params.conversation.clientId, role: 'CLIENT' },
             ],
           },
         },
@@ -338,8 +348,8 @@ export default class ConversationRepository extends Repository implements IConve
         data: {
           participants: {
             create: [
-              { userId: params.workerId, role: "WORKER" },
-              { userId: params.clientId, role: "CLIENT" },
+              { userId: params.workerId, role: 'WORKER' },
+              { userId: params.clientId, role: 'CLIENT' },
             ],
           },
         },

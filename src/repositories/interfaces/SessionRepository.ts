@@ -1,8 +1,4 @@
-import {
-  Session,
-  SessionCreateInput,
-  SessionFilter,
-} from '../../domain/session.entity.js';
+import { Session, SessionCreateInput, SessionFilter } from '../../domain/session.entity.js';
 import { IDType } from './Repository.js';
 
 export default interface ISessionRepository {
@@ -14,7 +10,7 @@ export default interface ISessionRepository {
   /**
    * Create a session
    */
-  create(params: { userId: IDType, session: SessionCreateInput, }): Promise<Session>;
+  create(params: { userId: IDType; session: SessionCreateInput }): Promise<Session>;
   /**
    * Delete a session
    */
@@ -22,5 +18,5 @@ export default interface ISessionRepository {
   /**
    * Delete all sessions with given filter: device Id, user Id
    */
-  deleteMany(params: { filter: SessionFilter; }): Promise<void>;
+  deleteMany(params: { filter: SessionFilter }): Promise<void>;
 }

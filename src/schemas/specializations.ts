@@ -1,6 +1,10 @@
-import { z } from 'zod';
-import { UUIDSchema } from './common.js';
+import { z } from '../libs/zod.js';
+import { buildFilterSchema, UUIDSchema } from './common.js';
 import { NameSchema, createQuerySchema } from './common.js';
+import {
+  SpecializationFilterDescriptor,
+  SubSpecializationFilterDescriptor,
+} from 'src/domain/specialization.entity.js';
 
 const CATEGORIES = [
   'ELECTRICITY',
@@ -18,30 +22,9 @@ const CATEGORIES = [
   'DEFAULTCATEGORY',
 ] as const;
 
-export const CategorySchema = z.enum(CATEGORIES, { message: `category must be one of: ${CATEGORIES.join(', ')}` });
-
-
-const SPECIALIZATION_QUERY_CONFIG = {
-  allowedFilterFields: ['name', 'nameAr', 'category'],
-  filterFieldTypes: {
-    name: { type: 'string' as const, minLength: 2, maxLength: 100 },
-    nameAr: { type: 'string' as const, minLength: 2, maxLength: 100 },
-    category: { type: 'enum' as const, enumValues: [...CATEGORIES] as [string, ...string[]] },
-  },
-  allowedOrderByFields: ['name', 'nameAr', 'category', 'createdAt', 'updatedAt'],
-  allowedSearchFields: ['name', 'nameAr', 'category'],
-};
-
-const SUB_SPECIALIZATION_QUERY_CONFIG = {
-  allowedFilterFields: ['name', 'nameAr', 'mainSpecializationId'],
-  filterFieldTypes: {
-    name: { type: 'string' as const, minLength: 2, maxLength: 100 },
-    nameAr: { type: 'string' as const, minLength: 2, maxLength: 100 },
-    mainSpecializationId: { type: 'uuid' as const },
-  },
-  allowedOrderByFields: ['name', 'nameAr', 'createdAt', 'updatedAt'],
-  allowedSearchFields: ['name', 'nameAr'],
-};
+export const CategorySchema = z.enum(CATEGORIES, {
+  message: `category must be one of: ${CATEGORIES.join(', ')}`,
+});
 
 // ============================================
 // Specialization schemas
@@ -77,8 +60,10 @@ export type UpdateSubSpecializationDTO = z.infer<typeof UpdateSubSpecializationS
 // Query schemas
 // ============================================
 
-export const SpecializationQuerySchema = createQuerySchema(SPECIALIZATION_QUERY_CONFIG);
+export const SpecializationFilterSchema = buildFilterSchema(SpecializationFilterDescriptor);
+export const SpecializationQuerySchema = createQuerySchema(SpecializationFilterSchema);
 export type SpecializationQuery = z.infer<typeof SpecializationQuerySchema>;
 
-export const SubSpecializationQuerySchema = createQuerySchema(SUB_SPECIALIZATION_QUERY_CONFIG);
+export const SubSpecializationFilterSchema = buildFilterSchema(SubSpecializationFilterDescriptor);
+export const SubSpecializationQuerySchema = createQuerySchema(SubSpecializationFilterSchema);
 export type SubSpecializationQuery = z.infer<typeof SubSpecializationQuerySchema>;

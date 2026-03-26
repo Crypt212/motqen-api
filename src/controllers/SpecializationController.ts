@@ -3,21 +3,25 @@
  * @module controllers/SpecializationController
  */
 
-import { matchedData } from 'express-validator';
 import SuccessResponse from '../responses/successResponse.js';
 import { specializationService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
+import { parseQueryParams } from 'src/schemas/common.js';
+import {
+  SpecializationFilterSchema,
+  SubSpecializationFilterSchema,
+} from 'src/schemas/specializations.js';
 
 /**
  * Get all specializations with pagination, filtering, and ordering
  */
 export const getSpecializations = asyncHandler(async (req, res) => {
-  const { filter, sortBy, sortOrder, page, limit } = matchedData(req, { includeOptionals: true });
+  const { filter, pagination, sort } = parseQueryParams(req.query, SpecializationFilterSchema);
 
   const result = await specializationService.getSpecializations({
     filter,
-    pagination: { page, limit },
-    sort: { sortBy, sortOrder },
+    pagination,
+    sort: sort[0],
   });
 
   new SuccessResponse('Specializations retrieved successfully', result, 200).send(res);
@@ -27,7 +31,7 @@ export const getSpecializations = asyncHandler(async (req, res) => {
  * Get specialization by ID
  */
 export const getSpecializationById = asyncHandler(async (req, res) => {
-  const { specializationId: id } = matchedData(req, { includeOptionals: true });
+  const id = req.params.specializationId as string;
   const specialization = await specializationService.getSpecializationById({ id });
 
   new SuccessResponse('Specialization retrieved successfully', { specialization }, 200).send(res);
@@ -37,14 +41,14 @@ export const getSpecializationById = asyncHandler(async (req, res) => {
  * Get sub-specializations by parent ID with pagination
  */
 export const getSubSpecializations = asyncHandler(async (req, res) => {
-  const { page, limit, sortBy, sortOrder, filter } = matchedData(req, { includeOptionals: true });
-  const id = String(req.params.specializationId);
+  const { filter, pagination, sort } = parseQueryParams(req.query, SubSpecializationFilterSchema);
+  const parentId = String(req.params.specializationId);
 
   const result = await specializationService.getSubSpecializations({
-    parentId: id,
+    parentId,
     filter,
-    pagination: { page, limit },
-    sort: { sortBy, sortOrder },
+    pagination,
+    sort: sort[0],
   });
 
   new SuccessResponse('Sub-specializations retrieved successfully', result, 200).send(res);
@@ -54,7 +58,7 @@ export const getSubSpecializations = asyncHandler(async (req, res) => {
  * Create a new specialization (Admin only)
  */
 export const createSpecialization = asyncHandler(async (req, res) => {
-  const { name, nameAr, category } = matchedData(req, { includeOptionals: true });
+  const { name, nameAr, category } = req.body;
 
   const specialization = await specializationService.createSpecialization({
     input: { name, nameAr, category },
@@ -67,8 +71,8 @@ export const createSpecialization = asyncHandler(async (req, res) => {
  * Update specialization (Admin only)
  */
 export const updateSpecialization = asyncHandler(async (req, res) => {
-  const { name, nameAr, category } = matchedData(req, { includeOptionals: true });
-  const id = String(req.params.specializationId);
+  const { name, nameAr, category } = req.body;
+  const id = req.params.specializationId as string;
 
   const specialization = await specializationService.updateSpecialization({
     id,
@@ -82,7 +86,7 @@ export const updateSpecialization = asyncHandler(async (req, res) => {
  * Delete specialization (Admin only)
  */
 export const deleteSpecialization = asyncHandler(async (req, res) => {
-  const id = String(req.params.specializationId);
+  const id = req.params.specializationId as string;
 
   await specializationService.deleteSpecialization({ id });
 
@@ -93,7 +97,7 @@ export const deleteSpecialization = asyncHandler(async (req, res) => {
  * Create a new sub-specialization (Admin only)
  */
 export const createSubSpecialization = asyncHandler(async (req, res) => {
-  const { name, nameAr } = matchedData(req, { includeOptionals: true });
+  const { name, nameAr } = req.body;
   const id = String(req.params.specializationId);
 
   const subSpecialization = await specializationService.createSubSpecialization({
@@ -110,8 +114,8 @@ export const createSubSpecialization = asyncHandler(async (req, res) => {
  * Delete sub-specialization (Admin only)
  */
 export const deleteSubSpecialization = asyncHandler(async (req, res) => {
-  const subId = String(req.params.subSpecializationId);
-  const id = String(req.params.specializationId);
+  const subId = req.params.subSpecializationId as string;
+  const id = req.params.specializationId as string;
 
   await specializationService.deleteSubSpecialization({ parentId: id, subId });
 

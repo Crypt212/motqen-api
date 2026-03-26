@@ -8,7 +8,14 @@ import Service, { tryCatch } from './Service.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
-import { ClientProfile, ClientProfileCreateInput, ClientProfileFilter, ClientProfileUpdateInput, LocationCreateInput, LocationUpdateInput } from '../domain/clientProfile.entity.js';
+import {
+  ClientProfile,
+  ClientProfileCreateInput,
+  ClientProfileFilter,
+  ClientProfileUpdateInput,
+  LocationCreateInput,
+  LocationUpdateInput,
+} from '../domain/clientProfile.entity.js';
 
 /**
  * Client Service - Manages client-related operations
@@ -22,7 +29,10 @@ export default class ClientService extends Service {
    * @param {ClientRepository} params.clientRepository
    * @param {UserRepository} params.userRepository
    */
-  constructor(params: { clientProfileRepository: IClientProfileRepository, userRepository: IUserRepository }) {
+  constructor(params: {
+    clientProfileRepository: IClientProfileRepository;
+    userRepository: IUserRepository;
+  }) {
     super();
     this.clientProfileRepository = params.clientProfileRepository;
     this.userRepository = params.userRepository;
@@ -38,7 +48,7 @@ export default class ClientService extends Service {
       const user = await this.userRepository.find({ filter: { id: userId } });
       if (!user) throw new AppError('User not found', 404);
 
-      const clientProfile = await this.clientProfileRepository.find({ filter: { userId, } });
+      const clientProfile = await this.clientProfileRepository.find({ filter: { userId } });
       if (!clientProfile) throw new AppError('Client profile not found', 404);
 
       return clientProfile;
@@ -49,7 +59,10 @@ export default class ClientService extends Service {
    * Create a client profile for a user
    * @throws {AppError} If user not found
    */
-  async create(params: { userId: IDType, data: ClientProfileCreateInput & { location: LocationCreateInput } }): Promise<ClientProfile | null> {
+  async create(params: {
+    userId: IDType;
+    data: ClientProfileCreateInput & { location: LocationCreateInput };
+  }): Promise<ClientProfile | null> {
     return tryCatch(async () => {
       const { userId, data } = params;
       const user = await this.userRepository.find({ filter: { id: userId } });
@@ -57,8 +70,7 @@ export default class ClientService extends Service {
 
       const clientProfile = await this.clientProfileRepository.createWithPrimaryLocation({
         userId,
-        clientProfile: {
-        },
+        clientProfile: {},
         location: {
           governmentId: data.location.governmentId,
           cityId: data.location.cityId,
@@ -76,10 +88,17 @@ export default class ClientService extends Service {
    * Update a client's profile for a user
    * @throws {AppError} If profile not found
    */
-  async update(params: { filter: ClientProfileFilter, data: ClientProfileUpdateInput & { location?: LocationUpdateInput } }): Promise<ClientProfile | null> {
+  async update(params: {
+    filter: ClientProfileFilter;
+    data: ClientProfileUpdateInput & { location?: LocationUpdateInput };
+  }): Promise<ClientProfile | null> {
     return tryCatch(async () => {
       const { filter, data } = params;
-      return await this.clientProfileRepository.updateWithPrimaryLocation({ filter, clientProfile: { data }, location: data.location });
+      return await this.clientProfileRepository.updateWithPrimaryLocation({
+        filter,
+        clientProfile: { data },
+        location: data.location,
+      });
     });
   }
 

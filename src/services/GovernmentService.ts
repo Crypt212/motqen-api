@@ -14,7 +14,7 @@ import {
   City,
   CityFilter,
 } from '../domain/government.entity.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../types/query.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/query.js';
 
 export default class GovernmentService extends Service {
   private governmentRepository: IGovernmentRepository;
@@ -28,7 +28,7 @@ export default class GovernmentService extends Service {
     filter: GovernmentFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Government>;
-  }): Promise<PaginatedResult<Government>> {
+  }): Promise<PaginatedResultMeta & { governments: Government[] }> {
     return tryCatch(async () => {
       return await this.governmentRepository.findMany(params);
     });
@@ -46,9 +46,7 @@ export default class GovernmentService extends Service {
     });
   }
 
-  async createGovernment(params: {
-    data: GovernmentCreateInput;
-  }): Promise<Government> {
+  async createGovernment(params: { data: GovernmentCreateInput }): Promise<Government> {
     return tryCatch(async () => {
       const government = await this.governmentRepository.create({
         government: params.data,
@@ -60,10 +58,7 @@ export default class GovernmentService extends Service {
     });
   }
 
-  async updateGovernment(params: {
-    id: string;
-    data: GovernmentUpdateInput;
-  }): Promise<Government> {
+  async updateGovernment(params: { id: string; data: GovernmentUpdateInput }): Promise<Government> {
     return tryCatch(async () => {
       const existing = await this.governmentRepository.find({
         filter: { id: params.id },
@@ -100,7 +95,7 @@ export default class GovernmentService extends Service {
     filter: CityFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<City>;
-  }): Promise<PaginatedResult<City>> {
+  }): Promise<PaginatedResultMeta & { cities: City[] }> {
     return tryCatch(async () => {
       const existing = await this.governmentRepository.find({
         filter: { id: params.governmentId },

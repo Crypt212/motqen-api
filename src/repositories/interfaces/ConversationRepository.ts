@@ -6,7 +6,7 @@ import {
   ConversationUpdateInput,
   ConversationWithParticipantsAndMessages,
 } from '../../domain/conversation.entity.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { IDType } from '../interfaces/Repository.js';
 
 export default interface IConversationRepository {
@@ -33,10 +33,7 @@ export default interface IConversationRepository {
   /**
    * Find conversation between worker and client (unique constraint)
    */
-  findByPair(params: {
-    workerId: IDType;
-    clientId: IDType;
-  }): Promise<Conversation | null>;
+  findByPair(params: { workerId: IDType; clientId: IDType }): Promise<Conversation | null>;
 
   /**
    * Find conversation with participant
@@ -50,22 +47,29 @@ export default interface IConversationRepository {
    * Find non empty conversations
    */
   findNonEmptyConversationsWithParticipantsAndMessages(params: {
-    filter: ConversationFilter,
+    filter: ConversationFilter;
     userId: IDType;
     pagination?: PaginationOptions;
-    sort?: SortOptions<ConversationWithParticipantsAndMessages>
-  }): Promise<PaginatedResult<ConversationWithParticipantsAndMessages>>;
-
+    sort?: SortOptions<ConversationWithParticipantsAndMessages>;
+  }): Promise<
+    PaginatedResultMeta & {
+      conversationParticipantsWithMessages: ConversationWithParticipantsAndMessages[];
+    }
+  >;
 
   /**
    * Find conversations
    */
   findMany(params: {
-    filter: ConversationFilter,
+    filter: ConversationFilter;
     userId: IDType;
     pagination?: PaginationOptions;
-    sort?: SortOptions<ConversationWithParticipantsAndMessages>
-  }): Promise<PaginatedResult<ConversationWithParticipantsAndMessages>>;
+    sort?: SortOptions<ConversationWithParticipantsAndMessages>;
+  }): Promise<
+    PaginatedResultMeta & {
+      conversationParticipantsWithMessages: ConversationWithParticipantsAndMessages[];
+    }
+  >;
 
   /**
    * Find conversation participant
@@ -78,17 +82,12 @@ export default interface IConversationRepository {
   /**
    * Create a conversation
    */
-  create(params: {
-    conversation: ConversationCreateInput;
-  }): Promise<Conversation>;
+  create(params: { conversation: ConversationCreateInput }): Promise<Conversation>;
 
   /**
    * Create conversation with participants
    */
-  createWithParticipants(params: {
-    workerId: IDType;
-    clientId: IDType;
-  }): Promise<{
+  createWithParticipants(params: { workerId: IDType; clientId: IDType }): Promise<{
     conversation: Conversation;
     participants: ConversationParticipant[];
   }>;

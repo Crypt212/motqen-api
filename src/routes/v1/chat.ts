@@ -22,7 +22,7 @@ import {
 } from '../../controllers/ChatController.js';
 import { authenticateAccess } from '../../middlewares/authMiddleware.js';
 import { validateBody, validateParams, validateQuery } from 'src/middlewares/validateRequest.js';
-import { createQuerySchema } from 'src/schemas/common.js';
+import { buildFilterSchema, createQuerySchema } from 'src/schemas/common.js';
 
 const chatRouter = Router();
 
@@ -105,10 +105,8 @@ chatRouter.post(
   '/conversations',
   authenticateAccess,
   authorizeClient,
-  [
-    validateBody(z.object({ workerId: z.uuid({ message: 'workerId must be a valid UUID' }), }))
-  ],
-  getOrCreateConversation,
+  [validateBody(z.object({ workerId: z.uuid({ message: 'workerId must be a valid UUID' }) }))],
+  getOrCreateConversation
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -201,14 +199,16 @@ chatRouter.post(
 chatRouter.get(
   '/conversations',
   [
-    validateQuery(createQuerySchema({
-      allowedFilterFields: ['id'],
-      filterFieldTypes: { id: { type: 'uuid' as const } },
-      allowedOrderByFields: ['createdAt'],
-      allowedSearchFields: [],
-    })),
+    validateQuery(
+      createQuerySchema(
+        buildFilterSchema({
+          skip: { type: 'number' as const, min: 0 },
+          take: { type: 'number' as const, min: 1, max: 30 },
+        })
+      )
+    ),
   ],
-  getConversations,
+  getConversations
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -276,14 +276,18 @@ chatRouter.get(
 chatRouter.get(
   '/conversations/unread',
   [
-    validateQuery(createQuerySchema({
-      allowedFilterFields: ['id'],
-      filterFieldTypes: { id: { type: 'uuid' as const } },
-      allowedOrderByFields: ['createdAt'],
-      allowedSearchFields: [],
-    })),
+    validateQuery(
+      createQuerySchema(
+        buildFilterSchema({
+          page: { type: 'number' as const, min: 0 },
+          limit: { type: 'number' as const, min: 1, max: 30 },
+          sortBy: { type: 'string' as const, enum: ['updatedAt', 'messageCounter', 'unreadCount'] },
+          sortOrder: { type: 'string' as const, enum: ['asc', 'desc'] },
+        })
+      )
+    ),
   ],
-  getUnreadSummary,
+  getUnreadSummary
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -388,15 +392,19 @@ chatRouter.get(
 chatRouter.get(
   '/conversations/:conversationId/messages',
   [
-    validateParams(z.object({ conversationId: z.uuid({ message: 'conversationId must be a valid UUID' }) })),
-    validateQuery(createQuerySchema({
-      allowedFilterFields: ['id'],
-      filterFieldTypes: { id: { type: 'uuid' as const } },
-      allowedOrderByFields: ['createdAt'],
-      allowedSearchFields: [],
-    })),
+    validateParams(
+      z.object({ conversationId: z.uuid({ message: 'conversationId must be a valid UUID' }) })
+    ),
+    validateQuery(
+      createQuerySchema(
+        buildFilterSchema({
+          after: { type: 'number' as const, min: 0 },
+          limit: { type: 'number' as const, min: 1, max: 30 },
+        })
+      )
+    ),
   ],
-  getMessages,
+  getMessages
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -476,10 +484,16 @@ chatRouter.get(
 chatRouter.get(
   '/conversations/:conversationId/messages/missed',
   [
-    validateParams(z.object({ conversationId: z.uuid({ message: 'conversationId must be a valid UUID' }) })),
-    validateQuery(z.object({ after: z.int({ message: 'after is required and must be a non-negative integer'}).gte(0) }) ),
+    validateParams(
+      z.object({ conversationId: z.uuid({ message: 'conversationId must be a valid UUID' }) })
+    ),
+    validateQuery(
+      z.object({
+        after: z.int({ message: 'after is required and must be a non-negative integer' }).gte(0),
+      })
+    ),
   ],
-  getMissedMessages,
+  getMissedMessages
 );
 
 export default chatRouter;

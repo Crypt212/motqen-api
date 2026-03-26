@@ -10,8 +10,8 @@ import {
   CityFilter,
 } from '../../domain/government.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
-import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
-import { PaginationOptions, SortOptions, PaginatedResult } from '../../types/query.js';
+import { isEmptyFilter } from './utils.js';
+import { PaginationOptions, SortOptions, PaginatedResultMeta } from '../../types/query.js';
 import { PrismaClient } from '@prisma/client';
 
 export default class GovernmentRepository extends Repository implements IGovernmentRepository {
@@ -47,7 +47,6 @@ export default class GovernmentRepository extends Repository implements IGovernm
   async find(params: { filter: GovernmentFilter }): Promise<Government | null> {
     try {
       const { filter } = params;
-      if (isEmptyFilter(filter)) return null;
 
       const record = await this.prismaClient.government.findFirst({
         where: filter,
@@ -62,10 +61,9 @@ export default class GovernmentRepository extends Repository implements IGovernm
     filter: GovernmentFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Government>;
-  }): Promise<PaginatedResult<Government>> {
+  }): Promise<PaginatedResultMeta & { governments: Government[] }> {
     try {
       const { filter, pagination, sort } = params;
-      if (isEmptyFilter(filter)) return getEmptyPaginatedResult();
 
       const total = await this.prismaClient.government.count({
         where: filter,
@@ -83,7 +81,7 @@ export default class GovernmentRepository extends Repository implements IGovernm
       });
 
       return {
-        data: governments.map((g) => this.toDomain(g)),
+        governments: governments.map((g) => this.toDomain(g)),
         ...paginationResult,
         count: governments.length,
         hasNext: paginationResult.page < paginationResult.totalPages,
@@ -97,6 +95,7 @@ export default class GovernmentRepository extends Repository implements IGovernm
   async findCity(params: { filter: CityFilter }): Promise<City | null> {
     try {
       const { filter } = params;
+      console.log(filter);
       if (isEmptyFilter(filter)) return null;
 
       const record = await this.prismaClient.city.findFirst({
@@ -112,10 +111,9 @@ export default class GovernmentRepository extends Repository implements IGovernm
     filter: CityFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<City>;
-  }): Promise<PaginatedResult<City>> {
+  }): Promise<PaginatedResultMeta & { cities: City[] }> {
     try {
       const { filter, pagination, sort } = params;
-      if (isEmptyFilter(filter)) return getEmptyPaginatedResult();
 
       const total = await this.prismaClient.city.count({
         where: filter,
@@ -133,7 +131,7 @@ export default class GovernmentRepository extends Repository implements IGovernm
       });
 
       return {
-        data: cities.map((c) => this.toDomainCity(c)),
+        cities: cities.map((c) => this.toDomainCity(c)),
         ...paginationResult,
         count: cities.length,
         hasNext: paginationResult.page < paginationResult.totalPages,
@@ -162,7 +160,7 @@ export default class GovernmentRepository extends Repository implements IGovernm
     try {
       const record = await this.prismaClient.city.create({
         data: {
-          ...(params.city),
+          ...params.city,
           government: { connect: { id: params.governmentId } },
         },
       });

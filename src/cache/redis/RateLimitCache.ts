@@ -17,13 +17,13 @@ export default class RateLimitCache implements IRateLimitCache {
    * Key generators for rate limit cache
    */
   private keys: {
-      sendCount: (phone: string, method: Method) => string,
-      sendCooldown: (phone: string, method: Method) => string,
-      sendDeviceCount: (deviceId: DeviceID) => string,
-      sendDeviceCooldown: (deviceId: DeviceID) => string,
-      verify: (phone: string, method: Method) => string,
-      verified: (phone: string) => string,
-      accountsDevice: (fp: string) => string,
+    sendCount: (phone: string, method: Method) => string;
+    sendCooldown: (phone: string, method: Method) => string;
+    sendDeviceCount: (deviceId: DeviceID) => string;
+    sendDeviceCooldown: (deviceId: DeviceID) => string;
+    verify: (phone: string, method: Method) => string;
+    verified: (phone: string) => string;
+    accountsDevice: (fp: string) => string;
   };
   private incrementSendScript: string;
   private incrementAccountsScript: string;
@@ -225,8 +225,6 @@ export default class RateLimitCache implements IRateLimitCache {
    * Reset rate limit state after successful verification
    */
   async resetAfterSuccess(phone: string, method: Method) {
-    await Promise.all([
-      this.deleteKey(this.keys.verify(phone, method)),
-    ]);
+    await Promise.all([this.deleteKey(this.keys.verify(phone, method))]);
   }
 }

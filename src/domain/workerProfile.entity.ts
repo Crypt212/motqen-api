@@ -1,74 +1,77 @@
-import { $Enums } from "@prisma/client";
-import { IDType } from "../repositories/interfaces/Repository.js";
+import { $Enums } from '@prisma/client';
+import { IDType } from '../repositories/interfaces/Repository.js';
+import { FilterFromDescriptor } from 'src/schemas/common.js';
+import { FieldTypeDefinition } from 'src/types/query.js';
 
 export type VerificationStatus = $Enums.VerificationStatus;
 
 export type WorkerProfile = {
   id: IDType;
-  userId: string,
+  userId: string;
 
-  experienceYears: number,
-  isInTeam: boolean,
-  acceptsUrgentJobs: boolean,
-  bio?: string,
+  experienceYears: number;
+  isInTeam: boolean;
+  acceptsUrgentJobs: boolean;
+  bio?: string;
 
-  createdAt: Date,
-  updatedAt: Date,
-}
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export type WorkerProfileCreateInput = {
-  experienceYears?: number,
-  isInTeam?: boolean,
-  acceptsUrgentJobs?: boolean,
-  bio?: string,
-}
+  experienceYears?: number;
+  isInTeam?: boolean;
+  acceptsUrgentJobs?: boolean;
+  bio?: string;
+};
 
-export type WorkerProfileUpdateInput = Partial<WorkerProfileCreateInput>
+export type WorkerProfileUpdateInput = Partial<WorkerProfileCreateInput>;
 
-export type WorkerProfileFilter = {
-  id?: IDType,
-  workerProfileId?: IDType,
-  userId?: IDType,
-}
+export const WorkerProfileFilterDescriptor = {
+  id: { type: 'uuid' as const },
+  userId: { type: 'uuid' as const },
+} satisfies Record<string, FieldTypeDefinition>;
+
+export type WorkerProfileFilter = FilterFromDescriptor<typeof WorkerProfileFilterDescriptor>;
 
 // ==================================================
 
 export type WorkerProfileVerification = {
   id: IDType;
-  workerProfileId: string,
+  workerProfileId: string;
 
-  idWithPersonalImageUrl: String,
-  idDocumentUrl: String,
-  reason: String,
-  status: VerificationStatus,
+  idWithPersonalImageUrl: String;
+  idDocumentUrl: String;
+  reason: String;
+  status: VerificationStatus;
 
-  createdAt: Date,
-  updatedAt: Date,
-}
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export type WorkerProfileVerificationCreateInput = {
-  idWithPersonalImageUrl: String,
-  idDocumentUrl: String,
-  reason?: String,
-  status?: VerificationStatus,
-}
+  idWithPersonalImageUrl: String;
+  idDocumentUrl: String;
+  reason?: String;
+  status?: VerificationStatus;
+};
 
-export type WorkerProfileVerificationUpdateInput = Partial<WorkerProfileVerificationCreateInput>
+export type WorkerProfileVerificationUpdateInput = Partial<WorkerProfileVerificationCreateInput>;
 
 // ===================================================
 
 export type Portfolio = {
-  id: IDType,
-  workerProfileId: IDType,
+  id: IDType;
+  workerProfileId: IDType;
 
-  description: string,
+  description: string;
 
-  updatedAt: Date,
-  createdAt: Date,
-}
+  updatedAt: Date;
+  createdAt: Date;
+};
 
 export type PortfolioCreateInput = {
-  description?: string,
-}
+  description?: string;
+};
 
-export type PortfolioUpdateInput = Partial<PortfolioCreateInput>
+export type PortfolioUpdateInput = Partial<PortfolioCreateInput>;

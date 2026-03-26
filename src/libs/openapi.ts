@@ -1,8 +1,7 @@
-import { OpenAPIRegistry, OpenApiGeneratorV3 }
-  from '@asteasolutions/zod-to-openapi';
+import { OpenAPIRegistry, OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
 
 // Part of the example
-// import { LoginSchema } from '../schemas/auth.schema';
+// import { LoginSchema } from '../schemas/auth.js';
 
 export const registry = new OpenAPIRegistry();
 

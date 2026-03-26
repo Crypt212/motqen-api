@@ -3,6 +3,5 @@
  * @module types/express
  */
 
-
 // Export empty object to make this a module
-export { };
+export {};

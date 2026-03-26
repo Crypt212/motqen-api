@@ -4,7 +4,7 @@
  * Place at: src/schemas/auth.schema.ts
  */
 
-import { z } from 'zod';
+import { z } from '../libs/zod.js';
 import {
   EgyptianPhoneSchema,
   OTPCodeSchema,
@@ -13,7 +13,10 @@ import {
   ClientProfileSchema,
   WorkerProfileSchema,
   createQuerySchema,
+  buildFilterSchema,
 } from './common.js';
+import { SessionFilterDescriptor } from 'src/domain/session.entity.js';
+import { UserFilterDescriptor } from 'src/domain/user.entity.js';
 
 // ============================================
 // Auth schemas
@@ -32,18 +35,25 @@ export const VerifyOTPSchema = z.object({
 });
 export type VerifyOTPDTO = z.infer<typeof VerifyOTPSchema>;
 
+export function parseJSON() {
+  return z
+    .string()
+    .trim()
+    .transform((val: string) => JSON.parse(val));
+}
+
 // Register schemas — token and deviceId come from headers,
 // handled separately in middleware. These cover the body.
 export const RegisterClientSchema = z.object({
-  userData: UserDataSchema,
-  clientProfile: ClientProfileSchema,
+  userData: parseJSON().pipe(UserDataSchema),
+  clientProfile: parseJSON().pipe(ClientProfileSchema),
   // personal_image validated in multer middleware — not in body schema
 });
 export type RegisterClientDTO = z.infer<typeof RegisterClientSchema>;
 
 export const RegisterWorkerSchema = z.object({
-  userData: UserDataSchema,
-  workerProfile: WorkerProfileSchema,
+  userData: parseJSON().pipe(UserDataSchema),
+  workerProfile: parseJSON().pipe(WorkerProfileSchema),
   // personal_image, id_image, personal_with_id_image — validated in multer middleware
 });
 export type RegisterWorkerDTO = z.infer<typeof RegisterWorkerSchema>;
@@ -54,36 +64,10 @@ export type RegisterWorkerDTO = z.infer<typeof RegisterWorkerSchema>;
 // No body schema needed for: validateLogin, validateLogout,
 // validateReviewStatus, validateGenerateAccessToken.
 
-// ============================================
-// Admin query schemas — replaces SESSIONS_QUERY_CONFIG / USERS_QUERY_CONFIG
-// ============================================
+export const SessionFilterSchema = buildFilterSchema(SessionFilterDescriptor);
+export const SessionQuerySchema = createQuerySchema(SessionFilterSchema);
+export type SessionQuery = z.infer<typeof SessionQuerySchema>;
 
-export const SESSIONS_QUERY_CONFIG = {
-  allowedFilterFields: ['userId', 'deviceId', 'isRevoked'],
-  filterFieldTypes: {
-    userId: { type: 'uuid' as const },
-    deviceId: { type: 'string' as const, minLength: 1, maxLength: 255 },
-    isRevoked: { type: 'boolean' as const },
-  },
-  allowedOrderByFields: ['createdAt', 'lastUsedAt', 'expiresAt'],
-  allowedSearchFields: [],
-};
-
-export const USERS_QUERY_CONFIG = {
-  allowedFilterFields: ['role', 'status', 'phoneNumber', 'governmentId', 'cityId'],
-  filterFieldTypes: {
-    role: { type: 'enum' as const, enumValues: ['USER', 'ADMIN', 'SUPER_ADMIN'] as [string, ...string[]] },
-    status: { type: 'enum' as const, enumValues: ['ACTIVE', 'INACTIVE', 'PENDING', 'SUSPENDED'] as [string, ...string[]] },
-    phoneNumber: { type: 'string' as const, minLength: 10, maxLength: 15 },
-    governmentId: { type: 'uuid' as const },
-    cityId: { type: 'uuid' as const },
-  },
-  allowedOrderByFields: ['createdAt', 'updatedAt', 'firstName', 'lastName', 'phoneNumber'],
-  allowedSearchFields: ['firstName', 'lastName', 'phoneNumber'],
-};
-
-export const SessionsQuerySchema = createQuerySchema(SESSIONS_QUERY_CONFIG);
-export type SessionsQuery = z.infer<typeof SessionsQuerySchema>;
-
-export const UsersQuerySchema = createQuerySchema(USERS_QUERY_CONFIG);
-export type UsersQuery = z.infer<typeof UsersQuerySchema>;
+export const UserFilterSchema = buildFilterSchema(UserFilterDescriptor);
+export const UserQuerySchema = createQuerySchema(UserFilterSchema);
+export type UserQuery = z.infer<typeof UserQuerySchema>;

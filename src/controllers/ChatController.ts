@@ -77,10 +77,10 @@ export const getUnreadSummary = asyncHandler(async (req, res) => {
     pagination: { page, limit },
     sort: { sortBy, sortOrder },
   });
-  const unread = conversations.data.filter((c) => {
+  const unread = conversations.conversationsWithParticipantsAndMessages.filter((c) => {
     const myParticipant = c.participants.find((p) => p.userId === userId);
     const unreadCount = c.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0);
-    return unreadCount > 0
+    return unreadCount > 0;
   });
 
   new SuccessResponse('Unread summary', { unread }, 200).send(res);

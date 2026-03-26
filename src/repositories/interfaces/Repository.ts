@@ -1,3 +1,2 @@
-export default interface IRepository {
-}
+export default interface IRepository {}
 export type IDType = string;

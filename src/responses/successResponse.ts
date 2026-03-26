@@ -8,10 +8,10 @@
  * @class
  */
 class SuccessResponse {
-    public status = "success";
-    public message;
-    public data;
-    public statusCode;
+  public status = 'success';
+  public message: string;
+  public data: unknown;
+  public statusCode: number;
   /**
    * Creates a new success response instance
    * @constructor
@@ -19,8 +19,8 @@ class SuccessResponse {
    * @param {*} [data=null] - The response data
    * @param {number} [statusCode=200] - HTTP status code
    */
-  constructor(message: string = "Success", data: any = null, statusCode: number = 200) {
-    this.status = "success";
+  constructor(message: string = 'Success', data: unknown = null, statusCode: number = 200) {
+    this.status = 'success';
     this.message = message;
     this.data = data;
     this.statusCode = statusCode;
@@ -29,7 +29,7 @@ class SuccessResponse {
   /**
    * Sends the success response to the client
    */
-  send(res: import("express").Response): import("express").Response {
+  send(res: import('express').Response): import('express').Response {
     return res.status(this.statusCode).json({
       status: this.status,
       message: this.message,

@@ -14,26 +14,29 @@ import { ErrorRequestHandler } from 'express';
 export type DeviceID = string;
 
 export type UserState = {
-  userId: IDType,
-  phoneNumber: string,
-  role: Role,
-  accountStatus: AccountStatus,
+  userId: IDType;
+  phoneNumber: string;
+  role: Role;
+  accountStatus: AccountStatus;
   worker?: {
-    id: IDType,
+    id: IDType;
     verification: {
-      status: VerificationStatus,
-      reason?: string,
-    },
-
-  },
+      status: VerificationStatus;
+      reason?: string;
+    };
+  };
   client?: {
-    id: IDType,
-  }
-}
+    id: IDType;
+  };
+};
 
-export type Request = ExpressRequest & { deviceId?: DeviceID } & { userState?: UserState }
+export type Request = ExpressRequest & { deviceId?: DeviceID } & { userState?: UserState };
 
-export type RequestHandler = (req: Request, res: Response, next: NextFunction) => void | Promise<void>
+export type RequestHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => void | Promise<void>;
 
 /**
  * Controller wrapper to ensure consistent error handling
@@ -43,7 +46,6 @@ export function asyncHandler(controller: RequestHandler): RequestHandler {
     Promise.resolve(controller(req, res, next)).catch(next);
   };
 }
-
 
 export const errorHandler: ErrorRequestHandler = (err, _, res) => {
   res.status(err.status ?? 500).json({ error: err.message });

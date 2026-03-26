@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from '../libs/zod.js';
 import { UUIDSchema } from './common.js';
 
 export const ExploreSearchSchema = z.object({

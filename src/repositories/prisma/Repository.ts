@@ -5,11 +5,8 @@ import IRepository from '../interfaces/Repository.js';
 
 /**
  * Handle Prisma errors and convert to RepositoryError
- * @param {Error} error - The Prisma error
- * @param {string} operation - The operation that failed
- * @throws {RepositoryError}
  */
-export function handlePrismaError(error: Error, operation: string): RepositoryError | Error {
+export function handlePrismaError(error: unknown, operation: string): RepositoryError | unknown {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return error;
 
   const prismaError: pkg.Prisma.PrismaClientKnownRequestError = error;

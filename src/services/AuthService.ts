@@ -28,6 +28,7 @@ import IGovernmentRepository from '../repositories/interfaces/GovernmentReposito
 import ISessionRepository from '../repositories/interfaces/SessionRepository.js';
 import { Session } from '../domain/session.entity.js';
 import { SpecializationsTree } from '../domain/specialization.entity.js';
+import { OTPErrorDetails } from 'src/errors/appErrorDetails/OTPDetails.js';
 
 const MAX_VERIFY_ATTEMPTS = 5;
 
@@ -142,7 +143,7 @@ export default class AuthService extends Service {
         )
       ).url;
 
-      await this.workerProfileRepository.find({ filter: { userId: user.id } });
+      await this.workerProfileRepository.find({ workerFilter: { userId: user.id } });
 
       const verification = await this.workerProfileRepository.setVerification({
         workerProfileId: profile.id,
@@ -155,13 +156,13 @@ export default class AuthService extends Service {
       });
 
       await this.workerProfileRepository.insertWorkGovernments({
-        filter: {
+        workerFilter: {
           userId: user.id,
         },
         governmentIds: workGovernmentIds,
       });
       await this.workerProfileRepository.insertSubSpecializations({
-        filter: {
+        workerFilter: {
           userId: user.id,
         },
         specializationsTree,
@@ -297,14 +298,21 @@ export default class AuthService extends Service {
     try {
       const hashedOTP = hashOTP(OTP);
 
-      if (!OTP) throw new AppError('OTP is not provided', 422, { type: 'OTP' });
+      if (!OTP)
+        throw new AppError(
+          'OTP is not provided',
+          422,
+          new OTPErrorDetails({ type: 'FAILED_ATTEMPT' })
+        );
 
       const otp = await this.otpCache.getOtp(phoneNumber, method);
 
       if (!otp || hashedOTP !== otp)
-        throw new AppError("OTP is expired or doesn't match", 400, {
-          type: 'OTP',
-        });
+        throw new AppError(
+          "OTP is expired or doesn't match",
+          400,
+          new OTPErrorDetails({ type: 'FAILED_ATTEMPT' })
+        );
 
       await this.otpCache.deleteOtp(phoneNumber, method);
 
@@ -332,12 +340,12 @@ export default class AuthService extends Service {
       if (tokenType === 'login') {
         const user = await this.userRepository.find({ filter: { phoneNumber: phoneNumber } });
         const workProfile = await this.workerProfileRepository.find({
-          filter: { userId: user.id },
+          workerFilter: { userId: user.id },
         });
         workerShit.isWorker = workProfile ? true : false;
         if (workerShit.isWorker) {
           const verification = await this.workerProfileRepository.findVerification({
-            filter: { userId: user.id },
+            workerFilter: { userId: user.id },
           });
           workerShit.isWorkerSignedUp = verification.status === 'APPROVED';
         }
@@ -347,8 +355,9 @@ export default class AuthService extends Service {
       }
 
       return { tokenType, token, workerShit };
-    } catch (error) {
-      if (!(error instanceof AppError && error.details.type === 'OTP')) throw error;
+    } catch (error: unknown) {
+      if (!(error instanceof AppError && error.details && error.details instanceof OTPErrorDetails))
+        throw error;
       const record = await this.rateLimitCache.incrementVerify(phoneNumber, method);
 
       const limitStatus = {
@@ -357,10 +366,15 @@ export default class AuthService extends Service {
         blocked: record.attempts >= MAX_VERIFY_ATTEMPTS,
       };
 
-      throw new AppError(error.message, 400, {
-        remainingAttempts: limitStatus.remaining,
-        requestNewOtp: limitStatus.blocked,
-      });
+      throw new AppError(
+        error.message,
+        400,
+        new OTPErrorDetails({
+          type: 'FAILED_ATTEMPT',
+          remainingAttempts: limitStatus.remaining,
+          requestNewOtp: limitStatus.blocked,
+        })
+      );
     }
   }
 

@@ -3,7 +3,6 @@
  * @module controllers/ExploreController
  */
 
-import { matchedData } from 'express-validator';
 import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { userRepository, workerProfileRepository } from '../state.js';
@@ -73,7 +72,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     nearestFirst,
     page,
     limit,
-  } = matchedData(req, { includeOptionals: true });
+  } = req.query;
 
   const mainSpecializationId = getFirstString(specializationId, specialization_id);
   const subSpecId = getFirstString(subSpecializationId, sub_specialization_id, category_id);
@@ -84,28 +83,21 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     availableNow,
     AvailableNow,
     AvailbleNow,
-    availability,
+    availability
   );
-  const isAvailableNow = availabilityFilter === undefined
-    ? undefined
-    : parseBooleanFlag(availabilityFilter);
+  const isAvailableNow =
+    availabilityFilter === undefined ? undefined : parseBooleanFlag(availabilityFilter);
 
   const acceptsUrgentJobsFlag = parseBooleanFlag(acceptsUrgentJobs);
 
-  const pageNum = typeof page === 'string'
-    ? parseInt(page, 10)
-    : (typeof page === 'number' ? page : undefined);
-  const limitNum = typeof limit === 'string'
-    ? parseInt(limit, 10)
-    : (typeof limit === 'number' ? limit : undefined);
+  const pageNum =
+    typeof page === 'string' ? parseInt(page, 10) : typeof page === 'number' ? page : undefined;
+  const limitNum =
+    typeof limit === 'string' ? parseInt(limit, 10) : typeof limit === 'number' ? limit : undefined;
 
-  const highestRatedFlag =
-    parseBooleanFlag(highestRated) ||
-    parseBooleanFlag(topRated);
+  const highestRatedFlag = parseBooleanFlag(highestRated) || parseBooleanFlag(topRated);
 
-  const nearestFlag =
-    parseBooleanFlag(nearest) ||
-    parseBooleanFlag(nearestFirst);
+  const nearestFlag = parseBooleanFlag(nearest) || parseBooleanFlag(nearestFirst);
 
   if (!mainSpecializationId) {
     throw new AppError('specializationId is required for explore search', 400);
@@ -146,26 +138,31 @@ export const searchWorkers = asyncHandler(async (req, res) => {
       }),
     });
 
-    customerGovernmentName = /** @type {any} */ (currentUser)?.clientProfile?.locations?.[0]?.government?.name;
-    customerGovernmentLatitude = /** @type {any} */ (currentUser)?.clientProfile?.locations?.[0]?.government?.lat;
-    customerGovernmentLongitude = /** @type {any} */ (currentUser)?.clientProfile?.locations?.[0]?.government?.long;
+    customerGovernmentName = /** @type {any} */ (currentUser)?.clientProfile?.locations?.[0]
+      ?.government?.name;
+    customerGovernmentLatitude = /** @type {any} */ (currentUser)?.clientProfile?.locations?.[0]
+      ?.government?.lat;
+    customerGovernmentLongitude = /** @type {any} */ (currentUser)?.clientProfile?.locations?.[0]
+      ?.government?.long;
   }
 
-  const result = await workerProfileRepository.searchWorkers(/** @type {any} */ ({
-    specializationId: mainSpecializationId,
-    subSpecializationId: subSpecId,
-    city: areaFilter,
-    availability: isAvailableNow,
-    acceptsUrgentJobs: acceptsUrgentJobsFlag,
-    highestRated: highestRatedFlag,
-    nearest: nearestFlag,
-    customerGovernmentName,
-    customerGovernmentLatitude,
-    customerGovernmentLongitude,
-    currentUserId: req.userState?.userId,
-    page: pageNum,
-    limit: limitNum,
-  }));
+  const result = await workerProfileRepository.searchWorkers(
+    /** @type {any} */ ({
+      specializationId: mainSpecializationId,
+      subSpecializationId: subSpecId,
+      city: areaFilter,
+      availability: isAvailableNow,
+      acceptsUrgentJobs: acceptsUrgentJobsFlag,
+      highestRated: highestRatedFlag,
+      nearest: nearestFlag,
+      customerGovernmentName,
+      customerGovernmentLatitude,
+      customerGovernmentLongitude,
+      currentUserId: req.userState?.userId,
+      page: pageNum,
+      limit: limitNum,
+    })
+  );
 
   new SuccessResponse('Explore results retrieved successfully', result, 200).send(res);
 });
@@ -174,12 +171,12 @@ export const searchWorkers = asyncHandler(async (req, res) => {
  * GET /explore/:id
  * Get details of a single explored worker.
  * @param {import('../types/asyncHandler.js').Request} req
- * @param {import('../types/asyncHandler.js').Response} res
+ * @param {import('express').Response} res
  */
 export const getWorkerById = asyncHandler(async (req, res) => {
-  const { id: workerId } = matchedData(req, { includeOptionals: true });
+  const id = String(req.params.id);
 
-  const worker = await workerProfileRepository.getWorkerById({ workerId });
+  const worker = await workerProfileRepository.find({ workerFilter: { id } });
 
   if (!worker) {
     throw new AppError('Worker not found or not approved', 404);

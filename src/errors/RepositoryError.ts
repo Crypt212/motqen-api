@@ -5,16 +5,16 @@
  */
 export enum RepositoryErrorType {
   /** Database connection or query errors */
-  "DATABASE_ERROR",
+  'DATABASE_ERROR',
   /** Unique constraint violations */
-  "DUPLICATE_KEY",
+  'DUPLICATE_KEY',
   /** Resource not found */
-  "NOT_FOUND",
+  'NOT_FOUND',
   /** Resource already exists */
-  "ALREADY_EXISTS",
+  'ALREADY_EXISTS',
   /** Validation errors */
-  "INVALID",
-};
+  'INVALID',
+}
 
 /**
  * Custom error class for repository layer errors

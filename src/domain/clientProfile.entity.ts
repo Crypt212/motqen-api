@@ -1,47 +1,51 @@
-import { IDType } from "../repositories/interfaces/Repository.js";
+import { FieldTypeDefinition } from 'src/types/query.js';
+import { IDType } from '../repositories/interfaces/Repository.js';
+import { FilterFromDescriptor } from 'src/schemas/common.js';
 
 export interface ClientProfile {
-  id: string,
-  userId: IDType,
+  id: string;
+  userId: IDType;
 
-  updatedAt: Date,
-  createdAt: Date,
+  updatedAt: Date;
+  createdAt: Date;
 }
 
-export type ClientProfileCreateInput = {
-}
+export type ClientProfileCreateInput = {};
 
-export type ClientProfileUpdateInput = Partial<ClientProfileCreateInput>
+export type ClientProfileUpdateInput = Partial<ClientProfileCreateInput>;
 
-export type ClientProfileFilter = {
-  id?: IDType,
-  userId?: IDType
-}
+export const ClientProfileFilterDescriptor = {
+  id: { type: 'uuid' as const },
+  userId: { type: 'uuid' as const },
+} satisfies Record<string, FieldTypeDefinition>;
+
+export type ClientProfileFilter = FilterFromDescriptor<typeof ClientProfileFilterDescriptor>;
 
 // ==================================================
 
 export interface Location {
-  id: IDType,
-  clientProfileId: IDType,
+  id: IDType;
+  clientProfileId: IDType;
 
-  governmentId: IDType,
-  cityId: IDType,
-  address: string,
-  addressNotes: string,
-  isMain: boolean,
+  governmentId: IDType;
+  cityId: IDType;
+  address: string;
+  addressNotes: string;
+  isMain: boolean;
 }
 
 export type LocationCreateInput = {
-  governmentId: IDType,
-  cityId: IDType,
-  address: string,
-  addressNotes: string,
-  isMain: boolean,
-}
+  governmentId: IDType;
+  cityId: IDType;
+  address: string;
+  addressNotes: string;
+  isMain: boolean;
+};
 
-export type LocationFilter = {
-  id?: IDType,
-  clientProfileId?: IDType,
-}
+export const LocationFilterDescriptor = {
+  id: { type: 'uuid' as const },
+} satisfies Record<string, FieldTypeDefinition>;
 
-export type LocationUpdateInput = Partial<LocationCreateInput>
+export type LocationFilter = FilterFromDescriptor<typeof LocationFilterDescriptor>;
+
+export type LocationUpdateInput = Partial<LocationCreateInput>;

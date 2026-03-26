@@ -1,6 +1,6 @@
-import OperationalError from "./OperationalError.js";
+import OperationalError from './OperationalError.js';
 import { z } from '../libs/zod.js';
-import { $ZodIssue } from "zod/v4/core";
+import { $ZodIssue } from 'zod/v4/core';
 
 export default class ValidationError extends OperationalError {
   public issues: $ZodIssue[];

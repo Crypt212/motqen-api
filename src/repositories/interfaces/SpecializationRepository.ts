@@ -1,6 +1,13 @@
-import { Specialization, SpecializationCreateInput, SpecializationFilter, SubSpecialization, SubSpecializationCreateInput, SubSpecializationFilter } from "../../domain/specialization.entity.js";
-import { PaginationOptions, PaginatedResult, SortOptions } from "../../types/query.js";
-import { IDType } from "./Repository.js";
+import {
+  Specialization,
+  SpecializationCreateInput,
+  SpecializationFilter,
+  SubSpecialization,
+  SubSpecializationCreateInput,
+  SubSpecializationFilter,
+} from '../../domain/specialization.entity.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
+import { IDType } from './Repository.js';
 
 export default interface ISpecializationRepository {
   /**
@@ -10,16 +17,25 @@ export default interface ISpecializationRepository {
   /**
    * Find many specializations
    */
-  findMany: (params: { filter: SpecializationFilter, pagination?: PaginationOptions, sort?: SortOptions<Specialization> }) => Promise<PaginatedResult<Specialization>>;
+  findMany: (params: {
+    filter: SpecializationFilter;
+    pagination?: PaginationOptions;
+    sort?: SortOptions<Specialization>;
+  }) => Promise<PaginatedResultMeta & { specializations: Specialization[] }>;
   /**
    * Find a sub-specialization
    */
-  findSubSpecialization: (params: { filter: SubSpecializationFilter }) => Promise<SubSpecialization | null>;
+  findSubSpecialization: (params: {
+    filter: SubSpecializationFilter;
+  }) => Promise<SubSpecialization | null>;
   /**
    * Find many specializations
    */
-  findSubSpecializations: (params: { filter: SubSpecializationFilter, pagination?: PaginationOptions, sort?: SortOptions<SubSpecialization> }) => Promise<PaginatedResult<SubSpecialization>>;
-
+  findSubSpecializations: (params: {
+    filter: SubSpecializationFilter;
+    pagination?: PaginationOptions;
+    sort?: SortOptions<SubSpecialization>;
+  }) => Promise<PaginatedResultMeta & { subSpecializations: SubSpecialization[] }>;
 
   /**
    * create a specialization
@@ -28,15 +44,24 @@ export default interface ISpecializationRepository {
   /**
    * create a sub-specialization
    */
-  createSubSpecialization: (params: { mainSpecializationId: IDType, subSpecialization: SubSpecializationCreateInput }) => Promise<Specialization>;
+  createSubSpecialization: (params: {
+    mainSpecializationId: IDType;
+    subSpecialization: SubSpecializationCreateInput;
+  }) => Promise<Specialization>;
   /**
    * update a specialization
    */
-  update: (params: { filter: SpecializationFilter, specialization: Specialization }) => Promise<Specialization>;
+  update: (params: {
+    filter: SpecializationFilter;
+    specialization: Specialization;
+  }) => Promise<Specialization>;
   /**
    * update a sub-specialization
    */
-  updateSubSpecialization: (params: { filter: SubSpecializationFilter, subSpecialization: SubSpecialization }) => Promise<SubSpecialization>;
+  updateSubSpecialization: (params: {
+    filter: SubSpecializationFilter;
+    subSpecialization: SubSpecialization;
+  }) => Promise<SubSpecialization>;
   /**
    * delete a specialization
    */

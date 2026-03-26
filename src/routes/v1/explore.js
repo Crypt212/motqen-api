@@ -3,10 +3,10 @@
  * @module routes/v1/explore
  */
 
-import { Router } from "express";
-import { getWorkerById, searchWorkers } from "../../controllers/ExploreController.js";
-import { validateExpress } from "../../middlewares/validateRequest.js";
-import { validateExploreSearch, validateExploreWorkerId } from "../../validators/explore.js";
+import { Router } from 'express';
+import { getWorkerById, searchWorkers } from '../../controllers/ExploreController.js';
+import { validateExpress } from '../../middlewares/validateRequest.js';
+import { validateExploreSearch, validateExploreWorkerId } from '../../validators/explore.js';
 
 const exploreRouter = Router();
 
@@ -18,7 +18,7 @@ const exploreRouter = Router();
  *     description: |
  *       Returns a paginated list of approved workers for the requested specialization.
  *       Supports optional sorting and filtering flags used by the Explore UI.
- *     tags: [Explore]
+ *     tags: [Workers]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -123,7 +123,7 @@ const exploreRouter = Router();
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
-exploreRouter.get("/", validateExploreSearch, validateExpress, searchWorkers);
+exploreRouter.get('/', validateExploreSearch, validateExpress, searchWorkers);
 
 /**
  * @swagger
@@ -133,7 +133,7 @@ exploreRouter.get("/", validateExploreSearch, validateExpress, searchWorkers);
  *     description: |
  *       Returns the full public profile for the selected worker card from Explore.
  *       Only approved workers with active accounts are returned.
- *     tags: [Explore]
+ *     tags: [Workers]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -187,6 +187,6 @@ exploreRouter.get("/", validateExploreSearch, validateExpress, searchWorkers);
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
-exploreRouter.get("/:id", validateExploreWorkerId, validateExpress, getWorkerById);
+exploreRouter.get('/:id', validateExploreWorkerId, validateExpress, getWorkerById);
 
 export default exploreRouter;

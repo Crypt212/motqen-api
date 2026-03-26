@@ -8,6 +8,7 @@ import Service from './Service.js';
 import IRateLimitCache from '../cache/interfaces/RateLimitCache.js';
 import { Method } from 'src/domain/otp.entity.js';
 import { DeviceID } from 'src/types/asyncHandler.js';
+import { OTPErrorDetails } from 'src/errors/appErrorDetails/OTPDetails.js';
 
 const MAX_VERIFY_ATTEMPTS = 5;
 
@@ -35,15 +36,11 @@ export default class RateLimitService extends Service {
     ]);
 
     if (phoneCooldown || deviceCooldown) {
-      const retryAfter = await this.repository.getSendCooldownTTL(
-        phone,
-        method,
-        deviceId
-      );
+      const retryAfter = await this.repository.getSendCooldownTTL(phone, method, deviceId);
       throw new AppError(
         `Too many requests, retry after ${retryAfter} seconds`,
         429,
-        { retryAfter }
+        new OTPErrorDetails({ type: 'TOO_MANY_VERIFICATION_REQUESTS', retryAfter })
       );
     }
   }
@@ -51,7 +48,11 @@ export default class RateLimitService extends Service {
   /**
    * Increment the send OTP attempt count
    */
-  async incrementSend(phone: string, method: Method, deviceId: DeviceID): Promise<{ attempts: number, cooldown: number }> {
+  async incrementSend(
+    phone: string,
+    method: Method,
+    deviceId: DeviceID
+  ): Promise<{ attempts: number; cooldown: number }> {
     return this.repository.incrementSend(phone, method, deviceId);
   }
 
@@ -65,7 +66,7 @@ export default class RateLimitService extends Service {
       throw new AppError(
         'Too many verification attempts, please request a new OTP',
         429,
-        { remainingAttempts: 0, requestNewOtp: true }
+        new OTPErrorDetails({ type: 'FAILED_ATTEMPT', remainingAttempts: 0, requestNewOtp: true })
       );
     }
   }
@@ -73,7 +74,10 @@ export default class RateLimitService extends Service {
   /**
    * Increment the verification attempt count
    */
-  async incrementVerify(phone: string, method: Method): Promise<{attempts: number, remaining: number, blocked: boolean}> {
+  async incrementVerify(
+    phone: string,
+    method: Method
+  ): Promise<{ attempts: number; remaining: number; blocked: boolean }> {
     const record = await this.repository.incrementVerify(phone, method);
 
     return {

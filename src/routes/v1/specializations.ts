@@ -16,7 +16,15 @@ import {
 } from '../../controllers/SpecializationController.js';
 import { isActive, authorizeAdmin } from '../../middlewares/authMiddleware.js';
 import { validateBody, validateParams, validateQuery } from 'src/middlewares/validateRequest.js';
-import { CreateSpecializationSchema, CreateSubSpecializationSchema, SpecializationIdParamsSchema, SpecializationQuerySchema, SubSpecializationIdParamsSchema, SubSpecializationQuerySchema, UpdateSpecializationSchema } from 'src/schemas/specializations.js';
+import {
+  CreateSpecializationSchema,
+  CreateSubSpecializationSchema,
+  SpecializationIdParamsSchema,
+  SpecializationQuerySchema,
+  SubSpecializationIdParamsSchema,
+  SubSpecializationQuerySchema,
+  UpdateSpecializationSchema,
+} from 'src/schemas/specializations.js';
 
 const specializationRouter = Router();
 
@@ -49,11 +57,7 @@ const specializationRouter = Router();
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-specializationRouter.get(
-  '/',
-  validateQuery(SpecializationQuerySchema),
-  getSpecializations
-);
+specializationRouter.get('/', validateQuery(SpecializationQuerySchema), getSpecializations);
 
 /**
  * @swagger

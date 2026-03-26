@@ -1,45 +1,44 @@
-import { $Enums } from "@prisma/client";
-import { IDType } from "../repositories/interfaces/Repository.js";
+import { $Enums } from '@prisma/client';
+import { IDType } from '../repositories/interfaces/Repository.js';
+import { FilterFromDescriptor } from 'src/schemas/common.js';
+import { FieldTypeDefinition } from 'src/types/query.js';
 
 export type AccountStatus = $Enums.AccountStatus;
 
 export type Role = $Enums.Role;
 
-
 export type User = {
-  id: IDType,
+  id: IDType;
 
-  phoneNumber: string,
-  firstName: string,
-  middleName: string,
-  lastName: string,
-  profileImageUrl: string,
-  status: AccountStatus,
-  role: Role,
+  phoneNumber: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  profileImageUrl: string;
+  status: AccountStatus;
+  role: Role;
 
-  isOnline: boolean,
-  isWorker?: boolean,
-  isClient?: boolean,
+  isOnline: boolean;
 
-  createdAt: Date,
-  updatedAt: Date,
-}
-
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export type UserCreateInput = {
-  phoneNumber: string,
-  firstName: string,
-  middleName: string,
-  lastName: string,
-  profileImageUrl?: string,
-  status: AccountStatus,
-  role: Role,
-}
+  phoneNumber: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  profileImageUrl?: string;
+  status: AccountStatus;
+  role: Role;
+};
 
 export type UserUpdateInput = Partial<UserCreateInput>;
 
-export type UsersFilter = {
-  id?: IDType,
-  phoneNumber?: string,
-}
+export const UserFilterDescriptor = {
+  id: { type: 'uuid' as const },
+  phoneNumber: { type: 'string' as const },
+} satisfies Record<string, FieldTypeDefinition>;
 
+export type UserFilter = FilterFromDescriptor<typeof UserFilterDescriptor>;
