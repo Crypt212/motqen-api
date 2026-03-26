@@ -1,6 +1,6 @@
 /**
- * @fileoverview Explore Controller - Handle explore-related HTTP requests
- * @module controllers/ExploreController
+ * @fileoverview Worker Controller - Handle workers-related HTTP requests
+ * @module controllers/WorkerController
  */
 
 import AppError from '../errors/AppError.js';
@@ -47,10 +47,8 @@ function parseBooleanFlag(value) {
 }
 
 /**
- * GET /explore
+ * GET /workers
  * Search for approved workers by specialization with optional UI flags.
- * @param {import('../types/asyncHandler.js').Request} req
- * @param {import('express').Response} res
  */
 export const searchWorkers = asyncHandler(async (req, res) => {
   const {
@@ -100,7 +98,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
   const nearestFlag = parseBooleanFlag(nearest) || parseBooleanFlag(nearestFirst);
 
   if (!mainSpecializationId) {
-    throw new AppError('specializationId is required for explore search', 400);
+    throw new AppError('specializationId is required for workers search', 400);
   }
 
   let customerGovernmentName;
@@ -164,11 +162,11 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     })
   );
 
-  new SuccessResponse('Explore results retrieved successfully', result, 200).send(res);
+  new SuccessResponse('Workers results retrieved successfully', result, 200).send(res);
 });
 
 /**
- * GET /explore/:id
+ * GET /workers/:id
  * Get details of a single explored worker.
  * @param {import('../types/asyncHandler.js').Request} req
  * @param {import('express').Response} res
@@ -182,5 +180,5 @@ export const getWorkerById = asyncHandler(async (req, res) => {
     throw new AppError('Worker not found or not approved', 404);
   }
 
-  new SuccessResponse('Explore worker retrieved successfully', worker, 200).send(res);
+  new SuccessResponse('worker retrieved successfully', worker, 200).send(res);
 });

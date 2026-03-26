@@ -1,7 +1,5 @@
 /**
  * @fileoverview Auth Zod schemas
- * Replaces: src/validators/auth.js
- * Place at: src/schemas/auth.schema.ts
  */
 
 import { z } from '../libs/zod.js';
@@ -15,8 +13,8 @@ import {
   createQuerySchema,
   buildFilterSchema,
 } from './common.js';
-import { SessionFilterDescriptor } from 'src/domain/session.entity.js';
-import { UserFilterDescriptor } from 'src/domain/user.entity.js';
+import { SessionFilterDescriptor } from '../domain/session.entity.js';
+import { UserFilterDescriptor } from '../domain/user.entity.js';
 
 // ============================================
 // Auth schemas

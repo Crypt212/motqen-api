@@ -6,9 +6,9 @@
 import AppError from '../errors/AppError.js';
 import Service from './Service.js';
 import IRateLimitCache from '../cache/interfaces/RateLimitCache.js';
-import { Method } from 'src/domain/otp.entity.js';
-import { DeviceID } from 'src/types/asyncHandler.js';
-import { OTPErrorDetails } from 'src/errors/appErrorDetails/OTPDetails.js';
+import { Method } from '../domain/otp.entity.js';
+import { DeviceID } from '../types/asyncHandler.js';
+import { OTPErrorDetails } from '../errors/appErrorDetails/OTPDetails.js';
 
 const MAX_VERIFY_ATTEMPTS = 5;
 

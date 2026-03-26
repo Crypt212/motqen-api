@@ -1,6 +1,6 @@
 import { v2 } from 'cloudinary';
 import environment from '../configs/environment.js';
-import { asyncHandler } from 'src/types/asyncHandler.js';
+import { asyncHandler } from '../types/asyncHandler.js';
 
 const { config } = v2;
 

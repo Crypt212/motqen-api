@@ -1,10 +1,9 @@
-import { generateOTP, hashOTP } from '../utils/OTP.js';
-
 /**
  * @fileoverview User Service - Handle authentication
  * @module services/AuthService
  */
 
+import { generateOTP, hashOTP } from '../utils/OTP.js';
 import crypto from 'crypto';
 import AppError from '../errors/AppError.js';
 import uploadToCloudinary from '../providers/cloudinaryProvider.js';
@@ -28,7 +27,7 @@ import IGovernmentRepository from '../repositories/interfaces/GovernmentReposito
 import ISessionRepository from '../repositories/interfaces/SessionRepository.js';
 import { Session } from '../domain/session.entity.js';
 import { SpecializationsTree } from '../domain/specialization.entity.js';
-import { OTPErrorDetails } from 'src/errors/appErrorDetails/OTPDetails.js';
+import { OTPErrorDetails } from '../errors/appErrorDetails/OTPDetails.js';
 
 const MAX_VERIFY_ATTEMPTS = 5;
 

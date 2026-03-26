@@ -3,11 +3,11 @@
  * @module controllers/GovernmentController
  */
 
-import { GovernmentFilterSchema } from 'src/schemas/governments.js';
+import { GovernmentFilterSchema } from '../schemas/governments.js';
 import SuccessResponse from '../responses/successResponse.js';
 import GovernmentService from '../services/GovernmentService.js';
 import { asyncHandler } from '../types/asyncHandler.js';
-import { parseQueryParams } from 'src/schemas/common.js';
+import { parseQueryParams } from '../schemas/common.js';
 
 export default class GovernmentController {
   private governmentService: GovernmentService;

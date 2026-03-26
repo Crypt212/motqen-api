@@ -1,4 +1,4 @@
-import { IDType } from 'src/repositories/interfaces/Repository.js';
+import { IDType } from '../repositories/interfaces/Repository.js';
 import { logger } from '../libs/winston.js';
 
 let _io: import('socket.io').Server | undefined;

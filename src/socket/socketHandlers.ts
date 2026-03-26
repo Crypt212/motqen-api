@@ -26,8 +26,8 @@
 import { logger } from '../libs/winston.js';
 import { chatService, conversationRepository } from '../state.js';
 import prisma from '../libs/database.js';
-import { IDType } from 'src/repositories/interfaces/Repository.js';
-import { ConversationWithParticipantsAndMessages } from 'src/domain/conversation.entity.js';
+import { IDType } from '../repositories/interfaces/Repository.js';
+import { ConversationWithParticipantsAndMessages } from '../domain/conversation.entity.js';
 
 /**
  * Emit an event to all partner rooms of a user across all their conversations.

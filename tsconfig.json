@@ -9,7 +9,6 @@
     /* JavaScript support (no .ts files — JS only) */
     "allowJs": true,
     "checkJs": true,
-    "noEmit": true,
 
     /* Strictness — practical level for existing JS codebase */
     "strict": true,

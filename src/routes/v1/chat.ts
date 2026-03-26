@@ -21,8 +21,8 @@ import {
   getMissedMessages,
 } from '../../controllers/ChatController.js';
 import { authenticateAccess } from '../../middlewares/authMiddleware.js';
-import { validateBody, validateParams, validateQuery } from 'src/middlewares/validateRequest.js';
-import { buildFilterSchema, createQuerySchema } from 'src/schemas/common.js';
+import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
+import { buildFilterSchema, createQuerySchema } from '../../schemas/common.js';
 
 const chatRouter = Router();
 

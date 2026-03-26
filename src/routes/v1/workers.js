@@ -1,18 +1,18 @@
 /**
- * @fileoverview Explore Routes - Explore/search endpoints for customers
- * @module routes/v1/explore
+ * @fileoverview Workers Routes - Explore/search workers endpoints for customers
+ * @module routes/v1/workers
  */
 
 import { Router } from 'express';
-import { getWorkerById, searchWorkers } from '../../controllers/ExploreController.js';
-import { validateExpress } from '../../middlewares/validateRequest.js';
-import { validateExploreSearch, validateExploreWorkerId } from '../../validators/explore.js';
+import { getWorkerById, searchWorkers } from '../../controllers/WorkerController.js';
+import { ExploreSearchSchema, ExploreWorkerIdParamsSchema } from '../../schemas/workers.js';
+import { validateParams, validateQuery } from '../../middlewares/validateRequest.js';
 
-const exploreRouter = Router();
+const workersRouter = Router();
 
 /**
  * @swagger
- * /explore:
+ * /workers:
  *   get:
  *     summary: Explore workers by specialization
  *     description: |
@@ -97,10 +97,10 @@ const exploreRouter = Router();
  *                 - type: object
  *                   properties:
  *                     data:
- *                       $ref: '#/components/schemas/ExploreSearchResponse'
+ *                       $ref: '#/components/schemas/WorkersSearchResponse'
  *             example:
  *               status: success
- *               message: Explore results retrieved successfully
+ *               message: Workers results retrieved successfully
  *               data:
  *                 data:
  *                   - workerId: 123e4567-e89b-12d3-a456-426614174000
@@ -123,15 +123,15 @@ const exploreRouter = Router();
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
-exploreRouter.get('/', validateExploreSearch, validateExpress, searchWorkers);
+workersRouter.get('/', validateQuery(ExploreSearchSchema), searchWorkers);
 
 /**
  * @swagger
- * /explore/{id}:
+ * /workers/{id}:
  *   get:
  *     summary: Get explored worker details
  *     description: |
- *       Returns the full public profile for the selected worker card from Explore.
+ *       Returns the full public profile for the selected worker card.
  *       Only approved workers with active accounts are returned.
  *     tags: [Workers]
  *     security:
@@ -159,7 +159,7 @@ exploreRouter.get('/', validateExploreSearch, validateExpress, searchWorkers);
  *                       $ref: '#/components/schemas/WorkerDetailResponse'
  *             example:
  *               status: success
- *               message: Explore worker retrieved successfully
+ *               message: Worker retrieved successfully
  *               data:
  *                 workerId: 123e4567-e89b-12d3-a456-426614174000
  *                 name: أحمد علي محمد
@@ -187,6 +187,6 @@ exploreRouter.get('/', validateExploreSearch, validateExpress, searchWorkers);
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
-exploreRouter.get('/:id', validateExploreWorkerId, validateExpress, getWorkerById);
+workersRouter.get('/:id', validateParams(ExploreWorkerIdParamsSchema), getWorkerById);
 
-export default exploreRouter;
+export default workersRouter;

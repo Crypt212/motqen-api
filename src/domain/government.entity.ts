@@ -1,6 +1,6 @@
-import { FieldTypeDefinition } from 'src/types/query.js';
+import { FieldTypeDefinition } from '../types/query.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
-import { FilterFromDescriptor } from 'src/schemas/common.js';
+import { FilterFromDescriptor } from '../schemas/common.js';
 
 export type Government = {
   id: IDType;

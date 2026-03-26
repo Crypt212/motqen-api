@@ -1,10 +1,10 @@
 import { logger } from '../libs/winston.js';
 import RepositoryError from '../errors/RepositoryError.js';
 import { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
-import AppError from 'src/errors/AppError.js';
-import OperationalError from 'src/errors/OperationalError.js';
-import environment from 'src/configs/environment.js';
-import ValidationError from 'src/errors/ValidationError.js';
+import AppError from '../errors/AppError.js';
+import OperationalError from '../errors/OperationalError.js';
+import environment from '../configs/environment.js';
+import ValidationError from '../errors/ValidationError.js';
 
 const errorHandler: ErrorRequestHandler = function (
   err: unknown,

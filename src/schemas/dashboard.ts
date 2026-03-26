@@ -1,7 +1,5 @@
 /**
  * @fileoverview Dashboard Zod schemas
- * Replaces: src/validators/dashboard.js
- * Place at: src/schemas/dashboard.schema.ts
  */
 
 import { z } from '../libs/zod.js';
@@ -17,8 +15,8 @@ import {
   createQuerySchema,
   buildFilterSchema,
 } from './common.js';
-import { WorkerProfileFilterDescriptor } from 'src/domain/workerProfile.entity.js';
-import { ClientProfileFilterDescriptor } from 'src/domain/clientProfile.entity.js';
+import { WorkerProfileFilterDescriptor } from '../domain/workerProfile.entity.js';
+import { ClientProfileFilterDescriptor } from '../domain/clientProfile.entity.js';
 
 // ============================================
 // User schemas

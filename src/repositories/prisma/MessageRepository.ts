@@ -11,7 +11,7 @@ import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { IDType } from '../interfaces/Repository.js';
 import { PrismaClient } from '@prisma/client/extension';
-import { User } from 'src/domain/user.entity.js';
+import { User } from '../../domain/user.entity.js';
 
 export default class MessageRepository extends Repository implements IMessageRepository {
   constructor(prisma: PrismaClient) {

@@ -1,9 +1,9 @@
 import { validationResult, ValidationError as ExpressValidationError } from 'express-validator';
 import { logger } from '../libs/winston.js';
-import { asyncHandler } from 'src/types/asyncHandler.js';
+import { asyncHandler } from '../types/asyncHandler.js';
 import { z } from 'zod';
 import { Request, Response } from 'express';
-import ValidationError from 'src/errors/ValidationError.js';
+import ValidationError from '../errors/ValidationError.js';
 
 type Location = 'body' | 'query' | 'params';
 

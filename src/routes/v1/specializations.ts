@@ -15,7 +15,7 @@ import {
   deleteSubSpecialization,
 } from '../../controllers/SpecializationController.js';
 import { isActive, authorizeAdmin } from '../../middlewares/authMiddleware.js';
-import { validateBody, validateParams, validateQuery } from 'src/middlewares/validateRequest.js';
+import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
 import {
   CreateSpecializationSchema,
   CreateSubSpecializationSchema,
@@ -24,7 +24,7 @@ import {
   SubSpecializationIdParamsSchema,
   SubSpecializationQuerySchema,
   UpdateSpecializationSchema,
-} from 'src/schemas/specializations.js';
+} from '../../schemas/specializations.js';
 
 const specializationRouter = Router();
 

@@ -6,22 +6,22 @@
 import AppError from '../errors/AppError.js';
 import Service, { tryCatch } from './Service.js';
 import IChatPresenceCache from '../cache/interfaces/ChatPresenceCache.js';
-import { Message, MessageType } from 'src/domain/message.entity.js';
-import { User } from 'src/domain/user.entity.js';
-import IClientProfileRepository from 'src/repositories/interfaces/ClientRepository.js';
-import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerRepository.js';
-import IMessageRepository from 'src/repositories/interfaces/MessageRepository.js';
-import IConversationRepository from 'src/repositories/interfaces/ConversationRepository.js';
-import { IDType } from 'src/repositories/interfaces/Repository.js';
+import { Message, MessageType } from '../domain/message.entity.js';
+import { User } from '../domain/user.entity.js';
+import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
+import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
+import IMessageRepository from '../repositories/interfaces/MessageRepository.js';
+import IConversationRepository from '../repositories/interfaces/ConversationRepository.js';
+import { IDType } from '../repositories/interfaces/Repository.js';
 import {
   Conversation,
   ConversationParticipant,
   ConversationWithParticipantsAndMessages,
-} from 'src/domain/conversation.entity.js';
-import RepositoryError, { RepositoryErrorType } from 'src/errors/RepositoryError.js';
-import prisma from 'src/libs/database.js';
+} from '../domain/conversation.entity.js';
+import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
+import prisma from '../libs/database.js';
 import pkg from '@prisma/client';
-import { PaginatedResultMeta, PaginationOptions, SortOptions } from 'src/types/query.js';
+import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../types/query.js';
 
 export type ConversationWithMeta = {
   id: string;

@@ -4,7 +4,7 @@ import { NameSchema, createQuerySchema } from './common.js';
 import {
   SpecializationFilterDescriptor,
   SubSpecializationFilterDescriptor,
-} from 'src/domain/specialization.entity.js';
+} from '../domain/specialization.entity.js';
 
 const CATEGORIES = [
   'ELECTRICITY',

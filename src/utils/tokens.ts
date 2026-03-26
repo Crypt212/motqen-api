@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import environment from '../configs/environment.js';
 import AppError from '../errors/AppError.js';
-import { TokenTypeMap } from 'src/types/tokens.js';
+import { TokenTypeMap } from '../types/tokens.js';
 
 /**
  * Get token configuration based on payload type

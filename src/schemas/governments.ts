@@ -1,7 +1,7 @@
 import { z } from '../libs/zod.js';
 import { buildFilterSchema, UUIDSchema } from './common.js';
 import { NameSchema, LongitudeSchema, LatitudeSchema, createQuerySchema } from './common.js';
-import { CityFilterDescriptor, GovernmentFilterDescriptor } from 'src/domain/government.entity.js';
+import { CityFilterDescriptor, GovernmentFilterDescriptor } from '../domain/government.entity.js';
 
 // ============================================
 // Government schemas

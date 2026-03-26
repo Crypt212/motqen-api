@@ -11,7 +11,7 @@ import { redisRetreiveOrCache } from '../utils/redis.js';
 import { userService } from '../state.js';
 import AppError from '../errors/AppError.js';
 import { ExtendedError, Socket } from 'socket.io';
-import { AccessTokenPayload } from 'src/types/tokens.js';
+import { AccessTokenPayload } from '../types/tokens.js';
 
 /**
  * Socket.IO middleware that authenticates the connection via JWT access token.

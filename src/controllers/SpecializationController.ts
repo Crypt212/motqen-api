@@ -6,11 +6,11 @@
 import SuccessResponse from '../responses/successResponse.js';
 import { specializationService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
-import { parseQueryParams } from 'src/schemas/common.js';
+import { parseQueryParams } from '../schemas/common.js';
 import {
   SpecializationFilterSchema,
   SubSpecializationFilterSchema,
-} from 'src/schemas/specializations.js';
+} from '../schemas/specializations.js';
 
 /**
  * Get all specializations with pagination, filtering, and ordering

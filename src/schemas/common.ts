@@ -1,9 +1,8 @@
 /**
  * @fileoverview Common Zod schemas and helpers
- * Place at: src/schemas/common.schema.ts
  */
 
-import { FieldTypeDefinition } from 'src/types/query.js';
+import { FieldTypeDefinition } from '../types/query.js';
 import { z } from '../libs/zod.js';
 
 // ============================================

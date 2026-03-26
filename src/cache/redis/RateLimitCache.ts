@@ -6,7 +6,7 @@
 import IRateLimitCache from '../interfaces/RateLimitCache.js';
 import { RedisClientType } from '../../libs/redis.js';
 import { Method } from '../../domain/otp.entity.js';
-import { DeviceID } from 'src/types/asyncHandler.js';
+import { DeviceID } from '../../types/asyncHandler.js';
 
 /**
  * Rate Limit Cache - Handles rate limiting and account tracking using Redis

@@ -6,13 +6,13 @@
 import { Router } from 'express';
 import { governmentController } from '../../state.js';
 import { isActive, authorizeAdmin } from '../../middlewares/authMiddleware.js';
-import { validateBody, validateParams, validateQuery } from 'src/middlewares/validateRequest.js';
+import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
 import {
   CreateGovernmentSchema,
   GovernmentIdParamsSchema,
   GovernmentQuerySchema,
   UpdateGovernmentSchema,
-} from 'src/schemas/governments.js';
+} from '../../schemas/governments.js';
 
 const governmentRouter = Router();
 

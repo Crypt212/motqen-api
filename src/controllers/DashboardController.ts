@@ -7,11 +7,11 @@ import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { clientProfileService, userService, workerProfileService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
-import { parseQueryParams } from 'src/schemas/common.js';
+import { parseQueryParams } from '../schemas/common.js';
 import {
   WorkerGovernmentFilterSchema,
   WorkerSpecializationFilterSchema,
-} from 'src/schemas/dashboard.js';
+} from '../schemas/dashboard.js';
 
 export const getUser = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;

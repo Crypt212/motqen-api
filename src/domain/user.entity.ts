@@ -1,7 +1,7 @@
 import { $Enums } from '@prisma/client';
 import { IDType } from '../repositories/interfaces/Repository.js';
-import { FilterFromDescriptor } from 'src/schemas/common.js';
-import { FieldTypeDefinition } from 'src/types/query.js';
+import { FilterFromDescriptor } from '../schemas/common.js';
+import { FieldTypeDefinition } from '../types/query.js';
 
 export type AccountStatus = $Enums.AccountStatus;
 
