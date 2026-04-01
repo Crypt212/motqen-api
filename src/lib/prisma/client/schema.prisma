@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/lib/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Session {
+  id                Int      @id @default(autoincrement())
+  userId            Int
+  token             String   @unique
+  isRevoked         Boolean  @default(false)
+  deviceFingerprint String   @unique
+  lastUsedAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
+  expiresAt         DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token, deviceFingerprint, userId])
+  @@map("sessions")
+}
+
+model OTPs {
+  attempts    Int      @default(1)
+  phoneNumber String   @unique
+  hashedOTP   String
+  updatedAt   DateTime
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  InProcess   Boolean // race condition
+
+  @@map("OTPs")
+}
+
+model User {
+  id          Int           @id @default(autoincrement())
+  phoneNumber String        @unique
+  fristName   String
+  lastName    String
+  government  String
+  city        String
+  bio         String?
+  status      AccountStatus @default(INCOMPLETE)
+
+  role       Role        @default(CLIENT)
+  sessions   Session[]
+  workerInfo WorkerInfo?
+
+  @@map("users")
+}
+
+model WorkerInfo {
+  id                      Int     @id @default(autoincrement())
+  userId                  Int     @unique
+  experienceYears         Int
+  isInTeam                Boolean
+  acceptsUrgentJobs       Boolean
+  primarySpecializationId Int
+
+  secondarySpecializations SpecializationsForWorkers[]
+  primarySpecialization    Specialization              @relation(fields: [primarySpecializationId], references: [id])
+  user                     User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goverments               Goverment[]
+
+  @@map("worker_infos")
+}
+
+model SpecializationsForWorkers {
+  workerInfoId     Int
+  specializationId Int
+
+  workerInfo     WorkerInfo     @relation(fields: [workerInfoId], references: [id], onDelete: Cascade)
+  specialization Specialization @relation(fields: [specializationId], references: [id], onDelete: Cascade)
+
+  @@id([workerInfoId, specializationId])
+}
+
+model Specialization {
+  id               Int                         @id @default(autoincrement())
+  name             String
+  field            String
+  secondaryWorkers SpecializationsForWorkers[]
+  primaryWorkers   WorkerInfo[]
+
+  @@map("specializations")
+}
+
+model Goverment {
+  id           Int         @id @default(autoincrement())
+  name         String
+  workerInfo   WorkerInfo? @relation(fields: [workerInfoId], references: [id])
+  workerInfoId Int?
+
+  @@map("governments")
+}
+
+enum AccountStatus {
+  INCOMPLETE
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum Role {
+  WORKER
+  CLIENT
+  ADMIN
+}

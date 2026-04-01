@@ -8,6 +8,8 @@ import {
   WorkerProfile,
   WorkerProfileCreateInput,
   WorkerProfileFilter,
+  WorkerSearchInput,
+  WorkerSearchItem,
   WorkerProfileUpdateInput,
   WorkerProfileVerification,
   WorkerProfileVerificationCreateInput,
@@ -586,6 +588,7 @@ export default class WorkerRepositoryRepository
     categoryId = undefined,
     specializationId = undefined,
     subSpecializationId = undefined,
+    governmentId = undefined,
     area = undefined,
     city = undefined,
     availability = undefined,
@@ -594,38 +597,18 @@ export default class WorkerRepositoryRepository
     nearest = false,
     customerGovernmentLatitude = undefined,
     customerGovernmentLongitude = undefined,
+    customerGovernmentName = undefined,
+    currentUserId = undefined,
     page = 1,
     limit = 10,
-  }: {
-    categoryId: string;
-    specializationId?: string;
-    subSpecializationId?: string;
-    area: string;
-    city?: string;
-    availability: boolean;
-    acceptsUrgentJobs: boolean;
-    highestRated: boolean;
-    nearest: boolean;
-    customerGovernmentLatitude?: string | number;
-    customerGovernmentLongitude?: string | number;
-    page: number;
-    limit: number;
-  }): Promise<
+  }: WorkerSearchInput): Promise<
     PaginatedResultMeta & {
-      workers: {
-        distanceKm?: number;
-        workerId: string;
-        name: string;
-        profileImage: string;
-        service_title: string;
-        rating: number;
-        area: string;
-        isAvailableNow: boolean;
-        completedServices: number;
-        acceptsUrgentJobs: boolean;
-      }[];
+      workers: WorkerSearchItem[];
     }
   > {
+    void customerGovernmentName;
+    void currentUserId;
+
     const parsedLimit = typeof limit === 'string' ? parseInt(limit, 10) : limit;
     const parsedPage = typeof page === 'string' ? parseInt(page, 10) : page;
     const normalizedLimit = Math.min(Math.max(parsedLimit || 10, 1), 50);
@@ -675,7 +658,7 @@ export default class WorkerRepositoryRepository
       whereClause.acceptsUrgentJobs = true;
     }
 
-    const areaFilter = city || area;
+    const areaFilter = governmentId || city || area;
 
     if (areaFilter) {
       whereClause.workGovernments = {
@@ -698,9 +681,102 @@ export default class WorkerRepositoryRepository
       where: whereClause,
     });
 
+    const toRadians = (value: number): number => (value * Math.PI) / 180;
+    const calcDistanceKm = (
+      originLat: number,
+      originLong: number,
+      destinationLat: number,
+      destinationLong: number
+    ): number => {
+      const earthRadiusKm = 6371;
+      const deltaLatitude = toRadians(destinationLat - originLat);
+      const deltaLongitude = toRadians(destinationLong - originLong);
+      const a =
+        Math.sin(deltaLatitude / 2) * Math.sin(deltaLatitude / 2) +
+        Math.cos(toRadians(originLat)) *
+          Math.cos(toRadians(destinationLat)) *
+          Math.sin(deltaLongitude / 2) *
+          Math.sin(deltaLongitude / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+      return earthRadiusKm * c;
+    };
+
+    const customerLat = Number.parseFloat(String(customerGovernmentLatitude ?? ''));
+    const customerLong = Number.parseFloat(String(customerGovernmentLongitude ?? ''));
+    const hasCustomerCoordinates = Number.isFinite(customerLat) && Number.isFinite(customerLong);
+
+    let nearestDistanceByWorkerId: Record<string, number | null> = {};
+    let orderedWorkerIdsByNearest: string[] | null = null;
+
+    if (nearest && hasCustomerCoordinates) {
+      const matchingWorkers = await this.prismaClient.workerProfile.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+        },
+      });
+
+      const matchingWorkerIds = matchingWorkers.map((worker) => worker.id);
+
+      if (matchingWorkerIds.length > 0) {
+        const nearestRows = await this.prismaClient.$queryRawUnsafe<
+          Array<{
+            id: string;
+            distance_km: number | null;
+          }>
+        >(
+          `
+            SELECT
+              wp.id,
+              MIN(
+                6371 * 2 * ASIN(
+                  SQRT(
+                    POWER(SIN((RADIANS(CAST(g.lat AS double precision)) - RADIANS($2::double precision)) / 2), 2) +
+                    COS(RADIANS($2::double precision)) * COS(RADIANS(CAST(g.lat AS double precision))) *
+                    POWER(SIN((RADIANS(CAST(g.long AS double precision)) - RADIANS($3::double precision)) / 2), 2)
+                  )
+                )
+              ) AS distance_km
+            FROM worker_profiles wp
+            LEFT JOIN governments_for_workers gfw ON gfw."workerProfileId" = wp.id
+            LEFT JOIN governments g ON g.id = gfw."governmentId"
+            WHERE wp.id = ANY($1::text[])
+            GROUP BY wp.id
+            ORDER BY distance_km ASC NULLS LAST, wp."experienceYears" DESC, wp.id DESC
+            LIMIT $4 OFFSET $5
+          `,
+          matchingWorkerIds,
+          customerLat,
+          customerLong,
+          normalizedLimit,
+          skip
+        );
+
+        orderedWorkerIdsByNearest = nearestRows.map((row) => row.id);
+        nearestDistanceByWorkerId = nearestRows.reduce<Record<string, number | null>>(
+          (acc, row) => {
+            acc[row.id] = typeof row.distance_km === 'number' ? row.distance_km : null;
+            return acc;
+          },
+          {}
+        );
+      } else {
+        orderedWorkerIdsByNearest = [];
+      }
+    }
+
     // Fetch workers with relations
     const workers = await this.prismaClient.workerProfile.findMany({
-      where: whereClause,
+      where:
+        nearest && orderedWorkerIdsByNearest
+          ? {
+              ...whereClause,
+              id: {
+                in: orderedWorkerIdsByNearest,
+              },
+            }
+          : whereClause,
       select: {
         id: true,
         experienceYears: true,
@@ -739,35 +815,13 @@ export default class WorkerRepositoryRepository
           },
         },
       },
-      orderBy: [{ experienceYears: 'desc' }, { id: 'desc' }],
-      skip,
-      take: normalizedLimit,
+      orderBy:
+        nearest && orderedWorkerIdsByNearest
+          ? undefined
+          : [{ experienceYears: 'desc' }, { id: 'desc' }],
+      skip: nearest && orderedWorkerIdsByNearest ? undefined : skip,
+      take: nearest && orderedWorkerIdsByNearest ? undefined : normalizedLimit,
     });
-
-    const toRadians = (value: number) => (value * Math.PI) / 180;
-    const calcDistanceKm = (
-      originLat: number,
-      originLong: number,
-      destinationLat: number,
-      destinationLong: number
-    ) => {
-      const earthRadiusKm = 6371;
-      const deltaLatitude = toRadians(destinationLat - originLat);
-      const deltaLongitude = toRadians(destinationLong - originLong);
-      const a =
-        Math.sin(deltaLatitude / 2) * Math.sin(deltaLatitude / 2) +
-        Math.cos(toRadians(originLat)) *
-          Math.cos(toRadians(destinationLat)) *
-          Math.sin(deltaLongitude / 2) *
-          Math.sin(deltaLongitude / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-      return earthRadiusKm * c;
-    };
-
-    const customerLat = Number.parseFloat(String(customerGovernmentLatitude ?? ''));
-    const customerLong = Number.parseFloat(String(customerGovernmentLongitude ?? ''));
-    const hasCustomerCoordinates = Number.isFinite(customerLat) && Number.isFinite(customerLong);
 
     const computedWorkers = workers.map((worker) => {
       const ratedOrders = worker.orders.filter((order) => typeof order.rating === 'number');
@@ -780,7 +834,9 @@ export default class WorkerRepositoryRepository
       ).length;
 
       let nearestDistanceKm = null;
-      if (hasCustomerCoordinates) {
+      if (nearest && worker.id in nearestDistanceByWorkerId) {
+        nearestDistanceKm = nearestDistanceByWorkerId[worker.id];
+      } else if (hasCustomerCoordinates) {
         for (const government of worker.workGovernments) {
           const governmentLat = Number.parseFloat(String(government.lat ?? ''));
           const governmentLong = Number.parseFloat(String(government.long ?? ''));

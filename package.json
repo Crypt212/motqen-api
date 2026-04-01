@@ -33,7 +33,7 @@
   },
   "lint-staged": {
     "*.ts": [
-      "eslint --fix",
+      "eslint --fix --no-warn-ignored --ignore-pattern src/generated/** --ignore-pattern src/lib/prisma/client/**",
       "prettier --write"
     ],
     "*.js": [

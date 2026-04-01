@@ -3,11 +3,21 @@ import tsparser from '@typescript-eslint/parser';
 
 export default [
   {
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'coverage/**',
+      'src/generated/**',
+      'src/lib/prisma/client/**',
+    ],
+  },
+  {
     files: ['**/*.ts'],
+    ignores: ['src/generated/**', 'src/lib/prisma/client/**'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
-        project: './tsconfig.json',
+        project: './tsconfig.eslint.json',
       },
     },
     plugins: { '@typescript-eslint': tseslint },

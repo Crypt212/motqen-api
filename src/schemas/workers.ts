@@ -1,6 +1,17 @@
 import { z } from '../libs/zod.js';
 import { UUIDSchema } from './common.js';
 
+const FlaggedFilterSchema = z.enum([
+  'availability',
+  'availbilty',
+  'nearest',
+  'acceptsUrgentJobs',
+  'acceptUrgentJobs',
+  'highestRated',
+  'highestrated',
+  'heasetrated',
+]);
+
 export const ExploreSearchSchema = z.object({
   specializationId: UUIDSchema,
   subSpecializationId: UUIDSchema.optional().nullable(),
@@ -15,6 +26,9 @@ export const ExploreSearchSchema = z.object({
   availableNow: z.coerce.boolean().optional().nullable(),
   AvailableNow: z.coerce.boolean().optional().nullable(),
   AvailbleNow: z.coerce.boolean().optional().nullable(),
+  flagged: z.union([FlaggedFilterSchema, z.array(FlaggedFilterSchema), z.string()]).optional(),
+  flaged: z.union([FlaggedFilterSchema, z.array(FlaggedFilterSchema), z.string()]).optional(),
+  Flaged: z.union([FlaggedFilterSchema, z.array(FlaggedFilterSchema), z.string()]).optional(),
 });
 export type ExploreSearchDTO = z.infer<typeof ExploreSearchSchema>;
 

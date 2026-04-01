@@ -18,7 +18,7 @@ const mainRouter = Router();
 mainRouter.use('/auth', sensitiveIpRateLimiter, authRouter);
 mainRouter.use('/me', authenticateAccess, isActive, dashboardRouter);
 mainRouter.use('/chat', authenticateAccess, isActive, chatRouter);
-mainRouter.use('/workers', authenticateAccess, isActive, workersRouter);
+mainRouter.use('/workers', workersRouter);
 mainRouter.use('/governments', governmentRouter);
 mainRouter.use('/specializations', specializationRouter);
 

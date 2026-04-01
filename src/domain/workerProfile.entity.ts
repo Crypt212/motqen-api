@@ -75,3 +75,37 @@ export type PortfolioCreateInput = {
 };
 
 export type PortfolioUpdateInput = Partial<PortfolioCreateInput>;
+
+export type WorkerSearchFlag = 'availability' | 'nearest' | 'acceptsUrgentJobs' | 'highestRated';
+
+export type WorkerSearchInput = {
+  categoryId?: string;
+  specializationId?: string;
+  subSpecializationId?: string;
+  governmentId?: string;
+  area?: string;
+  city?: string;
+  availability?: boolean;
+  acceptsUrgentJobs?: boolean;
+  highestRated?: boolean;
+  nearest?: boolean;
+  customerGovernmentName?: string;
+  customerGovernmentLatitude?: string | number;
+  customerGovernmentLongitude?: string | number;
+  currentUserId?: string;
+  page?: number;
+  limit?: number;
+};
+
+export type WorkerSearchItem = {
+  distanceKm?: number;
+  workerId: string;
+  name: string;
+  profileImage: string;
+  service_title: string;
+  rating: number;
+  area: string;
+  isAvailableNow: boolean;
+  completedServices: number;
+  acceptsUrgentJobs: boolean;
+};

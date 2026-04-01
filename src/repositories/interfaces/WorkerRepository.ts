@@ -3,6 +3,8 @@ import {
   WorkerProfile,
   WorkerProfileCreateInput,
   WorkerProfileFilter,
+  WorkerSearchInput,
+  WorkerSearchItem,
   WorkerProfileUpdateInput,
   WorkerProfileVerification,
   WorkerProfileVerificationCreateInput,
@@ -19,6 +21,15 @@ export default interface IWorkerProfileRepository {
    * Find worker profile
    */
   find(params: { workerFilter: WorkerProfileFilter }): Promise<WorkerProfile | null>;
+
+  /**
+   * Search approved workers for explore list
+   */
+  searchWorkers(params: WorkerSearchInput): Promise<
+    PaginatedResultMeta & {
+      workers: WorkerSearchItem[];
+    }
+  >;
   /**
    * Find many online users' worker profiles
    */
