@@ -65,7 +65,6 @@ export default class UserRepository extends Repository implements IUserRepositor
     filter: UserFilter;
   }): Promise<(User & { isClient: boolean; isWorker: boolean }) | null> {
     try {
-      if (isEmptyFilter(filter)) return null;
       const record = await this.prismaClient.user.findFirst({
         where: filter,
       });
@@ -90,8 +89,6 @@ export default class UserRepository extends Repository implements IUserRepositor
     sort?: SortOptions<User>;
   }): Promise<PaginatedResultMeta & { users: User[] }> {
     try {
-      if (isEmptyFilter(filter)) return { users: [], ...getEmptyPaginatedResult() };
-
       const total = await this.prismaClient.user.count({
         where: filter,
       });
@@ -129,8 +126,6 @@ export default class UserRepository extends Repository implements IUserRepositor
     sort?: SortOptions<User>;
   }): Promise<PaginatedResultMeta & { users: User[] }> {
     try {
-      if (isEmptyFilter(filter)) return { users: [], ...getEmptyPaginatedResult() };
-
       const whereCondition = {
         ...filter,
         isOnline: true,

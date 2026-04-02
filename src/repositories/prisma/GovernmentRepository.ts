@@ -95,7 +95,6 @@ export default class GovernmentRepository extends Repository implements IGovernm
   async findCity(params: { filter: CityFilter }): Promise<City | null> {
     try {
       const { filter } = params;
-      if (isEmptyFilter(filter)) return null;
 
       const record = await this.prismaClient.city.findFirst({
         where: filter,

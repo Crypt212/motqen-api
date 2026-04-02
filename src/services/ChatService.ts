@@ -44,7 +44,6 @@ export default class ChatService extends Service {
   private conversationRepository: IConversationRepository;
   private messageRepository: IMessageRepository;
   private workerProfileRepository: IWorkerProfileRepository;
-  private clientProfileRepository: IClientProfileRepository;
   private _presence: IChatPresenceCache;
 
   constructor(params: {
@@ -58,7 +57,6 @@ export default class ChatService extends Service {
     this.conversationRepository = params.conversationRepository;
     this.messageRepository = params.messageRepository;
     this.workerProfileRepository = params.workerProfileRepository;
-    this.clientProfileRepository = params.clientProfileRepository;
     this._presence = params.presence;
   }
 
@@ -121,7 +119,7 @@ export default class ChatService extends Service {
     sort: SortOptions<ConversationWithParticipantsAndMessages>;
   }): Promise<
     PaginatedResultMeta & {
-      conversationsWithParticipantsAndMessages: ConversationWithParticipantsAndMessages[];
+      conversations: ConversationWithParticipantsAndMessages[];
     }
   > {
     const { userId, pagination, sort } = params;
@@ -165,8 +163,7 @@ export default class ChatService extends Service {
       });
 
       return {
-        conversationsWithParticipantsAndMessages:
-          conversations as unknown as ConversationWithParticipantsAndMessages[],
+        conversations: conversations as unknown as ConversationWithParticipantsAndMessages[],
         page: convs.page,
         limit: convs.limit,
         count: convs.count,

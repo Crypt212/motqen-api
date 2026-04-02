@@ -67,7 +67,6 @@ export default class WorkerProfileRepository
     workerFilter: WorkerProfileFilter;
   }): Promise<WorkerProfile | null> {
     try {
-      if (isEmptyFilter(workerFilter)) return null;
       const record = await this.prismaClient.workerProfile.findFirst({
         where: workerFilter,
       });
@@ -87,8 +86,6 @@ export default class WorkerProfileRepository
     sort?: SortOptions<WorkerProfile>;
   }): Promise<PaginatedResultMeta & { workerProfiles: WorkerProfile[] }> {
     try {
-      if (isEmptyFilter(workerFilter)) return { ...getEmptyPaginatedResult(), workerProfiles: [] };
-
       const whereCondition = {
         user: { isOnline: true },
         ...workerFilter,
@@ -129,8 +126,6 @@ export default class WorkerProfileRepository
     pagination?: PaginationOptions;
   }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }> {
     try {
-      if (isEmptyFilter(workerFilter)) return { ...getEmptyPaginatedResult(), governmentIds: [] };
-
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
         where: workerFilter,
         include: { workGovernments: true },
@@ -167,7 +162,6 @@ export default class WorkerProfileRepository
     workerFilter: WorkerProfileFilter;
   }): Promise<WorkerProfileVerification | null> {
     try {
-      if (isEmptyFilter(workerFilter)) return null;
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
         where: workerFilter,
       });
@@ -194,8 +188,6 @@ export default class WorkerProfileRepository
     pagination?: PaginationOptions;
   }): Promise<PaginatedResultMeta & { specializationIds: IDType[] }> {
     try {
-      if (isEmptyFilter(filter)) return { ...getEmptyPaginatedResult(), specializationIds: [] };
-
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
         where: filter,
         include: { chosenSpecializations: true },

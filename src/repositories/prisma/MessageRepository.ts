@@ -69,7 +69,6 @@ export default class MessageRepository extends Repository implements IMessageRep
   async find(params: { filter: MessageFilter }): Promise<Message | null> {
     try {
       const { filter } = params;
-      if (isEmptyFilter(filter)) return null;
 
       const record = await this.prismaClient.message.findFirst({
         where: filter,
@@ -87,7 +86,6 @@ export default class MessageRepository extends Repository implements IMessageRep
   }): Promise<PaginatedResultMeta & { messages: Message[] }> {
     try {
       const { filter, pagination, sort } = params;
-      if (!filter || isEmptyFilter(filter)) return { ...getEmptyPaginatedResult(), messages: [] };
 
       const total = await this.prismaClient.message.count({
         where: filter,

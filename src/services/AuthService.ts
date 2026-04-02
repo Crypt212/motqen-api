@@ -17,7 +17,7 @@ import { logger } from '../libs/winston.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
-import { Role, User, AccountStatus, LocationCreateInput } from '../domain/user.entity.js';
+import { Role, User } from '../domain/user.entity.js';
 import { WorkerProfile, WorkerProfileVerification } from '../domain/workerProfile.entity.js';
 import { ClientProfile } from '../domain/clientProfile.entity.js';
 import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
@@ -55,12 +55,7 @@ interface InputWorkerType {
   profileWithIdImageBuffer: Buffer;
 }
 
-interface InputClientType {
-  address: string;
-  addressNotes: string;
-  governmentId: IDType;
-  cityId: IDType;
-}
+interface InputClientType {}
 
 /**
  * Auth Service
@@ -209,14 +204,10 @@ export default class AuthService extends Service {
    * @returns {Promise<{ user: import("../repositories/database/UserRepository.js").User, profile: import("../generated/prisma/client.js").ClientProfile }>} Created user object
    * @throws {AppError} If government or city not found
    */
-  async registerClient({
-    firstName,
-    middleName,
-    lastName,
-    phoneNumber,
-    profileImageBuffer,
-    location,
-  }: InputUserType): Promise<{ user: User; profile: ClientProfile }> {
+  async registerClient(
+    { firstName, middleName, lastName, phoneNumber, profileImageBuffer, location }: InputUserType,
+    {}: InputClientType
+  ): Promise<{ user: User; profile: ClientProfile }> {
     return tryCatch(async () => {
       if (location) {
         const government = await this.governmentRepository.find({

@@ -40,7 +40,7 @@ async function emitToPartners(
 ) {
   try {
     const convs = await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages(
-      { userId, filter: 'All' }
+      { userId, filter: {} }
     );
     const partnersEmitted = new Set();
     for (const conv of convs.conversationParticipantsWithMessages) {
@@ -257,7 +257,7 @@ export function registerSocketHandlers(
       const convs =
         await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
           userId,
-          filter: 'All',
+          filter: {},
         });
       const conversationIds = convs.conversationParticipantsWithMessages.map((c) => c.id);
       void presence.leaveAllChats({ userId, socketId: socket.id, conversationIds });

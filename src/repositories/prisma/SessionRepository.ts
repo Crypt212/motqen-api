@@ -29,7 +29,6 @@ export default class SessionRepository extends Repository implements ISessionRep
   async find(params: { filter: SessionFilter }): Promise<Session | null> {
     try {
       const { filter } = params;
-      if (isEmptyFilter(filter)) return null;
 
       const record = await this.prismaClient.session.findFirst({
         where: filter,

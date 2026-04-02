@@ -63,14 +63,17 @@ export const registerClient = asyncHandler(async (req, res) => {
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-  const { user, profile } = await authService.registerClient({
-    phoneNumber,
-    firstName,
-    middleName,
-    lastName,
-    profileImageBuffer: image?.buffer ?? undefined,
-    location,
-  });
+  const { user, profile } = await authService.registerClient(
+    {
+      phoneNumber,
+      firstName,
+      middleName,
+      lastName,
+      profileImageBuffer: image?.buffer ?? undefined,
+      location,
+    },
+    {}
+  );
 
   const { unHashedRefreshToken } = await authService.login({
     phoneNumber,

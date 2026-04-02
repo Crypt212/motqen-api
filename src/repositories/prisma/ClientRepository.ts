@@ -30,7 +30,6 @@ export default class ClientProfileRepository
   async find(params: { filter: ClientProfileFilter }): Promise<ClientProfile | null> {
     try {
       const { filter } = params;
-      if (isEmptyFilter(filter)) return null;
 
       const record = await this.prismaClient.clientProfile.findFirst({
         where: filter,
