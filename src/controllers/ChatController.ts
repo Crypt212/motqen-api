@@ -41,7 +41,7 @@ export const getConversations = asyncHandler(async (req, res) => {
     sort: { sortBy, sortOrder },
   });
 
-  new SuccessResponse('Conversations retrieved', { conversations }, 200).send(res);
+  new SuccessResponse('Conversations retrieved', conversations, 200).send(res);
 });
 
 /**
