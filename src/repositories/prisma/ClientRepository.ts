@@ -6,9 +6,6 @@ import {
   ClientProfileCreateInput,
   ClientProfileFilter,
   ClientProfileUpdateInput,
-  Location,
-  LocationCreateInput,
-  LocationUpdateInput,
 } from '../../domain/clientProfile.entity.js';
 import { isEmptyFilter } from './utils.js';
 import { PrismaClient } from 'src/generated/prisma/client.js';
@@ -30,18 +27,6 @@ export default class ClientProfileRepository
     };
   }
 
-  private toDomainLocation(record: Location): Location {
-    return {
-      id: record.id,
-      clientProfileId: record.clientProfileId,
-      governmentId: record.governmentId,
-      cityId: record.cityId,
-      address: record.address,
-      addressNotes: record.addressNotes,
-      isMain: record.isMain,
-    };
-  }
-
   async find(params: { filter: ClientProfileFilter }): Promise<ClientProfile | null> {
     try {
       const { filter } = params;
@@ -53,35 +38,6 @@ export default class ClientProfileRepository
       return record ? this.toDomain(record) : null;
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'find');
-    }
-  }
-
-  async findWithPrimaryLocation(params: {
-    filter: ClientProfileFilter;
-  }): Promise<(ClientProfile & { location: Location }) | null> {
-    try {
-      const { filter } = params;
-      if (isEmptyFilter(filter)) return null;
-
-      const userWithLocation = await this.prismaClient.clientProfile.findFirst({
-        where: filter,
-        include: {
-          locations: {
-            where: {
-              isMain: true,
-            },
-          },
-        },
-      });
-      if (!userWithLocation || userWithLocation.locations.length === 0) return null;
-
-      const location = userWithLocation.locations[0];
-      return {
-        ...this.toDomain(userWithLocation),
-        location: this.toDomainLocation(location),
-      };
-    } catch (error: unknown) {
-      throw handlePrismaError(error as Error, 'findWithPrimaryLocation');
     }
   }
 
@@ -116,40 +72,6 @@ export default class ClientProfileRepository
     }
   }
 
-  async createWithPrimaryLocation(params: {
-    userId: IDType;
-    clientProfile: ClientProfileCreateInput;
-    location: LocationCreateInput;
-  }): Promise<ClientProfile & { location: Location }> {
-    try {
-      const clientProfile = await this.prismaClient.clientProfile.create({
-        data: {
-          userId: params.userId,
-          ...params.clientProfile,
-          locations: {
-            create: {
-              ...params.location,
-            },
-          },
-        },
-        include: {
-          locations: {
-            where: { isMain: true },
-            take: 1,
-          },
-        },
-      });
-
-      const location = clientProfile.locations[0];
-      return {
-        ...this.toDomain(clientProfile),
-        location: this.toDomainLocation(location),
-      };
-    } catch (error: unknown) {
-      throw handlePrismaError(error as Error, 'createWithPrimaryLocation');
-    }
-  }
-
   async update(params: {
     filter: ClientProfileFilter;
     clientProfile: ClientProfileUpdateInput;
@@ -175,55 +97,6 @@ export default class ClientProfileRepository
       return this.toDomain(updated);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'update');
-    }
-  }
-
-  async updateWithPrimaryLocation(params: {
-    filter: ClientProfileFilter;
-    clientProfile: ClientProfileUpdateInput;
-    location: LocationUpdateInput;
-  }): Promise<ClientProfile & { location: Location }> {
-    try {
-      const { filter, clientProfile, location } = params;
-      if (isEmptyFilter(filter)) {
-        throw new Error('Client profile not found');
-      }
-
-      const existingProfile = await this.prismaClient.clientProfile.findFirst({
-        where: filter,
-      });
-
-      if (!existingProfile) {
-        throw new Error('Client profile not found');
-      }
-
-      const mainLocation = await this.prismaClient.location.findFirst({
-        where: {
-          clientProfileId: existingProfile.id,
-          isMain: true,
-        },
-      });
-
-      if (!mainLocation) {
-        throw new Error('Primary location not found');
-      }
-
-      await this.prismaClient.location.update({
-        where: { id: mainLocation.id },
-        data: location,
-      });
-
-      const updated = await this.prismaClient.clientProfile.update({
-        where: { id: existingProfile.id },
-        data: clientProfile,
-      });
-
-      return {
-        ...this.toDomain(updated),
-        location: this.toDomainLocation(mainLocation),
-      };
-    } catch (error: unknown) {
-      throw handlePrismaError(error as Error, 'updateWithPrimaryLocation');
     }
   }
 

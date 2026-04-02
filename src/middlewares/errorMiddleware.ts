@@ -25,9 +25,9 @@ const errorHandler: ErrorRequestHandler = function (
   if (err instanceof RepositoryError) {
     return res.status(500).json({
       message:
-        'Database error: ' + err.code + environment.nodeEnv === 'development'
-          ? ' - Details: ' + err.message
-          : '',
+        'Database error: ' +
+        err.code +
+        (environment.nodeEnv === 'development' ? ' - Details: ' + err.message : ''),
       stack: environment.nodeEnv === 'development' ? err.stack : undefined,
     });
   }

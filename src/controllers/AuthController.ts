@@ -32,16 +32,18 @@ export const verifyOTP = asyncHandler(async (req, res) => {
   const { phoneNumber, otp, method } = req.body;
   const deviceId = req.deviceId;
 
-  const { tokenType, token, workerShit } = await authService.verifyOTP(
+  const { tokenType, token, workerVerificationInfo } = await authService.verifyOTP(
     phoneNumber,
     method,
     otp,
     deviceId
   );
 
-  new SuccessResponse('OTP verified successfully', { tokenType, token, ...workerShit }, 200).send(
-    res
-  );
+  new SuccessResponse(
+    'OTP verified successfully',
+    { tokenType, token, ...workerVerificationInfo },
+    200
+  ).send(res);
 });
 
 /**
@@ -50,9 +52,8 @@ export const verifyOTP = asyncHandler(async (req, res) => {
  */
 export const registerClient = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
-  const { userData, clientProfile } = req.body;
-  const { firstName, middleName, lastName } = JSON.parse(userData);
-  const { cityId, governmentId, address, addressNotes } = JSON.parse(clientProfile);
+  const { userData } = req.body;
+  const { firstName, middleName, lastName, location } = JSON.parse(userData);
 
   const phoneNumber = verifyAndDecodeToken(
     req.headers['authorization'].split(' ')[1],
@@ -62,22 +63,14 @@ export const registerClient = asyncHandler(async (req, res) => {
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-  console.log(req.body);
-  const { user, profile } = await authService.registerClient(
-    {
-      phoneNumber,
-      firstName,
-      middleName,
-      lastName,
-      profileImageBuffer: image?.buffer ?? undefined,
-    },
-    {
-      governmentId,
-      cityId,
-      address,
-      addressNotes,
-    }
-  );
+  const { user, profile } = await authService.registerClient({
+    phoneNumber,
+    firstName,
+    middleName,
+    lastName,
+    profileImageBuffer: image?.buffer ?? undefined,
+    location,
+  });
 
   const { unHashedRefreshToken } = await authService.login({
     phoneNumber,
@@ -105,7 +98,7 @@ export const registerClient = asyncHandler(async (req, res) => {
  */
 export const registerWorker = asyncHandler(async (req, res) => {
   const { userData, workerProfile } = req.body;
-  const { firstName, middleName, lastName } = JSON.parse(userData);
+  const { firstName, middleName, lastName, location } = JSON.parse(userData);
   const { experienceYears, isInTeam, acceptsUrgentJobs, specializationsTree, workGovernmentIds } =
     JSON.parse(workerProfile);
 
@@ -131,6 +124,7 @@ export const registerWorker = asyncHandler(async (req, res) => {
       middleName,
       lastName,
       profileImageBuffer: images['personal_image'][0].buffer,
+      location,
     },
     {
       idImageBuffer: images['id_image'][0].buffer,
@@ -230,7 +224,6 @@ export const generateAccessToken = asyncHandler(async (req, res) => {
  * Reviews the status of a user (pending, approved, rejected)
  */
 export const reviewStatus = asyncHandler(async (req, res) => {
-  console.log(req.userState);
   if (req.userState.client) {
     new SuccessResponse('You are a client, you can whatever you want <3', {}, 200).send(res);
     return;

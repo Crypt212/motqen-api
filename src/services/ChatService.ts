@@ -44,8 +44,8 @@ export default class ChatService extends Service {
   private conversationRepository: IConversationRepository;
   private messageRepository: IMessageRepository;
   private workerProfileRepository: IWorkerProfileRepository;
-  public clientProfileRepository: IClientProfileRepository;
-  private presencee: IChatPresenceCache;
+  private clientProfileRepository: IClientProfileRepository;
+  private _presence: IChatPresenceCache;
 
   constructor(params: {
     conversationRepository: IConversationRepository;
@@ -59,7 +59,7 @@ export default class ChatService extends Service {
     this.messageRepository = params.messageRepository;
     this.workerProfileRepository = params.workerProfileRepository;
     this.clientProfileRepository = params.clientProfileRepository;
-    this.presencee = params.presence;
+    this._presence = params.presence;
   }
 
   // ─── Conversation ──────────────────────────────────────────────────────────
@@ -164,7 +164,17 @@ export default class ChatService extends Service {
         };
       });
 
-      return conversations;
+      return {
+        conversationsWithParticipantsAndMessages:
+          conversations as unknown as ConversationWithParticipantsAndMessages[],
+        page: convs.page,
+        limit: convs.limit,
+        count: convs.count,
+        total: convs.total,
+        totalPages: convs.totalPages,
+        hasNext: convs.hasNext,
+        hasPrev: convs.hasPrev,
+      };
     });
   }
 
@@ -384,6 +394,6 @@ export default class ChatService extends Service {
   // ─── Presence helpers (delegates to ChatPresenceCache) ────────────────────
 
   get presence(): IChatPresenceCache {
-    return this.presencee;
+    return this._presence;
   }
 }

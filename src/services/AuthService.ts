@@ -17,8 +17,8 @@ import { logger } from '../libs/winston.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
-import { Role, User } from '../domain/user.entity.js';
-import { WorkerProfile } from '../domain/workerProfile.entity.js';
+import { Role, User, AccountStatus, LocationCreateInput } from '../domain/user.entity.js';
+import { WorkerProfile, WorkerProfileVerification } from '../domain/workerProfile.entity.js';
 import { ClientProfile } from '../domain/clientProfile.entity.js';
 import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
 import { Method } from '../domain/otp.entity.js';
@@ -37,6 +37,12 @@ interface InputUserType {
   middleName: string;
   lastName: string;
   profileImageBuffer: Buffer;
+  location?: {
+    governmentId: IDType;
+    cityId: IDType;
+    address: string;
+    addressNotes: string;
+  };
 }
 
 interface InputWorkerType {
@@ -96,17 +102,17 @@ export default class AuthService extends Service {
    * @throws {AppError} If government or city not found
    */
   async registerWorker(
-    { phoneNumber, firstName, middleName, lastName, profileImageBuffer }: InputUserType,
+    { firstName, middleName, lastName, phoneNumber, profileImageBuffer, location }: InputUserType,
     {
-      idImageBuffer,
-      profileWithIdImageBuffer,
       experienceYears,
       isInTeam,
+      specializationsTree: specializations,
       acceptsUrgentJobs,
-      specializationsTree,
+      idImageBuffer,
+      profileWithIdImageBuffer,
       workGovernmentIds,
     }: InputWorkerType
-  ): Promise<{ user: User; profile: WorkerProfile }> {
+  ): Promise<{ user: User; profile: WorkerProfile; verification: WorkerProfileVerification }> {
     return tryCatch(async () => {
       // Note: governmentId and cityId validation moved to location handling
       // For workers, government associations are handled via workGovernmentIds
@@ -121,6 +127,17 @@ export default class AuthService extends Service {
           status: 'ACTIVE',
         },
       });
+
+      if (location) {
+        await this.userRepository.addLocation({
+          userId: user.id,
+          location: {
+            ...location,
+            isMain: true,
+          },
+        });
+      }
+
       const profile = await this.workerProfileRepository.create({
         userId: user.id,
         workerProfile: {
@@ -164,7 +181,7 @@ export default class AuthService extends Service {
         workerFilter: {
           userId: user.id,
         },
-        specializationsTree,
+        specializationsTree: specializations,
       });
 
       const { url } = await uploadToCloudinary(
@@ -192,24 +209,23 @@ export default class AuthService extends Service {
    * @returns {Promise<{ user: import("../repositories/database/UserRepository.js").User, profile: import("../generated/prisma/client.js").ClientProfile }>} Created user object
    * @throws {AppError} If government or city not found
    */
-  async registerClient(
-    { firstName, middleName, lastName, phoneNumber, profileImageBuffer }: InputUserType,
-    { governmentId, cityId, address, addressNotes }: InputClientType
-  ): Promise<{ user: User; profile: ClientProfile }> {
+  async registerClient({
+    firstName,
+    middleName,
+    lastName,
+    phoneNumber,
+    profileImageBuffer,
+    location,
+  }: InputUserType): Promise<{ user: User; profile: ClientProfile }> {
     return tryCatch(async () => {
-      // Note: governmentId and cityId validation moved to location handling
-      // For clients, location data is handled separately via the Location model
+      if (location) {
+        const government = await this.governmentRepository.find({
+          filter: { id: location.governmentId },
+        });
+        if (!government) throw new AppError('Government not found', 404);
 
-      const government = await this.governmentRepository.find({ filter: { id: governmentId } });
-
-      if (!government) {
-        throw new AppError('Government not found', 404);
-      }
-
-      const city = await this.governmentRepository.findCity({ filter: { id: cityId } });
-
-      if (!city) {
-        throw new AppError('City not found', 404);
+        const city = await this.governmentRepository.findCity({ filter: { id: location.cityId } });
+        if (!city) throw new AppError('City not found', 404);
       }
 
       const user = await this.userRepository.create({
@@ -223,17 +239,22 @@ export default class AuthService extends Service {
         },
       });
 
-      await this.clientProfileRepository.createWithPrimaryLocation({
+      // Create bare client profile
+      await this.clientProfileRepository.create({
         userId: user.id,
         clientProfile: {},
-        location: {
-          governmentId,
-          cityId,
-          address,
-          addressNotes,
-          isMain: true,
-        },
       });
+
+      // Add primary location to the User
+      if (location) {
+        await this.userRepository.addLocation({
+          userId: user.id,
+          location: {
+            ...location,
+            isMain: true,
+          },
+        });
+      }
 
       if (profileImageBuffer) {
         const { url } = await uploadToCloudinary(
@@ -251,7 +272,7 @@ export default class AuthService extends Service {
         user.profileImageUrl = url;
       }
 
-      const profile = await this.clientProfileRepository.findWithPrimaryLocation({
+      const profile = await this.clientProfileRepository.find({
         filter: { userId: user.id },
       });
 
@@ -290,7 +311,7 @@ export default class AuthService extends Service {
   ): Promise<{
     tokenType: 'register' | 'login';
     token: string;
-    workerShit: { isWorker: boolean; isWorkerSignedUp: boolean } | {};
+    workerVerificationInfo: { isWorker: boolean; isWorkerSignedUp: boolean } | {};
   }> {
     // in production -> Invalid or expired OTP only
 
@@ -315,8 +336,6 @@ export default class AuthService extends Service {
 
       await this.otpCache.deleteOtp(phoneNumber, method);
 
-      await this.rateLimitCache.incrementVerify(phoneNumber, method);
-
       await this.rateLimitCache.resetAfterSuccess(phoneNumber, method, deviceId);
       const user = await this.userRepository.find({ filter: { phoneNumber } });
 
@@ -332,28 +351,31 @@ export default class AuthService extends Service {
         token = generateToken(payload);
       }
 
-      let workerShit: { isWorker: boolean; isWorkerSignedUp: boolean } = {
+      let workerVerificationInfo: { isWorker: boolean; isWorkerSignedUp: boolean } = {
         isWorker: false,
         isWorkerSignedUp: false,
       };
       if (tokenType === 'login') {
-        const user = await this.userRepository.find({ filter: { phoneNumber: phoneNumber } });
         const workProfile = await this.workerProfileRepository.find({
           workerFilter: { userId: user.id },
         });
-        workerShit.isWorker = workProfile ? true : false;
-        if (workerShit.isWorker) {
+        workerVerificationInfo.isWorker = workProfile ? true : false;
+        if (workerVerificationInfo.isWorker) {
           const verification = await this.workerProfileRepository.findVerification({
             workerFilter: { userId: user.id },
           });
-          workerShit.isWorkerSignedUp = verification.status === 'APPROVED';
+          if (!verification) {
+            workerVerificationInfo.isWorkerSignedUp = false;
+          } else {
+            workerVerificationInfo.isWorkerSignedUp = verification.status === 'APPROVED';
+          }
         }
       } else {
-        workerShit.isWorker = false;
-        workerShit.isWorkerSignedUp = false;
+        workerVerificationInfo.isWorker = false;
+        workerVerificationInfo.isWorkerSignedUp = false;
       }
 
-      return { tokenType, token, workerShit };
+      return { tokenType, token, workerVerificationInfo: workerVerificationInfo };
     } catch (error: unknown) {
       if (!(error instanceof AppError && error.details && error.details instanceof OTPErrorDetails))
         throw error;

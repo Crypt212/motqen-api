@@ -48,6 +48,7 @@ model User {
   sessions      Session[]
   workerProfile WorkerProfile?
   clientProfile ClientProfile?
+  locations     Location[]
   conversations ConversationParticipant[]
   sentMessages  Message[]
 
@@ -61,24 +62,25 @@ model ClientProfile {
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
-  orders    Order[]
-  locations Location[]
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("client_profiles")
 }
 
 model Location {
-  id              String        @id @default(uuid())
-  clientProfileId String
-  governmentId    String
-  cityId          String
-  address         String
-  addressNotes    String?
-  isMain          Boolean
-  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
-  government      Government    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
-  city            City          @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  id           String     @id @default(uuid())
+  userId       String
+  governmentId String
+  cityId       String
+  address      String
+  addressNotes String?
+  isMain       Boolean
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  government   Government @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  city         City       @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@map("locations")
 }
 
 model WorkerProfile {

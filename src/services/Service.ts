@@ -4,16 +4,12 @@
  */
 
 /**
- * Wrapper to catch errors and convert RepositoryError to AppError
- * @throws {AppError} If RepositoryError is caught, converts to AppError
+ * Invoke an async function with proper type inference.
+ * Exists as a uniform call-site pattern across services — kept
+ * intentionally thin so adding cross-cutting concerns (logging,
+ * error mapping) later is a single-point change.
  */
-export const tryCatch = async <T>(fn: Function): Promise<T> => {
-  try {
-    return await fn();
-  } catch (err) {
-    throw err;
-  }
-};
+export const tryCatch = <T>(fn: () => Promise<T>): Promise<T> => fn();
 
 /**
  * Base Service class providing common functionality for all services
