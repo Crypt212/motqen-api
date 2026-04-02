@@ -153,7 +153,7 @@ export default class ChatService extends Service {
           id: conv.id,
           messageCounter: conv.messageCounter,
           unreadCount,
-          lastMessage: conv.messages[0] ?? null,
+          lastMessage: conv.messages ? conv.messages : null,
           partner: partnerParticipant?.user ?? null,
           partnerLastReceivedMessageNumber: partnerParticipant?.lastReceivedMessageNumber ?? 0,
           partnerLastReadMessageNumber: partnerParticipant?.lastReadMessageNumber ?? 0,
