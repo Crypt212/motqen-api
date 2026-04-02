@@ -59,15 +59,25 @@ describe('ClientProfileService', () => {
       ).rejects.toThrow('User not found');
     });
 
-    it('should force isMain=true on new primary location', async () => {
+    it('should create client profile and force isMain=true on new primary location on User', async () => {
       userRepo.find.mockResolvedValue(makeUser());
-      clientRepo.createWithPrimaryLocation.mockResolvedValue(makeClientProfile());
+      clientRepo.create.mockResolvedValue(makeClientProfile());
+      userRepo.addLocation.mockResolvedValue({});
+
       await service.create({
         userId: 'user-1',
         data: { location: { governmentId: 'g', cityId: 'c', address: 'A', isMain: false } },
       });
-      expect(clientRepo.createWithPrimaryLocation).toHaveBeenCalledWith(
-        expect.objectContaining({ location: expect.objectContaining({ isMain: true }) })
+
+      expect(clientRepo.create).toHaveBeenCalledWith({
+        userId: 'user-1',
+        clientProfile: {},
+      });
+      expect(userRepo.addLocation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          location: expect.objectContaining({ isMain: true }),
+        })
       );
     });
   });

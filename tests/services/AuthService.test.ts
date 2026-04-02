@@ -334,20 +334,26 @@ describe('AuthService', () => {
       govRepo.find.mockResolvedValue(makeGovernment());
       govRepo.findCity.mockResolvedValue({ id: 'city-1', name: 'Maadi' });
       userRepo.create.mockResolvedValue(user);
-      clientRepo.createWithPrimaryLocation.mockResolvedValue({});
-      clientRepo.findWithPrimaryLocation.mockResolvedValue({
+      clientRepo.create.mockResolvedValue({});
+      userRepo.addLocation.mockResolvedValue({});
+      userRepo.update.mockResolvedValue(user);
+      clientRepo.find.mockResolvedValue({
         id: 'client-1',
         userId: user.id,
       });
-      userRepo.update.mockResolvedValue(user);
 
       const result = await authService.registerClient(userData, clientData);
 
       expect(result.user).toBeDefined();
       expect(result.profile).toBeDefined();
-      // Verify location was created with isMain=true
-      expect(clientRepo.createWithPrimaryLocation).toHaveBeenCalledWith(
+      expect(clientRepo.create).toHaveBeenCalledWith({
+        userId: user.id,
+        clientProfile: {},
+      });
+      // Verify location was created with isMain=true on the User
+      expect(userRepo.addLocation).toHaveBeenCalledWith(
         expect.objectContaining({
+          userId: user.id,
           location: expect.objectContaining({ isMain: true }),
         })
       );
@@ -357,9 +363,10 @@ describe('AuthService', () => {
       govRepo.find.mockResolvedValue(makeGovernment());
       govRepo.findCity.mockResolvedValue({ id: 'city-1' });
       userRepo.create.mockResolvedValue(makeUser());
-      clientRepo.createWithPrimaryLocation.mockResolvedValue({});
-      clientRepo.findWithPrimaryLocation.mockResolvedValue({});
+      clientRepo.create.mockResolvedValue({});
+      userRepo.addLocation.mockResolvedValue({});
       userRepo.update.mockResolvedValue(makeUser());
+      clientRepo.find.mockResolvedValue({});
 
       await authService.registerClient(userData, clientData);
 

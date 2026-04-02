@@ -197,9 +197,6 @@ export default class AuthService extends Service {
     { governmentId, cityId, address, addressNotes }: InputClientType
   ): Promise<{ user: User; profile: ClientProfile }> {
     return tryCatch(async () => {
-      // Note: governmentId and cityId validation moved to location handling
-      // For clients, location data is handled separately via the Location model
-
       const government = await this.governmentRepository.find({ filter: { id: governmentId } });
 
       if (!government) {
@@ -223,9 +220,15 @@ export default class AuthService extends Service {
         },
       });
 
-      await this.clientProfileRepository.createWithPrimaryLocation({
+      // Create bare client profile (no location — that's on User now)
+      await this.clientProfileRepository.create({
         userId: user.id,
         clientProfile: {},
+      });
+
+      // Add primary location to the User
+      await this.userRepository.addLocation({
+        userId: user.id,
         location: {
           governmentId,
           cityId,
@@ -251,7 +254,7 @@ export default class AuthService extends Service {
         user.profileImageUrl = url;
       }
 
-      const profile = await this.clientProfileRepository.findWithPrimaryLocation({
+      const profile = await this.clientProfileRepository.find({
         filter: { userId: user.id },
       });
 

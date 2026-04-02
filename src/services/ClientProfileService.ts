@@ -13,9 +13,8 @@ import {
   ClientProfileCreateInput,
   ClientProfileFilter,
   ClientProfileUpdateInput,
-  LocationCreateInput,
-  LocationUpdateInput,
 } from '../domain/clientProfile.entity.js';
+import { LocationCreateInput, LocationUpdateInput } from '../domain/user.entity.js';
 
 /**
  * Client Service - Manages client-related operations
@@ -24,11 +23,6 @@ export default class ClientService extends Service {
   private clientProfileRepository: IClientProfileRepository;
   private userRepository: IUserRepository;
 
-  /**
-   * @param {Object} params
-   * @param {ClientRepository} params.clientRepository
-   * @param {UserRepository} params.userRepository
-   */
   constructor(params: {
     clientProfileRepository: IClientProfileRepository;
     userRepository: IUserRepository;
@@ -56,7 +50,8 @@ export default class ClientService extends Service {
   }
 
   /**
-   * Create a client profile for a user
+   * Create a client profile for a user.
+   * Location is created on the User (not the client profile).
    * @throws {AppError} If user not found
    */
   async create(params: {
@@ -68,9 +63,15 @@ export default class ClientService extends Service {
       const user = await this.userRepository.find({ filter: { id: userId } });
       if (!user) throw new AppError('User not found', 404);
 
-      const clientProfile = await this.clientProfileRepository.createWithPrimaryLocation({
+      // Create the client profile (no location — that's on User now)
+      const clientProfile = await this.clientProfileRepository.create({
         userId,
         clientProfile: {},
+      });
+
+      // Add primary location to the User
+      await this.userRepository.addLocation({
+        userId,
         location: {
           governmentId: data.location.governmentId,
           cityId: data.location.cityId,
@@ -85,20 +86,31 @@ export default class ClientService extends Service {
   }
 
   /**
-   * Update a client's profile for a user
+   * Update a client's profile for a user.
+   * Location updates go through the User repository.
    * @throws {AppError} If profile not found
    */
   async update(params: {
     filter: ClientProfileFilter;
     data: ClientProfileUpdateInput & { location?: LocationUpdateInput };
+    userId: IDType;
   }): Promise<ClientProfile | null> {
     return tryCatch(async () => {
-      const { filter, data } = params;
-      return await this.clientProfileRepository.updateWithPrimaryLocation({
+      const { filter, data, userId } = params;
+
+      const clientProfile = await this.clientProfileRepository.update({
         filter,
         clientProfile: data,
-        location: data.location,
       });
+
+      if (data.location) {
+        await this.userRepository.updatePrimaryLocation({
+          userId,
+          location: data.location,
+        });
+      }
+
+      return clientProfile;
     });
   }
 

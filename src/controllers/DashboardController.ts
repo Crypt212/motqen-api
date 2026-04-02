@@ -63,10 +63,12 @@ export const createClientProfile = asyncHandler(async (req, res) => {
 export const updateClientProfile = asyncHandler(async (req, res) => {
   const { address, addressNotes } = req.body;
   const clientProfileId = req.userState.client.id;
+  const userId = req.userState.userId;
 
   const clientProfile = await clientProfileService.update({
     filter: { id: clientProfileId },
     data: { location: { address, addressNotes } },
+    userId,
   });
 
   new SuccessResponse('updated client profile successfully', { clientProfile }, 200).send(res);

@@ -1,5 +1,14 @@
-import { User, UserCreateInput, UserFilter, UserUpdateInput } from '../../domain/user.entity.js';
+import {
+  User,
+  UserCreateInput,
+  UserFilter,
+  UserUpdateInput,
+  Location,
+  LocationCreateInput,
+  LocationUpdateInput,
+} from '../../domain/user.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
+import { IDType } from './Repository.js';
 
 export default interface IUserRepository {
   /**
@@ -40,4 +49,26 @@ export default interface IUserRepository {
    * Delete a user
    */
   delete(params: { filter: UserFilter }): Promise<void>;
+
+  // ─── Location methods ─────────────────────────────────────────────────
+
+  /**
+   * Find a user with their primary (isMain=true) location
+   */
+  findWithPrimaryLocation(params: {
+    filter: UserFilter;
+  }): Promise<(User & { location: Location }) | null>;
+
+  /**
+   * Add a location to a user
+   */
+  addLocation(params: { userId: IDType; location: LocationCreateInput }): Promise<Location>;
+
+  /**
+   * Update a user's primary location
+   */
+  updatePrimaryLocation(params: {
+    userId: IDType;
+    location: LocationUpdateInput;
+  }): Promise<Location>;
 }

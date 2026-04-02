@@ -27,6 +27,9 @@ export const createMockUserRepository = (): {
   create: vi.fn(),
   update: vi.fn(),
   delete: vi.fn(),
+  findWithPrimaryLocation: vi.fn(),
+  addLocation: vi.fn(),
+  updatePrimaryLocation: vi.fn(),
 });
 
 export const createMockWorkerProfileRepository = (): {
@@ -56,12 +59,9 @@ export const createMockClientProfileRepository = (): {
   [K in keyof IClientProfileRepository]: ReturnType<typeof vi.fn>;
 } => ({
   find: vi.fn(),
-  findWithPrimaryLocation: vi.fn(),
   exists: vi.fn(),
   create: vi.fn(),
-  createWithPrimaryLocation: vi.fn(),
   update: vi.fn(),
-  updateWithPrimaryLocation: vi.fn(),
   delete: vi.fn(),
 });
 
@@ -285,5 +285,16 @@ export const makeSpecialization = (overrides: Partial<any> = {}) => ({
   category: 'ELECTRICITY' as const,
   createdAt: new Date('2025-01-01'),
   updatedAt: new Date('2025-01-01'),
+  ...overrides,
+});
+
+export const makeLocation = (overrides: Partial<any> = {}) => ({
+  id: 'loc-1',
+  userId: 'user-1',
+  governmentId: 'gov-1',
+  cityId: 'city-1',
+  address: '123 Tahrir Square',
+  addressNotes: 'Near the museum',
+  isMain: true,
   ...overrides,
 });
