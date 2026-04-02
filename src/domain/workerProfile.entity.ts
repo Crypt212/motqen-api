@@ -40,9 +40,9 @@ export type WorkerProfileVerification = {
   id: IDType;
   workerProfileId: string;
 
-  idWithPersonalImageUrl: String;
-  idDocumentUrl: String;
-  reason: String;
+  idWithPersonalImageUrl: string;
+  idDocumentUrl: string;
+  reason: string;
   status: VerificationStatus;
 
   createdAt: Date;
@@ -50,9 +50,9 @@ export type WorkerProfileVerification = {
 };
 
 export type WorkerProfileVerificationCreateInput = {
-  idWithPersonalImageUrl: String;
-  idDocumentUrl: String;
-  reason?: String;
+  idWithPersonalImageUrl: string;
+  idDocumentUrl: string;
+  reason?: string;
   status?: VerificationStatus;
 };
 

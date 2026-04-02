@@ -238,9 +238,6 @@ export const parseQueryParams = <T extends z.ZodRawShape>(
   query: Record<string, unknown>,
   filterSchema: ZodFilterSchema<T>
 ) => {
-  console.log('inside parseQueryParams');
-  console.log('query: ', query);
-
   const { sortableFields, searchableFields } = filterSchema[FILTER_META];
   const filterFields = Object.keys(filterSchema.shape);
 

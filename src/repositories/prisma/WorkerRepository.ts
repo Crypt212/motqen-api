@@ -15,7 +15,7 @@ import {
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { AccountStatus, PrismaClient, VerificationStatus } from 'src/generated/prisma/client.js';
 
-export default class WorkerRepositoryRepository
+export default class WorkerProfileRepository
   extends Repository
   implements IWorkerProfileRepository
 {
@@ -510,15 +510,15 @@ export default class WorkerRepositoryRepository
 
       if (!existingProfile) return;
 
-      for (const treeNode of specializationsTree) {
-        await this.prismaClient.chosenSpecialization.deleteMany({
-          where: {
-            workerProfileId: existingProfile.id,
+      await this.prismaClient.chosenSpecialization.deleteMany({
+        where: {
+          workerProfileId: existingProfile.id,
+          OR: specializationsTree.map((treeNode) => ({
             specializationId: treeNode.mainId,
             subSpecializationId: { in: treeNode.subIds },
-          },
-        });
-      }
+          })),
+        },
+      });
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'deleteSubSpecializations');
     }
@@ -846,8 +846,8 @@ export default class WorkerRepositoryRepository
       page: normalizedPage,
       limit: normalizedLimit,
       count: data.length,
-      hasNext: page != totalPages,
-      hasPrev: page != 1,
+      hasNext: normalizedPage < totalPages,
+      hasPrev: normalizedPage > 1,
       totalPages,
     };
   }

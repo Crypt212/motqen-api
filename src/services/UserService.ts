@@ -103,7 +103,6 @@ export default class UserService extends Service {
     const { filter } = params;
     const user = await this.userRepository.find({ filter });
     const worker = await this.workerProfileRepository.find({ workerFilter: { userId: user.id } });
-    console.log(user, worker, filter);
     let verification = null;
     if (worker)
       verification = await this.workerProfileRepository.findVerification({

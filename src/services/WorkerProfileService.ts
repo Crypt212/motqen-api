@@ -153,10 +153,10 @@ export default class WorkerService extends Service {
    * Delete a worker's profile information
    * @throws {AppError} If profile not found
    */
-  async delete(params: { workerProfileId: IDType }): Promise<WorkerProfile> {
+  async delete(params: { workerProfileId: IDType }): Promise<void> {
     const { workerProfileId } = params;
     return tryCatch(async () => {
-      return await this.workerProfileRepository.delete({ workerFilter: { id: workerProfileId } });
+      await this.workerProfileRepository.delete({ workerFilter: { id: workerProfileId } });
     });
   }
 

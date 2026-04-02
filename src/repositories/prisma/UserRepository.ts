@@ -49,11 +49,12 @@ export default class UserRepository extends Repository implements IUserRepositor
       const record = await this.prismaClient.user.findFirst({
         where: filter,
       });
+      if (!record) return null;
       const isWorker =
         (await this.prismaClient.workerProfile.count({ where: { userId: record.id } })) > 0;
       const isClient =
         (await this.prismaClient.clientProfile.count({ where: { userId: record.id } })) > 0;
-      return record ? { ...this.toDomain(record), isClient, isWorker } : null;
+      return { ...this.toDomain(record), isClient, isWorker };
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'find');
     }

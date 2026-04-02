@@ -195,7 +195,7 @@ export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
       governmentIds,
     });
 
-  new SuccessResponse('deleted worker working governments successfully', 200).send(res);
+  new SuccessResponse('deleted worker working governments successfully', null, 200).send(res);
 });
 
 export const getWorkerSpecializations = asyncHandler(async (req, res) => {
@@ -221,7 +221,7 @@ export const addWorkerSpecializations = asyncHandler(async (req, res) => {
     specializationsTree,
   });
 
-  new SuccessResponse('added worker specializations successfully', 200).send(res);
+  new SuccessResponse('added worker specializations successfully', null, 200).send(res);
 });
 
 /**
@@ -248,5 +248,5 @@ export const deleteWorkerSpecializations = asyncHandler(async (req, res) => {
       });
   }
 
-  new SuccessResponse('deleted worker specializations successfully', 200).send(res);
+  new SuccessResponse('deleted worker specializations successfully', null, 200).send(res);
 });

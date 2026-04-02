@@ -290,7 +290,7 @@ export default class AuthService extends Service {
   ): Promise<{
     tokenType: 'register' | 'login';
     token: string;
-    workerShit: { isWorker: boolean; isWorkerSignedUp: boolean } | {};
+    workerVerificationInfo: { isWorker: boolean; isWorkerSignedUp: boolean } | {};
   }> {
     // in production -> Invalid or expired OTP only
 
@@ -315,8 +315,6 @@ export default class AuthService extends Service {
 
       await this.otpCache.deleteOtp(phoneNumber, method);
 
-      await this.rateLimitCache.incrementVerify(phoneNumber, method);
-
       await this.rateLimitCache.resetAfterSuccess(phoneNumber, method, deviceId);
       const user = await this.userRepository.find({ filter: { phoneNumber } });
 
@@ -332,28 +330,31 @@ export default class AuthService extends Service {
         token = generateToken(payload);
       }
 
-      let workerShit: { isWorker: boolean; isWorkerSignedUp: boolean } = {
+      let workerVerificationInfo: { isWorker: boolean; isWorkerSignedUp: boolean } = {
         isWorker: false,
         isWorkerSignedUp: false,
       };
       if (tokenType === 'login') {
-        const user = await this.userRepository.find({ filter: { phoneNumber: phoneNumber } });
         const workProfile = await this.workerProfileRepository.find({
           workerFilter: { userId: user.id },
         });
-        workerShit.isWorker = workProfile ? true : false;
-        if (workerShit.isWorker) {
+        workerVerificationInfo.isWorker = workProfile ? true : false;
+        if (workerVerificationInfo.isWorker) {
           const verification = await this.workerProfileRepository.findVerification({
             workerFilter: { userId: user.id },
           });
-          workerShit.isWorkerSignedUp = verification.status === 'APPROVED';
+          if (!verification) {
+            workerVerificationInfo.isWorkerSignedUp = false;
+          } else {
+            workerVerificationInfo.isWorkerSignedUp = verification.status === 'APPROVED';
+          }
         }
       } else {
-        workerShit.isWorker = false;
-        workerShit.isWorkerSignedUp = false;
+        workerVerificationInfo.isWorker = false;
+        workerVerificationInfo.isWorkerSignedUp = false;
       }
 
-      return { tokenType, token, workerShit };
+      return { tokenType, token, workerVerificationInfo: workerVerificationInfo };
     } catch (error: unknown) {
       if (!(error instanceof AppError && error.details && error.details instanceof OTPErrorDetails))
         throw error;

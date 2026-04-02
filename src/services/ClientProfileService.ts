@@ -96,7 +96,7 @@ export default class ClientService extends Service {
       const { filter, data } = params;
       return await this.clientProfileRepository.updateWithPrimaryLocation({
         filter,
-        clientProfile: { data },
+        clientProfile: data,
         location: data.location,
       });
     });
@@ -106,10 +106,10 @@ export default class ClientService extends Service {
    * Delete a client's profile information
    * @throws {AppError} If profile not found
    */
-  async delete(params: { filter: ClientProfileFilter }): Promise<ClientProfile | null> {
+  async delete(params: { filter: ClientProfileFilter }): Promise<void> {
     return tryCatch(async () => {
       const { filter } = params;
-      return await this.clientProfileRepository.delete({ filter });
+      await this.clientProfileRepository.delete({ filter });
     });
   }
 
