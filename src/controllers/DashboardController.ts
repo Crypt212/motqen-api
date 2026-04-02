@@ -265,7 +265,7 @@ export const addUserLocation = asyncHandler(async (req, res) => {
 
 export const updateUserLocation = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const locationId = req.params.locationId;
+  const locationId = req.params.locationId as string;
   const locationUpdate = req.body;
   const location = await userService.updateLocation({
     filter: { id: locationId, userId },
@@ -276,7 +276,7 @@ export const updateUserLocation = asyncHandler(async (req, res) => {
 
 export const deleteUserLocation = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const locationId = req.params.locationId;
+  const locationId = req.params.locationId as string;
   await userService.deleteLocation({ filter: { id: locationId, userId } });
   new SuccessResponse('deleted location successfully', null, 200).send(res);
 });

@@ -8,6 +8,8 @@ import {
   UserDataOptionalSchema,
   LocationSchema,
   LocationOptionalSchema,
+  ClientProfileSchema,
+  ClientProfileOptionalSchema,
   WorkerProfileSchema,
   WorkerProfileOptionalSchema,
   SpecializationsTreeSchema,
@@ -27,6 +29,16 @@ import { ClientProfileFilterDescriptor } from '../domain/clientProfile.entity.js
 export const UpdateUserSchema = UserDataOptionalSchema;
 export type UpdateUserDTO = z.infer<typeof UpdateUserSchema>;
 
+// ============================================
+// Client profile schemas
+// ============================================
+
+// GET, DELETE — no body
+export const CreateClientProfileSchema = ClientProfileSchema;
+export type CreateClientProfileDTO = z.infer<typeof CreateClientProfileSchema>;
+
+export const UpdateClientProfileSchema = ClientProfileOptionalSchema;
+export type UpdateClientProfileDTO = z.infer<typeof UpdateClientProfileSchema>;
 // ============================================
 // Worker profile schemas
 // ============================================
