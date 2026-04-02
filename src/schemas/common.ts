@@ -49,22 +49,28 @@ export const LatitudeSchema = z
 // Shared object schemas
 // ============================================
 
-export const UserDataSchema = z.object({
-  firstName: z.string().trim().min(1, 'firstName is required'),
-  middleName: z.string().trim().optional(),
-  lastName: z.string().trim().min(1, 'lastName is required'),
-});
-
-export const UserDataOptionalSchema = UserDataSchema.partial();
-
-export const ClientProfileSchema = z.object({
+export const LocationSchema = z.object({
   address: z.string().trim().min(1, 'address is required'),
   governmentId: UUIDSchema,
   cityId: UUIDSchema,
   addressNotes: z.string().trim().optional(),
 });
 
-export const ClientProfileOptionalSchema = ClientProfileSchema.partial();
+export const LocationOptionalSchema = LocationSchema.partial();
+
+export const UserDataSchema = z.object({
+  firstName: z.string().trim().min(1, 'firstName is required'),
+  middleName: z.string().trim().optional(),
+  lastName: z.string().trim().min(1, 'lastName is required'),
+  location: LocationSchema.optional(),
+});
+
+export const UserDataOptionalSchema = z.object({
+  firstName: z.string().trim().min(1, 'firstName is required').optional(),
+  middleName: z.string().trim().optional(),
+  lastName: z.string().trim().min(1, 'lastName is required').optional(),
+  location: LocationOptionalSchema.optional(),
+});
 
 export const SpecializationTreeItemSchema = z.object({
   mainId: UUIDSchema,
@@ -88,6 +94,10 @@ export const WorkerProfileSchema = z.object({
 });
 
 export const WorkerProfileOptionalSchema = WorkerProfileSchema.partial();
+
+export const ClientProfileSchema = z.object({});
+
+export const ClientProfileOptionalSchema = ClientProfileSchema.partial();
 
 // ============================================
 // Filter descriptor

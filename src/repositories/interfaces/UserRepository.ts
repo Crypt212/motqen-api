@@ -59,6 +59,13 @@ export default interface IUserRepository {
     filter: UserFilter;
   }): Promise<(User & { location: Location }) | null>;
 
+  findLocations(params: { filter: { userId: IDType } }): Promise<Location[]>;
+  updateLocation(params: {
+    filter: { id: IDType; userId: IDType };
+    location: LocationUpdateInput;
+  }): Promise<Location>;
+  deleteLocation(params: { filter: { id: IDType; userId: IDType } }): Promise<void>;
+
   /**
    * Add a location to a user
    */

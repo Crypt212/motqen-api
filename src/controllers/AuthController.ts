@@ -52,9 +52,8 @@ export const verifyOTP = asyncHandler(async (req, res) => {
  */
 export const registerClient = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
-  const { userData, clientProfile } = req.body;
-  const { firstName, middleName, lastName } = JSON.parse(userData);
-  const { cityId, governmentId, address, addressNotes } = JSON.parse(clientProfile);
+  const { userData } = req.body;
+  const { firstName, middleName, lastName, location } = JSON.parse(userData);
 
   const phoneNumber = verifyAndDecodeToken(
     req.headers['authorization'].split(' ')[1],
@@ -64,21 +63,14 @@ export const registerClient = asyncHandler(async (req, res) => {
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-  const { user, profile } = await authService.registerClient(
-    {
-      phoneNumber,
-      firstName,
-      middleName,
-      lastName,
-      profileImageBuffer: image?.buffer ?? undefined,
-    },
-    {
-      governmentId,
-      cityId,
-      address,
-      addressNotes,
-    }
-  );
+  const { user, profile } = await authService.registerClient({
+    phoneNumber,
+    firstName,
+    middleName,
+    lastName,
+    profileImageBuffer: image?.buffer ?? undefined,
+    location,
+  });
 
   const { unHashedRefreshToken } = await authService.login({
     phoneNumber,
@@ -106,7 +98,7 @@ export const registerClient = asyncHandler(async (req, res) => {
  */
 export const registerWorker = asyncHandler(async (req, res) => {
   const { userData, workerProfile } = req.body;
-  const { firstName, middleName, lastName } = JSON.parse(userData);
+  const { firstName, middleName, lastName, location } = JSON.parse(userData);
   const { experienceYears, isInTeam, acceptsUrgentJobs, specializationsTree, workGovernmentIds } =
     JSON.parse(workerProfile);
 
@@ -132,6 +124,7 @@ export const registerWorker = asyncHandler(async (req, res) => {
       middleName,
       lastName,
       profileImageBuffer: images['personal_image'][0].buffer,
+      location,
     },
     {
       idImageBuffer: images['id_image'][0].buffer,

@@ -8,9 +8,18 @@ import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
-import { AccountStatus, Role, User, UserFilter } from '../domain/user.entity.js';
+import {
+  AccountStatus,
+  Role,
+  User,
+  UserFilter,
+  LocationCreateInput,
+  LocationUpdateInput,
+  Location,
+} from '../domain/user.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/query.js';
 import { UserState } from '../types/asyncHandler.js';
+import { IDType } from '../repositories/interfaces/Repository.js';
 
 type InputUserType = {
   phoneNumber: string;
@@ -136,5 +145,28 @@ export default class UserService extends Service {
   async exists(params: { filter: UserFilter }): Promise<boolean> {
     const { filter } = params;
     return await this.userRepository.exists({ filter });
+  }
+
+  // ============================================
+  // Location proxy endpoints
+  // ============================================
+
+  async getLocations(params: { filter: { userId: IDType } }): Promise<Location[]> {
+    return await this.userRepository.findLocations(params);
+  }
+
+  async addLocation(params: { userId: IDType; location: LocationCreateInput }): Promise<Location> {
+    return await this.userRepository.addLocation(params);
+  }
+
+  async updateLocation(params: {
+    filter: { id: IDType; userId: IDType };
+    location: LocationUpdateInput;
+  }): Promise<Location> {
+    return await this.userRepository.updateLocation(params);
+  }
+
+  async deleteLocation(params: { filter: { id: IDType; userId: IDType } }): Promise<void> {
+    return await this.userRepository.deleteLocation(params);
   }
 }

@@ -56,7 +56,7 @@ export default class ClientService extends Service {
    */
   async create(params: {
     userId: IDType;
-    data: ClientProfileCreateInput & { location: LocationCreateInput };
+    data: ClientProfileCreateInput;
   }): Promise<ClientProfile | null> {
     return tryCatch(async () => {
       const { userId, data } = params;
@@ -66,19 +66,7 @@ export default class ClientService extends Service {
       // Create the client profile (no location — that's on User now)
       const clientProfile = await this.clientProfileRepository.create({
         userId,
-        clientProfile: {},
-      });
-
-      // Add primary location to the User
-      await this.userRepository.addLocation({
-        userId,
-        location: {
-          governmentId: data.location.governmentId,
-          cityId: data.location.cityId,
-          address: data.location.address,
-          addressNotes: data.location.addressNotes,
-          isMain: true,
-        },
+        clientProfile: data,
       });
 
       return clientProfile;
@@ -92,7 +80,7 @@ export default class ClientService extends Service {
    */
   async update(params: {
     filter: ClientProfileFilter;
-    data: ClientProfileUpdateInput & { location?: LocationUpdateInput };
+    data: ClientProfileUpdateInput;
     userId: IDType;
   }): Promise<ClientProfile | null> {
     return tryCatch(async () => {
@@ -102,13 +90,6 @@ export default class ClientService extends Service {
         filter,
         clientProfile: data,
       });
-
-      if (data.location) {
-        await this.userRepository.updatePrimaryLocation({
-          userId,
-          location: data.location,
-        });
-      }
 
       return clientProfile;
     });

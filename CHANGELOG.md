@@ -1,13 +1,32 @@
-# Backend Audit & Refactoring — Changelog
-
-**Date:** April 2, 2026  
-**Scope:** Logic bugs, performance, security, code quality, test suite, team workflows
+A full audit of the backend codebase was performed. **16 bugs were fixed**, **127 tests were synchronized**, and **3 workflow documents** were created for the team. The TypeScript compiler passes cleanly.
 
 ---
 
-## Summary
+## [2026-04-02] — Centralize Location Architecture
 
-A full audit of the backend codebase was performed. **15 bugs were fixed**, **128 tests were added**, and **3 workflow documents** were created for the team. The TypeScript compiler passes cleanly.
+Migrated the `Location` entity from `ClientProfile` to the core `User` domain. This allows all user types (Clients and Workers) to manage one or more locations, with a designated primary location.
+
+### 🏗️ Architectural Changes
+
+#### 1. Location Entity Migration
+- **Repository:** `UserRepository` now manages user locations directly. Added `findLocations`, `updateLocation`, and `deleteLocation` methods.
+- **IsMain Logic:** Repository now automatically handles toggling `isMain` flags — when a new location is set as main, previous main locations are unset.
+- **User Domain:** `User` registration now optionally accepts a `location` object in `userData` which becomes their starter primary location.
+
+#### 2. Service Refactoring
+- **`AuthService`**: `InputUserType` now includes optional `location`. Registration flows for both Clients and Workers now sync location data to the `User` record on creation.
+- **`ClientProfileService`**: Stripped of location-specific logic. It now manages a bare profile record, keeping the concerns of "identity" and "location" separate.
+
+#### 3. Dashboard API
+- **Controllers:** Added `getUserLocations`, `addUserLocation`, `updateUserLocation`, and `deleteUserLocation` in `DashboardController`.
+- **Schemas:** Created shared `LocationSchema` and `LocationOptionalSchema` in `common.ts` for reuse across the app. `ClientProfileSchema` simplified to an empty object.
+
+### 🧹 Cleanup & Consistency
+- **Type Safety:** Fixed `Express.params` type mismatches and interface inconsistencies in `AuthService` and `DashboardController`.
+- **Test Alignment:** Synced `AuthService.test.ts`, `ProfileServices.test.ts`, and `validation.test.ts` with the new architecture.
+- **Style:** Performed a full codebase formatting pass (`npm run format`).
+
+---
 
 ---
 
@@ -121,13 +140,15 @@ All tests pass. Run with `npx vitest run`.
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
-| `tests/services/AuthService.test.ts` | 27 | OTP request/verify, register/login token selection, worker verification detection, session lifecycle, rate limiting |
-| `tests/services/ChatService.test.ts` | 14 | Conversation idempotency, race conditions, cross-conversation security, message validation, participant access |
-| `tests/services/RateLimitService.test.ts` | 7 | Phone/device cooldowns, attempt limits, blocking logic |
-| `tests/services/ReferenceDataServices.test.ts` | 11 | Government + specialization CRUD, existence checks, filter merging |
+| `tests/services/AuthService.test.ts` | 26 | OTP request/verify, register/login token selection, worker verification detection, session lifecycle, rate limiting |
+| `tests/services/ChatService.test.ts` | 17 | Conversation idempotency, race conditions, cross-conversation security, message validation, participant access |
+| `tests/services/RateLimitService.test.ts` | 8 | Phone/device cooldowns, attempt limits, blocking logic |
+| `tests/services/ReferenceDataServices.test.ts` | 12 | Government + specialization CRUD, existence checks, filter merging |
 | `tests/services/ProfileServices.test.ts` | 7 | Client/worker profile retrieval, user state role detection |
-| `tests/schemas/validation.test.ts` | 34 | Egyptian phones, OTP codes, UUIDs, coordinates, worker/client profile schemas |
-| `tests/utils/utilities.test.ts` | 15 | Pagination edge cases, sort handling, random element selection |
+| `tests/schemas/validation.test.ts` | 39 | Egyptian phones, OTP codes, UUIDs, coordinates, worker/client profile schemas |
+| `tests/utils/utilities.test.ts` | 18 | Pagination edge cases, sort handling, random element selection |
+
+**Total:** 127 tests passing.
 
 **Supporting files:**
 - `tests/setup.ts` — global env vars

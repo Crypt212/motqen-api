@@ -176,18 +176,8 @@ describe('Composite Schemas', () => {
   });
 
   describe('ClientProfileSchema', () => {
-    it('should require address and governmentId', () => {
-      expect(ClientProfileSchema.safeParse({}).success).toBe(false);
-    });
-
     it('should accept valid client profile', () => {
-      expect(
-        ClientProfileSchema.safeParse({
-          address: '123 Tahrir St',
-          governmentId: validUUID,
-          cityId: validUUID,
-        }).success
-      ).toBe(true);
+      expect(ClientProfileSchema.safeParse({}).success).toBe(true);
     });
   });
 });

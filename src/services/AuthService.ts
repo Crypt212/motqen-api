@@ -17,8 +17,8 @@ import { logger } from '../libs/winston.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
-import { Role, User } from '../domain/user.entity.js';
-import { WorkerProfile } from '../domain/workerProfile.entity.js';
+import { Role, User, AccountStatus, LocationCreateInput } from '../domain/user.entity.js';
+import { WorkerProfile, WorkerProfileVerification } from '../domain/workerProfile.entity.js';
 import { ClientProfile } from '../domain/clientProfile.entity.js';
 import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
 import { Method } from '../domain/otp.entity.js';
@@ -37,6 +37,12 @@ interface InputUserType {
   middleName: string;
   lastName: string;
   profileImageBuffer: Buffer;
+  location?: {
+    governmentId: IDType;
+    cityId: IDType;
+    address: string;
+    addressNotes: string;
+  };
 }
 
 interface InputWorkerType {
@@ -96,17 +102,17 @@ export default class AuthService extends Service {
    * @throws {AppError} If government or city not found
    */
   async registerWorker(
-    { phoneNumber, firstName, middleName, lastName, profileImageBuffer }: InputUserType,
+    { firstName, middleName, lastName, phoneNumber, profileImageBuffer, location }: InputUserType,
     {
-      idImageBuffer,
-      profileWithIdImageBuffer,
       experienceYears,
       isInTeam,
+      specializationsTree: specializations,
       acceptsUrgentJobs,
-      specializationsTree,
+      idImageBuffer,
+      profileWithIdImageBuffer,
       workGovernmentIds,
     }: InputWorkerType
-  ): Promise<{ user: User; profile: WorkerProfile }> {
+  ): Promise<{ user: User; profile: WorkerProfile; verification: WorkerProfileVerification }> {
     return tryCatch(async () => {
       // Note: governmentId and cityId validation moved to location handling
       // For workers, government associations are handled via workGovernmentIds
@@ -121,6 +127,17 @@ export default class AuthService extends Service {
           status: 'ACTIVE',
         },
       });
+
+      if (location) {
+        await this.userRepository.addLocation({
+          userId: user.id,
+          location: {
+            ...location,
+            isMain: true,
+          },
+        });
+      }
+
       const profile = await this.workerProfileRepository.create({
         userId: user.id,
         workerProfile: {
@@ -164,7 +181,7 @@ export default class AuthService extends Service {
         workerFilter: {
           userId: user.id,
         },
-        specializationsTree,
+        specializationsTree: specializations,
       });
 
       const { url } = await uploadToCloudinary(
@@ -192,21 +209,23 @@ export default class AuthService extends Service {
    * @returns {Promise<{ user: import("../repositories/database/UserRepository.js").User, profile: import("../generated/prisma/client.js").ClientProfile }>} Created user object
    * @throws {AppError} If government or city not found
    */
-  async registerClient(
-    { firstName, middleName, lastName, phoneNumber, profileImageBuffer }: InputUserType,
-    { governmentId, cityId, address, addressNotes }: InputClientType
-  ): Promise<{ user: User; profile: ClientProfile }> {
+  async registerClient({
+    firstName,
+    middleName,
+    lastName,
+    phoneNumber,
+    profileImageBuffer,
+    location,
+  }: InputUserType): Promise<{ user: User; profile: ClientProfile }> {
     return tryCatch(async () => {
-      const government = await this.governmentRepository.find({ filter: { id: governmentId } });
+      if (location) {
+        const government = await this.governmentRepository.find({
+          filter: { id: location.governmentId },
+        });
+        if (!government) throw new AppError('Government not found', 404);
 
-      if (!government) {
-        throw new AppError('Government not found', 404);
-      }
-
-      const city = await this.governmentRepository.findCity({ filter: { id: cityId } });
-
-      if (!city) {
-        throw new AppError('City not found', 404);
+        const city = await this.governmentRepository.findCity({ filter: { id: location.cityId } });
+        if (!city) throw new AppError('City not found', 404);
       }
 
       const user = await this.userRepository.create({
@@ -220,23 +239,22 @@ export default class AuthService extends Service {
         },
       });
 
-      // Create bare client profile (no location — that's on User now)
+      // Create bare client profile
       await this.clientProfileRepository.create({
         userId: user.id,
         clientProfile: {},
       });
 
       // Add primary location to the User
-      await this.userRepository.addLocation({
-        userId: user.id,
-        location: {
-          governmentId,
-          cityId,
-          address,
-          addressNotes,
-          isMain: true,
-        },
-      });
+      if (location) {
+        await this.userRepository.addLocation({
+          userId: user.id,
+          location: {
+            ...location,
+            isMain: true,
+          },
+        });
+      }
 
       if (profileImageBuffer) {
         const { url } = await uploadToCloudinary(

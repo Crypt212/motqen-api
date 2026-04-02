@@ -41,33 +41,23 @@ export const updateUser = asyncHandler(async (req, res) => {
 });
 
 export const createClientProfile = asyncHandler(async (req, res) => {
-  const { address, addressNotes, governmentId, cityId } = req.body;
   const userId = req.userState.userId;
 
   const clientProfile = await clientProfileService.create({
     userId,
-    data: {
-      location: {
-        governmentId,
-        cityId,
-        address,
-        addressNotes,
-        isMain: true,
-      },
-    },
+    data: {},
   });
 
   new SuccessResponse('created client profile successfully', { clientProfile }, 200).send(res);
 });
 
 export const updateClientProfile = asyncHandler(async (req, res) => {
-  const { address, addressNotes } = req.body;
   const clientProfileId = req.userState.client.id;
   const userId = req.userState.userId;
 
   const clientProfile = await clientProfileService.update({
     filter: { id: clientProfileId },
-    data: { location: { address, addressNotes } },
+    data: {},
     userId,
   });
 
@@ -251,4 +241,42 @@ export const deleteWorkerSpecializations = asyncHandler(async (req, res) => {
   }
 
   new SuccessResponse('deleted worker specializations successfully', null, 200).send(res);
+});
+
+// ============================================
+// Locations endpoints
+// ============================================
+
+export const getUserLocations = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const locations = await userService.getLocations({ filter: { userId } });
+  new SuccessResponse('retrieved user locations successfully', { locations }, 200).send(res);
+});
+
+export const addUserLocation = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const { governmentId, cityId, address, addressNotes, isMain } = req.body;
+  const location = await userService.addLocation({
+    userId,
+    location: { governmentId, cityId, address, addressNotes, isMain },
+  });
+  new SuccessResponse('added location successfully', { location }, 201).send(res);
+});
+
+export const updateUserLocation = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const locationId = req.params.locationId;
+  const locationUpdate = req.body;
+  const location = await userService.updateLocation({
+    filter: { id: locationId, userId },
+    location: locationUpdate,
+  });
+  new SuccessResponse('updated location successfully', { location }, 200).send(res);
+});
+
+export const deleteUserLocation = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const locationId = req.params.locationId;
+  await userService.deleteLocation({ filter: { id: locationId, userId } });
+  new SuccessResponse('deleted location successfully', null, 200).send(res);
 });
