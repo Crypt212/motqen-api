@@ -606,16 +606,14 @@ export default class WorkerProfileRepository
   }): Promise<
     PaginatedResultMeta & {
       workers: {
-        distanceKm?: number;
         workerId: string;
         name: string;
         profileImage: string;
-        service_title: string;
         rating: number;
-        area: string;
+        ratingCount: number;
+        distance?: number;
         isAvailableNow: boolean;
         completedServices: number;
-        acceptsUrgentJobs: boolean;
       }[];
     }
   > {
@@ -763,6 +761,9 @@ export default class WorkerProfileRepository
             _avg: {
               rating: true,
             },
+            _count: {
+              rating: true,
+            },
           })
         : Promise.resolve([]);
 
@@ -797,30 +798,37 @@ export default class WorkerProfileRepository
     );
 
     const ratingMap = new Map(
-      ratingRows.map((row) => [row.workerProfileId, Number(row._avg.rating ?? 0)])
+      ratingRows.map((row) => [
+        row.workerProfileId,
+        {
+          rating: Number(row._avg.rating ?? 0),
+          ratingCount: Number(row._count.rating ?? 0),
+        },
+      ])
     );
     const completedMap = new Map(
       completedRows.map((row) => [row.workerProfileId, Number(row._count._all ?? 0)])
     );
 
     const computedWorkers = workers.map((worker) => {
-      const rating = ratingMap.get(worker.id) ?? 0;
+      const ratingData = ratingMap.get(worker.id) ?? { rating: 0, ratingCount: 0 };
       const completedServices = completedMap.get(worker.id) ?? 0;
 
-      const nearestDistanceKm = nearestDistanceMap.get(worker.id) ?? null;
+      const nearestDistance = nearestDistanceMap.get(worker.id) ?? null;
 
       return {
         worker,
-        rating,
+        rating: ratingData.rating,
+        ratingCount: ratingData.ratingCount,
         completedServices,
-        nearestDistanceKm,
+        nearestDistance,
       };
     });
 
     const sortedWorkers = computedWorkers.sort((a, b) => {
       if (nearest && hasCustomerCoordinates) {
-        const aDistance = a.nearestDistanceKm;
-        const bDistance = b.nearestDistanceKm;
+        const aDistance = a.nearestDistance;
+        const bDistance = b.nearestDistance;
 
         if (aDistance === null && bDistance !== null) return 1;
         if (aDistance !== null && bDistance === null) return -1;
@@ -839,23 +847,16 @@ export default class WorkerProfileRepository
 
     // Transform data to response format
     const data = paginatedWorkers.map(
-      ({ worker, rating, completedServices, nearestDistanceKm }) => {
+      ({ worker, rating, ratingCount, completedServices, nearestDistance }) => {
         return {
           workerId: worker.id,
           name: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
           profileImage: worker.user.profileImageUrl,
-          service_title:
-            worker.chosenSpecializations.length > 0
-              ? worker.chosenSpecializations[0].subSpecialization.name
-              : null,
           rating,
-          area: worker.workGovernments.length > 0 ? worker.workGovernments[0].name : null,
+          ratingCount,
           isAvailableNow: worker.user.isOnline,
           completedServices,
-          acceptsUrgentJobs: worker.acceptsUrgentJobs,
-          ...(nearestDistanceKm !== null
-            ? { distanceKm: Number(nearestDistanceKm.toFixed(1)) }
-            : {}),
+          ...(nearestDistance !== null ? { distance: Number(nearestDistance.toFixed(1)) } : {}),
         };
       }
     );

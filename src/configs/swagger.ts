@@ -1063,21 +1063,16 @@ const options = {
               example: 'https://res.cloudinary.com/.../avatar.jpg',
               description: 'Worker profile image URL',
             },
-            service_title: {
-              type: 'string',
-              example: 'تركيب الأنابيب',
-              description: 'Main specialization name',
-            },
             rating: {
               type: 'number',
               format: 'float',
               example: 4.5,
               description: 'Average rating from completed orders (0-5)',
             },
-            area: {
-              type: 'string',
-              example: 'القاهرة',
-              description: 'Main work government/area',
+            ratingCount: {
+              type: 'integer',
+              example: 12,
+              description: 'Total number of ratings received',
             },
             isAvailableNow: {
               type: 'boolean',
@@ -1089,12 +1084,7 @@ const options = {
               example: 15,
               description: 'Number of completed or reviewed orders',
             },
-            acceptsUrgentJobs: {
-              type: 'boolean',
-              example: true,
-              description: 'Whether worker accepts urgent jobs',
-            },
-            distanceKm: {
+            distance: {
               type: 'number',
               format: 'float',
               nullable: true,

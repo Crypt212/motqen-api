@@ -101,13 +101,11 @@ const workersRouter = Router();
  *                   - workerId: 123e4567-e89b-12d3-a456-426614174000
  *                     name: أحمد علي محمد
  *                     profileImage: https://res.cloudinary.com/.../avatar.jpg
- *                     service_title: تركيب الأنابيب
  *                     rating: 4.5
- *                     area: القاهرة
+ *                     ratingCount: 12
  *                     isAvailableNow: true
  *                     completedServices: 15
- *                     acceptsUrgentJobs: true
- *                     distanceKm: 5.2
+ *                     distance: 5.2
  *                 total: 50
  *                 page: 1
  *                 limit: 10
