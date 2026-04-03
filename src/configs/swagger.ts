@@ -1107,35 +1107,45 @@ const options = {
           type: 'object',
           description: 'Paginated list of worker cards',
           properties: {
-            data: {
+            workers: {
               type: 'array',
               items: { $ref: '#/components/schemas/ExploreWorkerCard' },
               description: 'List of worker cards',
             },
-            meta: {
-              type: 'object',
-              properties: {
-                total: {
-                  type: 'integer',
-                  example: 50,
-                  description: 'Total number of matching workers',
-                },
-                page: {
-                  type: 'integer',
-                  example: 1,
-                  description: 'Current page number',
-                },
-                limit: {
-                  type: 'integer',
-                  example: 10,
-                  description: 'Results per page',
-                },
-                totalPages: {
-                  type: 'integer',
-                  example: 5,
-                  description: 'Total number of pages',
-                },
-              },
+            total: {
+              type: 'integer',
+              example: 50,
+              description: 'Total number of matching workers',
+            },
+            page: {
+              type: 'integer',
+              example: 1,
+              description: 'Current page number',
+            },
+            limit: {
+              type: 'integer',
+              example: 10,
+              description: 'Results per page',
+            },
+            count: {
+              type: 'integer',
+              example: 10,
+              description: 'Count of workers in current page',
+            },
+            hasNext: {
+              type: 'boolean',
+              example: true,
+              description: 'Whether there is a next page',
+            },
+            hasPrev: {
+              type: 'boolean',
+              example: false,
+              description: 'Whether there is a previous page',
+            },
+            totalPages: {
+              type: 'integer',
+              example: 5,
+              description: 'Total number of pages',
             },
           },
         },

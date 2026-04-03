@@ -22,8 +22,6 @@ const workersRouter = Router();
  *       - governments (optional multi-select)
  *       - flaged (optional front flags)
  *     tags: [Workers]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - name: specializationId
  *         in: query
@@ -94,12 +92,12 @@ const workersRouter = Router();
  *                 - type: object
  *                   properties:
  *                     data:
- *                       $ref: '#/components/schemas/WorkersSearchResponse'
+ *                       $ref: '#/components/schemas/ExploreSearchResponse'
  *             example:
  *               status: success
  *               message: Workers results retrieved successfully
  *               data:
- *                 data:
+ *                 workers:
  *                   - workerId: 123e4567-e89b-12d3-a456-426614174000
  *                     name: أحمد علي محمد
  *                     profileImage: https://res.cloudinary.com/.../avatar.jpg
@@ -110,15 +108,15 @@ const workersRouter = Router();
  *                     completedServices: 15
  *                     acceptsUrgentJobs: true
  *                     distanceKm: 5.2
- *                 meta:
- *                   total: 50
- *                   page: 1
- *                   limit: 10
- *                   totalPages: 5
+ *                 total: 50
+ *                 page: 1
+ *                 limit: 10
+ *                 count: 10
+ *                 hasNext: true
+ *                 hasPrev: false
+ *                 totalPages: 5
  *       400:
  *         $ref: '#/components/responses/BadRequest'
- *       401:
- *         $ref: '#/components/responses/Unauthorized'
  */
 workersRouter.get('/', validateQuery(ExploreSearchSchema), searchWorkers);
 
@@ -131,8 +129,6 @@ workersRouter.get('/', validateQuery(ExploreSearchSchema), searchWorkers);
  *       Returns the full public profile for the selected worker card.
  *       Only approved workers with active accounts are returned.
  *     tags: [Workers]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/UUIDPathId'
  *       - $ref: '#/components/parameters/DeviceFingerprint'
@@ -153,34 +149,17 @@ workersRouter.get('/', validateQuery(ExploreSearchSchema), searchWorkers);
  *                 - type: object
  *                   properties:
  *                     data:
- *                       $ref: '#/components/schemas/WorkerDetailResponse'
+ *                       $ref: '#/components/schemas/WorkerProfile'
  *             example:
  *               status: success
  *               message: Worker retrieved successfully
  *               data:
- *                 workerId: 123e4567-e89b-12d3-a456-426614174000
- *                 name: أحمد علي محمد
- *                 profileImage: https://res.cloudinary.com/.../avatar.jpg
- *                 specializations:
- *                   - تركيب الأنابيب
- *                   - إصلاح الأنابيب
+ *                 id: 123e4567-e89b-12d3-a456-426614174000
+ *                 userId: 0f6f2de8-1eac-4d54-9f2f-97f4c0e7169a
  *                 experienceYears: 5
- *                 area: القاهرة
- *                 workGovernments:
- *                   - القاهرة
- *                   - الجيزة
- *                 badges:
- *                   - TOP_RATED
- *                   - VERIFIED
- *                 verificationStatus: APPROVED
+ *                 isInTeam: false
+ *                 acceptsUrgentJobs: true
  *                 bio: متخصص في السباكة لمدة 5 سنوات
- *                 portfolio:
- *                   - id: proj-id-1
- *                     description: مشروع تركيب مواسير دقيقة
- *                     projectImages:
- *                       - imageUrl: https://res.cloudinary.com/.../project1.jpg
- *       401:
- *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
