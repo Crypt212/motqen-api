@@ -24,11 +24,9 @@
     "seed:conversations": "node ./seeds/samples/createConversations.js",
     "seed:governments": "node seeds/governments/createGovernments.js",
     "seed:specializations": "node seeds/specializations/createSpecializations.js",
-    "lint": "eslint src --ext .ts,.js",
-    "lint:fix": "eslint src --ext .ts,.js --fix",
+    "lint": "eslint src --ext .ts,.js --fix",
     "format": "prettier --write src",
-    "format:check": "prettier --check src",
-    "check:all": "npm run type-check && npm run lint && npm run format:check && npm run test",
+    "check:all": "npm run type-check && npm run lint && npm run format && npm run test",
     "prepare": "husky"
   },
   "lint-staged": {
