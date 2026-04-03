@@ -138,33 +138,22 @@ export const searchWorkers = asyncHandler(async (req, res) => {
   if (req.userState?.userId) {
     const currentUserSelect: Prisma.UserSelect = {
       id: true,
-      firstName: true,
-      middleName: true,
-      lastName: true,
-      profileImageUrl: true,
-      isOnline: true,
-      clientProfile: {
+      locations: {
+        where: {
+          isMain: true,
+        },
+        take: 1,
         select: {
-          locations: {
-            where: {
-              isMain: true,
-            },
-            take: 1,
+          government: {
             select: {
-              government: {
-                select: {
-                  name: true,
-                  lat: true,
-                  long: true,
-                },
-              },
-              city: {
-                select: {
-                  name: true,
-                  lat: true,
-                  long: true,
-                },
-              },
+              lat: true,
+              long: true,
+            },
+          },
+          city: {
+            select: {
+              lat: true,
+              long: true,
             },
           },
         },
@@ -175,21 +164,19 @@ export const searchWorkers = asyncHandler(async (req, res) => {
       where: { id: req.userState.userId },
       select: currentUserSelect,
     })) as {
-      clientProfile?: {
-        locations?: Array<{
-          government?: {
-            lat?: string | null;
-            long?: string | null;
-          };
-          city?: {
-            lat?: string | null;
-            long?: string | null;
-          };
-        }>;
-      };
+      locations?: Array<{
+        government?: {
+          lat?: string | null;
+          long?: string | null;
+        };
+        city?: {
+          lat?: string | null;
+          long?: string | null;
+        };
+      }>;
     } | null;
 
-    const mainLocation = currentUser?.clientProfile?.locations?.[0];
+    const mainLocation = currentUser?.locations?.[0];
     customerLatitude = mainLocation?.city?.lat ?? mainLocation?.government?.lat ?? undefined;
     customerLongitude = mainLocation?.city?.long ?? mainLocation?.government?.long ?? undefined;
   }
