@@ -14,10 +14,13 @@ const workersRouter = Router();
  * @swagger
  * /workers:
  *   get:
- *     summary: Explore workers by specialization
+ *     summary: Explore workers with flaged filters
  *     description: |
- *       Returns a paginated list of approved workers for the requested specialization.
- *       Supports optional sorting and filtering flags used by the Explore UI.
+ *       Returns a paginated list of approved workers filtered by:
+ *       - specializationId (required)
+ *       - subSpecializationId (optional)
+ *       - governments (optional multi-select)
+ *       - flaged (optional front flags)
  *     tags: [Workers]
  *     security:
  *       - bearerAuth: []
@@ -28,55 +31,49 @@ const workersRouter = Router();
  *         schema:
  *           type: string
  *           format: uuid
- *         description: Main specialization used as the base explore search.
+ *         description: Main specialization base filter.
  *       - name: subSpecializationId
  *         in: query
  *         required: false
  *         schema:
  *           type: string
  *           format: uuid
- *         description: Optional sub-specialization filter.
- *       - name: highestRated
+ *         description: Sub-specialization base filter.
+ *       - name: governments
  *         in: query
  *         required: false
  *         schema:
- *           type: boolean
- *         description: Prioritize highest rated workers first.
- *       - name: nearest
+ *           type: array
+ *           items:
+ *             type: string
+ *             format: uuid
+ *         style: form
+ *         explode: false
+ *         description: Government IDs list. Use comma-separated values or repeated key.
+ *       - name: flaged
  *         in: query
  *         required: false
  *         schema:
- *           type: boolean
- *         description: Prioritize nearest workers based on customer and worker governments.
- *       - name: governmentId
- *         in: query
- *         required: false
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Filter workers by a specific government.
- *       - name: acceptsUrgentJobs
- *         in: query
- *         required: false
- *         schema:
- *           type: boolean
- *         description: Return only workers who accept urgent jobs.
- *       - name: availableNow
- *         in: query
- *         required: false
- *         schema:
- *           type: boolean
+ *           type: array
+ *           items:
+ *             type: string
+ *             enum: [availbilty, nearest, acceptUrgentJobs, heasetrated]
+ *         style: form
+ *         explode: false
  *         description: |
- *           Return only workers available now.
- *           Supported aliases: availability, AvailableNow, AvailbleNow.
+ *           Front flags collection.
+ *           availbilty => availability filter (online workers)
+ *           nearest => nearest-first sorting using PostgreSQL distance calculation
+ *           acceptUrgentJobs => only workers accepting urgent jobs
+ *           heasetrated => highest-rated sorting
  *       - name: page
  *         in: query
- *         required: true
+ *         required: false
  *         schema:
  *           type: integer
  *       - name: limit
  *         in: query
- *         required: true
+ *         required: false
  *         schema:
  *           type: integer
  *       - $ref: '#/components/parameters/DeviceFingerprint'

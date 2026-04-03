@@ -13,7 +13,12 @@ import {
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
-import { AccountStatus, PrismaClient, VerificationStatus } from 'src/generated/prisma/client.js';
+import {
+  AccountStatus,
+  Prisma,
+  PrismaClient,
+  VerificationStatus,
+} from '../../generated/prisma/client.js';
 
 export default class WorkerRepositoryRepository
   extends Repository
@@ -583,31 +588,27 @@ export default class WorkerRepositoryRepository
    * Search for approved workers with pagination, filtering, and sorting
    */
   async searchWorkers({
-    categoryId = undefined,
-    specializationId = undefined,
-    subSpecializationId = undefined,
-    area = undefined,
-    city = undefined,
+    specializationId,
+    subSpecializationId,
+    governmentIds = [],
     availability = undefined,
     acceptsUrgentJobs = false,
     highestRated = false,
     nearest = false,
-    customerGovernmentLatitude = undefined,
-    customerGovernmentLongitude = undefined,
+    customerLatitude = undefined,
+    customerLongitude = undefined,
     page = 1,
     limit = 10,
   }: {
-    categoryId: string;
-    specializationId?: string;
+    specializationId: string;
     subSpecializationId?: string;
-    area: string;
-    city?: string;
-    availability: boolean;
+    governmentIds?: string[];
+    availability?: boolean;
     acceptsUrgentJobs: boolean;
     highestRated: boolean;
     nearest: boolean;
-    customerGovernmentLatitude?: string | number;
-    customerGovernmentLongitude?: string | number;
+    customerLatitude?: string | number;
+    customerLongitude?: string | number;
     page: number;
     limit: number;
   }): Promise<
@@ -655,15 +656,19 @@ export default class WorkerRepositoryRepository
         whereClause.user.isOnline = availability === true;
       }
 
-      const selectedSubSpecializationId = subSpecializationId || categoryId;
+      whereClause.chosenSpecializations = {
+        some: {
+          specializationId,
+          ...(subSpecializationId ? { subSpecializationId } : {}),
+        },
+      };
 
-      if (specializationId || selectedSubSpecializationId) {
-        whereClause.chosenSpecializations = {
+      if (governmentIds.length > 0) {
+        whereClause.workGovernments = {
           some: {
-            ...(specializationId ? { specializationId } : {}),
-            ...(selectedSubSpecializationId
-              ? { subSpecializationId: selectedSubSpecializationId }
-              : {}),
+            id: {
+              in: governmentIds,
+            },
           },
         };
       }
@@ -673,24 +678,6 @@ export default class WorkerRepositoryRepository
 
     if (acceptsUrgentJobs === true) {
       whereClause.acceptsUrgentJobs = true;
-    }
-
-    const areaFilter = city || area;
-
-    if (areaFilter) {
-      whereClause.workGovernments = {
-        some: {
-          OR: [
-            { id: areaFilter },
-            {
-              name: {
-                equals: areaFilter,
-                mode: 'insensitive',
-              },
-            },
-          ],
-        },
-      };
     }
 
     // Get total count
@@ -715,18 +702,11 @@ export default class WorkerRepositoryRepository
             isOnline: true,
           },
         },
-        orders: {
-          select: {
-            rating: true,
-            status: true,
-          },
-        },
         workGovernments: {
           select: {
             id: true,
             name: true,
-            lat: true,
-            long: true,
+            ...(nearest ? { lat: true, long: true } : {}),
           },
         },
         chosenSpecializations: {
@@ -740,60 +720,102 @@ export default class WorkerRepositoryRepository
         },
       },
       orderBy: [{ experienceYears: 'desc' }, { id: 'desc' }],
-      skip,
-      take: normalizedLimit,
     });
 
-    const toRadians = (value: number) => (value * Math.PI) / 180;
-    const calcDistanceKm = (
-      originLat: number,
-      originLong: number,
-      destinationLat: number,
-      destinationLong: number
-    ) => {
-      const earthRadiusKm = 6371;
-      const deltaLatitude = toRadians(destinationLat - originLat);
-      const deltaLongitude = toRadians(destinationLong - originLong);
-      const a =
-        Math.sin(deltaLatitude / 2) * Math.sin(deltaLatitude / 2) +
-        Math.cos(toRadians(originLat)) *
-          Math.cos(toRadians(destinationLat)) *
-          Math.sin(deltaLongitude / 2) *
-          Math.sin(deltaLongitude / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const workerIds = workers.map((worker) => worker.id);
 
-      return earthRadiusKm * c;
-    };
-
-    const customerLat = Number.parseFloat(String(customerGovernmentLatitude ?? ''));
-    const customerLong = Number.parseFloat(String(customerGovernmentLongitude ?? ''));
+    const customerLat = Number.parseFloat(String(customerLatitude ?? ''));
+    const customerLong = Number.parseFloat(String(customerLongitude ?? ''));
     const hasCustomerCoordinates = Number.isFinite(customerLat) && Number.isFinite(customerLong);
 
+    const nearestRowsPromise =
+      nearest && hasCustomerCoordinates && workerIds.length > 0
+        ? this.prismaClient.$queryRaw<
+            Array<{ workerProfileId: string; distanceKm: number | null }>
+          >`
+            SELECT
+              gfw."workerProfileId" AS "workerProfileId",
+              MIN(
+                6371 * ACOS(
+                  LEAST(
+                    1,
+                    GREATEST(
+                      -1,
+                      COS(RADIANS(${customerLat})) *
+                        COS(RADIANS(CAST(g."lat" AS double precision))) *
+                        COS(RADIANS(CAST(g."long" AS double precision)) - RADIANS(${customerLong})) +
+                        SIN(RADIANS(${customerLat})) *
+                        SIN(RADIANS(CAST(g."lat" AS double precision)))
+                    )
+                  )
+                )
+              )::double precision AS "distanceKm"
+            FROM "governments_for_workers" gfw
+            INNER JOIN "governments" g ON g."id" = gfw."governmentId"
+            WHERE gfw."workerProfileId" IN (${Prisma.join(workerIds)})
+              AND g."lat" ~ '^-?[0-9]+(\\.[0-9]+)?$'
+              AND g."long" ~ '^-?[0-9]+(\\.[0-9]+)?$'
+            GROUP BY gfw."workerProfileId"
+          `
+        : Promise.resolve([]);
+
+    const ratingRowsPromise =
+      workerIds.length > 0
+        ? this.prismaClient.order.groupBy({
+            by: ['workerProfileId'],
+            where: {
+              workerProfileId: {
+                in: workerIds,
+              },
+            },
+            _avg: {
+              rating: true,
+            },
+          })
+        : Promise.resolve([]);
+
+    const completedRowsPromise =
+      workerIds.length > 0
+        ? this.prismaClient.order.groupBy({
+            by: ['workerProfileId'],
+            where: {
+              workerProfileId: {
+                in: workerIds,
+              },
+              status: {
+                in: ['COMPLETED', 'REVIEWED'],
+              },
+            },
+            _count: {
+              _all: true,
+            },
+          })
+        : Promise.resolve([]);
+
+    const [nearestRows, ratingRows, completedRows] = await Promise.all([
+      nearestRowsPromise,
+      ratingRowsPromise,
+      completedRowsPromise,
+    ]);
+
+    const nearestDistanceMap = new Map(
+      nearestRows
+        .filter((row) => typeof row.distanceKm === 'number' && Number.isFinite(row.distanceKm))
+        .map((row) => [row.workerProfileId, Number(row.distanceKm)])
+    );
+
+    const ratingMap = new Map(
+      ratingRows.map((row) => [row.workerProfileId, Number(row._avg.rating ?? 0)])
+    );
+    const completedMap = new Map(
+      completedRows.map((row) => [row.workerProfileId, Number(row._count._all ?? 0)])
+    );
+
     const computedWorkers = workers.map((worker) => {
-      const ratedOrders = worker.orders.filter((order) => typeof order.rating === 'number');
-      const rating =
-        ratedOrders.length > 0
-          ? ratedOrders.reduce((sum, order) => sum + order.rating, 0) / ratedOrders.length
-          : 0;
-      const completedServices = worker.orders.filter(
-        (order) => order.status === 'COMPLETED' || order.status === 'REVIEWED'
-      ).length;
+      const rating = ratingMap.get(worker.id) ?? 0;
+      const completedServices = completedMap.get(worker.id) ?? 0;
 
-      let nearestDistanceKm = null;
-      if (hasCustomerCoordinates) {
-        for (const government of worker.workGovernments) {
-          const governmentLat = Number.parseFloat(String(government.lat ?? ''));
-          const governmentLong = Number.parseFloat(String(government.long ?? ''));
-          if (!Number.isFinite(governmentLat) || !Number.isFinite(governmentLong)) {
-            continue;
-          }
-
-          const distance = calcDistanceKm(customerLat, customerLong, governmentLat, governmentLong);
-          if (nearestDistanceKm === null || distance < nearestDistanceKm) {
-            nearestDistanceKm = distance;
-          }
-        }
-      }
+      const nearestDistanceKm = nearestDistanceMap.get(worker.id) ?? null;
 
       return {
         worker,
@@ -821,22 +843,30 @@ export default class WorkerRepositoryRepository
       return b.worker.experienceYears - a.worker.experienceYears;
     });
 
+    const paginatedWorkers = sortedWorkers.slice(skip, skip + normalizedLimit);
+
     // Transform data to response format
-    const data = sortedWorkers.map(({ worker, rating, completedServices, nearestDistanceKm }) => ({
-      workerId: worker.id,
-      name: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
-      profileImage: worker.user.profileImageUrl,
-      service_title:
-        worker.chosenSpecializations.length > 0
-          ? worker.chosenSpecializations[0].subSpecialization.name
-          : null,
-      rating,
-      area: worker.workGovernments.length > 0 ? worker.workGovernments[0].name : null,
-      isAvailableNow: worker.user.isOnline,
-      completedServices,
-      acceptsUrgentJobs: worker.acceptsUrgentJobs,
-      ...(nearestDistanceKm !== null ? { distanceKm: Number(nearestDistanceKm.toFixed(1)) } : {}),
-    }));
+    const data = paginatedWorkers.map(
+      ({ worker, rating, completedServices, nearestDistanceKm }) => {
+        return {
+          workerId: worker.id,
+          name: `${worker.user.firstName} ${worker.user.middleName || ''} ${worker.user.lastName}`.trim(),
+          profileImage: worker.user.profileImageUrl,
+          service_title:
+            worker.chosenSpecializations.length > 0
+              ? worker.chosenSpecializations[0].subSpecialization.name
+              : null,
+          rating,
+          area: worker.workGovernments.length > 0 ? worker.workGovernments[0].name : null,
+          isAvailableNow: worker.user.isOnline,
+          completedServices,
+          acceptsUrgentJobs: worker.acceptsUrgentJobs,
+          ...(nearestDistanceKm !== null
+            ? { distanceKm: Number(nearestDistanceKm.toFixed(1)) }
+            : {}),
+        };
+      }
+    );
 
     const totalPages = Math.ceil(total / normalizedLimit);
 
@@ -846,8 +876,8 @@ export default class WorkerRepositoryRepository
       page: normalizedPage,
       limit: normalizedLimit,
       count: data.length,
-      hasNext: page != totalPages,
-      hasPrev: page != 1,
+      hasNext: normalizedPage < totalPages,
+      hasPrev: normalizedPage > 1,
       totalPages,
     };
   }
