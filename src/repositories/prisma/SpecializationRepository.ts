@@ -6,6 +6,7 @@ import { isEmptyFilter } from './utils.js';
 import { PaginationOptions, SortOptions } from '../../types/query.js';
 import {
   Specialization,
+  SpecializationCategory,
   SpecializationCreateInput,
   SpecializationFilter,
   SubSpecialization,
@@ -23,12 +24,20 @@ export default class SpecializationRepository
     super(prisma);
   }
 
-  private toDomain(record: Specialization): Specialization {
+  private toDomain(record: {
+    id: IDType;
+    name: string;
+    nameAr: string;
+    category: SpecializationCategory;
+    updatedAt: Date;
+    createdAt: Date;
+  }): Specialization {
     return {
       id: record.id,
       name: record.name,
       nameAr: record.nameAr,
       category: record.category,
+      ordersCount: 0, // TODO: fill with right value when database is updated
       updatedAt: record.updatedAt,
       createdAt: record.createdAt,
     };

@@ -12,6 +12,7 @@ export type Specialization = {
   name: string;
   nameAr: string;
   category: SpecializationCategory;
+  ordersCount: number;
 
   updatedAt: Date;
   createdAt: Date;
@@ -30,6 +31,7 @@ export const SpecializationFilterDescriptor = {
   name: { type: 'string' as const },
   nameAr: { type: 'string' as const },
   category: { type: 'string' as const },
+  ordersCount: { type: 'number' as const },
 } satisfies Record<string, FieldTypeDefinition>;
 
 export type SpecializationFilter = FilterFromDescriptor<typeof SpecializationFilterDescriptor> & {
