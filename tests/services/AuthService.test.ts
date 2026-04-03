@@ -311,7 +311,9 @@ describe('AuthService', () => {
     it('should validate government and city exist before creating user', async () => {
       govRepo.find.mockResolvedValue(null);
 
-      await expect(authService.registerClient(userData)).rejects.toThrow('Government not found');
+      await expect(authService.registerClient(userData, {})).rejects.toThrow(
+        'Government not found'
+      );
       // User should NOT be created if validation fails
       expect(userRepo.create).not.toHaveBeenCalled();
     });
@@ -320,7 +322,7 @@ describe('AuthService', () => {
       govRepo.find.mockResolvedValue(makeGovernment());
       govRepo.findCity.mockResolvedValue(null);
 
-      await expect(authService.registerClient(userData)).rejects.toThrow('City not found');
+      await expect(authService.registerClient(userData, {})).rejects.toThrow('City not found');
       expect(userRepo.create).not.toHaveBeenCalled();
     });
 
@@ -337,7 +339,7 @@ describe('AuthService', () => {
         userId: user.id,
       });
 
-      const result = await authService.registerClient(userData);
+      const result = await authService.registerClient(userData, {});
 
       expect(result.user).toBeDefined();
       expect(result.profile).toBeDefined();
@@ -363,7 +365,7 @@ describe('AuthService', () => {
       userRepo.update.mockResolvedValue(makeUser());
       clientRepo.find.mockResolvedValue({});
 
-      await authService.registerClient(userData);
+      await authService.registerClient(userData, {});
 
       expect(userRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
