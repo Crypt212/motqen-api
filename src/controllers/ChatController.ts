@@ -41,7 +41,7 @@ export const getConversations = asyncHandler(async (req, res) => {
     sort: { sortBy, sortOrder },
   });
 
-  new SuccessResponse('Conversations retrieved', { conversations }, 200).send(res);
+  new SuccessResponse('Conversations retrieved', conversations, 200).send(res);
 });
 
 /**
@@ -77,7 +77,7 @@ export const getUnreadSummary = asyncHandler(async (req, res) => {
     pagination: { page, limit },
     sort: { sortBy, sortOrder },
   });
-  const unread = conversations.conversationsWithParticipantsAndMessages.filter((c) => {
+  const unread = conversations.conversations.filter((c) => {
     const myParticipant = c.participants.find((p) => p.userId === userId);
     const unreadCount = c.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0);
     return unreadCount > 0;

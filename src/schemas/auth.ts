@@ -8,7 +8,6 @@ import {
   OTPCodeSchema,
   OTPMethodSchema,
   UserDataSchema,
-  ClientProfileSchema,
   WorkerProfileSchema,
   createQuerySchema,
   buildFilterSchema,
@@ -44,7 +43,6 @@ export function parseJSON() {
 // handled separately in middleware. These cover the body.
 export const RegisterClientSchema = z.object({
   userData: parseJSON().pipe(UserDataSchema),
-  clientProfile: parseJSON().pipe(ClientProfileSchema),
   // personal_image validated in multer middleware — not in body schema
 });
 export type RegisterClientDTO = z.infer<typeof RegisterClientSchema>;

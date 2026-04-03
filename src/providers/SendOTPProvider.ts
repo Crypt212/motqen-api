@@ -18,7 +18,9 @@ const { accountSid, authToken, virtualNumber } = environment.twilio;
  * await SendOTPProvider('SMS', '123456', '+201234567890');
  */
 export default async function (method: Method, OTP: string, phoneNumber: string) {
-  console.log(method, OTP, phoneNumber);
+  if (environment.nodeEnv === 'development') {
+    logger.debug(`OTP: ${OTP} for ${phoneNumber} via ${method}`);
+  }
   if (method === 'SMS') {
     // await sendViaSMS(`Your OTP is ${OTP}`, phoneNumber);
   } else if (method === 'WHATSAPP') {

@@ -20,7 +20,7 @@ import {
   VerificationStatus,
 } from '../../generated/prisma/client.js';
 
-export default class WorkerRepositoryRepository
+export default class WorkerProfileRepository
   extends Repository
   implements IWorkerProfileRepository
 {
@@ -72,7 +72,6 @@ export default class WorkerRepositoryRepository
     workerFilter: WorkerProfileFilter;
   }): Promise<WorkerProfile | null> {
     try {
-      if (isEmptyFilter(workerFilter)) return null;
       const record = await this.prismaClient.workerProfile.findFirst({
         where: workerFilter,
       });
@@ -92,8 +91,6 @@ export default class WorkerRepositoryRepository
     sort?: SortOptions<WorkerProfile>;
   }): Promise<PaginatedResultMeta & { workerProfiles: WorkerProfile[] }> {
     try {
-      if (isEmptyFilter(workerFilter)) return { ...getEmptyPaginatedResult(), workerProfiles: [] };
-
       const whereCondition = {
         user: { isOnline: true },
         ...workerFilter,
@@ -134,8 +131,6 @@ export default class WorkerRepositoryRepository
     pagination?: PaginationOptions;
   }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }> {
     try {
-      if (isEmptyFilter(workerFilter)) return { ...getEmptyPaginatedResult(), governmentIds: [] };
-
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
         where: workerFilter,
         include: { workGovernments: true },
@@ -172,7 +167,6 @@ export default class WorkerRepositoryRepository
     workerFilter: WorkerProfileFilter;
   }): Promise<WorkerProfileVerification | null> {
     try {
-      if (isEmptyFilter(workerFilter)) return null;
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
         where: workerFilter,
       });
@@ -199,8 +193,6 @@ export default class WorkerRepositoryRepository
     pagination?: PaginationOptions;
   }): Promise<PaginatedResultMeta & { specializationIds: IDType[] }> {
     try {
-      if (isEmptyFilter(filter)) return { ...getEmptyPaginatedResult(), specializationIds: [] };
-
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
         where: filter,
         include: { chosenSpecializations: true },
@@ -515,15 +507,15 @@ export default class WorkerRepositoryRepository
 
       if (!existingProfile) return;
 
-      for (const treeNode of specializationsTree) {
-        await this.prismaClient.chosenSpecialization.deleteMany({
-          where: {
-            workerProfileId: existingProfile.id,
+      await this.prismaClient.chosenSpecialization.deleteMany({
+        where: {
+          workerProfileId: existingProfile.id,
+          OR: specializationsTree.map((treeNode) => ({
             specializationId: treeNode.mainId,
             subSpecializationId: { in: treeNode.subIds },
-          },
-        });
-      }
+          })),
+        },
+      });
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'deleteSubSpecializations');
     }

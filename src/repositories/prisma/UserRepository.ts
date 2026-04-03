@@ -2,9 +2,17 @@ import IUserRepository from '../interfaces/UserRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
-import { User, UserCreateInput, UserFilter } from '../../domain/user.entity.js';
+import {
+  User,
+  UserCreateInput,
+  UserFilter,
+  Location,
+  LocationCreateInput,
+  LocationUpdateInput,
+} from '../../domain/user.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { PrismaClient } from 'src/generated/prisma/client.js';
+import { IDType } from '../interfaces/Repository.js';
 
 export default class UserRepository extends Repository implements IUserRepository {
   constructor(prisma: PrismaClient) {
@@ -27,6 +35,18 @@ export default class UserRepository extends Repository implements IUserRepositor
     };
   }
 
+  private toDomainLocation(record: Location): Location {
+    return {
+      id: record.id,
+      userId: record.userId,
+      governmentId: record.governmentId,
+      cityId: record.cityId,
+      address: record.address,
+      addressNotes: record.addressNotes,
+      isMain: record.isMain,
+    };
+  }
+
   async exists({ filter }: { filter: UserFilter }): Promise<boolean> {
     try {
       if (isEmptyFilter(filter)) return false;
@@ -45,15 +65,15 @@ export default class UserRepository extends Repository implements IUserRepositor
     filter: UserFilter;
   }): Promise<(User & { isClient: boolean; isWorker: boolean }) | null> {
     try {
-      if (isEmptyFilter(filter)) return null;
       const record = await this.prismaClient.user.findFirst({
         where: filter,
       });
+      if (!record) return null;
       const isWorker =
         (await this.prismaClient.workerProfile.count({ where: { userId: record.id } })) > 0;
       const isClient =
         (await this.prismaClient.clientProfile.count({ where: { userId: record.id } })) > 0;
-      return record ? { ...this.toDomain(record), isClient, isWorker } : null;
+      return { ...this.toDomain(record), isClient, isWorker };
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'find');
     }
@@ -69,8 +89,6 @@ export default class UserRepository extends Repository implements IUserRepositor
     sort?: SortOptions<User>;
   }): Promise<PaginatedResultMeta & { users: User[] }> {
     try {
-      if (isEmptyFilter(filter)) return { users: [], ...getEmptyPaginatedResult() };
-
       const total = await this.prismaClient.user.count({
         where: filter,
       });
@@ -108,8 +126,6 @@ export default class UserRepository extends Repository implements IUserRepositor
     sort?: SortOptions<User>;
   }): Promise<PaginatedResultMeta & { users: User[] }> {
     try {
-      if (isEmptyFilter(filter)) return { users: [], ...getEmptyPaginatedResult() };
-
       const whereCondition = {
         ...filter,
         isOnline: true,
@@ -190,6 +206,135 @@ export default class UserRepository extends Repository implements IUserRepositor
       });
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'delete');
+    }
+  }
+
+  // ─── Location methods ──────────────────────────────────────────────────
+
+  async findWithPrimaryLocation(params: {
+    filter: UserFilter;
+  }): Promise<(User & { location: Location }) | null> {
+    try {
+      const { filter } = params;
+      if (isEmptyFilter(filter)) return null;
+
+      const userWithLocation = await this.prismaClient.user.findFirst({
+        where: filter,
+        include: {
+          locations: {
+            where: { isMain: true },
+            take: 1,
+          },
+        },
+      });
+
+      if (!userWithLocation || userWithLocation.locations.length === 0) return null;
+
+      const location = userWithLocation.locations[0];
+      return {
+        ...this.toDomain(userWithLocation),
+        location: this.toDomainLocation(location),
+      };
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'findWithPrimaryLocation');
+    }
+  }
+
+  async addLocation(params: { userId: IDType; location: LocationCreateInput }): Promise<Location> {
+    try {
+      if (params.location.isMain) {
+        await this.prismaClient.location.updateMany({
+          where: { userId: params.userId },
+          data: { isMain: false },
+        });
+      }
+
+      const record = await this.prismaClient.location.create({
+        data: {
+          userId: params.userId,
+          ...params.location,
+        },
+      });
+      return this.toDomainLocation(record);
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'addLocation');
+    }
+  }
+
+  async updatePrimaryLocation(params: {
+    userId: IDType;
+    location: LocationUpdateInput;
+  }): Promise<Location> {
+    try {
+      const mainLocation = await this.prismaClient.location.findFirst({
+        where: {
+          userId: params.userId,
+          isMain: true,
+        },
+      });
+
+      if (!mainLocation) {
+        throw new Error('Primary location not found');
+      }
+
+      // If this explicitly tries to switch main toggle, we handle it
+      if (params.location.isMain) {
+        await this.prismaClient.location.updateMany({
+          where: { userId: params.userId, id: { not: mainLocation.id } },
+          data: { isMain: false },
+        });
+      }
+
+      const updated = await this.prismaClient.location.update({
+        where: { id: mainLocation.id },
+        data: params.location,
+      });
+      return this.toDomainLocation(updated);
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'updatePrimaryLocation');
+    }
+  }
+
+  async findLocations(params: { filter: { userId: IDType } }): Promise<Location[]> {
+    try {
+      const locations = await this.prismaClient.location.findMany({
+        where: { userId: params.filter.userId },
+      });
+      return locations.map((l) => this.toDomainLocation(l));
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'findLocations');
+    }
+  }
+
+  async updateLocation(params: {
+    filter: { id: IDType; userId: IDType };
+    location: LocationUpdateInput;
+  }): Promise<Location> {
+    try {
+      if (params.location.isMain) {
+        await this.prismaClient.location.updateMany({
+          where: { userId: params.filter.userId, id: { not: params.filter.id } },
+          data: { isMain: false },
+        });
+      }
+
+      const updated = await this.prismaClient.location.update({
+        where: { id: params.filter.id, userId: params.filter.userId },
+        data: params.location,
+      });
+      return this.toDomainLocation(updated);
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'updateLocation');
+    }
+  }
+
+  async deleteLocation(params: { filter: { id: IDType; userId: IDType } }): Promise<void> {
+    try {
+      await this.prismaClient.location.delete({
+        where: { id: params.filter.id, userId: params.filter.userId },
+      });
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'deleteLocation');
     }
   }
 }

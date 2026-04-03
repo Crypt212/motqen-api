@@ -48,7 +48,6 @@ export default class SpecializationRepository
   async find(params: { filter: SpecializationFilter }): Promise<Specialization | null> {
     try {
       const { filter } = params;
-      if (isEmptyFilter(filter)) return null;
 
       const record = await this.prismaClient.specialization.findFirst({
         where: filter,
@@ -98,7 +97,6 @@ export default class SpecializationRepository
   }): Promise<SubSpecialization | null> {
     try {
       const { filter } = params;
-      if (isEmptyFilter(filter)) return null;
 
       const record = await this.prismaClient.subSpecialization.findFirst({
         where: filter,

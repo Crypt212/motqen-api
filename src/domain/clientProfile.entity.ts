@@ -20,32 +20,3 @@ export const ClientProfileFilterDescriptor = {
 } satisfies Record<string, FieldTypeDefinition>;
 
 export type ClientProfileFilter = FilterFromDescriptor<typeof ClientProfileFilterDescriptor>;
-
-// ==================================================
-
-export interface Location {
-  id: IDType;
-  clientProfileId: IDType;
-
-  governmentId: IDType;
-  cityId: IDType;
-  address: string;
-  addressNotes: string;
-  isMain: boolean;
-}
-
-export type LocationCreateInput = {
-  governmentId: IDType;
-  cityId: IDType;
-  address: string;
-  addressNotes: string;
-  isMain: boolean;
-};
-
-export const LocationFilterDescriptor = {
-  id: { type: 'uuid' as const },
-} satisfies Record<string, FieldTypeDefinition>;
-
-export type LocationFilter = FilterFromDescriptor<typeof LocationFilterDescriptor>;
-
-export type LocationUpdateInput = Partial<LocationCreateInput>;

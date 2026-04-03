@@ -7,35 +7,33 @@ export function handlePagination(params: { total: number; paginationOptions: Pag
   paginationResult: PaginatedResultMeta;
   paginationQuery: { skip: number; take: number };
 } {
-  params.paginationOptions.limit = Math.max(params.paginationOptions.limit || 10, 1);
+  const { total, paginationOptions } = params;
+  const limit = Math.max(paginationOptions?.limit || 10, 1);
 
-  const totalPages = Math.ceil(params.total / params.paginationOptions.limit);
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
-  params.paginationOptions.page = Math.min(
-    Math.max(params.paginationOptions.page || 1, 1),
-    totalPages
-  );
+  const page = Math.min(Math.max(paginationOptions?.page || 1, 1), totalPages);
 
-  const skip = (params.paginationOptions.page - 1) * params.paginationOptions.limit;
+  const skip = (page - 1) * limit;
 
-  let count = params.paginationOptions.limit;
-  if (params.paginationOptions.page === totalPages) {
-    count = params.total % params.paginationOptions.limit;
+  let count = limit;
+  if (page === totalPages) {
+    count = total % limit || limit;
   }
 
   return {
     paginationQuery: {
       skip,
-      take: params.paginationOptions.limit,
+      take: limit,
     },
     paginationResult: {
-      page: params.paginationOptions.page,
-      limit: params.paginationOptions.limit,
+      page,
+      limit,
       count,
-      total: params.total,
+      total,
       totalPages,
-      hasNext: params.paginationOptions.page * params.paginationOptions.limit < params.total,
-      hasPrev: params.paginationOptions.page > 1,
+      hasNext: page * limit < total,
+      hasPrev: page > 1,
     },
   };
 }

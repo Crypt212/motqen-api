@@ -58,7 +58,6 @@ export default class ConversationRepository extends Repository implements IConve
   async find(params: { filter: ConversationFilter }): Promise<Conversation | null> {
     try {
       const { filter } = params;
-      if (isEmptyFilter(filter)) return null;
 
       const record = await this.prismaClient.conversation.findFirst({
         where: filter,
@@ -127,7 +126,7 @@ export default class ConversationRepository extends Repository implements IConve
   }
 
   async findNonEmptyConversationsWithParticipantsAndMessages(params: {
-    filter: ConversationFilter | 'All';
+    filter: ConversationFilter;
     userId: IDType;
     pagination?: PaginationOptions;
     sort?: SortOptions<ConversationWithParticipantsAndMessages>;
@@ -138,14 +137,9 @@ export default class ConversationRepository extends Repository implements IConve
   > {
     try {
       const { filter, userId, pagination, sort } = params;
-      let finalFilter = {};
-
-      if (filter === 'All') finalFilter = {};
-      else if (isEmptyFilter(filter))
-        return { ...getEmptyPaginatedResult(), conversationParticipantsWithMessages: [] };
 
       const total = await this.prismaClient.conversation.count({
-        where: { ...finalFilter, participants: { some: { userId } }, messageCounter: { gt: 0 } },
+        where: { ...filter, participants: { some: { userId } }, messageCounter: { gt: 0 } },
       });
       const sortQuery = handleSort(sort);
       const { paginationResult, paginationQuery } = handlePagination({
@@ -157,7 +151,7 @@ export default class ConversationRepository extends Repository implements IConve
         where: {
           participants: { some: { userId } },
           messageCounter: { gt: 0 },
-          ...finalFilter,
+          ...filter,
         },
         include: {
           participants: {
@@ -228,8 +222,6 @@ export default class ConversationRepository extends Repository implements IConve
   > {
     try {
       const { filter, userId, pagination, sort } = params;
-      if (isEmptyFilter(filter))
-        return { ...getEmptyPaginatedResult(), conversationParticipantsWithMessages: [] };
 
       const total = await this.prismaClient.conversation.count({
         where: { ...filter, participants: { some: { userId } } },

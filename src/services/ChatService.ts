@@ -44,8 +44,7 @@ export default class ChatService extends Service {
   private conversationRepository: IConversationRepository;
   private messageRepository: IMessageRepository;
   private workerProfileRepository: IWorkerProfileRepository;
-  public clientProfileRepository: IClientProfileRepository;
-  private presencee: IChatPresenceCache;
+  private _presence: IChatPresenceCache;
 
   constructor(params: {
     conversationRepository: IConversationRepository;
@@ -58,8 +57,7 @@ export default class ChatService extends Service {
     this.conversationRepository = params.conversationRepository;
     this.messageRepository = params.messageRepository;
     this.workerProfileRepository = params.workerProfileRepository;
-    this.clientProfileRepository = params.clientProfileRepository;
-    this.presencee = params.presence;
+    this._presence = params.presence;
   }
 
   // ─── Conversation ──────────────────────────────────────────────────────────
@@ -121,7 +119,7 @@ export default class ChatService extends Service {
     sort: SortOptions<ConversationWithParticipantsAndMessages>;
   }): Promise<
     PaginatedResultMeta & {
-      conversationsWithParticipantsAndMessages: ConversationWithParticipantsAndMessages[];
+      conversations: ConversationWithParticipantsAndMessages[];
     }
   > {
     const { userId, pagination, sort } = params;
@@ -155,7 +153,7 @@ export default class ChatService extends Service {
           id: conv.id,
           messageCounter: conv.messageCounter,
           unreadCount,
-          lastMessage: conv.messages[0] ?? null,
+          lastMessage: conv.messages ? conv.messages : null,
           partner: partnerParticipant?.user ?? null,
           partnerLastReceivedMessageNumber: partnerParticipant?.lastReceivedMessageNumber ?? 0,
           partnerLastReadMessageNumber: partnerParticipant?.lastReadMessageNumber ?? 0,
@@ -164,7 +162,16 @@ export default class ChatService extends Service {
         };
       });
 
-      return conversations;
+      return {
+        conversations: conversations as unknown as ConversationWithParticipantsAndMessages[],
+        page: convs.page,
+        limit: convs.limit,
+        count: convs.count,
+        total: convs.total,
+        totalPages: convs.totalPages,
+        hasNext: convs.hasNext,
+        hasPrev: convs.hasPrev,
+      };
     });
   }
 
@@ -384,6 +391,6 @@ export default class ChatService extends Service {
   // ─── Presence helpers (delegates to ChatPresenceCache) ────────────────────
 
   get presence(): IChatPresenceCache {
-    return this.presencee;
+    return this._presence;
   }
 }

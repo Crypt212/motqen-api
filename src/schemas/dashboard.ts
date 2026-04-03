@@ -6,6 +6,8 @@ import { z } from '../libs/zod.js';
 import {
   UUIDSchema,
   UserDataOptionalSchema,
+  LocationSchema,
+  LocationOptionalSchema,
   ClientProfileSchema,
   ClientProfileOptionalSchema,
   WorkerProfileSchema,
@@ -28,6 +30,16 @@ export const UpdateUserSchema = UserDataOptionalSchema;
 export type UpdateUserDTO = z.infer<typeof UpdateUserSchema>;
 
 // ============================================
+// Client profile schemas
+// ============================================
+
+// GET, DELETE — no body
+export const CreateClientProfileSchema = ClientProfileSchema;
+export type CreateClientProfileDTO = z.infer<typeof CreateClientProfileSchema>;
+
+export const UpdateClientProfileSchema = ClientProfileOptionalSchema;
+export type UpdateClientProfileDTO = z.infer<typeof UpdateClientProfileSchema>;
+// ============================================
 // Worker profile schemas
 // ============================================
 
@@ -39,15 +51,14 @@ export const UpdateWorkerProfileSchema = WorkerProfileOptionalSchema;
 export type UpdateWorkerProfileDTO = z.infer<typeof UpdateWorkerProfileSchema>;
 
 // ============================================
-// Client profile schemas
+// Location schemas
 // ============================================
 
-// GET, DELETE — no body
-export const CreateClientProfileSchema = ClientProfileSchema;
-export type CreateClientProfileDTO = z.infer<typeof CreateClientProfileSchema>;
+export const AddLocationSchema = LocationSchema;
+export type AddLocationDTO = z.infer<typeof AddLocationSchema>;
 
-export const UpdateClientProfileSchema = ClientProfileOptionalSchema;
-export type UpdateClientProfileDTO = z.infer<typeof UpdateClientProfileSchema>;
+export const UpdateLocationSchema = LocationOptionalSchema;
+export type UpdateLocationDTO = z.infer<typeof UpdateLocationSchema>;
 
 // ============================================
 // Worker governments schemas
