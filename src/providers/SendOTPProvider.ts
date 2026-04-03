@@ -19,7 +19,7 @@ const { accountSid, authToken, virtualNumber } = environment.twilio;
  */
 export default async function (method: Method, OTP: string, phoneNumber: string) {
   if (environment.nodeEnv === 'development') {
-    logger.debug(`OTP: ${OTP} for ${phoneNumber} via ${method}`);
+    logger.info(`OTP: ${OTP} for ${phoneNumber} via ${method}`);
   }
   if (method === 'SMS') {
     // await sendViaSMS(`Your OTP is ${OTP}`, phoneNumber);
