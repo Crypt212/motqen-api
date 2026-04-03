@@ -23,11 +23,18 @@ const parseStringList = (value: unknown): unknown => {
   return undefined;
 };
 
+const parseOptionalUUID = (value: unknown): unknown => {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  return value;
+};
+
 const FlagedFilterSchema = z.enum(['availbilty', 'nearest', 'acceptUrgentJobs', 'heasetrated']);
 
 export const ExploreSearchSchema = z.object({
   specializationId: UUIDSchema,
-  subSpecializationId: UUIDSchema.optional(),
+  subSpecializationId: z.preprocess(parseOptionalUUID, UUIDSchema.optional()),
   governments: z.preprocess(parseStringList, z.array(UUIDSchema).optional()),
   flaged: z.preprocess(parseStringList, z.array(FlagedFilterSchema).optional().default([])),
   page: z.coerce
