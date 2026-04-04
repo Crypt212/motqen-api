@@ -192,9 +192,10 @@ export default class ChatService extends Service {
     content: string;
     type?: MessageType;
   }): Promise<Message> {
-    const { conversationId, senderId, content, type } = params;
+    let { conversationId, senderId, content, type } = params;
     return tryCatch(async () => {
-      if (!content?.trim()) throw new AppError('Message content cannot be empty', 400);
+      content = content?.trim() || '';
+      if (!content) throw new AppError('Message content cannot be empty', 400);
       if (content.length > 2000)
         throw new AppError('Message content cannot exceed 2000 characters', 400);
 
@@ -253,6 +254,16 @@ export default class ChatService extends Service {
       if (!message) throw new AppError('Message not found', 404);
       if (message.conversationId !== conversationId)
         throw new AppError('Message does not belong to this conversation', 400);
+
+      const participant = await this.conversationRepository.findParticipant({
+        conversationId,
+        userId,
+      });
+      if (!participant) throw new AppError('Not a participant in this conversation', 403);
+
+      if (message.messageNumber <= participant.lastReadMessageNumber) {
+        return { readUpTo: message.messageNumber };
+      }
 
       await this.conversationRepository.updateLastRead({
         conversationId,
@@ -380,6 +391,16 @@ export default class ChatService extends Service {
   }): Promise<ConversationParticipant> {
     const { conversationId, userId, messageNumber } = params;
     return tryCatch(async () => {
+      const participant = await this.conversationRepository.findParticipant({
+        conversationId,
+        userId,
+      });
+      if (!participant) throw new AppError('Not a participant in this conversation', 403);
+
+      if (messageNumber <= participant.lastReceivedMessageNumber) {
+        return participant;
+      }
+
       return this.conversationRepository.updateLastReceived({
         conversationId,
         userId,

@@ -83,7 +83,7 @@ export function registerSocketHandlers(
   });
 
   // ─── send_message ───────────────────────────────────────────────────────────
-  socket.on('send_message', async ({ conversationId, content, type = 'TEXT' }, ack) => {
+  socket.on('send_message', async ({ conversationId, content, type = 'TEXT', localId }, ack) => {
     try {
       // 1. DB-based participant validation (authoritative)
       await chatService.validateParticipant({ conversationId, userId });
@@ -140,6 +140,7 @@ export function registerSocketHandlers(
           createdAt: message.createdAt,
           delivered,
           read: recipientInChat,
+          localId,
         });
       }
     } catch (err: unknown) {
