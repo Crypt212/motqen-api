@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from 'vitest';
+
+vi.mock('../../src/providers/cloudinaryProvider.js', () => ({
+  default: vi.fn(),
+  deleteFromCloudinary: vi.fn().mockResolvedValue({ result: 'ok' }),
+}));
+
+import uploadToCloudinary, { deleteFromCloudinary } from '../../src/providers/cloudinaryProvider.js';
 import { chatService, conversationRepository, messageRepository } from '../../src/state.js';
 import prisma from '../../src/libs/database.js';
 import redisClient from '../../src/libs/redis.js';
@@ -232,4 +239,67 @@ describe('Chat Integration Tests (Real DB)', () => {
     expect(participantsAfter).toBe(0);
   });
 
+  describe('sendImageMessage (Cloudinary mocked)', () => {
+    const fakeImageUrl =
+      'https://res.cloudinary.com/demo/image/upload/v1/chat-images/seeded-conv/fake.jpg';
+    const fakePublicId = 'chat-images/seeded-conv/fake-public-id';
+
+    beforeEach(() => {
+      vi.mocked(uploadToCloudinary).mockReset();
+      vi.mocked(deleteFromCloudinary).mockReset();
+      vi.mocked(deleteFromCloudinary).mockResolvedValue({ result: 'ok' } as never);
+      vi.mocked(uploadToCloudinary).mockResolvedValue({
+        url: fakeImageUrl,
+        publicId: fakePublicId,
+      });
+    });
+
+    it('should upload via Cloudinary (mocked), persist message as IMAGE with URL content', async () => {
+      const beforeCounter = (
+        await prisma.conversation.findUniqueOrThrow({ where: { id: inProgressConvId } })
+      ).messageCounter;
+
+      const imageBuffer = Buffer.from('fake-image-bytes');
+      const message = await chatService.sendImageMessage({
+        conversationId: inProgressConvId,
+        senderId: clientId,
+        imageBuffer,
+      });
+
+      expect(uploadToCloudinary).toHaveBeenCalledTimes(1);
+      expect(uploadToCloudinary).toHaveBeenCalledWith(
+        imageBuffer,
+        `chat-images/${inProgressConvId}`
+      );
+      expect(message.type).toBe('IMAGE');
+      expect(message.content).toBe(fakeImageUrl);
+      expect(message.senderId).toBe(clientId);
+      expect(message.messageNumber).toBe(beforeCounter + 1);
+
+      const row = await prisma.message.findUniqueOrThrow({ where: { id: message.id } });
+      expect(row.type).toBe('IMAGE');
+      expect(row.content).toBe(fakeImageUrl);
+    });
+
+    it('should call Cloudinary delete (mocked) when message insert fails after upload', async () => {
+      const missingConversationId = '00000000-0000-0000-0000-000000000099';
+      const rollbackPublicId = 'chat-images/rollback-by-public-id';
+
+      vi.mocked(uploadToCloudinary).mockResolvedValue({
+        url: 'https://res.cloudinary.com/demo/rollback-case.jpg',
+        publicId: rollbackPublicId,
+      });
+
+      await expect(
+        chatService.sendImageMessage({
+          conversationId: missingConversationId,
+          senderId: clientId,
+          imageBuffer: Buffer.from('x'),
+        })
+      ).rejects.toThrow();
+
+      expect(deleteFromCloudinary).toHaveBeenCalledTimes(1);
+      expect(deleteFromCloudinary).toHaveBeenCalledWith(rollbackPublicId);
+    });
+  });
 });

@@ -4,6 +4,7 @@
  */
 
 import AppError from '../errors/AppError.js';
+import uploadToCloudinary, { deleteFromCloudinary } from '../providers/cloudinaryProvider.js';
 import Service, { tryCatch } from './Service.js';
 import IChatPresenceCache from '../cache/interfaces/ChatPresenceCache.js';
 import { Message, MessageType } from '../domain/message.entity.js';
@@ -228,6 +229,40 @@ export default class ChatService extends Service {
       });
 
       return message;
+    });
+  }
+
+  /**
+   * Send an image message — uploads to Cloudinary,
+   * then atomically increments the counter and inserts the message.
+   *
+   * @param params.conversationId  The conversation to send the image in
+   * @param params.senderId        The authenticated user's ID
+   * @param params.imageBuffer     The raw image buffer from multer
+   */
+  async sendImageMessage(params: {
+    conversationId: IDType;
+    senderId: IDType;
+    imageBuffer: Buffer;
+  }): Promise<Message> {
+    const { conversationId, senderId, imageBuffer } = params;
+    return tryCatch(async () => {
+      const { url, publicId } = await uploadToCloudinary(
+        imageBuffer,
+        `chat-images/${conversationId}`
+      );
+
+      try {
+        return await this.sendMessage({
+          conversationId,
+          senderId,
+          content: url,
+          type: 'IMAGE',
+        });
+      } catch (error) {
+        await deleteFromCloudinary(publicId).catch(() => undefined);
+        throw error;
+      }
     });
   }
 
