@@ -483,13 +483,13 @@ const options = {
               description: 'Government name in Arabic (2-100 characters)',
             },
             long: {
-              type: 'string',
-              example: '31.2357',
+              type: 'number',
+              example: 31.2357,
               description: 'Longitude coordinate',
             },
             lat: {
-              type: 'string',
-              example: '30.0444',
+              type: 'number',
+              example: 30.0444,
               description: 'Latitude coordinate',
             },
           },
@@ -509,13 +509,13 @@ const options = {
               description: 'City name in Arabic (2-100 characters)',
             },
             long: {
-              type: 'string',
-              example: '31.2571',
+              type: 'number',
+              example: 31.2571,
               description: 'Longitude coordinate',
             },
             lat: {
-              type: 'string',
-              example: '29.9592',
+              type: 'number',
+              example: 29.9592,
               description: 'Latitude coordinate',
             },
             governmentId: {

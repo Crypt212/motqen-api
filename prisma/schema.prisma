@@ -218,6 +218,7 @@ model Government {
   nameAr    String
   long      String
   lat       String
+  pointGeography Unsupported("geography(Point,4326)")?
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
@@ -235,6 +236,7 @@ model City {
   nameAr       String
   long         String
   lat          String
+  pointGeography Unsupported("geography(Point,4326)")?
   updatedAt    DateTime @updatedAt
   createdAt    DateTime @default(now())
 

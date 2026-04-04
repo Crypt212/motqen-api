@@ -726,25 +726,15 @@ export default class WorkerProfileRepository
             SELECT
               gfw."workerProfileId" AS "workerProfileId",
               MIN(
-                6371 * ACOS(
-                  LEAST(
-                    1,
-                    GREATEST(
-                      -1,
-                      COS(RADIANS(${customerLat})) *
-                        COS(RADIANS(CAST(g."lat" AS double precision))) *
-                        COS(RADIANS(CAST(g."long" AS double precision)) - RADIANS(${customerLong})) +
-                        SIN(RADIANS(${customerLat})) *
-                        SIN(RADIANS(CAST(g."lat" AS double precision)))
-                    )
-                  )
-                )
+                ST_Distance(
+                  g."pointGeography",
+                  ST_SetSRID(ST_MakePoint(${customerLong}, ${customerLat}), 4326)::geography
+                ) / 1000.0
               )::double precision AS "distanceKm"
             FROM "governments_for_workers" gfw
             INNER JOIN "governments" g ON g."id" = gfw."governmentId"
             WHERE gfw."workerProfileId" IN (${Prisma.join(workerIds)})
-              AND g."lat" ~ '^-?[0-9]+(\\.[0-9]+)?$'
-              AND g."long" ~ '^-?[0-9]+(\\.[0-9]+)?$'
+              AND g."pointGeography" IS NOT NULL
             GROUP BY gfw."workerProfileId"
           `
         : Promise.resolve([]);
@@ -801,13 +791,13 @@ export default class WorkerProfileRepository
       ratingRows.map((row) => [
         row.workerProfileId,
         {
-          rating: Number(row._avg.rating ?? 0),
-          ratingCount: Number(row._count.rating ?? 0),
+          rating: Number(row._avg?.rating ?? 0),
+          ratingCount: Number(row._count?.rating ?? 0),
         },
       ])
     );
     const completedMap = new Map(
-      completedRows.map((row) => [row.workerProfileId, Number(row._count._all ?? 0)])
+      completedRows.map((row) => [row.workerProfileId, Number(row._count?._all ?? 0)])
     );
 
     const computedWorkers = workers.map((worker) => {
