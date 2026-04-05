@@ -4,6 +4,7 @@
  */
 
 import AppError from '../errors/AppError.js';
+import uploadToCloudinary, { deleteFromCloudinary } from '../providers/cloudinaryProvider.js';
 import Service, { tryCatch } from './Service.js';
 import IChatPresenceCache from '../cache/interfaces/ChatPresenceCache.js';
 import { Message, MessageType } from '../domain/message.entity.js';
@@ -192,9 +193,10 @@ export default class ChatService extends Service {
     content: string;
     type?: MessageType;
   }): Promise<Message> {
-    const { conversationId, senderId, content, type } = params;
+    let { conversationId, senderId, content, type } = params;
     return tryCatch(async () => {
-      if (!content?.trim()) throw new AppError('Message content cannot be empty', 400);
+      content = content?.trim() || '';
+      if (!content) throw new AppError('Message content cannot be empty', 400);
       if (content.length > 2000)
         throw new AppError('Message content cannot exceed 2000 characters', 400);
 
@@ -230,6 +232,40 @@ export default class ChatService extends Service {
     });
   }
 
+  /**
+   * Send an image message — uploads to Cloudinary,
+   * then atomically increments the counter and inserts the message.
+   *
+   * @param params.conversationId  The conversation to send the image in
+   * @param params.senderId        The authenticated user's ID
+   * @param params.imageBuffer     The raw image buffer from multer
+   */
+  async sendImageMessage(params: {
+    conversationId: IDType;
+    senderId: IDType;
+    imageBuffer: Buffer;
+  }): Promise<Message> {
+    const { conversationId, senderId, imageBuffer } = params;
+    return tryCatch(async () => {
+      const { url, publicId } = await uploadToCloudinary(
+        imageBuffer,
+        `chat-images/${conversationId}`
+      );
+
+      try {
+        return await this.sendMessage({
+          conversationId,
+          senderId,
+          content: url,
+          type: 'IMAGE',
+        });
+      } catch (error) {
+        await deleteFromCloudinary(publicId).catch(() => undefined);
+        throw error;
+      }
+    });
+  }
+
   // ─── Read State ────────────────────────────────────────────────────────────
 
   /**
@@ -253,6 +289,16 @@ export default class ChatService extends Service {
       if (!message) throw new AppError('Message not found', 404);
       if (message.conversationId !== conversationId)
         throw new AppError('Message does not belong to this conversation', 400);
+
+      const participant = await this.conversationRepository.findParticipant({
+        conversationId,
+        userId,
+      });
+      if (!participant) throw new AppError('Not a participant in this conversation', 403);
+
+      if (message.messageNumber <= participant.lastReadMessageNumber) {
+        return { readUpTo: message.messageNumber };
+      }
 
       await this.conversationRepository.updateLastRead({
         conversationId,
@@ -380,6 +426,16 @@ export default class ChatService extends Service {
   }): Promise<ConversationParticipant> {
     const { conversationId, userId, messageNumber } = params;
     return tryCatch(async () => {
+      const participant = await this.conversationRepository.findParticipant({
+        conversationId,
+        userId,
+      });
+      if (!participant) throw new AppError('Not a participant in this conversation', 403);
+
+      if (messageNumber <= participant.lastReceivedMessageNumber) {
+        return participant;
+      }
+
       return this.conversationRepository.updateLastReceived({
         conversationId,
         userId,

@@ -4,6 +4,7 @@
  */
 
 import SuccessResponse from '../responses/successResponse.js';
+import AppError from '../errors/AppError.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { chatService } from '../state.js';
 import { matchedData } from 'express-validator';
@@ -103,4 +104,27 @@ export const getMissedMessages = asyncHandler(async (req, res) => {
   });
 
   new SuccessResponse('Missed messages', { messages }, 200).send(res);
+});
+
+/**
+ * POST /api/chat/conversations/:conversationId/messages/image
+ * Upload and send an image message in a conversation.
+ * Request: multipart/form-data with a single "image" field
+ * Requires authenticated user who is a participant in the conversation.
+ */
+export const sendImageMessage = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const { conversationId } = matchedData(req, { includeOptionals: true });
+  const file = req.file;
+  if (!file) {
+    throw new AppError('No image file provided. Upload a file under the "image" field', 400);
+  }
+
+  const message = await chatService.sendImageMessage({
+    conversationId,
+    senderId: userId,
+    imageBuffer: file.buffer,
+  });
+
+  new SuccessResponse('Image message sent', { message }, 201).send(res);
 });
