@@ -16,8 +16,10 @@ import ClientProfileService from './services/ClientProfileService.js';
 import WorkerProfileService from './services/WorkerProfileService.js';
 import ConversationRepository from './repositories/prisma/ConversationRepository.js';
 import MessageRepository from './repositories/prisma/MessageRepository.js';
+import FlaggedMessageRepository from './repositories/prisma/FlaggedMessageRepository.js';
 import ChatPresenceCache from './cache/redis/ChatPresenceCache.js';
 import ChatService from './services/ChatService.js';
+import ContactDetectionService from './services/ContactDetectionService.js';
 import prisma from './libs/database.js';
 import redisClient from './libs/redis.js';
 
@@ -38,6 +40,7 @@ export const governmentController = new GovernmentController({
 });
 export const conversationRepository = new ConversationRepository(prisma);
 export const messageRepository = new MessageRepository(prisma);
+export const flaggedMessageRepository = new FlaggedMessageRepository(prisma);
 
 export const rateLimitService = new RateLimitService({ rateLimitCache });
 export const userService = new UserService({
@@ -69,3 +72,4 @@ export const chatService = new ChatService({
   clientProfileRepository,
   presence: chatPresenceCache,
 });
+export const contactDetectionService = new ContactDetectionService(flaggedMessageRepository);
