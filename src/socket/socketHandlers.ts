@@ -24,7 +24,7 @@
  */
 
 import { logger } from '../libs/winston.js';
-import { chatService, conversationRepository } from '../state.js';
+import { chatService, conversationRepository, contactDetectionService } from '../state.js';
 import prisma from '../libs/database.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { ConversationWithParticipantsAndMessages } from '../domain/conversation.entity.js';
@@ -85,6 +85,13 @@ export function registerSocketHandlers(
   // ─── send_message ───────────────────────────────────────────────────────────
   socket.on('send_message', async ({ conversationId, content, type = 'TEXT', localId }, ack) => {
     try {
+if (type !== 'TEXT') {
+  if (typeof ack === 'function') {
+    ack({ ok: false, error: 'Invalid message type' });
+  }
+  return;
+}
+
       // 1. DB-based participant validation (authoritative)
       await chatService.validateParticipant({ conversationId, userId });
 
@@ -99,6 +106,13 @@ export function registerSocketHandlers(
         senderId: userId,
         content,
         type,
+      });
+
+      // Fire and forget: Non-blocking contact detection
+      setImmediate(() => {
+        contactDetectionService.analyzeAndFlagMessage(message).catch((err) => {
+          logger.error('[socket] Contact detection failed', err);
+        });
       });
 
       // 4. Check recipient presence

@@ -20,8 +20,6 @@ import {
   ConversationWithParticipantsAndMessages,
 } from '../domain/conversation.entity.js';
 import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
-import prisma from '../libs/database.js';
-import { $Enums } from '../generated/prisma/client.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../types/query.js';
 
 export type ConversationWithMeta = {
@@ -200,25 +198,11 @@ export default class ChatService extends Service {
       if (content.length > 2000)
         throw new AppError('Message content cannot exceed 2000 characters', 400);
 
-      const message = await prisma.$transaction(async (tx) => {
-        // Atomic increment — returns new counter value
-        const updated = await tx.conversation.update({
-          where: { id: conversationId },
-          data: { messageCounter: { increment: 1 } },
-          select: { messageCounter: true },
-        });
-        const messageNumber = updated.messageCounter;
-
-        // Insert the message with that number
-        return tx.message.create({
-          data: {
-            conversationId,
-            senderId,
-            messageNumber,
-            content,
-            type: $Enums.MessageType[type],
-          },
-        });
+      const message = await this.messageRepository.atomicSendMessage({
+        conversationId,
+        senderId,
+        content,
+        type: type || 'TEXT',
       });
 
       // Sender always "receives" their own message

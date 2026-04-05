@@ -235,6 +235,39 @@ export default class MessageRepository extends Repository implements IMessageRep
     }
   }
 
+  async atomicSendMessage(params: {
+    conversationId: IDType;
+    senderId: IDType;
+    content: string;
+    type?: MessageType;
+  }): Promise<Message> {
+    try {
+      const record = await (this.prismaClient as PrismaClient).$transaction(async (tx) => {
+        // Atomic increment — returns new counter value
+        const updated = await tx.conversation.update({
+          where: { id: params.conversationId },
+          data: { messageCounter: { increment: 1 } },
+          select: { messageCounter: true },
+        });
+        const messageNumber = updated.messageCounter;
+
+        // Insert the message with that number
+        return tx.message.create({
+          data: {
+            conversationId: params.conversationId,
+            senderId: params.senderId,
+            messageNumber,
+            content: params.content,
+            type: params.type || 'TEXT',
+          },
+        });
+      });
+      return this.toDomain(record);
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'atomicSendMessage');
+    }
+  }
+
   async updateMany(params: {
     filter: MessageFilter;
     message: Partial<Message>;

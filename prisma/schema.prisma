@@ -8,18 +8,18 @@ datasource db {
 }
 
 model Session {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   userId     String
-  token      String   @unique
-  isRevoked  Boolean  @default(false)
+  token      String    @unique
+  isRevoked  Boolean   @default(false)
   revokedAt  DateTime?
   revokedBy  String?
   deviceId   String
   ipAddress  String?
   userAgent  String?
-  lastUsedAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  createdAt  DateTime @default(now())
+  lastUsedAt DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  createdAt  DateTime  @default(now())
   expiresAt  DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -63,7 +63,7 @@ model ClientProfile {
   createdAt DateTime @default(now())
 
   orders Order[]
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("client_profiles")
 }
@@ -313,6 +313,19 @@ enum MessageType {
   IMAGE
 }
 
+enum FlagState {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+enum FlagReasonType {
+  PHONE_EGYPT
+  PHONE_INTERNATIONAL
+  URL
+  SOCIAL_HANDLE
+}
+
 model Conversation {
   id             String   @id @default(uuid())
   messageCounter Int      @default(0)
@@ -354,11 +367,28 @@ model Message {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       User         @relation(fields: [senderId], references: [id])
+  conversation Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User            @relation(fields: [senderId], references: [id])
+  flagged      FlaggedMessage?
 
   @@unique([conversationId, messageNumber])
   @@index([conversationId, createdAt])
   @@index([senderId])
   @@map("messages")
+}
+
+model FlaggedMessage {
+  id        String           @id @default(uuid())
+  messageId String           @unique
+  reasons   FlagReasonType[]
+  matches   String[]
+  state     FlagState        @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([state])
+  @@index([createdAt])
+  @@map("flagged_messages")
 }
