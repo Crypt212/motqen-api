@@ -306,6 +306,19 @@ export default class AuthService extends Service {
   }> {
     // in production -> Invalid or expired OTP only
 
+    const currentAttempts = await this.rateLimitCache.getVerifyAttempts(phoneNumber, method);
+    if (currentAttempts >= MAX_VERIFY_ATTEMPTS) {
+      throw new AppError(
+        'Maximum verification attempts reached',
+        400,
+        new OTPErrorDetails({
+          type: 'FAILED_ATTEMPT',
+          remainingAttempts: 0,
+          requestNewOtp: true,
+        })
+      );
+    }
+
     try {
       const hashedOTP = hashOTP(OTP);
 
