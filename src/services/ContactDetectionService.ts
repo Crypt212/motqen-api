@@ -14,11 +14,9 @@ export default class ContactDetectionService {
       if (!message.content || message.type !== 'TEXT') return;
 
       const detectionMatches = detectContactInfo(message.content);
-
       if (detectionMatches.length > 0) {
         const reasons = Array.from(new Set(detectionMatches.map((m) => m.type)));
         const matchTexts = detectionMatches.map((m) => m.match);
-
         // Insert exactly one FlaggedMessage with multiple reasons
         await this.flaggedMessageRepository.create({
           flaggedMessage: {

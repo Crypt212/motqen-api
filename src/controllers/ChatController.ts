@@ -6,8 +6,9 @@
 import SuccessResponse from '../responses/successResponse.js';
 import AppError from '../errors/AppError.js';
 import { asyncHandler } from '../types/asyncHandler.js';
-import { chatService } from '../state.js';
+import { chatService, conversationRepository } from '../state.js';
 import { matchedData } from 'express-validator';
+import { IDType } from 'src/repositories/interfaces/Repository.js';
 
 /**
  * POST /api/chat/conversations
@@ -52,7 +53,8 @@ export const getConversations = asyncHandler(async (req, res) => {
  */
 export const getMessages = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const { conversationId, limit, after } = matchedData(req, { includeOptionals: true });
+  const { limit, after } = matchedData(req, { includeOptionals: true });
+  const conversationId = req.params.conversationId as string;
 
   const messages = await chatService.getMessages({
     conversationId,
@@ -73,12 +75,16 @@ export const getUnreadSummary = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
   const { page, limit, sortBy, sortOrder } = matchedData(req, { includeOptionals: true });
 
-  const conversations = await chatService.getConversations({
+  const conversations = await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
     userId,
+    filter:{
+      
+    },
     pagination: { page, limit },
     sort: { sortBy, sortOrder },
   });
-  const unread = conversations.conversations.filter((c) => {
+
+  const unread = conversations.conversationParticipantsWithMessages.filter((c) => {
     const myParticipant = c.participants.find((p) => p.userId === userId);
     const unreadCount = c.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0);
     return unreadCount > 0;
@@ -113,8 +119,8 @@ export const getMissedMessages = asyncHandler(async (req, res) => {
  * Requires authenticated user who is a participant in the conversation.
  */
 export const sendImageMessage = asyncHandler(async (req, res) => {
-  const userId = req.userState.userId;
-  const { conversationId } = matchedData(req, { includeOptionals: true });
+  const userId = req.userState.userId as IDType;
+  const conversationId  = req.params.conversationId as IDType;
   const file = req.file;
   if (!file) {
     throw new AppError('No image file provided. Upload a file under the "image" field', 400);

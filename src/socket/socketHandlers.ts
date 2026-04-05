@@ -85,12 +85,12 @@ export function registerSocketHandlers(
   // ─── send_message ───────────────────────────────────────────────────────────
   socket.on('send_message', async ({ conversationId, content, type = 'TEXT', localId }, ack) => {
     try {
-if (type !== 'TEXT') {
-  if (typeof ack === 'function') {
-    ack({ ok: false, error: 'Invalid message type' });
-  }
-  return;
-}
+      if (type !== 'TEXT') {
+        if (typeof ack === 'function') {
+          ack({ ok: false, error: 'Invalid message type' });
+        }
+        return;
+      }
 
       // 1. DB-based participant validation (authoritative)
       await chatService.validateParticipant({ conversationId, userId });
@@ -110,7 +110,7 @@ if (type !== 'TEXT') {
 
       // Fire and forget: Non-blocking contact detection
       setImmediate(() => {
-        contactDetectionService.analyzeAndFlagMessage(message).catch((err) => {
+        contactDetectionService.analyzeAndFlagMessage(message).then((data)=>console.log(data)).catch((err) => {
           logger.error('[socket] Contact detection failed', err);
         });
       });
@@ -273,9 +273,22 @@ if (type !== 'TEXT') {
         await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
           userId,
           filter: {},
+          pagination: { page: 1, limit: 10 }
         });
       const conversationIds = convs.conversationParticipantsWithMessages.map((c) => c.id);
       void presence.leaveAllChats({ userId, socketId: socket.id, conversationIds });
+
+      // 2b. Emit partner_offline to all active online partners using Promise.all
+      await Promise.all(
+        convs.conversationParticipantsWithMessages.map(async (conv) => {
+          const partnerId = getPartnerId(conv as ConversationWithParticipantsAndMessages, userId);
+          if (!partnerId) return;
+          const isPartnerOnline = await presence.isOnline({ userId: partnerId });
+          if (isPartnerOnline) {
+            io.to(`user:${partnerId}`).emit('partner_offline', { conversationId: conv.id });
+          }
+        })
+      );
 
       // 3. Check if all devices are now offline
       const remaining = await presence.countSockets({ userId });
