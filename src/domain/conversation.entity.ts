@@ -62,3 +62,16 @@ export type Message = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type GetConversations =  {
+  id: IDType,
+  messageCounter: number,
+  unreadCount: number,
+  lastMessage: Message | null,
+  partner: User | null,
+  partnerLastReceivedMessageNumber: number,
+  partnerLastReadMessageNumber: number,
+  createdAt: Date,
+  updatedAt: Date,
+};
+

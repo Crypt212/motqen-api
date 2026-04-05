@@ -18,6 +18,7 @@ import {
   Conversation,
   ConversationParticipant,
   ConversationWithParticipantsAndMessages,
+  GetConversations
 } from '../domain/conversation.entity.js';
 import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../types/query.js';
@@ -118,7 +119,7 @@ export default class ChatService extends Service {
     sort: SortOptions<ConversationWithParticipantsAndMessages>;
   }): Promise<
     PaginatedResultMeta & {
-      conversations: ConversationWithParticipantsAndMessages[];
+      conversations: GetConversations[];
     }
   > {
     const { userId, pagination, sort } = params;
@@ -162,7 +163,7 @@ export default class ChatService extends Service {
       });
 
       return {
-        conversations: conversations as unknown as ConversationWithParticipantsAndMessages[],
+        conversations: conversations as unknown as GetConversations[],
         page: convs.page,
         limit: convs.limit,
         count: convs.count,
@@ -336,6 +337,7 @@ export default class ChatService extends Service {
     limit: number;
   }): Promise<Message[]> {
     const { conversationId, userId } = params;
+    console.log(params)
     const after = params.after ?? 0;
     const limit = params.limit ?? 30;
     return tryCatch(async () => {
