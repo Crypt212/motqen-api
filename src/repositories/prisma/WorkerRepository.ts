@@ -71,7 +71,7 @@ export default class WorkerProfileRepository
       const count = await this.prismaClient.workerProfile.count({
         where: workerFilter,
       });
-      return count > 0;
+      return count >= 0;
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'exists');
     }
