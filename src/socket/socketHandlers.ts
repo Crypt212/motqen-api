@@ -110,9 +110,12 @@ export function registerSocketHandlers(
 
       // Fire and forget: Non-blocking contact detection
       setImmediate(() => {
-        contactDetectionService.analyzeAndFlagMessage(message).then((data)=>console.log(data)).catch((err) => {
-          logger.error('[socket] Contact detection failed', err);
-        });
+        contactDetectionService
+          .analyzeAndFlagMessage(message)
+          .then((data) => console.log(data))
+          .catch((err) => {
+            logger.error('[socket] Contact detection failed', err);
+          });
       });
 
       // 4. Check recipient presence
@@ -150,8 +153,7 @@ export function registerSocketHandlers(
       if (typeof ack === 'function') {
         ack({
           ok: true,
-          messageNumber: message.messageNumber,
-          createdAt: message.createdAt,
+          message,
           delivered,
           read: recipientInChat,
           localId,
@@ -273,7 +275,7 @@ export function registerSocketHandlers(
         await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
           userId,
           filter: {},
-          pagination: { page: 1, limit: 10 }
+          pagination: { page: 1, limit: 10 },
         });
       const conversationIds = convs.conversationParticipantsWithMessages.map((c) => c.id);
       void presence.leaveAllChats({ userId, socketId: socket.id, conversationIds });

@@ -75,14 +75,13 @@ export const getUnreadSummary = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
   const { page, limit, sortBy, sortOrder } = matchedData(req, { includeOptionals: true });
 
-  const conversations = await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
-    userId,
-    filter:{
-      
-    },
-    pagination: { page, limit },
-    sort: { sortBy, sortOrder },
-  });
+  const conversations =
+    await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
+      userId,
+      filter: {},
+      pagination: { page, limit },
+      sort: { sortBy, sortOrder },
+    });
 
   const unread = conversations.conversationParticipantsWithMessages.filter((c) => {
     const myParticipant = c.participants.find((p) => p.userId === userId);
@@ -101,12 +100,15 @@ export const getUnreadSummary = asyncHandler(async (req, res) => {
  */
 export const getMissedMessages = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const { conversationId, after } = matchedData(req, { includeOptionals: true });
+  let {  after , limit} = req.query as { after: string; limit?: string };
+  const conversationId = req.params.conversationId as string;
 
+  console.log('Fetching missed messages for conversation ', conversationId, ' after message number ', after, ' with limit ', limit);
   const messages = await chatService.getMissedMessages({
     conversationId,
     userId,
-    afterMessageNumber: after,
+    afterMessageNumber: parseInt(after,10),
+    limit:limit? Math.max(parseInt(limit, 10), 50) : 50,
   });
 
   new SuccessResponse('Missed messages', { messages }, 200).send(res);
@@ -120,7 +122,7 @@ export const getMissedMessages = asyncHandler(async (req, res) => {
  */
 export const sendImageMessage = asyncHandler(async (req, res) => {
   const userId = req.userState.userId as IDType;
-  const conversationId  = req.params.conversationId as IDType;
+  const conversationId = req.params.conversationId as IDType;
   const file = req.file;
   if (!file) {
     throw new AppError('No image file provided. Upload a file under the "image" field', 400);
@@ -132,5 +134,5 @@ export const sendImageMessage = asyncHandler(async (req, res) => {
     imageBuffer: file.buffer,
   });
 
-  new SuccessResponse('Image message sent', { message }, 201).send(res);
+  new SuccessResponse('Image message sent', message, 201).send(res);
 });

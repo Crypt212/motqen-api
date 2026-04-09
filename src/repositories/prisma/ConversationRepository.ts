@@ -183,6 +183,7 @@ export default class ConversationRepository extends Repository implements IConve
       return {
         conversationParticipantsWithMessages: conversations.map((c) => ({
           ...this.toDomain(c),
+          LastMessage: c.messages && c.messages.length > 0 ? { content: c.messages[0].content ,type: c.messages[0].type} : undefined,
           participants: c.participants.map((p) => ({
             ...p,
             user: p.user

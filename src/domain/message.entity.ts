@@ -2,6 +2,7 @@ import { $Enums } from '../generated/prisma/client.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { FieldTypeDefinition } from '../types/query.js';
 import { FilterFromDescriptor } from '../schemas/common.js';
+import { User } from '../../domain/user.entity.js';
 
 export type MessageType = $Enums.MessageType;
 export type Message = {
@@ -13,14 +14,9 @@ export type Message = {
   type: MessageType;
   createdAt: Date;
   updatedAt: Date;
-  sender?: {
-    id: IDType;
-    firstName: string;
-    lastName: string;
-    profileImageUrl: string | null;
-  };
+  sender?:  User
 };
-
+  
 export type MessageCreateInput = {
   conversationId: IDType;
   senderId: IDType;

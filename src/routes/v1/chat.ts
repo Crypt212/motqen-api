@@ -491,7 +491,7 @@ chatRouter.get(
     ),
     validateQuery(
       z.object({
-        after: z.int({ message: 'after is required and must be a non-negative integer' }).gte(0),
+        after: z.string({ message: 'after is required and must be a non-negative integer' }),
       })
     ),
   ],
@@ -590,7 +590,7 @@ chatRouter.get(
  *         $ref: '#/components/responses/ValidationError'
  */
 chatRouter.post(
-  '/conversations/:conversationId/messages/image',
+  '/conversations/:conversationId/upload-image',
   [
     validateParams(
       z.object({ conversationId: z.uuid({ message: 'conversationId must be a valid UUID' }) })

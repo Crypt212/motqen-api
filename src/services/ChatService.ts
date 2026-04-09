@@ -153,7 +153,7 @@ export default class ChatService extends Service {
           id: conv.id,
           messageCounter: conv.messageCounter,
           unreadCount,
-          lastMessage: conv.messages ? conv.messages : null,
+          LastMessage: conv.LastMessage,
           partner: partnerParticipant?.user ?? null,
           partnerLastReceivedMessageNumber: partnerParticipant?.lastReceivedMessageNumber ?? 0,
           partnerLastReadMessageNumber: partnerParticipant?.lastReadMessageNumber ?? 0,
@@ -360,8 +360,9 @@ export default class ChatService extends Service {
     conversationId: IDType;
     userId: IDType;
     afterMessageNumber: number;
+    limit: number;
   }): Promise<Message[]> {
-    const { conversationId, userId, afterMessageNumber } = params;
+    const { conversationId, userId, afterMessageNumber , limit} = params;
     return tryCatch(async () => {
       const participant = await this.conversationRepository.findParticipant({
         conversationId,
@@ -372,7 +373,7 @@ export default class ChatService extends Service {
       return this.messageRepository.findPage({
         conversationId,
         after: afterMessageNumber,
-        limit: 100,
+        limit: limit ?? 100, 
       });
     });
   }
