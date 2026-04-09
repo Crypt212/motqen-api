@@ -37,6 +37,7 @@ export const createMockWorkerProfileRepository = (): {
 } => ({
   exists: vi.fn(),
   find: vi.fn(),
+  findExploreWorkerById: vi.fn(),
   findOnline: vi.fn(),
   findWorkGovernments: vi.fn(),
   findVerification: vi.fn(),

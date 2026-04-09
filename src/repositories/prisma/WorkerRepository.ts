@@ -1,4 +1,5 @@
 import IWorkerProfileRepository from '../interfaces/WorkerRepository.js';
+import { logger } from '../../libs/winston.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { IDType } from '../interfaces/Repository.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
@@ -19,6 +20,16 @@ import {
   PrismaClient,
   VerificationStatus,
 } from '../../generated/prisma/client.js';
+import type { ExploreWorkerPublicDetail } from '../../types/exploreWorker.js';
+
+export type { ExploreWorkerPublicDetail };
+
+type ExploreWorkerPrismaRow = Prisma.WorkerProfileGetPayload<{
+  include: {
+    user: true;
+    portfolio: { include: { projectImages: true } };
+  };
+}>;
 
 export default class WorkerProfileRepository
   extends Repository
@@ -79,6 +90,79 @@ export default class WorkerProfileRepository
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'find');
     }
+  }
+
+  /**
+   * Public explore profile: approved worker, active user, with user / portfolio / project images.
+   * Missing relations are returned as null; arrays are never undefined.
+   */
+  async findExploreWorkerById(workerProfileId: string): Promise<ExploreWorkerPublicDetail | null> {
+    try {
+      const record = await this.prismaClient.workerProfile.findFirst({
+        where: {
+          id: workerProfileId,
+          user: { status: AccountStatus.ACTIVE },
+        },
+        include: {
+          user: true,
+          portfolio: {
+            include: {
+              projectImages: { orderBy: { createdAt: 'asc' } },
+            },
+          },
+        },
+      });
+
+      if (!record) return null;
+      return this.mapExploreWorkerPublicDetail(record as ExploreWorkerPrismaRow);
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'findExploreWorkerById');
+    }
+  }
+
+  private mapExploreWorkerPublicDetail(row: ExploreWorkerPrismaRow): ExploreWorkerPublicDetail {
+    const nullable = <T>(v: T | null | undefined): T | null => (v == null ? null : v);
+
+    return {
+      id: row.id,
+      userId: row.userId,
+      portfolioId: nullable(row.portfolioId),
+      experienceYears: row.experienceYears,
+      isInTeam: row.isInTeam,
+      acceptsUrgentJobs: row.acceptsUrgentJobs,
+      bio: nullable(row.bio),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      user: {
+        id: row.user.id,
+        phoneNumber: row.user.phoneNumber,
+        firstName: row.user.firstName,
+        middleName: row.user.middleName,
+        lastName: row.user.lastName,
+        profileImageUrl: nullable(row.user.profileImageUrl),
+        status: row.user.status,
+        role: row.user.role,
+        isOnline: row.user.isOnline,
+        createdAt: row.user.createdAt,
+        updatedAt: row.user.updatedAt,
+      },
+      portfolio: row.portfolio
+        ? {
+            id: row.portfolio.id,
+            workerProfileId: row.portfolio.workerProfileId,
+            description: nullable(row.portfolio.description),
+            createdAt: row.portfolio.createdAt,
+            updatedAt: row.portfolio.updatedAt,
+            projectImages: (row.portfolio.projectImages ?? []).map((img) => ({
+              id: img.id,
+              portfolioId: img.portfolioId,
+              imageUrl: img.imageUrl,
+              createdAt: img.createdAt,
+              updatedAt: img.updatedAt,
+            })),
+          }
+        : null,
+    };
   }
 
   async findOnline({
@@ -623,51 +707,59 @@ export default class WorkerProfileRepository
     const normalizedPage = Math.max(parsedPage || 1, 1);
     const skip = (normalizedPage - 1) * normalizedLimit;
 
-    const whereClause: {
-      verification: {
-        status: VerificationStatus;
-      };
-      user: {
-        status: AccountStatus;
-        isOnline?: boolean;
-      };
-      chosenSpecializations?: {
-        some: unknown;
-      };
-      acceptsUrgentJobs?: boolean;
-      workGovernments?: unknown;
-    } = {
-      verification: { status: VerificationStatus.APPROVED },
+    const whereClause: Prisma.WorkerProfileWhereInput = {
+      // verification: { status: VerificationStatus.APPROVED },
       user: { status: AccountStatus.ACTIVE },
     };
 
-    try {
-      if (availability !== undefined && availability !== null) {
-        whereClause.user.isOnline = availability === true;
-      }
+    if (availability !== undefined && availability !== null) {
+      whereClause.user = {
+        status: AccountStatus.ACTIVE,
+        isOnline: availability === true,
+      };
+    }
 
+    // Main spec: match stored specializationId OR any chosen sub under that main (covers inconsistent rows).
+    // Sub spec: require the sub row and that the sub belongs to the requested main specialization.
+    if (subSpecializationId) {
       whereClause.chosenSpecializations = {
         some: {
-          specializationId,
-          ...(subSpecializationId ? { subSpecializationId } : {}),
+          subSpecializationId,
+          subSpecialization: {
+            mainSpecializationId: specializationId,
+          },
         },
       };
+    } else {
+      whereClause.chosenSpecializations = {
+        some: {
+          OR: [
+            { specializationId },
+            { subSpecialization: { mainSpecializationId: specializationId } },
+          ],
+        },
+      };
+    }
 
-      if (governmentIds.length > 0) {
-        whereClause.workGovernments = {
-          some: {
-            id: {
-              in: governmentIds,
-            },
+    if (governmentIds.length > 0) {
+      whereClause.workGovernments = {
+        some: {
+          id: {
+            in: governmentIds,
           },
-        };
-      }
-    } catch (error: unknown) {
-      handlePrismaError(error, 'searchWorkers');
+        },
+      };
     }
 
     if (acceptsUrgentJobs === true) {
       whereClause.acceptsUrgentJobs = true;
+    }
+
+    const searchDebug = process.env.WORKER_SEARCH_DEBUG === 'true';
+    if (searchDebug) {
+      logger.info('[workerSearch] prisma whereClause', {
+        whereClause: JSON.parse(JSON.stringify(whereClause)) as Record<string, unknown>,
+      });
     }
 
     // Get total count
@@ -781,6 +873,13 @@ export default class WorkerProfileRepository
       completedRowsPromise,
     ]);
 
+    if (searchDebug) {
+      logger.info('[workerSearch] raw findMany rows', {
+        count: workers.length,
+        workerProfileIds: workers.map((w) => w.id),
+      });
+    }
+
     const nearestDistanceMap = new Map(
       nearestRows
         .filter((row) => typeof row.distanceKm === 'number' && Number.isFinite(row.distanceKm))
@@ -852,6 +951,15 @@ export default class WorkerProfileRepository
     );
 
     const totalPages = Math.ceil(total / normalizedLimit);
+
+    if (searchDebug) {
+      logger.info('[workerSearch] formatted page slice', {
+        page: normalizedPage,
+        limit: normalizedLimit,
+        returnedCount: data.length,
+        total,
+      });
+    }
 
     return {
       workers: data,

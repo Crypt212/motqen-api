@@ -164,7 +164,7 @@ model ProjectImage {
 
 model ChosenSpecialization {
   workerProfileId     String
-  subSpecializationId String @unique
+  subSpecializationId String
   specializationId    String
 
   updatedAt DateTime @updatedAt

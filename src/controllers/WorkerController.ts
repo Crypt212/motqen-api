@@ -4,6 +4,7 @@
  */
 
 import AppError from '../errors/AppError.js';
+import { logger } from '../libs/winston.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { userRepository, workerProfileRepository } from '../state.js';
 import type { Prisma } from '../generated/prisma/client.js';
@@ -108,6 +109,10 @@ function parseFlagedFilters(value: unknown): Set<FlagedFilter> {
 export const searchWorkers = asyncHandler(async (req, res) => {
   const query = req.query as Partial<ExploreSearchDTO> & Record<string, unknown>;
 
+  if (process.env.WORKER_SEARCH_DEBUG === 'true') {
+    logger.info('[workerSearch] incoming query', { query });
+  }
+
   const { specializationId, subSpecializationId, governments, flaged, page, limit } = query;
 
   const specialization = getSingleQueryValue(specializationId);
@@ -207,7 +212,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
 export const getWorkerById = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
 
-  const worker = await workerProfileRepository.find({ workerFilter: { id } });
+  const worker = await workerProfileRepository.findExploreWorkerById(id);
 
   if (!worker) {
     throw new AppError('Worker not found or not approved', 404);

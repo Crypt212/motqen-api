@@ -31,6 +31,7 @@ import {
   authenticateRegister,
   isActive,
 } from '../../middlewares/authMiddleware.js';
+// import { validateBody } from 'twilio/lib/webhooks/webhooks.js';
 import { validateBody } from '../../middlewares/validateRequest.js';
 
 const authRouter = Router();
@@ -314,16 +315,14 @@ authRouter.post(
   ]),
   authenticateRegister,
   validateBody(RegisterWorkerSchema),
-  registerWorker
+  generateAccessToken
 );
 /**
  * @swagger
  * /auth/login:
  *   post:
  *     summary: Login
- *     description: |
- *       Authenticates an existing user using a **login token** (from OTP verify) and creates a session.
- *       Use the token returned by `/auth/otp/verify` (tokenType: "login") as `Bearer <token>` in the Authorization header.
+ *     description: Authenticates a user and returns access and refresh tokens.
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
