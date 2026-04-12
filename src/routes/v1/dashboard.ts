@@ -151,7 +151,7 @@ usersRouter.put(
  *                     data:
  *                       type: object
  *                       properties:
- *                         clientProfile:
+ *                         workerProfile:
  *                           $ref: '#/components/schemas/WorkerProfile'
  *       400:
  *         $ref: '#/components/responses/BadRequest'

@@ -7,6 +7,7 @@ import { Router } from 'express';
 import { getWorkerById, searchWorkers } from '../../controllers/WorkerController.js';
 import { ExploreSearchSchema, ExploreWorkerIdParamsSchema } from '../../schemas/workers.js';
 import { validateParams, validateQuery } from '../../middlewares/validateRequest.js';
+import { authenticateAccess } from 'src/middlewares/authMiddleware.js';
 
 const workersRouter = Router();
 
@@ -14,14 +15,18 @@ const workersRouter = Router();
  * @swagger
  * /workers:
  *   get:
- *     summary: Explore workers with flaged filters
+ *     summary: Explore workers with supported search filters
  *     description: |
  *       Returns a paginated list of approved workers filtered by:
  *       - specializationId (required)
  *       - subSpecializationId (optional)
- *       - governments (optional multi-select)
+ *       - governmentId (optional)
+ *       - cityId (optional)
+ *       - latitude & longitude (optional, for nearest sorting)
  *       - flaged (optional front flags)
  *     tags: [Workers]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - name: specializationId
  *         in: query
@@ -37,17 +42,34 @@ const workersRouter = Router();
  *           type: string
  *           format: uuid
  *         description: Sub-specialization base filter.
- *       - name: governments
+ *       - name: governmentId
  *         in: query
  *         required: false
  *         schema:
- *           type: array
- *           items:
- *             type: string
- *             format: uuid
- *         style: form
- *         explode: false
- *         description: Government IDs list. Use comma-separated values or repeated key.
+ *           type: string
+ *           format: uuid
+ *         description: Government UUID filter.
+ *       - name: cityId
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: City UUID filter.
+ *       - name: location[latitude]
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: number
+ *           format: float
+ *         description: Customer latitude for nearest sorting. If not provided, will try to use user's main location.
+ *       - name: location[longitude]
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: number
+ *           format: float
+ *         description: Customer longitude for nearest sorting. If not provided, will try to use user's main location.
  *       - name: flaged
  *         in: query
  *         required: false
@@ -55,15 +77,15 @@ const workersRouter = Router();
  *           type: array
  *           items:
  *             type: string
- *             enum: [availbilty, nearest, acceptUrgentJobs, heasetrated]
+ *             enum: [availability, nearest, acceptUrgentJobs, highestRated]
  *         style: form
  *         explode: false
  *         description: |
  *           Front flags collection.
- *           availbilty => availability filter (online workers)
+ *           availability => availability filter (online workers)
  *           nearest => nearest-first sorting using PostgreSQL distance calculation
  *           acceptUrgentJobs => only workers accepting urgent jobs
- *           heasetrated => highest-rated sorting
+ *           highestRated => sort by highest rating
  *       - name: page
  *         in: query
  *         required: false
@@ -115,8 +137,10 @@ const workersRouter = Router();
  *                 totalPages: 5
  *       400:
  *         $ref: '#/components/responses/BadRequest'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  */
-workersRouter.get('/', validateQuery(ExploreSearchSchema), searchWorkers);
+workersRouter.get('/',authenticateAccess,validateQuery(ExploreSearchSchema), searchWorkers);
 
 /**
  * @swagger
@@ -127,6 +151,8 @@ workersRouter.get('/', validateQuery(ExploreSearchSchema), searchWorkers);
  *       Returns the full public profile for the selected worker card.
  *       Only approved workers with active accounts are returned.
  *     tags: [Workers]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/UUIDPathId'
  *       - $ref: '#/components/parameters/DeviceFingerprint'
@@ -147,7 +173,7 @@ workersRouter.get('/', validateQuery(ExploreSearchSchema), searchWorkers);
  *                 - type: object
  *                   properties:
  *                     data:
- *                       $ref: '#/components/schemas/WorkerProfile'
+ *                       $ref: '#/components/schemas/WorkerDetailResponse'
  *             example:
  *               status: success
  *               message: Worker retrieved successfully
@@ -158,9 +184,11 @@ workersRouter.get('/', validateQuery(ExploreSearchSchema), searchWorkers);
  *                 isInTeam: false
  *                 acceptsUrgentJobs: true
  *                 bio: متخصص في السباكة لمدة 5 سنوات
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
-workersRouter.get('/:id', validateParams(ExploreWorkerIdParamsSchema), getWorkerById);
+workersRouter.get('/:id', authenticateAccess, validateParams(ExploreWorkerIdParamsSchema), getWorkerById);
 
 export default workersRouter;

@@ -7,4 +7,12 @@ package-lock.json
 **/coverage
 **/logs
 
+prisma/migrations
 src/generated
+
+.github
+.agent
+.specify
+.vscode
+specs
+docs

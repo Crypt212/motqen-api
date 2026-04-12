@@ -20,7 +20,7 @@ const options = {
     },
     servers: [
       {
-        url: `http://localhost:${environment.backend.port || 3000}/api/${environment.api.version || 'v1'}`,
+        url: `/api/${environment.api.version || 'v1'}`,
         description: `API version ${environment.api.version || 'v1'}`,
       },
     ],
@@ -143,7 +143,7 @@ const options = {
         RegisterClient: {
           type: 'object',
           description:
-            'Multipart form-data. Fields `userData` and `clientProfile` are JSON strings.',
+            'Multipart form-data. Field `userData` is a JSON string containing user info and location.',
           properties: {
             personal_image: {
               type: 'string',
@@ -152,20 +152,53 @@ const options = {
             },
             userData: {
               type: 'string',
-              description: 'JSON string containing user data',
+              description: 'JSON string containing user data and location (with long/lat)',
               example:
-                '{"firstName":"أحمد","middleName":"علي","lastName":"محمد","governmentId":"uuid","city":"المنصورة"}',
+                '{"firstName":"أحمد","middleName":"علي","lastName":"محمد","location":{"governmentId":"123e4567-e89b-12d3-a456-426614174000","cityId":"123e4567-e89b-12d3-a456-426614174001","address":"123 شارع الرئيسي","addressNotes":"بجوار المسجد","long":31.2357,"lat":30.0444}}',
             },
-            clientProfile: {
+          },
+        },
+        Location: {
+          type: 'object',
+          required: ['governmentId', 'cityId', 'address', 'long', 'lat'],
+          properties: {
+            governmentId: {
               type: 'string',
-              description: 'JSON string containing client profile data',
-              example: '{"address":"123 Main St","addressNotes":"Near the park"}',
+              format: 'uuid',
+              example: '123e4567-e89b-12d3-a456-426614174000',
+              description: 'Government UUID',
+            },
+            cityId: {
+              type: 'string',
+              format: 'uuid',
+              example: '123e4567-e89b-12d3-a456-426614174001',
+              description: 'City UUID',
+            },
+            address: {
+              type: 'string',
+              example: '123 شارع الرئيسي، المنصورة',
+              description: 'Full address (required)',
+            },
+            addressNotes: {
+              type: 'string',
+              example: 'بجوار المسجد الكبير',
+              description: 'Optional address notes',
+            },
+            long: {
+              type: 'number',
+              example: 31.2357,
+              description: 'Longitude coordinate (-180 to 180)',
+            },
+            lat: {
+              type: 'number',
+              example: 30.0444,
+              description: 'Latitude coordinate (-90 to 90)',
             },
           },
         },
         RegisterClientUserData: {
           type: 'object',
-          required: ['firstName', 'middleName', 'lastName', 'governmentId', 'city'],
+          required: ['firstName', 'middleName', 'lastName', 'location'],
           properties: {
             firstName: {
               type: 'string',
@@ -182,16 +215,8 @@ const options = {
               example: 'محمد',
               description: 'Last name (2-50 chars)',
             },
-            governmentId: {
-              type: 'string',
-              format: 'uuid',
-              example: '123e4567-e89b-12d3-a456-426614174000',
-              description: 'Government UUID',
-            },
-            city: {
-              type: 'string',
-              example: 'المنصورة',
-              description: 'City name (2-50 chars)',
+            location: {
+              $ref: '#/components/schemas/Location',
             },
           },
         },
@@ -214,7 +239,7 @@ const options = {
         RegisterWorker: {
           type: 'object',
           description:
-            'Multipart form-data. Fields `userData` and `workerProfile` are JSON strings. Three image files are required.',
+            'Multipart form-data. Fields `userData` and `workerProfile` are JSON strings. Three image files are required. userData must include location with long/lat.',
           properties: {
             personal_image: {
               type: 'string',
@@ -233,9 +258,9 @@ const options = {
             },
             userData: {
               type: 'string',
-              description: 'JSON string containing user data',
+              description: 'JSON string containing user data and location (with long/lat)',
               example:
-                '{"firstName":"أحمد","middleName":"علي","lastName":"محمد","governmentId":"uuid","city":"المنصورة"}',
+                '{"firstName":"أحمد","middleName":"علي","lastName":"محمد","location":{"governmentId":"123e4567-e89b-12d3-a456-426614174000","cityId":"123e4567-e89b-12d3-a456-426614174001","address":"123 شارع الرئيسي","addressNotes":"بجوار المسجد","long":31.2357,"lat":30.0444}}',
             },
             workerProfile: {
               type: 'string',
@@ -381,6 +406,11 @@ const options = {
               items: { type: 'string', format: 'uuid' },
               description: 'Government UUIDs where worker can work (optional)',
             },
+            bio: {
+              type: 'string',
+              example: 'متخصص في السباكة لمدة 5 سنوات',
+              description: 'Worker bio (optional)',
+            },
           },
         },
         CreateWorkerProfile: {
@@ -490,7 +520,7 @@ const options = {
             lat: {
               type: 'number',
               example: 30.0444,
-              description: 'Latitude coordinate',
+              description: 'Latitude coordinate (stored as PostGIS geography)',
             },
           },
         },
@@ -516,7 +546,7 @@ const options = {
             lat: {
               type: 'number',
               example: 29.9592,
-              description: 'Latitude coordinate',
+              description: 'Latitude coordinate (stored as PostGIS geography)',
             },
             governmentId: {
               type: 'string',
@@ -633,6 +663,11 @@ const options = {
               enum: ['USER', 'ADMIN'],
               example: 'USER',
             },
+            isOnline: {
+              type: 'boolean',
+              example: true,
+              description: 'Current online status',
+            },
           },
         },
         WorkerProfile: {
@@ -662,6 +697,19 @@ const options = {
               type: 'boolean',
               example: false,
               description: 'Admin approval status',
+            },
+            bio: {
+              type: 'string',
+              nullable: true,
+              example: 'متخصص في السباكة لمدة 5 سنوات',
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
             },
           },
         },
@@ -1179,64 +1227,41 @@ const options = {
         },
         WorkerDetailResponse: {
           type: 'object',
-          description: 'Full public profile of a worker',
+          description: 'Full public profile of a worker including user and portfolio data',
           properties: {
-            workerId: {
-              type: 'string',
-              format: 'uuid',
-              example: '123e4567-e89b-12d3-a456-426614174000',
-            },
-            name: {
-              type: 'string',
-              example: 'أحمد علي محمد',
-            },
-            profileImage: {
-              type: 'string',
-              nullable: true,
-              example: 'https://res.cloudinary.com/.../avatar.jpg',
-            },
-            specializations: {
-              type: 'array',
-              items: { type: 'string' },
-              example: ['تركيب الأنابيب', 'إصلاح الأنابيب'],
-              description: 'List of specialization names',
-            },
-            experienceYears: {
-              type: 'integer',
-              example: 5,
-              description: 'Years of experience',
-            },
-            area: {
-              type: 'string',
-              example: 'القاهرة',
-              description: 'Primary work area',
-            },
-            workGovernments: {
-              type: 'array',
-              items: { type: 'string' },
-              example: ['القاهرة', 'الجيزة'],
-              description: 'List of work governments/areas',
-            },
-            badges: {
-              type: 'array',
-              items: { $ref: '#/components/schemas/WorkerBadge' },
-              description: 'Achievement badges',
-            },
-            verificationStatus: {
-              type: 'string',
-              enum: ['PENDING', 'APPROVED', 'REJECTED'],
-              example: 'APPROVED',
-              description: 'Verification status',
-            },
-            bio: {
-              type: 'string',
-              example: 'متخصص في السباكة لمدة 5 سنوات',
-              description: 'Worker bio',
-            },
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            portfolioId: { type: 'string', format: 'uuid', nullable: true },
+            experienceYears: { type: 'integer' },
+            isInTeam: { type: 'boolean' },
+            acceptsUrgentJobs: { type: 'boolean' },
+            bio: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+            user: { $ref: '#/components/schemas/User' },
             portfolio: {
-              type: 'array',
-              items: { $ref: '#/components/schemas/WorkerPortfolioProject' },
-              description: 'Portfolio projects',
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                workerProfileId: { type: 'string', format: 'uuid' },
+                description: { type: 'string', nullable: true },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' },
+                projectImages: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string', format: 'uuid' },
+                      portfolioId: { type: 'string', format: 'uuid' },
+                      imageUrl: { type: 'string' },
+                      createdAt: { type: 'string', format: 'date-time' },
+                      updatedAt: { type: 'string', format: 'date-time' },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -1401,7 +1426,7 @@ const options = {
       },
     ],
   },
-  apis: ['./dist/routes/v1/**/*.{ts,js}'],
+  apis: ['./src/routes/v1/**/*.ts', './dist/routes/v1/**/*.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
