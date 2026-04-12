@@ -10,8 +10,8 @@ import {
   CityFilter,
 } from '../../domain/government.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
-import { isEmptyFilter } from './utils.js';
-import { PaginationOptions, SortOptions, PaginatedResultMeta } from '../../types/query.js';
+import { isEmptyFilter, paginateResult } from './utils.js';
+import { PaginationOptions, SortOptions, PaginatedResult } from '../../types/query.js';
 import { PrismaClient } from '../../generated/prisma/client.js';
 
 export default class GovernmentRepository extends Repository implements IGovernmentRepository {
@@ -61,7 +61,7 @@ export default class GovernmentRepository extends Repository implements IGovernm
     filter: GovernmentFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Government>;
-  }): Promise<PaginatedResultMeta & { governments: Government[] }> {
+  }): Promise<PaginatedResult<{ governments: Government[] }>> {
     try {
       const { filter, pagination, sort } = params;
 
@@ -80,13 +80,10 @@ export default class GovernmentRepository extends Repository implements IGovernm
         orderBy: sortQuery,
       });
 
-      return {
-        governments: governments.map((g) => this.toDomain(g)),
-        ...paginationResult,
-        count: governments.length,
-        hasNext: paginationResult.page < paginationResult.totalPages,
-        hasPrev: paginationResult.page > 1,
-      };
+      return paginateResult(
+        { governments: governments.map((g) => this.toDomain(g)) },
+        paginationResult
+      );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findMany');
     }
@@ -109,7 +106,7 @@ export default class GovernmentRepository extends Repository implements IGovernm
     filter: CityFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<City>;
-  }): Promise<PaginatedResultMeta & { cities: City[] }> {
+  }): Promise<PaginatedResult<{ cities: City[] }>> {
     try {
       const { filter, pagination, sort } = params;
 
@@ -128,13 +125,17 @@ export default class GovernmentRepository extends Repository implements IGovernm
         orderBy: sortQuery,
       });
 
-      return {
-        cities: cities.map((c) => this.toDomainCity(c)),
-        ...paginationResult,
-        count: cities.length,
-        hasNext: paginationResult.page < paginationResult.totalPages,
-        hasPrev: paginationResult.page > 1,
-      };
+      return paginateResult(
+        {
+          cities: cities.map((c) => this.toDomainCity(c)),
+        },
+        {
+          ...paginationResult,
+          count: cities.length,
+          hasNext: paginationResult.page < paginationResult.totalPages,
+          hasPrev: paginationResult.page > 1,
+        }
+      );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findCities');
     }

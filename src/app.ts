@@ -11,6 +11,8 @@ import swaggerUi from 'swagger-ui-express';
 import { verifyDeviceId } from './middlewares/authMiddleware.js';
 import { asyncHandler } from './types/asyncHandler.js';
 import { generateOpenAPISpec } from './libs/openapi.js';
+import environment from './configs/environment.js';
+import { env } from 'node:process';
 
 const initApp = async () => {
   const app = express();
@@ -18,7 +20,8 @@ const initApp = async () => {
   app.use(helmet());
   app.use(
     cors({
-      origin: '*',
+      origin: environment.nodeEnv === 'development' ? '*' : environment.frontend.url,
+      credentials: true,
     })
   );
   app.use(express.urlencoded({ extended: true }));

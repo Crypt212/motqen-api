@@ -13,6 +13,7 @@ import {
   UnreadConversationListResponseSchema,
   MessageListResponseSchema,
 } from '../../../schemas/responses.js';
+import { createResponseDoc } from 'src/docs/common.js';
 
 export default function registerChatDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────
@@ -27,20 +28,21 @@ export default function registerChatDocs(registry: OpenAPIRegistry) {
     description:
       'Idempotent — returns the existing conversation if one already exists for the given Worker + Client pair. Creates a new one otherwise. Only Worker ↔ Client pairs are allowed. A user cannot start a conversation with themselves.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: { 'application/json': { schema: CreateConversationSchema } },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Conversation ready (existing or newly created)',
         content: { 'application/json': { schema: ConversationResponseSchema } },
       },
-      400: { description: 'Bad Request — invalid workerId, clientId, or self-conversation' },
-      401: { description: 'Unauthorized' },
-      422: { description: 'Validation Error' },
-    },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      validationErrorResponse: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -55,16 +57,17 @@ export default function registerChatDocs(registry: OpenAPIRegistry) {
     description:
       'Returns all conversations the authenticated user participates in, ordered by most recently updated. Each item includes unreadCount, lastMessage preview, and partner public info. This is the app-open HTTP sync endpoint.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       query: ConversationListQuerySchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'List of conversations with unread counts',
         content: { 'application/json': { schema: ConversationListResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-    },
+      unauthorizedResponse: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -79,16 +82,17 @@ export default function registerChatDocs(registry: OpenAPIRegistry) {
     description:
       'Returns only conversations with unread messages (unreadCount > 0). Same shape as GET /conversations but filtered. Use for app-open badge count or notification summary.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       query: UnreadConversationQuerySchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Conversations with at least one unread message',
         content: { 'application/json': { schema: UnreadConversationListResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-    },
+      unauthorizedResponse: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -103,20 +107,21 @@ export default function registerChatDocs(registry: OpenAPIRegistry) {
     description:
       'Returns a page of messages in ascending order (oldest first). Uses messageNumber as the cursor for stable pagination. Only accessible by participants of the conversation.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: ConversationIdParamsSchema,
       query: MessageListQuerySchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Page of messages in ascending order',
         content: { 'application/json': { schema: MessageListResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Not a participant in this conversation' },
-      404: { description: 'Not Found' },
-      422: { description: 'Validation Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      validationErrorResponse: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -131,19 +136,20 @@ export default function registerChatDocs(registry: OpenAPIRegistry) {
     description:
       'Called by the client after receiving a `missed_messages_available` socket event on reconnect. Returns all messages with messageNumber > after (up to 100).',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: ConversationIdParamsSchema,
       query: MissedMessagesQuerySchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Missed messages since `after` (max 100, ascending order)',
         content: { 'application/json': { schema: MessageListResponseSchema } },
       },
-      400: { description: '`after` query param is missing or not a valid integer' },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Not a participant in this conversation' },
-      422: { description: 'Validation Error' },
-    },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
+    }),
   });
 }

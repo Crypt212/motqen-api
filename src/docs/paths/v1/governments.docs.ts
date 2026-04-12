@@ -1,5 +1,4 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
-import { z } from '../../../libs/zod.js';
 import {
   CreateGovernmentSchema,
   UpdateGovernmentSchema,
@@ -12,6 +11,7 @@ import {
   CityListResponseSchema,
   MessageOnlyResponseSchema,
 } from '../../../schemas/responses.js';
+import { createResponseDoc } from 'src/docs/common.js';
 
 export default function registerGovernmentsDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────
@@ -24,16 +24,17 @@ export default function registerGovernmentsDocs(registry: OpenAPIRegistry) {
     tags: ['Governments'],
     summary: 'Get all governments',
     description: 'Returns a list of all governments. Public endpoint.',
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       query: GovernmentQuerySchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Governments retrieved',
         content: { 'application/json': { schema: GovernmentListResponseSchema } },
       },
-      500: { description: 'Internal Server Error' },
-    },
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -46,18 +47,19 @@ export default function registerGovernmentsDocs(registry: OpenAPIRegistry) {
     tags: ['Governments'],
     summary: 'Get government by ID',
     description: 'Returns a single government by its UUID. Public endpoint.',
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: GovernmentIdParamsSchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Government retrieved',
         content: { 'application/json': { schema: GovernmentResponseSchema } },
       },
-      404: { description: 'Not Found' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      notFoundResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -71,21 +73,22 @@ export default function registerGovernmentsDocs(registry: OpenAPIRegistry) {
     summary: 'Create government (Admin)',
     description: 'Creates a new government. Requires admin access token.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: { 'application/json': { schema: CreateGovernmentSchema } },
       },
     },
-    responses: {
-      201: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Government created',
         content: { 'application/json': { schema: GovernmentResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -99,23 +102,24 @@ export default function registerGovernmentsDocs(registry: OpenAPIRegistry) {
     summary: 'Update government (Admin)',
     description: 'Updates an existing government by UUID. Requires admin access token.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: GovernmentIdParamsSchema,
       body: {
         content: { 'application/json': { schema: UpdateGovernmentSchema } },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Government updated',
         content: { 'application/json': { schema: GovernmentResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      404: { description: 'Not Found' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -129,19 +133,20 @@ export default function registerGovernmentsDocs(registry: OpenAPIRegistry) {
     summary: 'Delete government (Admin)',
     description: 'Deletes a government by UUID. Requires admin access token.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: GovernmentIdParamsSchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Government deleted',
         content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      404: { description: 'Not Found' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -155,18 +160,19 @@ export default function registerGovernmentsDocs(registry: OpenAPIRegistry) {
     summary: 'Get cities by government',
     description: 'Returns all cities under a specific government.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: GovernmentIdParamsSchema,
       query: GovernmentQuerySchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Cities retrieved',
         content: { 'application/json': { schema: CityListResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      404: { description: 'Not Found' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      notFoundResponse: true,
+      internalServerError: true,
+    }),
   });
 }

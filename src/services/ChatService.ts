@@ -21,7 +21,8 @@ import {
 import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
 import prisma from '../libs/database.js';
 import { $Enums } from '../generated/prisma/client.js';
-import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../types/query.js';
+import { PaginatedResult, PaginationOptions, SortOptions } from '../types/query.js';
+import { paginateResult } from '../repositories/prisma/utils.js';
 
 export type ConversationWithMeta = {
   id: string;
@@ -118,9 +119,9 @@ export default class ChatService extends Service {
     pagination: PaginationOptions;
     sort: SortOptions<ConversationWithParticipantsAndMessages>;
   }): Promise<
-    PaginatedResultMeta & {
+    PaginatedResult<{
       conversations: ConversationWithParticipantsAndMessages[];
-    }
+    }>
   > {
     const { userId, pagination, sort } = params;
     return tryCatch(async () => {
@@ -162,16 +163,20 @@ export default class ChatService extends Service {
         };
       });
 
-      return {
-        conversations: conversations as unknown as ConversationWithParticipantsAndMessages[],
-        page: convs.page,
-        limit: convs.limit,
-        count: convs.count,
-        total: convs.total,
-        totalPages: convs.totalPages,
-        hasNext: convs.hasNext,
-        hasPrev: convs.hasPrev,
-      };
+      return paginateResult(
+        {
+          conversations: conversations as unknown as ConversationWithParticipantsAndMessages[],
+        },
+        {
+          page: convs.meta.page,
+          limit: convs.meta.limit,
+          count: convs.meta.count,
+          total: convs.meta.total,
+          totalPages: convs.meta.totalPages,
+          hasNext: convs.meta.hasNext,
+          hasPrev: convs.meta.hasPrev,
+        }
+      );
     });
   }
 

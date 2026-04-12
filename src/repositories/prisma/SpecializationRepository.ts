@@ -2,7 +2,7 @@ import ISpecializationRepository from '../interfaces/SpecializationRepository.js
 import { handlePrismaError, Repository } from './Repository.js';
 import { IDType } from '../interfaces/Repository.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
-import { isEmptyFilter } from './utils.js';
+import { isEmptyFilter, paginateResult } from './utils.js';
 import { PaginationOptions, SortOptions } from '../../types/query.js';
 import {
   Specialization,
@@ -13,7 +13,7 @@ import {
   SubSpecializationCreateInput,
   SubSpecializationFilter,
 } from '../../domain/specialization.entity.js';
-import { PaginatedResultMeta } from '../../types/query.js';
+import { PaginatedResult } from '../../types/query.js';
 import { PrismaClient } from 'src/generated/prisma/client.js';
 
 export default class SpecializationRepository
@@ -71,7 +71,7 @@ export default class SpecializationRepository
     filter: SpecializationFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Specialization>;
-  }): Promise<PaginatedResultMeta & { specializations: Specialization[] }> {
+  }): Promise<PaginatedResult<{ specializations: Specialization[] }>> {
     try {
       const { filter, pagination, sort } = params;
       const total = await this.prismaClient.specialization.count({
@@ -89,13 +89,17 @@ export default class SpecializationRepository
         orderBy: sortQuery,
       });
 
-      return {
-        specializations: specializations.map((s) => this.toDomain(s)),
-        ...paginationResult,
-        count: specializations.length,
-        hasNext: paginationResult.page < paginationResult.totalPages,
-        hasPrev: paginationResult.page > 1,
-      };
+      return paginateResult(
+        {
+          specializations: specializations.map((s) => this.toDomain(s)),
+        },
+        {
+          ...paginationResult,
+          count: specializations.length,
+          hasNext: paginationResult.page < paginationResult.totalPages,
+          hasPrev: paginationResult.page > 1,
+        }
+      );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findMany');
     }
@@ -120,7 +124,7 @@ export default class SpecializationRepository
     filter: SubSpecializationFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<SubSpecialization>;
-  }): Promise<PaginatedResultMeta & { subSpecializations: SubSpecialization[] }> {
+  }): Promise<PaginatedResult<{ subSpecializations: SubSpecialization[] }>> {
     try {
       const { filter, pagination, sort } = params;
       const total = await this.prismaClient.subSpecialization.count({
@@ -138,13 +142,17 @@ export default class SpecializationRepository
         orderBy: sortQuery,
       });
 
-      return {
-        subSpecializations: subSpecializations.map((s) => this.toDomainSub(s)),
-        ...paginationResult,
-        count: subSpecializations.length,
-        hasNext: paginationResult.page < paginationResult.totalPages,
-        hasPrev: paginationResult.page > 1,
-      };
+      return paginateResult(
+        {
+          subSpecializations: subSpecializations.map((s) => this.toDomainSub(s)),
+        },
+        {
+          ...paginationResult,
+          count: subSpecializations.length,
+          hasNext: paginationResult.page < paginationResult.totalPages,
+          hasPrev: paginationResult.page > 1,
+        }
+      );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findSubSpecializations');
     }

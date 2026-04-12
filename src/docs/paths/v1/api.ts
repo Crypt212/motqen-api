@@ -23,8 +23,9 @@ registryV1.registerComponent('securitySchemes', 'BearerAuth', {
 
 registryV1.registerComponent('parameters', 'DeviceFingerprint', {
   in: 'header',
-  name: 'X-device-fingerprint',
+  name: 'x-device-fingerprint',
   required: true,
+  description: 'Device fingerprint',
   schema: {
     type: 'string',
     default: 'abc123',

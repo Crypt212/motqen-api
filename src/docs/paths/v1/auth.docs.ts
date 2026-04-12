@@ -16,6 +16,7 @@ import {
   ReviewStatusResponseSchema,
 } from '../../../schemas/responses.js';
 import { z } from '../../../libs/zod.js';
+import { createResponseDoc } from 'src/docs/common.js';
 
 export default function registerAuthDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────
@@ -29,21 +30,22 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     summary: 'Request OTP',
     description:
       'Sends a one-time password to the provided Egyptian phone number via SMS or WhatsApp.',
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: { 'application/json': { schema: RequestOTPSchema } },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'OTP sent successfully',
         content: { 'application/json': { schema: RequestOTPResponseSchema } },
       },
-      400: { description: 'Bad Request' },
-      422: { description: 'Validation Error' },
-      429: { description: 'Too Many Requests' },
-      500: { description: 'Internal Server Error' },
-    },
+      badRequestResponse: true,
+      validationErrorResponse: true,
+      tooManyRequestsResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -57,21 +59,22 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     summary: 'Verify OTP',
     description:
       'Verifies the OTP and returns either a login token (existing user) or a register token (new user).',
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: { 'application/json': { schema: VerifyOTPSchema } },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'OTP verified successfully',
         content: { 'application/json': { schema: VerifyOTPResponseSchema } },
       },
-      400: { description: 'Bad Request' },
-      422: { description: 'Validation Error' },
-      429: { description: 'Too Many Requests' },
-      500: { description: 'Internal Server Error' },
-    },
+      badRequestResponse: true,
+      validationErrorResponse: true,
+      tooManyRequestsResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -86,6 +89,7 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     description:
       'Registers a new client user. Requires a register token (from OTP verify) as Bearer token. Send as multipart/form-data with `userData` (JSON string) and optional `personal_image`.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: {
@@ -104,16 +108,16 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
         },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Client registered successfully',
         content: { 'application/json': { schema: RegisterClientResponseSchema } },
       },
-      400: { description: 'Bad Request' },
-      401: { description: 'Unauthorized' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      badRequestResponse: true,
+      validationErrorResponse: true,
+      tooManyRequestsResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -128,6 +132,7 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     description:
       'Registers a new worker user. Requires a register token (from OTP verify) as Bearer token. Send as multipart/form-data with `userData`, `workerProfile` (JSON strings) and required images: personal_image, id_image, personal_with_id_image.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: {
@@ -153,16 +158,16 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
         },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Worker registered successfully',
         content: { 'application/json': { schema: RegisterWorkerResponseSchema } },
       },
-      400: { description: 'Bad Request' },
-      401: { description: 'Unauthorized' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      badRequestResponse: true,
+      validationErrorResponse: true,
+      tooManyRequestsResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -177,15 +182,17 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     description:
       'Authenticates an existing user using a login token (from OTP verify) and creates a session. Set it as Bearer <token> in the Authorization header.',
     security: [{ BearerAuth: [] }],
-    responses: {
-      200: {
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Login successful',
         content: { 'application/json': { schema: LoginResponseSchema } },
       },
-      400: { description: 'Bad Request' },
-      401: { description: 'Unauthorized' },
-      500: { description: 'Internal Server Error' },
-    },
+      badRequestResponse: true,
+      validationErrorResponse: true,
+      tooManyRequestsResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -199,14 +206,15 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     summary: 'Logout',
     description: "Revokes the user's current session. Requires a valid access token.",
     security: [{ BearerAuth: [] }],
-    responses: {
-      200: {
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Logged out successfully',
         content: { 'application/json': { schema: EmptySuccessResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -221,14 +229,15 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     description:
       'Generates a new access token using a valid refresh token in the Authorization header.',
     security: [{ BearerAuth: [] }],
-    responses: {
-      200: {
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Access token generated',
         content: { 'application/json': { schema: AccessTokenResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -243,13 +252,14 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     description:
       'Returns whether the authenticated user (worker) has been approved by an admin. Requires access token.',
     security: [{ BearerAuth: [] }],
-    responses: {
-      200: {
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Approval status returned',
         content: { 'application/json': { schema: ReviewStatusResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      internalServerError: true,
+    }),
   });
 }

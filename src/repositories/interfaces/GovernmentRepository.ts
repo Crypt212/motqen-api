@@ -7,10 +7,10 @@ import {
   GovernmentFilter,
   GovernmentUpdateInput,
 } from '../../domain/government.entity.js';
-import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
+import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
 import { IDType } from './Repository.js';
 
-export default interface IGovernemntRepository {
+export default interface IGovernmentRepository {
   /**
    * Find a government
    */
@@ -22,7 +22,7 @@ export default interface IGovernemntRepository {
     filter: GovernmentFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Government>;
-  }): Promise<PaginatedResultMeta & { governments: Government[] }>;
+  }): Promise<PaginatedResult<{ governments: Government[] }>>;
   /**
    * Find a city
    */
@@ -34,7 +34,7 @@ export default interface IGovernemntRepository {
     filter: CityFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<City>;
-  }): Promise<PaginatedResultMeta & { cities: City[] }>;
+  }): Promise<PaginatedResult<{ cities: City[] }>>;
 
   /**
    * Create a government

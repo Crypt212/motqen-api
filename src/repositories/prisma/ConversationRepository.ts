@@ -9,8 +9,8 @@ import {
   ConversationUpdateInput,
   ConversationWithParticipantsAndMessages,
 } from '../../domain/conversation.entity.js';
-import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
-import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
+import { isEmptyFilter, getEmptyPaginatedResult, paginateResult } from './utils.js';
+import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PrismaClient } from 'src/generated/prisma/client.js';
 
@@ -131,9 +131,9 @@ export default class ConversationRepository extends Repository implements IConve
     pagination?: PaginationOptions;
     sort?: SortOptions<ConversationWithParticipantsAndMessages>;
   }): Promise<
-    PaginatedResultMeta & {
+    PaginatedResult<{
       conversationParticipantsWithMessages: ConversationWithParticipantsAndMessages[];
-    }
+    }>
   > {
     try {
       const { filter, userId, pagination, sort } = params;
@@ -180,31 +180,35 @@ export default class ConversationRepository extends Repository implements IConve
         ...paginationQuery,
       });
 
-      return {
-        conversationParticipantsWithMessages: conversations.map((c) => ({
-          ...this.toDomain(c),
-          participants: c.participants.map((p) => ({
-            ...p,
-            user: p.user
-              ? {
-                  id: p.user.id,
-                  firstName: p.user.firstName,
-                  middleName: p.user.middleName,
-                  lastName: p.user.lastName,
-                  status: p.user.status,
-                  role: p.user.role,
-                  phoneNumber: p.user.phoneNumber,
-                  profileImageUrl: p.user.profileImageUrl,
-                  isOnline: p.user.isOnline,
-                }
-              : undefined,
+      return paginateResult(
+        {
+          conversationParticipantsWithMessages: conversations.map((c) => ({
+            ...this.toDomain(c),
+            participants: c.participants.map((p) => ({
+              ...p,
+              user: p.user
+                ? {
+                    id: p.user.id,
+                    firstName: p.user.firstName,
+                    middleName: p.user.middleName,
+                    lastName: p.user.lastName,
+                    status: p.user.status,
+                    role: p.user.role,
+                    phoneNumber: p.user.phoneNumber,
+                    profileImageUrl: p.user.profileImageUrl,
+                    isOnline: p.user.isOnline,
+                  }
+                : undefined,
+            })),
           })),
-        })),
-        ...paginationResult,
-        count: conversations.length,
-        hasNext: paginationResult.page < paginationResult.totalPages,
-        hasPrev: paginationResult.page > 1,
-      };
+        },
+        {
+          ...paginationResult,
+          count: conversations.length,
+          hasNext: paginationResult.page < paginationResult.totalPages,
+          hasPrev: paginationResult.page > 1,
+        }
+      );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findNonEmptyConversations');
     }
@@ -216,9 +220,9 @@ export default class ConversationRepository extends Repository implements IConve
     pagination?: PaginationOptions;
     sort?: SortOptions<ConversationWithParticipantsAndMessages>;
   }): Promise<
-    PaginatedResultMeta & {
+    PaginatedResult<{
       conversationParticipantsWithMessages: ConversationWithParticipantsAndMessages[];
-    }
+    }>
   > {
     try {
       const { filter, userId, pagination, sort } = params;
@@ -264,31 +268,35 @@ export default class ConversationRepository extends Repository implements IConve
         ...paginationQuery,
       });
 
-      return {
-        conversationParticipantsWithMessages: conversations.map((c) => ({
-          ...this.toDomain(c),
-          participants: c.participants.map((p) => ({
-            ...this.toDomainParticipant(p),
-            user: p.user
-              ? {
-                  id: p.user.id,
-                  firstName: p.user.firstName,
-                  lastName: p.user.lastName,
-                  middleName: p.user.middleName,
-                  role: p.user.role,
-                  status: p.user.status,
-                  phoneNumber: p.user.phoneNumber,
-                  profileImageUrl: p.user.profileImageUrl,
-                  isOnline: p.user.isOnline,
-                }
-              : undefined,
+      return paginateResult(
+        {
+          conversationParticipantsWithMessages: conversations.map((c) => ({
+            ...this.toDomain(c),
+            participants: c.participants.map((p) => ({
+              ...this.toDomainParticipant(p),
+              user: p.user
+                ? {
+                    id: p.user.id,
+                    firstName: p.user.firstName,
+                    lastName: p.user.lastName,
+                    middleName: p.user.middleName,
+                    role: p.user.role,
+                    status: p.user.status,
+                    phoneNumber: p.user.phoneNumber,
+                    profileImageUrl: p.user.profileImageUrl,
+                    isOnline: p.user.isOnline,
+                  }
+                : undefined,
+            })),
           })),
-        })),
-        ...paginationResult,
-        count: conversations.length,
-        hasNext: paginationResult.page < paginationResult.totalPages,
-        hasPrev: paginationResult.page > 1,
-      };
+        },
+        {
+          ...paginationResult,
+          count: conversations.length,
+          hasNext: paginationResult.page < paginationResult.totalPages,
+          hasPrev: paginationResult.page > 1,
+        }
+      );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findMany');
     }

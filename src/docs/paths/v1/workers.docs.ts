@@ -4,6 +4,7 @@ import {
   ExploreWorkersResponseSchema,
   ExploreWorkerDetailResponseSchema,
 } from '../../../schemas/responses.js';
+import { createResponseDoc } from 'src/docs/common.js';
 
 export default function registerWorkersDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────
@@ -20,16 +21,18 @@ export default function registerWorkersDocs(registry: OpenAPIRegistry) {
 - subSpecializationId (optional)
 - governments (optional multi-select)
 - flaged (optional front flags: availbilty, nearest, acceptUrgentJobs, heasetrated)`,
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       query: ExploreSearchSchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Explore results retrieved successfully',
         content: { 'application/json': { schema: ExploreWorkersResponseSchema } },
       },
-      400: { description: 'Bad Request' },
-    },
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -43,15 +46,18 @@ export default function registerWorkersDocs(registry: OpenAPIRegistry) {
     summary: 'Get explored worker details',
     description:
       'Returns the full public profile for the selected worker card. Only approved workers with active accounts are returned.',
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: ExploreWorkerIdParamsSchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Worker details retrieved successfully',
         content: { 'application/json': { schema: ExploreWorkerDetailResponseSchema } },
       },
-      404: { description: 'Not Found' },
-    },
+      notFoundResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 }

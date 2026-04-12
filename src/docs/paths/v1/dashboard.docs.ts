@@ -23,6 +23,7 @@ import {
   SpecializationsResponseSchema,
   MessageOnlyResponseSchema,
 } from '../../../schemas/responses.js';
+import { createResponseDoc } from 'src/docs/common.js';
 
 export default function registerDashboardDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────
@@ -36,14 +37,15 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get current user',
     description: "Returns the authenticated user's profile information.",
     security: [{ BearerAuth: [] }],
-    responses: {
-      200: {
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'User retrieved',
         content: { 'application/json': { schema: UserResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -57,6 +59,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Update current user',
     description: "Updates the authenticated user's basic info. All fields are optional.",
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: {
@@ -69,15 +72,15 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
         },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'User updated',
         content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -92,6 +95,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       'Creates a worker profile for the authenticated user (who must not already be a worker). Send as multipart/form-data with three required image files.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: {
@@ -106,17 +110,17 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
         },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Worker profile created',
         content: { 'application/json': { schema: WorkerProfileResponseSchema } },
       },
-      400: { description: 'Bad Request' },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -131,15 +135,16 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       'Returns the complete profile of the authenticated craftsman/worker. Includes experience, specializations, operating governments, rating, badges, verification status, and portfolio. User must be registered as a Worker.',
     security: [{ BearerAuth: [] }],
-    responses: {
-      200: {
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Worker profile retrieved successfully',
         content: { 'application/json': { schema: WorkerProfileResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -153,21 +158,22 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Update worker profile',
     description: "Updates the authenticated worker's profile. All fields are optional.",
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: { 'application/json': { schema: UpdateWorkerProfileSchema } },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Worker profile updated',
         content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -181,15 +187,16 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Delete worker profile',
     description: "Deletes the authenticated worker's profile.",
     security: [{ BearerAuth: [] }],
-    responses: {
-      200: {
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Worker profile deleted',
         content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -203,18 +210,19 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get worker governments',
     description: 'Returns the list of governments where the authenticated worker operates.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       query: WorkerGovernmentQuerySchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Worker governments retrieved',
         content: { 'application/json': { schema: WorkGovernmentsResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -228,21 +236,22 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Add worker governments',
     description: 'Adds governments where the authenticated worker operates.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: { 'application/json': { schema: AddWorkerGovernmentsSchema } },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Worker governments added',
         content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -257,22 +266,23 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       "Removes governments from the authenticated worker's operating regions. Pass `all=true` query to remove all.",
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       query: DeleteWorkerGovernmentsQuerySchema,
       body: {
         content: { 'application/json': { schema: DeleteWorkerGovernmentsSchema } },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Worker governments deleted',
         content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -286,18 +296,19 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get worker specializations',
     description: 'Returns the list of specializations for the authenticated worker.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       query: WorkerSpecializationQuerySchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Worker specializations retrieved',
         content: { 'application/json': { schema: SpecializationsResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -311,21 +322,22 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Add worker specializations',
     description: 'Adds specializations for the authenticated worker.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: { 'application/json': { schema: AddWorkerSpecializationsSchema } },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Worker specializations added',
         content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -340,22 +352,23 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       'Removes specializations from the authenticated worker. Pass `all=true` to remove all, or `allSub=true` to remove all sub-specializations.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       query: DeleteWorkerSpecializationsQuerySchema,
       body: {
         content: { 'application/json': { schema: DeleteWorkerSpecializationsSchema } },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Worker specializations deleted',
         content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -370,20 +383,21 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       'Creates a client profile for the authenticated user (who must not already be a client).',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: { 'application/json': { schema: CreateClientProfileSchema } },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Client profile created',
         content: { 'application/json': { schema: ClientProfileResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -397,15 +411,16 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get client profile',
     description: "Returns the authenticated client's profile. User must have a client profile.",
     security: [{ BearerAuth: [] }],
-    responses: {
-      200: {
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Client profile retrieved',
         content: { 'application/json': { schema: ClientProfileResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -419,21 +434,22 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Update client profile',
     description: "Updates the authenticated client's profile. All fields are optional.",
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: { 'application/json': { schema: UpdateClientProfileSchema } },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Client profile updated',
         content: { 'application/json': { schema: ClientProfileResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -447,15 +463,16 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Delete client profile',
     description: "Deletes the authenticated client's profile.",
     security: [{ BearerAuth: [] }],
-    responses: {
-      200: {
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Client profile deleted',
         content: { 'application/json': { schema: ClientProfileResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 }

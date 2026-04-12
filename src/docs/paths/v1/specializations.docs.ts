@@ -15,6 +15,7 @@ import {
   SubSpecializationListResponseSchema,
   MessageOnlyResponseSchema,
 } from '../../../schemas/responses.js';
+import { createResponseDoc } from 'src/docs/common.js';
 
 export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────
@@ -27,16 +28,17 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     tags: ['Specializations'],
     summary: 'Get all specializations',
     description: 'Returns a list of all specializations. Public endpoint.',
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       query: SpecializationQuerySchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Specializations retrieved',
         content: { 'application/json': { schema: SpecializationListResponseSchema } },
       },
-      500: { description: 'Internal Server Error' },
-    },
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -49,18 +51,19 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     tags: ['Specializations'],
     summary: 'Get specialization by ID',
     description: 'Returns a single specialization by its UUID. Public endpoint.',
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: SpecializationIdParamsSchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Specialization retrieved',
         content: { 'application/json': { schema: SpecializationResponseSchema } },
       },
-      404: { description: 'Not Found' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      notFoundResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -73,18 +76,19 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     tags: ['Specializations'],
     summary: 'Get sub-specializations',
     description: 'Returns all sub-specializations under a parent specialization. Public endpoint.',
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: SpecializationIdParamsSchema,
       query: SubSpecializationQuerySchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Sub-specializations retrieved',
         content: { 'application/json': { schema: SubSpecializationListResponseSchema } },
       },
-      404: { description: 'Not Found' },
-      500: { description: 'Internal Server Error' },
-    },
+      notFoundResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -98,21 +102,22 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     summary: 'Create specialization (Admin)',
     description: 'Creates a new specialization. Requires admin access token.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
         content: { 'application/json': { schema: CreateSpecializationSchema } },
       },
     },
-    responses: {
-      201: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Specialization created',
         content: { 'application/json': { schema: SpecializationResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -126,23 +131,24 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     summary: 'Update specialization (Admin)',
     description: 'Updates an existing specialization by UUID. Requires admin access token.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: SpecializationIdParamsSchema,
       body: {
         content: { 'application/json': { schema: UpdateSpecializationSchema } },
       },
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Specialization updated',
         content: { 'application/json': { schema: SpecializationResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      404: { description: 'Not Found' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -156,19 +162,20 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     summary: 'Delete specialization (Admin)',
     description: 'Deletes a specialization by UUID. Requires admin access token.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: SpecializationIdParamsSchema,
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Specialization deleted',
         content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      404: { description: 'Not Found' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -183,23 +190,24 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     description:
       'Creates a new sub-specialization under a parent specialization. Requires admin access token.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: SpecializationIdParamsSchema,
       body: {
         content: { 'application/json': { schema: CreateSubSpecializationSchema } },
       },
     },
-    responses: {
-      201: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Sub-specialization created',
         content: { 'application/json': { schema: SubSpecializationResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      404: { description: 'Not Found' },
-      422: { description: 'Validation Error' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -214,18 +222,19 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     description:
       'Deletes a sub-specialization by UUID under a parent specialization. Requires admin access token.',
     security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       params: SpecializationIdParamsSchema.merge(SubSpecializationIdParamsSchema),
     },
-    responses: {
-      200: {
+    responses: createResponseDoc({
+      successfulResponse: {
         description: 'Sub-specialization deleted',
         content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
-      401: { description: 'Unauthorized' },
-      403: { description: 'Forbidden' },
-      404: { description: 'Not Found' },
-      500: { description: 'Internal Server Error' },
-    },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      internalServerError: true,
+    }),
   });
 }
