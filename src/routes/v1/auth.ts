@@ -31,7 +31,6 @@ import {
   authenticateRegister,
   isActive,
 } from '../../middlewares/authMiddleware.js';
-// import { validateBody } from 'twilio/lib/webhooks/webhooks.js';
 import { validateBody } from '../../middlewares/validateRequest.js';
 import { parseMultipartJson } from 'src/middlewares/multipartParseMiddleware.js';
 
@@ -60,7 +59,7 @@ authRouter.post(
   authenticateRegister,
   parseMultipartJson(['userData', 'workerProfile']),
   validateBody(RegisterWorkerSchema),
-  generateAccessToken
+  registerWorker
 );
 
 authRouter.post('/login', authenticateLogin, login);

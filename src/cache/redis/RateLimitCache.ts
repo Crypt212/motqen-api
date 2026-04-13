@@ -7,7 +7,6 @@ import IRateLimitCache from '../interfaces/RateLimitCache.js';
 import { RedisClientType } from '../../libs/redis.js';
 import { Method } from '../../domain/otp.entity.js';
 import { DeviceID } from '../../types/asyncHandler.js';
-import { RateLimiterRedis } from 'rate-limiter-flexible';
 
 /**
  * Rate Limit Cache - Handles rate limiting and account tracking using Redis
@@ -28,7 +27,6 @@ export default class RateLimitCache implements IRateLimitCache {
   };
   private incrementSendScript: string;
   private incrementAccountsScript: string;
-  private socketLimiters: Map<string, RateLimiterRedis> = new Map();
 
   /**
    * Creates an instance of RateLimitCache
@@ -228,38 +226,5 @@ export default class RateLimitCache implements IRateLimitCache {
    */
   async resetAfterSuccess(phone: string, method: Method) {
     await Promise.all([this.deleteKey(this.keys.verify(phone, method))]);
-  }
-
-  // ─── Socket ────────────────────────────────────────────────────────────────
-
-  /**
-   * Consume a point for a socket event.
-   * Throws an error (from rate-limiter-flexible) if exceeded.
-   * Resolves (fail-open) if Redis connection drops.
-   */
-  async consumeSocketEvent(userId: string, event: string, points: number, durationSeconds: number): Promise<void> {
-    try {
-      const keyPrefix = `socket:rl:${event}`;
-      let limiter = this.socketLimiters.get(keyPrefix);
-      
-      if (!limiter) {
-        limiter = new RateLimiterRedis({
-          storeClient: this.client,
-          keyPrefix,
-          points,
-          duration: durationSeconds,
-        });
-        this.socketLimiters.set(keyPrefix, limiter);
-      }
-
-      await limiter.consume(userId);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        // Internal Redis or connection error -> Fail Open
-        return;
-      }
-      // Rate limit exceeded (RateLimiterRes thrown) -> Re-throw
-      throw err;
-    }
   }
 }

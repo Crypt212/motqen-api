@@ -5,7 +5,6 @@ import UserRepository from './repositories/prisma/UserRepository.js';
 import WorkerProfileRepository from './repositories/prisma/WorkerRepository.js';
 import ClientProfileRepository from './repositories/prisma/ClientRepository.js';
 import RateLimitCache from './cache/redis/RateLimitCache.js';
-import TokenCache from './cache/redis/TokenCache.js';
 import RateLimitService from './services/RateLimitService.js';
 import AuthService from './services/AuthService.js';
 import GovernmentRepository from './repositories/prisma/GovernmentRepository.js';
@@ -17,17 +16,14 @@ import ClientProfileService from './services/ClientProfileService.js';
 import WorkerProfileService from './services/WorkerProfileService.js';
 import ConversationRepository from './repositories/prisma/ConversationRepository.js';
 import MessageRepository from './repositories/prisma/MessageRepository.js';
-import FlaggedMessageRepository from './repositories/prisma/FlaggedMessageRepository.js';
 import ChatPresenceCache from './cache/redis/ChatPresenceCache.js';
 import ChatService from './services/ChatService.js';
-import ContactDetectionService from './services/ContactDetectionService.js';
 import prisma from './libs/database.js';
 import redisClient from './libs/redis.js';
 
 export const rateLimitCache = new RateLimitCache(redisClient);
 export const otpCache = new OTPCache(redisClient);
 export const chatPresenceCache = new ChatPresenceCache(redisClient);
-export const tokenCache = new TokenCache(redisClient);
 
 export const sessionRepository = new SessionRepository(prisma);
 export const userRepository = new UserRepository(prisma);
@@ -42,7 +38,6 @@ export const governmentController = new GovernmentController({
 });
 export const conversationRepository = new ConversationRepository(prisma);
 export const messageRepository = new MessageRepository(prisma);
-export const flaggedMessageRepository = new FlaggedMessageRepository(prisma);
 
 export const rateLimitService = new RateLimitService({ rateLimitCache });
 export const userService = new UserService({
@@ -66,7 +61,6 @@ export const authService = new AuthService({
   otpCache,
   sessionRepository,
   rateLimitCache,
-  tokenCache,
 });
 export const chatService = new ChatService({
   conversationRepository,
@@ -75,4 +69,3 @@ export const chatService = new ChatService({
   clientProfileRepository,
   presence: chatPresenceCache,
 });
-export const contactDetectionService = new ContactDetectionService(flaggedMessageRepository);

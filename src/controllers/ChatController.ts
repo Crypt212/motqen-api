@@ -4,11 +4,9 @@
  */
 
 import SuccessResponse from '../responses/successResponse.js';
-import AppError from '../errors/AppError.js';
 import { asyncHandler } from '../types/asyncHandler.js';
-import { chatService, conversationRepository } from '../state.js';
+import { chatService } from '../state.js';
 import { matchedData } from 'express-validator';
-import { IDType } from 'src/repositories/interfaces/Repository.js';
 
 /**
  * POST /api/chat/conversations
@@ -53,8 +51,7 @@ export const getConversations = asyncHandler(async (req, res) => {
  */
 export const getMessages = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const { limit, after } = matchedData(req, { includeOptionals: true });
-  const conversationId = req.params.conversationId as string;
+  const { conversationId, limit, after } = matchedData(req, { includeOptionals: true });
 
   const messages = await chatService.getMessages({
     conversationId,
@@ -75,15 +72,12 @@ export const getUnreadSummary = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
   const { page, limit, sortBy, sortOrder } = matchedData(req, { includeOptionals: true });
 
-  const conversations =
-    await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
-      userId,
-      filter: {},
-      pagination: { page, limit },
-      sort: { sortBy, sortOrder },
-    });
-
-  const unread = conversations.conversationParticipantsWithMessages.filter((c) => {
+  const conversations = await chatService.getConversations({
+    userId,
+    pagination: { page, limit },
+    sort: { sortBy, sortOrder },
+  });
+  const unread = conversations.conversations.filter((c) => {
     const myParticipant = c.participants.find((p) => p.userId === userId);
     const unreadCount = c.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0);
     return unreadCount > 0;
@@ -100,39 +94,13 @@ export const getUnreadSummary = asyncHandler(async (req, res) => {
  */
 export const getMissedMessages = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  let {  after , limit} = req.query as { after: string; limit?: string };
-  const conversationId = req.params.conversationId as string;
+  const { conversationId, after } = matchedData(req, { includeOptionals: true });
 
-  console.log('Fetching missed messages for conversation ', conversationId, ' after message number ', after, ' with limit ', limit);
   const messages = await chatService.getMissedMessages({
     conversationId,
     userId,
-    afterMessageNumber: parseInt(after,10),
-    limit:limit? Math.max(parseInt(limit, 10), 50) : 50,
+    afterMessageNumber: after,
   });
 
   new SuccessResponse('Missed messages', { messages }, 200).send(res);
-});
-
-/**
- * POST /api/chat/conversations/:conversationId/messages/image
- * Upload and send an image message in a conversation.
- * Request: multipart/form-data with a single "image" field
- * Requires authenticated user who is a participant in the conversation.
- */
-export const sendImageMessage = asyncHandler(async (req, res) => {
-  const userId = req.userState.userId as IDType;
-  const conversationId = req.params.conversationId as IDType;
-  const file = req.file;
-  if (!file) {
-    throw new AppError('No image file provided. Upload a file under the "image" field', 400);
-  }
-
-  const message = await chatService.sendImageMessage({
-    conversationId,
-    senderId: userId,
-    imageBuffer: file.buffer,
-  });
-
-  new SuccessResponse('Image message sent', message, 201).send(res);
 });

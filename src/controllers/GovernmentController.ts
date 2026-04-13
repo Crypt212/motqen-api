@@ -12,18 +12,6 @@ import { parseQueryParams } from '../schemas/common.js';
 export default class GovernmentController {
   private governmentService: GovernmentService;
 
-  private normalizeCoordinate(value: unknown): string | undefined {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return String(value);
-    }
-
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return value.trim();
-    }
-
-    return undefined;
-  }
-
   constructor(params: { governmentService: GovernmentService }) {
     this.governmentService = params.governmentService;
   }
@@ -49,16 +37,8 @@ export default class GovernmentController {
 
   createGovernment = asyncHandler(async (req, res) => {
     const { name, nameAr, long, lat } = req.body;
-    const normalizedLong = this.normalizeCoordinate(long);
-    const normalizedLat = this.normalizeCoordinate(lat);
-
     const government = await this.governmentService.createGovernment({
-      data: {
-        name,
-        nameAr,
-        long: normalizedLong as string,
-        lat: normalizedLat as string,
-      },
+      data: { name, nameAr, long, lat },
     });
 
     new SuccessResponse('Government created successfully', { government }, 201).send(res);
@@ -67,17 +47,9 @@ export default class GovernmentController {
   updateGovernment = asyncHandler(async (req, res) => {
     const { name, nameAr, long, lat } = req.body;
     const id = req.params.governmentId as string;
-    const normalizedLong = this.normalizeCoordinate(long);
-    const normalizedLat = this.normalizeCoordinate(lat);
-
     const government = await this.governmentService.updateGovernment({
       id,
-      data: {
-        ...(name !== undefined ? { name } : {}),
-        ...(nameAr !== undefined ? { nameAr } : {}),
-        ...(normalizedLong !== undefined ? { long: normalizedLong } : {}),
-        ...(normalizedLat !== undefined ? { lat: normalizedLat } : {}),
-      },
+      data: { name, nameAr, long, lat },
     });
 
     new SuccessResponse('Government updated successfully', { government }, 200).send(res);

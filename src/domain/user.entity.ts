@@ -55,8 +55,6 @@ export interface Location {
   cityId: IDType;
   address: string;
   addressNotes: string;
-  long: number;
-  lat: number;
   isMain: boolean;
 }
 
@@ -65,8 +63,6 @@ export type LocationCreateInput = {
   cityId: IDType;
   address: string;
   addressNotes: string;
-  long: number;
-  lat: number;
   isMain: boolean;
 };
 
