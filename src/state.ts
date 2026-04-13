@@ -5,7 +5,6 @@ import UserRepository from './repositories/prisma/UserRepository.js';
 import WorkerProfileRepository from './repositories/prisma/WorkerRepository.js';
 import ClientProfileRepository from './repositories/prisma/ClientRepository.js';
 import RateLimitCache from './cache/redis/RateLimitCache.js';
-import TokenCache from './cache/redis/TokenCache.js';
 import RateLimitService from './services/RateLimitService.js';
 import AuthService from './services/AuthService.js';
 import GovernmentRepository from './repositories/prisma/GovernmentRepository.js';
@@ -27,7 +26,6 @@ import redisClient from './libs/redis.js';
 export const rateLimitCache = new RateLimitCache(redisClient);
 export const otpCache = new OTPCache(redisClient);
 export const chatPresenceCache = new ChatPresenceCache(redisClient);
-export const tokenCache = new TokenCache(redisClient);
 
 export const sessionRepository = new SessionRepository(prisma);
 export const userRepository = new UserRepository(prisma);
@@ -66,7 +64,6 @@ export const authService = new AuthService({
   otpCache,
   sessionRepository,
   rateLimitCache,
-  tokenCache,
 });
 export const chatService = new ChatService({
   conversationRepository,

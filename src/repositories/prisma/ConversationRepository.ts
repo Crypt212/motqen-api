@@ -12,7 +12,7 @@ import {
 import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
-import { PrismaClient } from '../../generated/prisma/client.js';
+import { PrismaClient } from 'src/generated/prisma/client.js';
 
 export default class ConversationRepository extends Repository implements IConversationRepository {
   constructor(prisma: PrismaClient) {

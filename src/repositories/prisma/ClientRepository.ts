@@ -8,7 +8,7 @@ import {
   ClientProfileUpdateInput,
 } from '../../domain/clientProfile.entity.js';
 import { isEmptyFilter } from './utils.js';
-import { PrismaClient } from '../../generated/prisma/client.js';
+import { PrismaClient } from 'src/generated/prisma/client.js';
 
 export default class ClientProfileRepository
   extends Repository

@@ -31,7 +31,6 @@ import {
   authenticateRegister,
   isActive,
 } from '../../middlewares/authMiddleware.js';
-// import { validateBody } from 'twilio/lib/webhooks/webhooks.js';
 import { validateBody } from '../../middlewares/validateRequest.js';
 
 const authRouter = Router();
@@ -138,7 +137,8 @@ authRouter.post('/otp/verify', validateBody(VerifyOTPSchema), checkVerifyLimit, 
  *       (obtained from OTP verify when the phone number is new).
  *
  *       Send as `multipart/form-data` with:
- *       - `userData` — JSON string with user info (includes location with long/lat)
+ *       - `userData` — JSON string with user info
+ *       - `clientProfile` — JSON string with client address info
  *       - `personal_image` — optional profile image file
  *
  *       **Register token:** Use the token returned by `/auth/otp/verify` (tokenType: "register").
@@ -154,7 +154,7 @@ authRouter.post('/otp/verify', validateBody(VerifyOTPSchema), checkVerifyLimit, 
  *         multipart/form-data:
  *           schema:
  *             type: object
- *             required: [userData]
+ *             required: [userData, clientProfile]
  *             properties:
  *               personal_image:
  *                 type: string
@@ -162,19 +162,21 @@ authRouter.post('/otp/verify', validateBody(VerifyOTPSchema), checkVerifyLimit, 
  *                 description: Profile image file (optional, jpeg/png/webp)
  *               userData:
  *                 type: string
- *                 default: '{"firstName":"أحمد","middleName":"علي","lastName":"محمد","location":{"governmentId":"123e4567-e89b-12d3-a456-426614000","cityId":"123e4567-e89b-12d3-a456-426614001","address":"123 شارع الرئيسي، المنصورة","addressNotes":"بجوار المسجد الكبير","long":31.2357,"lat":30.0444}}'
+ *                 default: '{"firstName":"أحمد","middleName":"علي","lastName":"محمد"}'
  *                 description: |
  *                   JSON string containing:
  *                   - `firstName` (string, required, 2-50 chars)
  *                   - `middleName` (string, required, 2-50 chars)
  *                   - `lastName` (string, required, 2-50 chars)
- *                   - `location` (object, required) - contains:
- *                     - `governmentId` (UUID, required)
- *                     - `cityId` (UUID, required)
- *                     - `address` (string, required)
- *                     - `addressNotes` (string, optional)
- *                     - `long` (number, required, -180 to 180)
- *                     - `lat` (number, required, -90 to 90)
+ *               clientProfile:
+ *                 type: string
+ *                 default: '{"address":"123 شارع الرئيسي، المنصورة","governmentId":"123e4567-e89b-12d3-a456-426614174000","cityId":"123e4567-e89b-12d3-a456-426614174000","addressNotes":"بجوار المسجد الكبير"}'
+ *                 description: |
+ *                   JSON string containing:
+ *                   - `governmentId` (UUID, required)
+ *                   - `cityId` (string, required, 2-50 chars)
+ *                   - `address` (string, required, 2-50 chars)
+ *                   - `addressNotes` (string, optional)
  *     responses:
  *       200:
  *         description: Client registered successfully
@@ -222,7 +224,7 @@ authRouter.post(
  *       (obtained from OTP verify when the phone number is new).
  *
  *       Send as `multipart/form-data` with:
- *       - `userData` — JSON string with user info (includes location with long/lat)
+ *       - `userData` — JSON string with user info
  *       - `workerProfile` — JSON string with worker profile data (specializations, experience, etc.)
  *       - `personal_image` — personal photo (required)
  *       - `id_image` — national ID image (required)
@@ -257,19 +259,12 @@ authRouter.post(
  *                 description: Selfie holding national ID (required)
  *               userData:
  *                 type: string
- *                 default: '{"firstName":"أحمد","middleName":"علي","lastName":"محمد","location":{"governmentId":"123e4567-e89b-12d3-a456-426614000","cityId":"123e4567-e89b-12d3-a456-426614001","address":"123 شارع الرئيسي، المنصورة","addressNotes":"بجوار المسجد الكبير","long":31.2357,"lat":30.0444}}'
+ *                 default: '{"firstName":"أحمد","middleName":"علي","lastName":"محمد"}'
  *                 description: |
  *                   JSON string containing:
  *                   - `firstName` (string, required, 2-50 chars)
  *                   - `middleName` (string, required, 2-50 chars)
  *                   - `lastName` (string, required, 2-50 chars)
- *                   - `location` (object, required) - contains:
- *                     - `governmentId` (UUID, required)
- *                     - `cityId` (UUID, required)
- *                     - `address` (string, required)
- *                     - `addressNotes` (string, optional)
- *                     - `long` (number, required, -180 to 180)
- *                     - `lat` (number, required, -90 to 90)
  *               workerProfile:
  *                 type: string
  *                 default: '{"experienceYears":5,"isInTeam":false,"acceptsUrgentJobs":true,"specializationsTree":[{"mainId":"123e4567-e89b-12d3-a456-426614174000","subIds":["123e4567-e89b-12d3-a456-426614174001"]}],"workGovernmentIds":["123e4567-e89b-12d3-a456-426614174000"]}'
@@ -319,14 +314,16 @@ authRouter.post(
   ]),
   authenticateRegister,
   validateBody(RegisterWorkerSchema),
-  generateAccessToken
+  registerWorker
 );
 /**
  * @swagger
  * /auth/login:
  *   post:
  *     summary: Login
- *     description: Authenticates a user and returns access and refresh tokens.
+ *     description: |
+ *       Authenticates an existing user using a **login token** (from OTP verify) and creates a session.
+ *       Use the token returned by `/auth/otp/verify` (tokenType: "login") as `Bearer <token>` in the Authorization header.
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []

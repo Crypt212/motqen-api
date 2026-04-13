@@ -1,5 +1,5 @@
 import { z } from '../libs/zod.js';
-import { LongitudeSchema, UUIDSchema } from './common.js';
+import { UUIDSchema } from './common.js';
 
 const parseStringList = (value: unknown): unknown => {
   if (value === undefined || value === null || value === '') {
@@ -30,12 +30,12 @@ const parseOptionalUUID = (value: unknown): unknown => {
   return value;
 };
 
-const FlagedFilterSchema = z.enum(['availability', 'nearest', 'acceptUrgentJobs', 'highestRated']);
+const FlagedFilterSchema = z.enum(['availbilty', 'nearest', 'acceptUrgentJobs', 'heasetrated']);
 
 export const ExploreSearchSchema = z.object({
   specializationId: UUIDSchema,
-  subSpecializationId: UUIDSchema.optional(),
-  governmentId: UUIDSchema.optional(),
+  subSpecializationId: z.preprocess(parseOptionalUUID, UUIDSchema.optional()),
+  governments: z.preprocess(parseStringList, z.array(UUIDSchema).optional()),
   flaged: z.preprocess(parseStringList, z.array(FlagedFilterSchema).optional().default([])),
   page: z.coerce
     .number()
@@ -50,8 +50,6 @@ export const ExploreSearchSchema = z.object({
     .max(50, 'limit must be an integer between 1 and 50')
     .optional()
     .default(10),
-  'location[longitude]': z.coerce.number().optional(),
-  'location[latitude]': z.coerce.number().optional(),
 });
 export type ExploreSearchDTO = z.infer<typeof ExploreSearchSchema>;
 

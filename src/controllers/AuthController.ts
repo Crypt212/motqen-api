@@ -7,6 +7,7 @@ import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { authService, rateLimitService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
+import { verifyAndDecodeToken } from '../utils/tokens.js';
 
 /**
  * Request OTP for phone number verification
@@ -54,10 +55,10 @@ export const registerClient = asyncHandler(async (req, res) => {
   const { userData } = req.body;
   const { firstName, middleName, lastName, location } = JSON.parse(userData);
 
-  const rawToken = req.headers['authorization']?.split(' ')[1];
-  if (!rawToken) throw new AppError('Unauthorized, register token not found', 401);
-
-  const { phoneNumber } = await authService.consumeRegisterToken(rawToken);
+  const phoneNumber = verifyAndDecodeToken(
+    req.headers['authorization'].split(' ')[1],
+    'register'
+  ).phoneNumber;
   const image = req.file;
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -105,10 +106,10 @@ export const registerWorker = asyncHandler(async (req, res) => {
     JSON.parse(workerProfile);
 
   const deviceId = req.deviceId;
-  const rawToken = req.headers['authorization']?.split(' ')[1];
-  if (!rawToken) throw new AppError('Unauthorized, register token not found', 401);
-
-  const { phoneNumber } = await authService.consumeRegisterToken(rawToken);
+  const phoneNumber = verifyAndDecodeToken(
+    req.headers['authorization'].split(' ')[1],
+    'register'
+  ).phoneNumber;
   const images = req.files;
 
   if (
@@ -165,10 +166,10 @@ export const registerWorker = asyncHandler(async (req, res) => {
  */
 export const login = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
-  const rawToken = req.headers['authorization']?.split(' ')[1];
-  if (!rawToken) throw new AppError('Unauthorized, login token not found', 401);
-
-  const { phoneNumber } = await authService.consumeLoginToken(rawToken);
+  const phoneNumber = verifyAndDecodeToken(
+    req.headers['authorization'].split(' ')[1],
+    'login'
+  ).phoneNumber;
 
   const { unHashedRefreshToken, user } = await authService.login({
     phoneNumber,
