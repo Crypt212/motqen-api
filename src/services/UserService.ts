@@ -17,7 +17,12 @@ import {
   LocationUpdateInput,
   Location,
 } from '../domain/user.entity.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../types/query.js';
+import {
+  PaginationOptions,
+  PaginatedResult,
+  SortOptions,
+  PaginatedResultMeta,
+} from '../types/query.js';
 import { UserState } from '../types/asyncHandler.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 

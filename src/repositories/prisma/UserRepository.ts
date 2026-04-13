@@ -10,7 +10,12 @@ import {
   LocationCreateInput,
   LocationUpdateInput,
 } from '../../domain/user.entity.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
+import {
+  PaginationOptions,
+  PaginatedResult,
+  SortOptions,
+  PaginatedResultMeta,
+} from '../../types/query.js';
 import { PrismaClient } from 'src/generated/prisma/client.js';
 import { IDType } from '../interfaces/Repository.js';
 
