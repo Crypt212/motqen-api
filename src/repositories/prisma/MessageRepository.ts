@@ -1,13 +1,13 @@
 import IMessageRepository from '../interfaces/MessageRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
-import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
+import { isEmptyFilter, getEmptyPaginatedResult, paginateResult } from './utils.js';
 import {
   Message,
   MessageCreateInput,
   MessageFilter,
   MessageType,
 } from '../../domain/message.entity.js';
-import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
+import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { IDType } from '../interfaces/Repository.js';
 import { User } from '../../domain/user.entity.js';
@@ -83,7 +83,7 @@ export default class MessageRepository extends Repository implements IMessageRep
     filter?: MessageFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Message>;
-  }): Promise<PaginatedResultMeta & { messages: Message[] }> {
+  }): Promise<PaginatedResult<{ messages: Message[] }>> {
     try {
       const { filter, pagination, sort } = params;
 
@@ -102,13 +102,17 @@ export default class MessageRepository extends Repository implements IMessageRep
         orderBy: sortQuery,
       });
 
-      return {
-        messages: messages.map((m) => this.toDomain(m)),
-        ...paginationResult,
-        count: messages.length,
-        hasNext: paginationResult.page < paginationResult.totalPages,
-        hasPrev: paginationResult.page > 1,
-      };
+      return paginateResult(
+        {
+          messages: messages.map((m) => this.toDomain(m)),
+        },
+        {
+          ...paginationResult,
+          count: messages.length,
+          hasNext: paginationResult.page < paginationResult.totalPages,
+          hasPrev: paginationResult.page > 1,
+        }
+      );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findMany');
     }

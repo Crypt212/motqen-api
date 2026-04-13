@@ -53,7 +53,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 export const registerClient = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
   const { userData } = req.body;
-  const { firstName, middleName, lastName, location } = JSON.parse(userData);
+  const { firstName, middleName, lastName, location } = userData;
 
   const phoneNumber = verifyAndDecodeToken(
     req.headers['authorization'].split(' ')[1],
@@ -101,9 +101,9 @@ export const registerClient = asyncHandler(async (req, res) => {
  */
 export const registerWorker = asyncHandler(async (req, res) => {
   const { userData, workerProfile } = req.body;
-  const { firstName, middleName, lastName, location } = JSON.parse(userData);
+  const { firstName, middleName, lastName, location } = userData;
   const { experienceYears, isInTeam, acceptsUrgentJobs, specializationsTree, workGovernmentIds } =
-    JSON.parse(workerProfile);
+    workerProfile;
 
   const deviceId = req.deviceId;
   const phoneNumber = verifyAndDecodeToken(

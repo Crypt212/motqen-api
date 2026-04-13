@@ -3,7 +3,7 @@ import { handlePrismaError, Repository } from './Repository.js';
 import { IDType } from '../interfaces/Repository.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { SpecializationsTree } from '../../domain/specialization.entity.js';
-import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
+import { isEmptyFilter, getEmptyPaginatedResult, paginateResult } from './utils.js';
 import {
   WorkerProfile,
   WorkerProfileCreateInput,
@@ -12,7 +12,7 @@ import {
   WorkerProfileVerification,
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
-import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
+import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
 import {
   AccountStatus,
   Prisma,
@@ -89,7 +89,7 @@ export default class WorkerProfileRepository
     workerFilter: WorkerProfileFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<WorkerProfile>;
-  }): Promise<PaginatedResultMeta & { workerProfiles: WorkerProfile[] }> {
+  }): Promise<PaginatedResult<{ workerProfiles: WorkerProfile[] }>> {
     try {
       const whereCondition = {
         user: { isOnline: true },
@@ -111,13 +111,17 @@ export default class WorkerProfileRepository
         orderBy: sortQuery,
       });
 
-      return {
-        workerProfiles: profiles.map((p) => this.toDomain(p)),
-        ...paginationResult,
-        count: profiles.length,
-        hasNext: paginationResult.page < paginationResult.totalPages,
-        hasPrev: paginationResult.page > 1,
-      };
+      return paginateResult(
+        {
+          workerProfiles: profiles.map((p) => this.toDomain(p)),
+        },
+        {
+          ...paginationResult,
+          count: profiles.length,
+          hasNext: paginationResult.page < paginationResult.totalPages,
+          hasPrev: paginationResult.page > 1,
+        }
+      );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findOnline');
     }
@@ -129,7 +133,7 @@ export default class WorkerProfileRepository
   }: {
     workerFilter: WorkerProfileFilter;
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }> {
+  }): Promise<PaginatedResult<{ governmentIds: IDType[] }>> {
     try {
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
         where: workerFilter,
@@ -137,7 +141,7 @@ export default class WorkerProfileRepository
       });
 
       if (!workerProfile) {
-        return { ...getEmptyPaginatedResult(), governmentIds: [] };
+        return getEmptyPaginatedResult({ governmentIds: [] });
       }
 
       const governmentIds = workerProfile.workGovernments.map((g) => g.id);
@@ -146,16 +150,20 @@ export default class WorkerProfileRepository
       const limit = pagination?.limit || 10;
       const totalPages = Math.ceil(total / limit);
 
-      return {
-        governmentIds,
-        page,
-        limit,
-        count: governmentIds.length,
-        total,
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
-      };
+      return paginateResult(
+        {
+          governmentIds,
+        },
+        {
+          page,
+          limit,
+          count: governmentIds.length,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1,
+        }
+      );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findWorkGovernments');
     }
@@ -191,7 +199,7 @@ export default class WorkerProfileRepository
     mainSpecializationIds: IDType[];
     filter: WorkerProfileFilter;
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResultMeta & { specializationIds: IDType[] }> {
+  }): Promise<PaginatedResult<{ specializationIds: IDType[] }>> {
     try {
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
         where: filter,
@@ -199,7 +207,7 @@ export default class WorkerProfileRepository
       });
 
       if (!workerProfile) {
-        return { ...getEmptyPaginatedResult(), specializationIds: [] };
+        return getEmptyPaginatedResult({ specializationIds: [] });
       }
 
       let specializationIds = workerProfile.chosenSpecializations.map((s) => s.specializationId);
@@ -214,16 +222,20 @@ export default class WorkerProfileRepository
       const limit = pagination?.limit || 10;
       const totalPages = Math.ceil(total / limit);
 
-      return {
-        specializationIds: uniqueIds,
-        page,
-        limit,
-        count: uniqueIds.length,
-        total,
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
-      };
+      return paginateResult(
+        {
+          specializationIds: uniqueIds,
+        },
+        {
+          page,
+          limit,
+          count: uniqueIds.length,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1,
+        }
+      );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findSpecializations');
     }
@@ -604,7 +616,7 @@ export default class WorkerProfileRepository
     page: number;
     limit: number;
   }): Promise<
-    PaginatedResultMeta & {
+    PaginatedResult<{
       workers: {
         workerId: string;
         name: string;
@@ -615,7 +627,7 @@ export default class WorkerProfileRepository
         isAvailableNow: boolean;
         completedServices: number;
       }[];
-    }
+    }>
   > {
     const parsedLimit = typeof limit === 'string' ? parseInt(limit, 10) : limit;
     const parsedPage = typeof page === 'string' ? parseInt(page, 10) : page;
@@ -863,15 +875,19 @@ export default class WorkerProfileRepository
 
     const totalPages = Math.ceil(total / normalizedLimit);
 
-    return {
-      workers: data,
-      total,
-      page: normalizedPage,
-      limit: normalizedLimit,
-      count: data.length,
-      hasNext: normalizedPage < totalPages,
-      hasPrev: normalizedPage > 1,
-      totalPages,
-    };
+    return paginateResult(
+      {
+        workers: data,
+      },
+      {
+        total,
+        page: normalizedPage,
+        limit: normalizedLimit,
+        count: data.length,
+        hasNext: normalizedPage < totalPages,
+        hasPrev: normalizedPage > 1,
+        totalPages,
+      }
+    );
   }
 }

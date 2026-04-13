@@ -13,12 +13,14 @@ export type FieldTypeDefinition = (
 export type PaginatedResultMeta = {
   page: number;
   limit: number;
-  count: number;
-  total: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
+  count?: number;
+  total?: number;
+  totalPages?: number;
+  hasNext?: boolean;
+  hasPrev?: boolean;
 };
+
+export type PaginatedResult<K extends object> = K & { meta: PaginatedResultMeta };
 
 /**
  * Pagination options for queries

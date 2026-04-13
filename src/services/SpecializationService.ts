@@ -11,7 +11,7 @@ import {
   SpecializationCategory,
   SubSpecialization,
 } from '../domain/specialization.entity.js';
-import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/query.js';
+import { PaginationOptions, PaginatedResult, SortOptions } from '../types/query.js';
 import AppError from '../errors/AppError.js';
 
 export type CreateSpecializationInput = {
@@ -43,7 +43,7 @@ export default class SpecializationService extends Service {
     filter?: SpecializationFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Specialization>;
-  }): Promise<PaginatedResultMeta & { specializations: Specialization[] }> {
+  }): Promise<PaginatedResult<{ specializations: Specialization[] }>> {
     const { filter, pagination, sort } = params;
     return await this.specializationRepository.findMany({
       filter: filter || {},
@@ -65,7 +65,7 @@ export default class SpecializationService extends Service {
     filter?: Partial<SubSpecialization>;
     pagination?: PaginationOptions;
     sort?: SortOptions<SubSpecialization>;
-  }): Promise<PaginatedResultMeta & { subSpecializations: SubSpecialization[] }> {
+  }): Promise<PaginatedResult<{ subSpecializations: SubSpecialization[] }>> {
     const { parentId, filter, pagination, sort } = params;
 
     const parent = await this.specializationRepository.find({ filter: { id: parentId } });

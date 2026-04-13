@@ -1,32 +1,13 @@
-import { OpenAPIRegistry, OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
+import { OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
+import { registryV1 } from '../docs/paths/v1/api.js';
 
-// Part of the example
-// import { LoginSchema } from '../schemas/auth.js';
-
-export const registry = new OpenAPIRegistry();
-
-// EXAMPLE HERE NIGGAS
-//
-// registry.registerPath({
-//   method: 'post',
-//   path: '/auth/login',
-//   summary: 'Login with OTP',
-//   request: {
-//     body: {
-//       content: { 'application/json': { schema: LoginSchema } }
-//     }
-//   },
-//   responses: {
-//     200: { description: 'Auth token returned' },
-//     400: { description: 'Validation error' },
-//     404: { description: 'User not found' },
-//   },
-// });
-
+// Import each docs file to register its paths
+registryV1.definitions;
 export function generateOpenAPISpec() {
-  const generator = new OpenApiGeneratorV3(registry.definitions);
-  return generator.generateDocument({
-    openapi: '3.0.0',
-    info: { title: 'API', version: '1.0.0' },
+  const generator = new OpenApiGeneratorV31(registryV1.definitions);
+  const doc = generator.generateDocument({
+    openapi: '3.1.0',
+    info: { title: 'API Docs', version: '1.0.0' },
   });
+  return doc;
 }

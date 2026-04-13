@@ -7,7 +7,7 @@ import {
   LocationCreateInput,
   LocationUpdateInput,
 } from '../../domain/user.entity.js';
-import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
+import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
 import { IDType } from './Repository.js';
 
 export default interface IUserRepository {
@@ -26,7 +26,7 @@ export default interface IUserRepository {
     filter: UserFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<User>;
-  }): Promise<PaginatedResultMeta & { users: User[] }>;
+  }): Promise<PaginatedResult<{ users: User[] }>>;
   /**
    * Find many online users' worker profiles
    */
@@ -34,7 +34,7 @@ export default interface IUserRepository {
     filter: UserFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<User>;
-  }): Promise<PaginatedResultMeta & { users: User[] }>;
+  }): Promise<PaginatedResult<{ users: User[] }>>;
 
   /**
    * Create a user

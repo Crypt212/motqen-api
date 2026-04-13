@@ -7,7 +7,7 @@ import {
   WorkerProfileVerification,
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
-import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
+import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
 import { IDType } from '../interfaces/Repository.js';
 
 export default interface IWorkerProfileRepository {
@@ -26,14 +26,14 @@ export default interface IWorkerProfileRepository {
     workerFilter: WorkerProfileFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<WorkerProfile>;
-  }): Promise<PaginatedResultMeta & { workerProfiles: WorkerProfile[] }>;
+  }): Promise<PaginatedResult<{ workerProfiles: WorkerProfile[] }>>;
   /**
    * Find work governments
    */
   findWorkGovernments(params: {
     workerFilter: WorkerProfileFilter;
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }>;
+  }): Promise<PaginatedResult<{ governmentIds: IDType[] }>>;
   /**
    * Find verification of a worker profile
    */
@@ -47,7 +47,7 @@ export default interface IWorkerProfileRepository {
     mainSpecializationIds: IDType[];
     filter: WorkerProfileFilter;
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResultMeta & { specializationIds: IDType[] }>;
+  }): Promise<PaginatedResult<{ specializationIds: IDType[] }>>;
 
   /**
    * Create a worker profile for a user ID
