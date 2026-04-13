@@ -14,7 +14,7 @@ import {
 } from '../domain/workerProfile.entity.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
-import { PaginationOptions, PaginatedResultMeta } from '../types/query.js';
+import { PaginationOptions, PaginatedResult } from '../types/query.js';
 import { GovernmentFilter } from '../domain/government.entity.js';
 import { SpecializationsTree } from '../domain/specialization.entity.js';
 
@@ -167,7 +167,7 @@ export default class WorkerService extends Service {
     pagination: PaginationOptions;
     filter: WorkerProfileFilter;
     GovernmentFilter: GovernmentFilter;
-  }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }> {
+  }): Promise<PaginatedResult<{ governmentIds: IDType[] }>> {
     const { pagination, GovernmentFilter: filter } = params;
     return tryCatch(async () => {
       const result = await this.workerProfileRepository.findWorkGovernments({
@@ -229,7 +229,7 @@ export default class WorkerService extends Service {
     mainSpecializationIds: IDType[];
     pagination: PaginationOptions;
     filter: WorkerProfileFilter;
-  }): Promise<PaginatedResultMeta & { specializationIds: IDType[] }> {
+  }): Promise<PaginatedResult<{ specializationIds: IDType[] }>> {
     const { mainSpecializationIds, pagination, filter } = params;
     return tryCatch(async () => {
       const result = await this.workerProfileRepository.findSpecializations({

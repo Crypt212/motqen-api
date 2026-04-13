@@ -6,7 +6,7 @@ import {
   SubSpecializationCreateInput,
   SubSpecializationFilter,
 } from '../../domain/specialization.entity.js';
-import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
+import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
 import { IDType } from './Repository.js';
 
 export default interface ISpecializationRepository {
@@ -21,7 +21,7 @@ export default interface ISpecializationRepository {
     filter: SpecializationFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Specialization>;
-  }) => Promise<PaginatedResultMeta & { specializations: Specialization[] }>;
+  }) => Promise<PaginatedResult<{ specializations: Specialization[] }>>;
   /**
    * Find a sub-specialization
    */
@@ -35,7 +35,7 @@ export default interface ISpecializationRepository {
     filter: SubSpecializationFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<SubSpecialization>;
-  }) => Promise<PaginatedResultMeta & { subSpecializations: SubSpecialization[] }>;
+  }) => Promise<PaginatedResult<{ subSpecializations: SubSpecialization[] }>>;
 
   /**
    * create a specialization

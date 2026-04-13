@@ -17,7 +17,12 @@ import {
   LocationUpdateInput,
   Location,
 } from '../domain/user.entity.js';
-import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/query.js';
+import {
+  PaginationOptions,
+  PaginatedResult,
+  SortOptions,
+  PaginatedResultMeta,
+} from '../types/query.js';
 import { UserState } from '../types/asyncHandler.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 
@@ -66,7 +71,7 @@ export default class UserService extends Service {
     filter: UserFilter;
     pagination: PaginationOptions;
     sort: SortOptions<User>;
-  }): Promise<PaginatedResultMeta & { users: User[] }> {
+  }): Promise<PaginatedResult<{ users: User[] }>> {
     const { filter, pagination, sort: orderBy } = params;
 
     return await this.userRepository.findMany({
@@ -151,7 +156,10 @@ export default class UserService extends Service {
   // Location proxy endpoints
   // ============================================
 
-  async getLocations(params: { filter: { userId: IDType } }): Promise<Location[]> {
+  async getLocations(params: {
+    filter: { userId: IDType };
+    pagination?: PaginationOptions;
+  }): Promise<PaginatedResultMeta & { locations: Location[] }> {
     return await this.userRepository.findLocations(params);
   }
 

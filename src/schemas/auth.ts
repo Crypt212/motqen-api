@@ -32,24 +32,17 @@ export const VerifyOTPSchema = z.object({
 });
 export type VerifyOTPDTO = z.infer<typeof VerifyOTPSchema>;
 
-export function parseJSON() {
-  return z
-    .string()
-    .trim()
-    .transform((val: string) => JSON.parse(val));
-}
-
 // Register schemas — token and deviceId come from headers,
 // handled separately in middleware. These cover the body.
 export const RegisterClientSchema = z.object({
-  userData: parseJSON().pipe(UserDataSchema),
+  userData: UserDataSchema,
   // personal_image validated in multer middleware — not in body schema
 });
 export type RegisterClientDTO = z.infer<typeof RegisterClientSchema>;
 
 export const RegisterWorkerSchema = z.object({
-  userData: parseJSON().pipe(UserDataSchema),
-  workerProfile: parseJSON().pipe(WorkerProfileSchema),
+  userData: UserDataSchema,
+  workerProfile: WorkerProfileSchema,
   // personal_image, id_image, personal_with_id_image — validated in multer middleware
 });
 export type RegisterWorkerDTO = z.infer<typeof RegisterWorkerSchema>;

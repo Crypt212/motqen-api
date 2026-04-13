@@ -132,9 +132,6 @@ export default class AuthService extends Service {
     }: InputWorkerType
   ): Promise<{ user: User; profile: WorkerProfile; verification: WorkerProfileVerification }> {
     return tryCatch(async () => {
-      // Note: governmentId and cityId validation moved to location handling
-      // For workers, government associations are handled via workGovernmentIds
-
       const user = await this.userRepository.create({
         user: {
           phoneNumber,

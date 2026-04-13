@@ -14,7 +14,12 @@ import {
   City,
   CityFilter,
 } from '../domain/government.entity.js';
-import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/query.js';
+import {
+  PaginationOptions,
+  PaginatedResultMeta,
+  SortOptions,
+  PaginatedResult,
+} from '../types/query.js';
 
 export default class GovernmentService extends Service {
   private governmentRepository: IGovernmentRepository;
@@ -28,7 +33,7 @@ export default class GovernmentService extends Service {
     filter: GovernmentFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Government>;
-  }): Promise<PaginatedResultMeta & { governments: Government[] }> {
+  }): Promise<PaginatedResult<{ governments: Government[] }>> {
     return tryCatch(async () => {
       return await this.governmentRepository.findMany(params);
     });
@@ -95,7 +100,7 @@ export default class GovernmentService extends Service {
     filter: CityFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<City>;
-  }): Promise<PaginatedResultMeta & { cities: City[] }> {
+  }): Promise<PaginatedResult<{ cities: City[] }>> {
     return tryCatch(async () => {
       const existing = await this.governmentRepository.find({
         filter: { id: params.governmentId },

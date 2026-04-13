@@ -65,7 +65,8 @@ export default class GovernmentController {
   });
 
   updateGovernment = asyncHandler(async (req, res) => {
-    const { governmentId: id, name, nameAr, long, lat } = req.body;
+    const { name, nameAr, long, lat } = req.body;
+    const id = req.params.governmentId as string;
     const normalizedLong = this.normalizeCoordinate(long);
     const normalizedLat = this.normalizeCoordinate(lat);
 
@@ -83,7 +84,7 @@ export default class GovernmentController {
   });
 
   deleteGovernment = asyncHandler(async (req, res) => {
-    const { governmentId: id } = req.body;
+    const id = req.params.governmentId as string;
 
     await this.governmentService.deleteGovernment({ id });
 
