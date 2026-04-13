@@ -12,7 +12,7 @@ import {
 import { isEmptyFilter, getEmptyPaginatedResult, paginateResult } from './utils.js';
 import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
-import { PrismaClient } from 'src/generated/prisma/client.js';
+import { PrismaClient } from '../../generated/prisma/client.js';
 
 export default class ConversationRepository extends Repository implements IConversationRepository {
   constructor(prisma: PrismaClient) {
@@ -180,25 +180,27 @@ export default class ConversationRepository extends Repository implements IConve
         ...paginationQuery,
       });
 
+
       return paginateResult(
         {
-          conversationParticipantsWithMessages: conversations.map((c) => ({
-            ...this.toDomain(c),
-            participants: c.participants.map((p) => ({
-              ...p,
-              user: p.user
-                ? {
-                    id: p.user.id,
-                    firstName: p.user.firstName,
-                    middleName: p.user.middleName,
-                    lastName: p.user.lastName,
-                    status: p.user.status,
-                    role: p.user.role,
-                    phoneNumber: p.user.phoneNumber,
-                    profileImageUrl: p.user.profileImageUrl,
-                    isOnline: p.user.isOnline,
-                  }
-                : undefined,
+        conversationParticipantsWithMessages: conversations.map((c) => ({
+          ...this.toDomain(c),
+          LastMessage: c.messages && c.messages.length > 0 ? { content: c.messages[0].content ,type: c.messages[0].type} : undefined,
+          participants: c.participants.map((p) => ({
+            ...p,
+            user: p.user
+              ? {
+                  id: p.user.id,
+                  firstName: p.user.firstName,
+                  middleName: p.user.middleName,
+                  lastName: p.user.lastName,
+                  status: p.user.status,
+                  role: p.user.role,
+                  phoneNumber: p.user.phoneNumber,
+                  profileImageUrl: p.user.profileImageUrl,
+                  isOnline: p.user.isOnline,
+                }
+              : undefined,
             })),
           })),
         },

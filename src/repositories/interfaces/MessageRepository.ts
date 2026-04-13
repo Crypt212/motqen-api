@@ -58,6 +58,16 @@ export default interface IMessageRepository {
   }): Promise<Message>;
 
   /**
+   * Atomically increments the conversation messageCounter and inserts the message.
+   */
+  atomicSendMessage(params: {
+    conversationId: string;
+    senderId: string;
+    content: string;
+    type?: string;
+  }): Promise<Message>;
+
+  /**
    * Update messages
    */
   updateMany(params: { filter: MessageFilter; message: Partial<Message> }): Promise<Message[]>;

@@ -54,6 +54,8 @@ export const LocationSchema = z.object({
   governmentId: UUIDSchema,
   cityId: UUIDSchema,
   addressNotes: z.string().trim().optional(),
+  long: LongitudeSchema,
+  lat: LatitudeSchema,
 });
 
 export const LocationOptionalSchema = LocationSchema.partial();
@@ -62,7 +64,7 @@ export const UserDataSchema = z.object({
   firstName: z.string().trim().min(1, 'firstName is required'),
   middleName: z.string().trim().optional(),
   lastName: z.string().trim().min(1, 'lastName is required'),
-  location: LocationSchema.optional(),
+  location: LocationSchema,
 });
 
 export const UserDataOptionalSchema = z.object({

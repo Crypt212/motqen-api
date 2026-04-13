@@ -12,7 +12,8 @@ import IOtpCache from '../cache/interfaces/otpCache.js';
 import environment from '../configs/environment.js';
 import SendOTPProvider from '../providers/SendOTPProvider.js';
 import IRateLimitCache from '../cache/interfaces/RateLimitCache.js';
-import { generateToken } from '../utils/tokens.js';
+import ITokenCache from '../cache/interfaces/tokenCache.js';
+import { generateToken, verifyAndDecodeToken } from '../utils/tokens.js';
 import { logger } from '../libs/winston.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
@@ -31,17 +32,36 @@ import { OTPErrorDetails } from '../errors/appErrorDetails/OTPDetails.js';
 
 const MAX_VERIFY_ATTEMPTS = 5;
 
+/**
+ * Convert JWT-style expiry string (e.g. '7d', '24h', '15m') to seconds
+ */
+function parseExpiryToSeconds(expiresIn: string): number {
+  const match = expiresIn.match(/^(\d+)(s|m|h|d|w)$/);
+  if (!match) return 3600;
+  const num = parseInt(match[1]);
+  switch (match[2]) {
+    case 's': return num;
+    case 'm': return num * 60;
+    case 'h': return num * 60 * 60;
+    case 'd': return num * 60 * 60 * 24;
+    case 'w': return num * 60 * 60 * 24 * 7;
+    default: return 3600;
+  }
+}
+
 interface InputUserType {
   phoneNumber: string;
   firstName: string;
   middleName: string;
   lastName: string;
   profileImageBuffer: Buffer;
-  location?: {
+  location: {
     governmentId: IDType;
     cityId: IDType;
     address: string;
     addressNotes: string;
+    long: number;
+    lat: number;
   };
 }
 
@@ -70,6 +90,7 @@ export default class AuthService extends Service {
   private sessionRepository: ISessionRepository;
   private rateLimitCache: IRateLimitCache;
   private otpCache: IOtpCache;
+  private tokenCache: ITokenCache;
 
   /**
    */
@@ -81,6 +102,7 @@ export default class AuthService extends Service {
     sessionRepository: ISessionRepository;
     rateLimitCache: IRateLimitCache;
     otpCache: IOtpCache;
+    tokenCache: ITokenCache;
   }) {
     super();
     this.userRepository = params.userRepository;
@@ -90,6 +112,7 @@ export default class AuthService extends Service {
     this.sessionRepository = params.sessionRepository;
     this.rateLimitCache = params.rateLimitCache;
     this.otpCache = params.otpCache;
+    this.tokenCache = params.tokenCache;
   }
 
   /**
@@ -120,15 +143,13 @@ export default class AuthService extends Service {
         },
       });
 
-      if (location) {
-        await this.userRepository.addLocation({
-          userId: user.id,
-          location: {
-            ...location,
-            isMain: true,
-          },
-        });
-      }
+      await this.userRepository.addLocation({
+        userId: user.id,
+        location: {
+          ...location,
+          isMain: true,
+        },
+      });
 
       const profile = await this.workerProfileRepository.create({
         userId: user.id,
@@ -206,15 +227,13 @@ export default class AuthService extends Service {
     {}: InputClientType
   ): Promise<{ user: User; profile: ClientProfile }> {
     return tryCatch(async () => {
-      if (location) {
-        const government = await this.governmentRepository.find({
-          filter: { id: location.governmentId },
-        });
-        if (!government) throw new AppError('Government not found', 404);
+      const government = await this.governmentRepository.find({
+        filter: { id: location.governmentId },
+      });
+      if (!government) throw new AppError('Government not found', 404);
 
-        const city = await this.governmentRepository.findCity({ filter: { id: location.cityId } });
-        if (!city) throw new AppError('City not found', 404);
-      }
+      const city = await this.governmentRepository.findCity({ filter: { id: location.cityId } });
+      if (!city) throw new AppError('City not found', 404);
 
       const user = await this.userRepository.create({
         user: {
@@ -234,15 +253,13 @@ export default class AuthService extends Service {
       });
 
       // Add primary location to the User
-      if (location) {
-        await this.userRepository.addLocation({
-          userId: user.id,
-          location: {
-            ...location,
-            isMain: true,
-          },
-        });
-      }
+      await this.userRepository.addLocation({
+        userId: user.id,
+        location: {
+          ...location,
+          isMain: true,
+        },
+      });
 
       if (profileImageBuffer) {
         const { url } = await uploadToCloudinary(
@@ -303,6 +320,19 @@ export default class AuthService extends Service {
   }> {
     // in production -> Invalid or expired OTP only
 
+    const currentAttempts = await this.rateLimitCache.getVerifyAttempts(phoneNumber, method);
+    if (currentAttempts >= MAX_VERIFY_ATTEMPTS) {
+      throw new AppError(
+        'Maximum verification attempts reached',
+        400,
+        new OTPErrorDetails({
+          type: 'FAILED_ATTEMPT',
+          remainingAttempts: 0,
+          requestNewOtp: true,
+        })
+      );
+    }
+
     try {
       const hashedOTP = hashOTP(OTP);
 
@@ -337,6 +367,14 @@ export default class AuthService extends Service {
         const payload: RegisterTokenPayload = { type: 'register', phoneNumber };
         tokenType = 'register';
         token = generateToken(payload);
+      }
+
+      // Store token hash in Redis so it can only be consumed once
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const ttlSeconds = parseExpiryToSeconds(environment.jwt[tokenType].expiresIn);
+      const stored = await this.tokenCache.setToken(tokenType, tokenHash, ttlSeconds);
+      if (!stored) {
+        throw new AppError('Token already issued for this session, please request a new OTP', 409);
       }
 
       let workerVerificationInfo: { isWorker: boolean; isWorkerSignedUp: boolean } = {
@@ -462,6 +500,52 @@ export default class AuthService extends Service {
       },
     });
     return { session, user, unHashedRefreshToken: unHashedRefreshToken };
+  }
+
+  /**
+   * Verify a register token and atomically consume it (one-time use).
+   * Rolls back Redis consumption if JWT verification fails.
+   * @throws {AppError} If token is invalid, already used, or expired
+   */
+  async consumeRegisterToken(token: string): Promise<RegisterTokenPayload> {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const consumed = await this.tokenCache.consumeToken('register', tokenHash);
+    if (!consumed) {
+      throw new AppError('Register token already used or expired', 401);
+    }
+
+    try {
+      const decoded = verifyAndDecodeToken(token, 'register');
+      return decoded;
+    } catch (error) {
+      // Rollback: restore token to Redis so it can be retried
+      const ttlSeconds = parseExpiryToSeconds(environment.jwt.register.expiresIn);
+      await this.tokenCache.restoreToken('register', tokenHash, ttlSeconds);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify a login token and atomically consume it (one-time use).
+   * Rolls back Redis consumption if JWT verification fails.
+   * @throws {AppError} If token is invalid, already used, or expired
+   */
+  async consumeLoginToken(token: string): Promise<LoginTokenPayload> {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const consumed = await this.tokenCache.consumeToken('login', tokenHash);
+    if (!consumed) {
+      throw new AppError('Login token already used or expired', 401);
+    }
+
+    try {
+      const decoded = verifyAndDecodeToken(token, 'login');
+      return decoded;
+    } catch (error) {
+      // Rollback: restore token to Redis so it can be retried
+      const ttlSeconds = parseExpiryToSeconds(environment.jwt.login.expiresIn);
+      await this.tokenCache.restoreToken('login', tokenHash, ttlSeconds);
+      throw error;
+    }
   }
 
   /**

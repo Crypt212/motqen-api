@@ -9,3 +9,10 @@ package-lock.json
 
 prisma/migrations
 src/generated
+
+.github
+.agent
+.specify
+.vscode
+specs
+docs

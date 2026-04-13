@@ -7,7 +7,6 @@ import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { authService, rateLimitService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
-import { verifyAndDecodeToken } from '../utils/tokens.js';
 
 /**
  * Request OTP for phone number verification
@@ -17,9 +16,9 @@ export const requestOTP = asyncHandler(async (req, res) => {
   const { method, phoneNumber } = req.body;
   const deviceId = req.deviceId;
 
-  await authService.requestOTP(phoneNumber, method);
-
   const { cooldown } = await rateLimitService.incrementSend(phoneNumber, method, deviceId);
+
+  await authService.requestOTP(phoneNumber, method);
 
   new SuccessResponse('OTP sent successfully', { phoneNumber, method, cooldown }, 200).send(res);
 });
@@ -55,10 +54,10 @@ export const registerClient = asyncHandler(async (req, res) => {
   const { userData } = req.body;
   const { firstName, middleName, lastName, location } = userData;
 
-  const phoneNumber = verifyAndDecodeToken(
-    req.headers['authorization'].split(' ')[1],
-    'register'
-  ).phoneNumber;
+  const rawToken = req.headers['authorization']?.split(' ')[1];
+  if (!rawToken) throw new AppError('Unauthorized, register token not found', 401);
+
+  const { phoneNumber } = await authService.consumeRegisterToken(rawToken);
   const image = req.file;
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -106,10 +105,10 @@ export const registerWorker = asyncHandler(async (req, res) => {
     workerProfile;
 
   const deviceId = req.deviceId;
-  const phoneNumber = verifyAndDecodeToken(
-    req.headers['authorization'].split(' ')[1],
-    'register'
-  ).phoneNumber;
+  const rawToken = req.headers['authorization']?.split(' ')[1];
+  if (!rawToken) throw new AppError('Unauthorized, register token not found', 401);
+
+  const { phoneNumber } = await authService.consumeRegisterToken(rawToken);
   const images = req.files;
 
   if (
@@ -166,10 +165,10 @@ export const registerWorker = asyncHandler(async (req, res) => {
  */
 export const login = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
-  const phoneNumber = verifyAndDecodeToken(
-    req.headers['authorization'].split(' ')[1],
-    'login'
-  ).phoneNumber;
+  const rawToken = req.headers['authorization']?.split(' ')[1];
+  if (!rawToken) throw new AppError('Unauthorized, login token not found', 401);
+
+  const { phoneNumber } = await authService.consumeLoginToken(rawToken);
 
   const { unHashedRefreshToken, user } = await authService.login({
     phoneNumber,

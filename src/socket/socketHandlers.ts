@@ -24,7 +24,7 @@
  */
 
 import { logger } from '../libs/winston.js';
-import { chatService, conversationRepository } from '../state.js';
+import { chatService, conversationRepository, contactDetectionService } from '../state.js';
 import prisma from '../libs/database.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { ConversationWithParticipantsAndMessages } from '../domain/conversation.entity.js';
@@ -83,8 +83,15 @@ export function registerSocketHandlers(
   });
 
   // ─── send_message ───────────────────────────────────────────────────────────
-  socket.on('send_message', async ({ conversationId, content, type = 'TEXT' }, ack) => {
+  socket.on('send_message', async ({ conversationId, content, type = 'TEXT', localId }, ack) => {
     try {
+      if (type !== 'TEXT') {
+        if (typeof ack === 'function') {
+          ack({ ok: false, error: 'Invalid message type' });
+        }
+        return;
+      }
+
       // 1. DB-based participant validation (authoritative)
       await chatService.validateParticipant({ conversationId, userId });
 
@@ -99,6 +106,16 @@ export function registerSocketHandlers(
         senderId: userId,
         content,
         type,
+      });
+
+      // Fire and forget: Non-blocking contact detection
+      setImmediate(() => {
+        contactDetectionService
+          .analyzeAndFlagMessage(message)
+          .then((data) => console.log(data))
+          .catch((err) => {
+            logger.error('[socket] Contact detection failed', err);
+          });
       });
 
       // 4. Check recipient presence
@@ -136,10 +153,10 @@ export function registerSocketHandlers(
       if (typeof ack === 'function') {
         ack({
           ok: true,
-          messageNumber: message.messageNumber,
-          createdAt: message.createdAt,
+          message,
           delivered,
           read: recipientInChat,
+          localId,
         });
       }
     } catch (err: unknown) {
@@ -258,9 +275,22 @@ export function registerSocketHandlers(
         await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
           userId,
           filter: {},
+          pagination: { page: 1, limit: 10 },
         });
       const conversationIds = convs.conversationParticipantsWithMessages.map((c) => c.id);
       void presence.leaveAllChats({ userId, socketId: socket.id, conversationIds });
+
+      // 2b. Emit partner_offline to all active online partners using Promise.all
+      await Promise.all(
+        convs.conversationParticipantsWithMessages.map(async (conv) => {
+          const partnerId = getPartnerId(conv as ConversationWithParticipantsAndMessages, userId);
+          if (!partnerId) return;
+          const isPartnerOnline = await presence.isOnline({ userId: partnerId });
+          if (isPartnerOnline) {
+            io.to(`user:${partnerId}`).emit('partner_offline', { conversationId: conv.id });
+          }
+        })
+      );
 
       // 3. Check if all devices are now offline
       const remaining = await presence.countSockets({ userId });
