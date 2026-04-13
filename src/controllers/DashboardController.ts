@@ -255,10 +255,10 @@ export const getUserLocations = asyncHandler(async (req, res) => {
 
 export const addUserLocation = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const { governmentId, cityId, address, addressNotes, isMain } = req.body;
+  const { governmentId, cityId, address, addressNotes, isMain, long, lat } = req.body;
   const location = await userService.addLocation({
     userId,
-    location: { governmentId, cityId, address, addressNotes, isMain },
+    location: { governmentId, cityId, address, addressNotes, isMain, long, lat },
   });
   new SuccessResponse('added location successfully', { location }, 201).send(res);
 });

@@ -3,7 +3,7 @@ import { handlePrismaError, Repository } from './Repository.js';
 import { IDType } from '../interfaces/Repository.js';
 import { Session, SessionCreateInput, SessionFilter } from '../../domain/session.entity.js';
 import { isEmptyFilter } from './utils.js';
-import { PrismaClient } from 'src/generated/prisma/client.js';
+import { PrismaClient } from '../../generated/prisma/client.js';
 
 export default class SessionRepository extends Repository implements ISessionRepository {
   constructor(prisma: PrismaClient) {
