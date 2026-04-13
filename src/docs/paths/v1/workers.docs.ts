@@ -4,7 +4,7 @@ import {
   ExploreWorkersResponseSchema,
   ExploreWorkerDetailResponseSchema,
 } from '../../../schemas/responses.js';
-import { createResponseDoc } from 'src/docs/common.js';
+import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerWorkersDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────

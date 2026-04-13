@@ -16,7 +16,7 @@ import {
   ReviewStatusResponseSchema,
 } from '../../../schemas/responses.js';
 import { z } from '../../../libs/zod.js';
-import { createResponseDoc } from 'src/docs/common.js';
+import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerAuthDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────

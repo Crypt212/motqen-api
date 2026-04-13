@@ -22,7 +22,7 @@ import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.
 import prisma from '../libs/database.js';
 import { $Enums } from '../generated/prisma/client.js';
 import { PaginatedResult, PaginationOptions, SortOptions } from '../types/query.js';
-import { paginateResult } from '../repositories/prisma/utils.js';
+import { paginateResult } from '../utils/handleFilteration.js';
 
 export type ConversationWithMeta = {
   id: string;
@@ -171,8 +171,6 @@ export default class ChatService extends Service {
           page: convs.meta.page,
           limit: convs.meta.limit,
           count: convs.meta.count,
-          total: convs.meta.total,
-          totalPages: convs.meta.totalPages,
           hasNext: convs.meta.hasNext,
           hasPrev: convs.meta.hasPrev,
         }

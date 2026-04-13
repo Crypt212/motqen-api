@@ -32,7 +32,7 @@ import {
   isActive,
 } from '../../middlewares/authMiddleware.js';
 import { validateBody } from '../../middlewares/validateRequest.js';
-import { parseMultipartJson } from 'src/middlewares/multipartParseMiddleware.js';
+import { parseMultipartJson } from '../../middlewares/multipartParseMiddleware.js';
 
 const authRouter = Router();
 

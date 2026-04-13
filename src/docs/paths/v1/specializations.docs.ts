@@ -15,7 +15,7 @@ import {
   SubSpecializationListResponseSchema,
   MessageOnlyResponseSchema,
 } from '../../../schemas/responses.js';
-import { createResponseDoc } from 'src/docs/common.js';
+import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────
