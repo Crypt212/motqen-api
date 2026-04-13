@@ -303,12 +303,31 @@ export default class UserRepository extends Repository implements IUserRepositor
     }
   }
 
-  async findLocations(params: { filter: { userId: IDType } }): Promise<Location[]> {
+  async findLocations(params: {
+    filter: { userId: IDType };
+    pagination?: PaginationOptions;
+  }): Promise<PaginatedResultMeta & { locations: Location[] }> {
     try {
-      const locations = await this.prismaClient.location.findMany({
+      const total = await this.prismaClient.location.count({
         where: { userId: params.filter.userId },
       });
-      return locations.map((l) => this.toDomainLocation(l));
+      const { paginationResult, paginationQuery } = handlePagination({
+        total,
+        paginationOptions: params.pagination,
+      });
+
+      const locations = await this.prismaClient.location.findMany({
+        where: { userId: params.filter.userId },
+        ...paginationQuery,
+      });
+
+      return {
+        locations: locations.map((l) => this.toDomainLocation(l)),
+        ...paginationResult,
+        count: locations.length,
+        hasNext: paginationResult.page < paginationResult.totalPages,
+        hasPrev: paginationResult.page > 1,
+      };
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findLocations');
     }

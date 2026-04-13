@@ -59,7 +59,10 @@ export default interface IUserRepository {
     filter: UserFilter;
   }): Promise<(User & { location: Location }) | null>;
 
-  findLocations(params: { filter: { userId: IDType } }): Promise<Location[]>;
+  findLocations(params: {
+    filter: { userId: IDType };
+    pagination?: PaginationOptions;
+  }): Promise<PaginatedResultMeta & { locations: Location[] }>;
   updateLocation(params: {
     filter: { id: IDType; userId: IDType };
     location: LocationUpdateInput;

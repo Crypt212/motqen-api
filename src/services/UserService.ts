@@ -151,7 +151,10 @@ export default class UserService extends Service {
   // Location proxy endpoints
   // ============================================
 
-  async getLocations(params: { filter: { userId: IDType } }): Promise<Location[]> {
+  async getLocations(params: {
+    filter: { userId: IDType };
+    pagination?: PaginationOptions;
+  }): Promise<PaginatedResultMeta & { locations: Location[] }> {
     return await this.userRepository.findLocations(params);
   }
 
