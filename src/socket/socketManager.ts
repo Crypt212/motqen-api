@@ -16,7 +16,7 @@ import { logger } from '../libs/winston.js';
 import { socketAuth } from '../middlewares/socketMiddleware.js';
 import { registerSocketHandlers } from './socketHandlers.js';
 import { initEmitter } from './socket-emitter.js';
-import { chatService, conversationRepository } from '../state.js';
+import { chatService, conversationRepository, rateLimitCache } from '../state.js';
 import prisma from '../libs/database.js';
 
 /** Initialize the Socket.IO server and attach it to the HTTP server. */
@@ -28,6 +28,10 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
     transports: ['websocket', 'polling'],
     pingTimeout: 60000,
     pingInterval: 25000,
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST'],
+    },
   });
 
   initEmitter(io);
@@ -53,6 +57,32 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
     const presence = chatService.presence;
 
     logger.info(`[socket] connected: ${userId} (${socket.id})`);
+
+    // ─── Global Rate Limiter ───────────────────────────────────────────────────
+    socket.use(async ([event, ...args], next) => {
+      if (typeof event !== 'string' || event === 'disconnect') return next();
+
+      let limit = 60; // Default for high-frequency (typing_indicator, ping)
+      if (event === 'send_message') limit = 30;
+      else if (['read'].includes(event)) limit = 20;
+      else if (['enter_chat', 'leave_chat' , 'typing_indicator' ,'ping' ].includes(event)) return next();
+      try {
+        await rateLimitCache.consumeSocketEvent(userId, event, limit, 60);
+        next();
+      } catch (err: any) {
+        const retryAfter = err.msBeforeNext ? Math.round(err.msBeforeNext / 1000) : 60;
+        
+        // TODO: Implement block/ban logic here for severe abusers if needed 
+
+        const lastArg = args[args.length - 1];
+        if (typeof lastArg === 'function') {
+          lastArg({ ok: false, error: 'Rate limit exceeded', retryAfter });
+        } else {
+          socket.emit('rate_limit_exceeded', { event, retryAfter });
+        }
+        // Do not call next() -> packet is silently dropped
+      }
+    });
 
     // 1. Join user room — all devices of this user share one room
     await socket.join(`user:${userId}`);

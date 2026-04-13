@@ -4,6 +4,7 @@
  */
 
 import AppError from '../errors/AppError.js';
+import uploadToCloudinary, { deleteFromCloudinary } from '../providers/cloudinaryProvider.js';
 import Service, { tryCatch } from './Service.js';
 import IChatPresenceCache from '../cache/interfaces/ChatPresenceCache.js';
 import { Message, MessageType } from '../domain/message.entity.js';
@@ -17,10 +18,9 @@ import {
   Conversation,
   ConversationParticipant,
   ConversationWithParticipantsAndMessages,
+  GetConversations
 } from '../domain/conversation.entity.js';
 import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
-import prisma from '../libs/database.js';
-import { $Enums } from '../generated/prisma/client.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../types/query.js';
 
 export type ConversationWithMeta = {
@@ -119,7 +119,7 @@ export default class ChatService extends Service {
     sort: SortOptions<ConversationWithParticipantsAndMessages>;
   }): Promise<
     PaginatedResultMeta & {
-      conversations: ConversationWithParticipantsAndMessages[];
+      conversations: GetConversations[];
     }
   > {
     const { userId, pagination, sort } = params;
@@ -153,7 +153,7 @@ export default class ChatService extends Service {
           id: conv.id,
           messageCounter: conv.messageCounter,
           unreadCount,
-          lastMessage: conv.messages ? conv.messages : null,
+          LastMessage: conv.LastMessage,
           partner: partnerParticipant?.user ?? null,
           partnerLastReceivedMessageNumber: partnerParticipant?.lastReceivedMessageNumber ?? 0,
           partnerLastReadMessageNumber: partnerParticipant?.lastReadMessageNumber ?? 0,
@@ -163,7 +163,7 @@ export default class ChatService extends Service {
       });
 
       return {
-        conversations: conversations as unknown as ConversationWithParticipantsAndMessages[],
+        conversations: conversations as unknown as GetConversations[],
         page: convs.page,
         limit: convs.limit,
         count: convs.count,
@@ -192,31 +192,18 @@ export default class ChatService extends Service {
     content: string;
     type?: MessageType;
   }): Promise<Message> {
-    const { conversationId, senderId, content, type } = params;
+    let { conversationId, senderId, content, type } = params;
     return tryCatch(async () => {
-      if (!content?.trim()) throw new AppError('Message content cannot be empty', 400);
+      content = content?.trim() || '';
+      if (!content) throw new AppError('Message content cannot be empty', 400);
       if (content.length > 2000)
         throw new AppError('Message content cannot exceed 2000 characters', 400);
 
-      const message = await prisma.$transaction(async (tx) => {
-        // Atomic increment — returns new counter value
-        const updated = await tx.conversation.update({
-          where: { id: conversationId },
-          data: { messageCounter: { increment: 1 } },
-          select: { messageCounter: true },
-        });
-        const messageNumber = updated.messageCounter;
-
-        // Insert the message with that number
-        return tx.message.create({
-          data: {
-            conversationId,
-            senderId,
-            messageNumber,
-            content,
-            type: $Enums.MessageType[type],
-          },
-        });
+      const message = await this.messageRepository.atomicSendMessage({
+        conversationId,
+        senderId,
+        content,
+        type: type || 'TEXT',
       });
 
       // Sender always "receives" their own message
@@ -227,6 +214,40 @@ export default class ChatService extends Service {
       });
 
       return message;
+    });
+  }
+
+  /**
+   * Send an image message — uploads to Cloudinary,
+   * then atomically increments the counter and inserts the message.
+   *
+   * @param params.conversationId  The conversation to send the image in
+   * @param params.senderId        The authenticated user's ID
+   * @param params.imageBuffer     The raw image buffer from multer
+   */
+  async sendImageMessage(params: {
+    conversationId: IDType;
+    senderId: IDType;
+    imageBuffer: Buffer;
+  }): Promise<Message> {
+    const { conversationId, senderId, imageBuffer } = params;
+    return tryCatch(async () => {
+      const { url, publicId } = await uploadToCloudinary(
+        imageBuffer,
+        `chat-images/${conversationId}`
+      );
+
+      try {
+        return await this.sendMessage({
+          conversationId,
+          senderId,
+          content: url,
+          type: 'IMAGE',
+        });
+      } catch (error) {
+        await deleteFromCloudinary(publicId).catch(() => undefined);
+        throw error;
+      }
     });
   }
 
@@ -253,6 +274,16 @@ export default class ChatService extends Service {
       if (!message) throw new AppError('Message not found', 404);
       if (message.conversationId !== conversationId)
         throw new AppError('Message does not belong to this conversation', 400);
+
+      const participant = await this.conversationRepository.findParticipant({
+        conversationId,
+        userId,
+      });
+      if (!participant) throw new AppError('Not a participant in this conversation', 403);
+
+      if (message.messageNumber <= participant.lastReadMessageNumber) {
+        return { readUpTo: message.messageNumber };
+      }
 
       await this.conversationRepository.updateLastRead({
         conversationId,
@@ -306,6 +337,7 @@ export default class ChatService extends Service {
     limit: number;
   }): Promise<Message[]> {
     const { conversationId, userId } = params;
+    console.log(params)
     const after = params.after ?? 0;
     const limit = params.limit ?? 30;
     return tryCatch(async () => {
@@ -328,8 +360,9 @@ export default class ChatService extends Service {
     conversationId: IDType;
     userId: IDType;
     afterMessageNumber: number;
+    limit: number;
   }): Promise<Message[]> {
-    const { conversationId, userId, afterMessageNumber } = params;
+    const { conversationId, userId, afterMessageNumber , limit} = params;
     return tryCatch(async () => {
       const participant = await this.conversationRepository.findParticipant({
         conversationId,
@@ -340,7 +373,7 @@ export default class ChatService extends Service {
       return this.messageRepository.findPage({
         conversationId,
         after: afterMessageNumber,
-        limit: 100,
+        limit: limit ?? 100, 
       });
     });
   }
@@ -380,6 +413,16 @@ export default class ChatService extends Service {
   }): Promise<ConversationParticipant> {
     const { conversationId, userId, messageNumber } = params;
     return tryCatch(async () => {
+      const participant = await this.conversationRepository.findParticipant({
+        conversationId,
+        userId,
+      });
+      if (!participant) throw new AppError('Not a participant in this conversation', 403);
+
+      if (messageNumber <= participant.lastReceivedMessageNumber) {
+        return participant;
+      }
+
       return this.conversationRepository.updateLastReceived({
         conversationId,
         userId,

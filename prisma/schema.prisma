@@ -12,9 +12,13 @@ model Session {
   userId     String
   token      String    @unique
   isRevoked  Boolean   @default(false)
+  revokedAt  DateTime?
+  revokedBy  String?
+  deviceId   String
   ipAddress  String?
   userAgent  String?
   lastUsedAt DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   createdAt  DateTime  @default(now())
   expiresAt  DateTime
   deviceId   String
@@ -223,52 +227,8 @@ model WorkerBadge {
   @@map("worker_badges")
 }
 
-model Conversation {
-  id             String                    @id @default(uuid())
-  messageCounter Int                       @default(0)
-  createdAt      DateTime                  @default(now())
-  updatedAt      DateTime                  @updatedAt
-  participants   ConversationParticipant[]
-  messages       Message[]
 
-  @@map("conversations")
-}
 
-model ConversationParticipant {
-  id                        String           @id @default(uuid())
-  conversationId            String
-  userId                    String
-  role                      ConversationRole
-  lastReadMessageNumber     Int              @default(0)
-  lastReceivedMessageNumber Int              @default(0)
-  createdAt                 DateTime         @default(now())
-  updatedAt                 DateTime         @updatedAt
-  conversation              Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user                      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([conversationId, userId])
-  @@unique([conversationId, role])
-  @@index([userId])
-  @@map("conversation_participants")
-}
-
-model Message {
-  id             String       @id @default(uuid())
-  conversationId String
-  senderId       String
-  messageNumber  Int
-  content        String
-  type           MessageType  @default(TEXT)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User         @relation(fields: [senderId], references: [id])
-
-  @@unique([conversationId, messageNumber])
-  @@index([conversationId, createdAt])
-  @@index([senderId])
-  @@map("messages")
-}
 
 model Order {
   id              String        @id @default(uuid())
@@ -340,4 +300,84 @@ enum ConversationRole {
 enum MessageType {
   TEXT
   IMAGE
+}
+
+enum FlagState {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+enum FlagReasonType {
+  PHONE_EGYPT
+  PHONE_INTERNATIONAL
+  URL
+  SOCIAL_HANDLE
+}
+
+model Conversation {
+  id             String   @id @default(uuid())
+  messageCounter Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id                        String           @id @default(uuid())
+  conversationId            String
+  userId                    String
+  role                      ConversationRole
+  lastReadMessageNumber     Int              @default(0)
+  lastReceivedMessageNumber Int              @default(0)
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@unique([conversationId, role])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String
+  senderId       String
+  messageNumber  Int
+  content        String
+  type           MessageType @default(TEXT)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  conversation Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User            @relation(fields: [senderId], references: [id])
+  flagged      FlaggedMessage?
+
+  @@unique([conversationId, messageNumber])
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model FlaggedMessage {
+  id        String           @id @default(uuid())
+  messageId String           @unique
+  reasons   FlagReasonType[]
+  matches   String[]
+  state     FlagState        @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([state])
+  @@index([createdAt])
+  @@map("flagged_messages")
 }

@@ -1,6 +1,6 @@
 import IMessageRepository from '../interfaces/MessageRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
-import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
+import { isEmptyFilter } from './utils.js';
 import {
   Message,
   MessageCreateInput,
@@ -10,8 +10,7 @@ import {
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { IDType } from '../interfaces/Repository.js';
-import { User } from '../../domain/user.entity.js';
-import { PrismaClient } from '../../generated/prisma/client.js';
+import { PrismaClient } from 'src/generated/prisma/client.js';
 
 export default class MessageRepository extends Repository implements IMessageRepository {
   constructor(prisma: PrismaClient) {
@@ -31,7 +30,7 @@ export default class MessageRepository extends Repository implements IMessageRep
     };
   }
 
-  private toDomainWithSender(record: Message & { sender?: Partial<User> }): Message {
+  private toDomainWithSender(record: Message ): Message {
     return {
       id: record.id,
       conversationId: record.conversationId,
@@ -45,8 +44,13 @@ export default class MessageRepository extends Repository implements IMessageRep
         ? {
             id: record.sender.id,
             firstName: record.sender.firstName,
+            middleName: record.sender.middleName,
             lastName: record.sender.lastName,
             profileImageUrl: record.sender.profileImageUrl,
+            role: record.sender.role,
+            phoneNumber: record.sender.phoneNumber,
+            status: record.sender.status,
+            isOnline: record.sender.isOnline,
           }
         : undefined,
     };
@@ -143,7 +147,12 @@ export default class MessageRepository extends Repository implements IMessageRep
             select: {
               id: true,
               firstName: true,
+              middleName: true,
               lastName: true,
+              phoneNumber: true,
+              role: true,
+              status: true,
+              isOnline: true,
               profileImageUrl: true,
             },
           },
@@ -232,6 +241,54 @@ export default class MessageRepository extends Repository implements IMessageRep
       return this.toDomain(record);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'insertMessage');
+    }
+  }
+
+  async atomicSendMessage(params: {
+    conversationId: IDType;
+    senderId: IDType;
+    content: string;
+    type?: MessageType;
+  }): Promise<Message> {
+    try {
+      const record = await (this.prismaClient as PrismaClient).$transaction(async (tx) => {
+        // Atomic increment — returns new counter value
+        const updated = await tx.conversation.update({
+          where: { id: params.conversationId },
+          data: { messageCounter: { increment: 1 } },
+          select: { messageCounter: true },
+        });
+        const messageNumber = updated.messageCounter;
+
+        // Insert the message with that number
+        return tx.message.create({
+          data: {
+            conversationId: params.conversationId,
+            senderId: params.senderId,
+            messageNumber,
+            content: params.content,
+            type: params.type || 'TEXT',
+          },
+          include: {
+            sender: {
+              select: {
+                id: true,
+                firstName: true,
+                middleName: true,
+                lastName: true,
+                phoneNumber: true,
+                role: true,
+                status: true,
+                isOnline: true,
+                profileImageUrl: true,
+              },
+            },
+          },
+        });
+      });
+      return record;
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'atomicSendMessage');
     }
   }
 

@@ -16,9 +16,9 @@ export const requestOTP = asyncHandler(async (req, res) => {
   const { method, phoneNumber } = req.body;
   const deviceId = req.deviceId;
 
-  await authService.requestOTP(phoneNumber, method);
-
   const { cooldown } = await rateLimitService.incrementSend(phoneNumber, method, deviceId);
+
+  await authService.requestOTP(phoneNumber, method);
 
   new SuccessResponse('OTP sent successfully', { phoneNumber, method, cooldown }, 200).send(res);
 });

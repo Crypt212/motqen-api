@@ -47,7 +47,7 @@ export type ConversationParticipant = {
 };
 
 export type ConversationWithParticipantsAndMessages = Conversation & {
-  // unreadCount: number;
+   LastMessage?: {content: string, type: string};
   participants: ConversationParticipant[];
   messages?: Message[];
 };
@@ -62,3 +62,16 @@ export type Message = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type GetConversations =  {
+  id: IDType,
+  messageCounter: number,
+  unreadCount: number,
+  LastMessage?: {content: string, type: string},
+  partner: User | null,
+  partnerLastReceivedMessageNumber: number,
+  partnerLastReadMessageNumber: number,
+  createdAt: Date,
+  updatedAt: Date,
+};
+
