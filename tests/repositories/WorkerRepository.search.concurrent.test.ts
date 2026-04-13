@@ -69,6 +69,14 @@ function createMockPrisma(): MockPrisma {
   const orderGroupBy = vi.fn(async (args: AnyObject) => {
     await delay(25);
 
+    if ('_avg' in args && '_count' in args) {
+      // Return both _avg and _count when both are requested
+      return [
+        { workerProfileId: 'worker-1', _avg: { rating: 4.5 }, _count: { rating: 12 } },
+        { workerProfileId: 'worker-2', _avg: { rating: 3.5 }, _count: { rating: 9 } },
+      ];
+    }
+
     if ('_avg' in args) {
       return [
         { workerProfileId: 'worker-1', _avg: { rating: 4.5 } },

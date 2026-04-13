@@ -8,10 +8,12 @@ export type VerificationStatus = $Enums.VerificationStatus;
 export type WorkerProfile = {
   id: IDType;
   userId: string;
+
   experienceYears: number;
   isInTeam: boolean;
   acceptsUrgentJobs: boolean;
   bio?: string;
+
   createdAt: Date;
   updatedAt: Date;
 };
@@ -21,7 +23,6 @@ export type WorkerProfileCreateInput = {
   isInTeam?: boolean;
   acceptsUrgentJobs?: boolean;
   bio?: string;
- 
 };
 
 export type WorkerProfileUpdateInput = Partial<WorkerProfileCreateInput>;

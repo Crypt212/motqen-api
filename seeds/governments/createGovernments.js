@@ -1,4 +1,21 @@
-import prisma from '../../src/libs/database.js';
+import 'dotenv/config';
+import pkg from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
+const { PrismaClient } = pkg;
+
+const { Pool } = pg;
+
+// Initialize Prisma Client
+const connectionString = process.env.DATABASE_URL;
+const pool = new Pool({
+  connectionString: connectionString,
+});
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({
+  adapter,
+  log: ['error', 'warn'],
+});
 
 // Egyptian Governments and their Cities
 // We'll track the first government and first city for creating a location for the test client
@@ -1017,15 +1034,15 @@ async function main() {
           data: {
             name: gov.name,
             nameAr: gov.nameAr,
-            long: parseFloat(gov.long),
-            lat: parseFloat(gov.lat),
+            long: gov.long,
+            lat: gov.lat,
           },
         });
         console.log(`Created government: ${govRecord.name}`);
       } else {
         await prisma.government.update({
           where: { id: govRecord.id },
-          data: { nameAr: gov.nameAr, long: parseFloat(gov.long), lat: parseFloat(gov.lat) },
+          data: { nameAr: gov.nameAr, long: gov.long, lat: gov.lat },
         });
         console.log(`Updated government: ${govRecord.name}`);
       }
@@ -1043,8 +1060,8 @@ async function main() {
             data: {
               name: city.name,
               nameAr: city.nameAr,
-              long: parseFloat(city.long),
-              lat: parseFloat(city.lat),
+              long: city.long,
+              lat: city.lat,
               governmentId: govRecord.id,
             },
           });
@@ -1052,7 +1069,7 @@ async function main() {
         } else {
           await prisma.city.update({
             where: { id: cityRecord.id },
-            data: { nameAr: city.nameAr, long: parseFloat(city.long), lat: parseFloat(city.lat) },
+            data: { nameAr: city.nameAr, long: city.long, lat: city.lat },
           });
           console.log(`  - Updated city: ${cityRecord.name}`);
         }

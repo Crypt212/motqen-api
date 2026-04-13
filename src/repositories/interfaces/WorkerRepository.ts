@@ -1,4 +1,3 @@
-import type { ExploreWorkerPublicDetail } from '../../types/exploreWorker.js';
 import { SpecializationsTree } from '../../domain/specialization.entity.js';
 import {
   WorkerProfile,
@@ -20,10 +19,6 @@ export default interface IWorkerProfileRepository {
    * Find worker profile
    */
   find(params: { workerFilter: WorkerProfileFilter }): Promise<WorkerProfile | null>;
-  /**
-   * Explore: approved + active user, full public payload with user, portfolio, project images
-   */
-  findExploreWorkerById(workerProfileId: string): Promise<ExploreWorkerPublicDetail | null>;
   /**
    * Find many online users' worker profiles
    */

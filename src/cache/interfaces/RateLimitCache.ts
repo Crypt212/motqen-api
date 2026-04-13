@@ -90,13 +90,4 @@ export default interface IRateLimitCache {
    * Reset rate limit state after successful verification
    */
   resetAfterSuccess(phone: string, method: Method, deviceId: IDType): Promise<void>;
-
-  // ─── Socket ────────────────────────────────────────────────────────────────
-
-  /**
-   * Consume a point for a socket event.
-   * Throws an error (typically from rate-limiter-flexible) if exceeded.
-   * Should fail-open (resolve) if Redis connection drops.
-   */
-  consumeSocketEvent(userId: string, event: string, points: number, durationSeconds: number): Promise<void>;
 }

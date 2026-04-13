@@ -18,6 +18,4 @@ const uploadToCloudinary = (
   });
 };
 
-export const deleteFromCloudinary = (publicId: string) => cloudinary.uploader.destroy(publicId);
-
 export default uploadToCloudinary;

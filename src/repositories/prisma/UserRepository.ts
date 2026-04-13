@@ -48,8 +48,6 @@ export default class UserRepository extends Repository implements IUserRepositor
       cityId: record.cityId,
       address: record.address,
       addressNotes: record.addressNotes,
-      long: record.long,
-      lat: record.lat,
       isMain: record.isMain,
     };
   }
@@ -233,25 +231,22 @@ export default class UserRepository extends Repository implements IUserRepositor
       const { filter } = params;
       if (isEmptyFilter(filter)) return null;
 
-      const user = await this.prismaClient.user.findFirst({
+      const userWithLocation = await this.prismaClient.user.findFirst({
         where: filter,
+        include: {
+          locations: {
+            where: { isMain: true },
+            take: 1,
+          },
+        },
       });
 
-      if (!user) return null;
+      if (!userWithLocation || userWithLocation.locations.length === 0) return null;
 
-      const locations = await this.prismaClient.$queryRaw<Location[]>`
-        SELECT id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain",
-               ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat
-        FROM locations
-        WHERE "userId" = ${user.id} AND "isMain" = true
-        LIMIT 1
-      `;
-
-      if (!locations || locations.length === 0) return null;
-
+      const location = userWithLocation.locations[0];
       return {
-        ...this.toDomain(user),
-        location: this.toDomainLocation(locations[0]),
+        ...this.toDomain(userWithLocation),
+        location: this.toDomainLocation(location),
       };
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findWithPrimaryLocation');
@@ -267,15 +262,13 @@ export default class UserRepository extends Repository implements IUserRepositor
         });
       }
 
-      const { governmentId, cityId, address, addressNotes, long, lat, isMain } = params.location;
-
-      const records = await this.prismaClient.$queryRaw<Location[]>`
-        INSERT INTO locations (id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain", "pointGeography")
-        VALUES (gen_random_uuid(), ${params.userId}, ${governmentId}, ${cityId}, ${address}, ${addressNotes}, ${isMain}, ST_SetSRID(ST_MakePoint(${long}, ${lat}), 4326))
-        RETURNING id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain", ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat
-      `;
-
-      return this.toDomainLocation(records[0]);
+      const record = await this.prismaClient.location.create({
+        data: {
+          userId: params.userId,
+          ...params.location,
+        },
+      });
+      return this.toDomainLocation(record);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'addLocation');
     }
@@ -286,18 +279,16 @@ export default class UserRepository extends Repository implements IUserRepositor
     location: LocationUpdateInput;
   }): Promise<Location> {
     try {
-      const mainLocations = await this.prismaClient.$queryRaw<Location[]>`
-        SELECT id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain",
-               ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat
-        FROM locations
-        WHERE "userId" = ${params.userId} AND "isMain" = true
-        LIMIT 1
-      `;
+      const mainLocation = await this.prismaClient.location.findFirst({
+        where: {
+          userId: params.userId,
+          isMain: true,
+        },
+      });
 
-      if (!mainLocations || mainLocations.length === 0) {
+      if (!mainLocation) {
         throw new Error('Primary location not found');
       }
-      const mainLocation = mainLocations[0];
 
       // If this explicitly tries to switch main toggle, we handle it
       if (params.location.isMain) {
@@ -307,26 +298,11 @@ export default class UserRepository extends Repository implements IUserRepositor
         });
       }
 
-      const { governmentId, cityId, address, addressNotes, long, lat, isMain } = params.location;
-      const updated = await this.prismaClient.$queryRaw<Location[]>`
-        UPDATE locations
-        SET 
-          "governmentId" = COALESCE(${governmentId}, "governmentId"),
-          "cityId" = COALESCE(${cityId}, "cityId"),
-          address = COALESCE(${address}, address),
-          "addressNotes" = COALESCE(${addressNotes}, "addressNotes"),
-          "isMain" = COALESCE(${isMain}, "isMain"),
-          "pointGeography" = CASE 
-            WHEN ${long} IS NOT NULL AND ${lat} IS NOT NULL 
-            THEN ST_SetSRID(ST_MakePoint(${long}, ${lat}), 4326)
-            ELSE "pointGeography" 
-          END,
-          "updatedAt" = NOW()
-        WHERE id = ${mainLocation.id} AND "userId" = ${params.userId}
-        RETURNING id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain",
-                  ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat
-      `;
-      return this.toDomainLocation(updated[0]);
+      const updated = await this.prismaClient.location.update({
+        where: { id: mainLocation.id },
+        data: params.location,
+      });
+      return this.toDomainLocation(updated);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'updatePrimaryLocation');
     }
@@ -335,17 +311,21 @@ export default class UserRepository extends Repository implements IUserRepositor
   async findLocations(params: {
     filter: { userId: IDType };
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResult<{ locations: Location[] }>> {
+  }): Promise<PaginatedResultMeta & { locations: Location[] }> {
     try {
-      const locations = await this.prismaClient.$queryRaw<Location[]>`
-        SELECT id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain",
-               ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat
-        FROM locations
-        WHERE "userId" = ${params.filter.userId}
-      `;
+      const total = await this.prismaClient.location.count({
+        where: { userId: params.filter.userId },
+      });
       const { paginationResult, paginationQuery } = handlePagination({
+        total,
         paginationOptions: params.pagination,
       });
+
+      const locations = await this.prismaClient.location.findMany({
+        where: { userId: params.filter.userId },
+        ...paginationQuery,
+      });
+
       return {
         locations: locations.map((l) => this.toDomainLocation(l)),
         ...paginationResult,
@@ -370,24 +350,11 @@ export default class UserRepository extends Repository implements IUserRepositor
         });
       }
 
-      const { governmentId, cityId, address, addressNotes, long, lat, isMain } = params.location;
-      const updated = await this.prismaClient.$queryRaw<Location[]>`
-        UPDATE locations
-        SET 
-          "cityId" = COALESCE(${cityId}, "cityId"),
-          address = COALESCE(${address}, address),
-          "addressNotes" = COALESCE(${addressNotes}, "addressNotes"),
-          "pointGeography" = CASE 
-            WHEN ${long} IS NOT NULL AND ${lat} IS NOT NULL 
-            THEN ST_SetSRID(ST_MakePoint(${long}, ${lat}), 4326)
-            ELSE "pointGeography" 
-          END,
-          "updatedAt" = NOW()
-        WHERE id = ${params.filter.id} AND "userId" = ${params.filter.userId}
-        RETURNING id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain",
-                  ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat
-      `;
-      return this.toDomainLocation(updated[0]);
+      const updated = await this.prismaClient.location.update({
+        where: { id: params.filter.id, userId: params.filter.userId },
+        data: params.location,
+      });
+      return this.toDomainLocation(updated);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'updateLocation');
     }
