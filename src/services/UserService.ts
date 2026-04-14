@@ -159,7 +159,7 @@ export default class UserService extends Service {
   async getLocations(params: {
     filter: { userId: IDType };
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResultMeta & { locations: Location[] }> {
+  }): Promise<PaginatedResult<{ locations: Location[] }>> {
     return await this.userRepository.findLocations(params);
   }
 
