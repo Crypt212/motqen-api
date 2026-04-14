@@ -12,7 +12,6 @@ import {
   WorkerGovernmentFilterSchema,
   WorkerSpecializationFilterSchema,
 } from '../schemas/dashboard.js';
-import { buildFilterSchema } from '../schemas/common.js';
 
 export const getUser = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
@@ -250,9 +249,8 @@ export const deleteWorkerSpecializations = asyncHandler(async (req, res) => {
 
 export const getUserLocations = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
-  const { pagination } = parseQueryParams(req.query, buildFilterSchema({}));
-  const locationsData = await userService.getLocations({ filter: { userId }, pagination });
-  new SuccessResponse('retrieved user locations successfully', locationsData, 200).send(res);
+  const locations = await userService.getLocations({ filter: { userId } });
+  new SuccessResponse('retrieved user locations successfully', { locations }, 200).send(res);
 });
 
 export const addUserLocation = asyncHandler(async (req, res) => {

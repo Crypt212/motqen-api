@@ -7,12 +7,7 @@ import {
   LocationCreateInput,
   LocationUpdateInput,
 } from '../../domain/user.entity.js';
-import {
-  PaginationOptions,
-  PaginatedResult,
-  SortOptions,
-  PaginatedResultMeta,
-} from '../../types/query.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { IDType } from './Repository.js';
 
 export default interface IUserRepository {
@@ -31,7 +26,7 @@ export default interface IUserRepository {
     filter: UserFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<User>;
-  }): Promise<PaginatedResult<{ users: User[] }>>;
+  }): Promise<PaginatedResultMeta & { users: User[] }>;
   /**
    * Find many online users' worker profiles
    */
@@ -39,7 +34,7 @@ export default interface IUserRepository {
     filter: UserFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<User>;
-  }): Promise<PaginatedResult<{ users: User[] }>>;
+  }): Promise<PaginatedResultMeta & { users: User[] }>;
 
   /**
    * Create a user
@@ -64,10 +59,7 @@ export default interface IUserRepository {
     filter: UserFilter;
   }): Promise<(User & { location: Location }) | null>;
 
-  findLocations(params: {
-    filter: { userId: IDType };
-    pagination?: PaginationOptions;
-  }): Promise<PaginatedResultMeta & { locations: Location[] }>;
+  findLocations(params: { filter: { userId: IDType } }): Promise<Location[]>;
   updateLocation(params: {
     filter: { id: IDType; userId: IDType };
     location: LocationUpdateInput;

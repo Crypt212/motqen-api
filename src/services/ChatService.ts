@@ -21,10 +21,7 @@ import {
   GetConversations
 } from '../domain/conversation.entity.js';
 import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
-import prisma from '../libs/database.js';
-import { $Enums } from '../generated/prisma/client.js';
-import { PaginatedResult, PaginationOptions, SortOptions } from '../types/query.js';
-import { paginateResult } from '../repositories/prisma/utils.js';
+import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../types/query.js';
 
 export type ConversationWithMeta = {
   id: string;
@@ -121,10 +118,9 @@ export default class ChatService extends Service {
     pagination: PaginationOptions;
     sort: SortOptions<ConversationWithParticipantsAndMessages>;
   }): Promise<
-
-    PaginatedResult<{
+    PaginatedResultMeta & {
       conversations: GetConversations[];
-    }>
+    }
   > {
     const { userId, pagination, sort } = params;
     return tryCatch(async () => {
@@ -166,12 +162,8 @@ export default class ChatService extends Service {
         };
       });
 
-
-      return paginateResult(
-        {
+      return {
         conversations: conversations as unknown as GetConversations[],
-        },
-        {
         page: convs.page,
         limit: convs.limit,
         count: convs.count,
@@ -179,8 +171,7 @@ export default class ChatService extends Service {
         totalPages: convs.totalPages,
         hasNext: convs.hasNext,
         hasPrev: convs.hasPrev,
-        }
-      );
+      };
     });
   }
 

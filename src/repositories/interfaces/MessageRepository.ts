@@ -1,5 +1,5 @@
 import { Message, MessageCreateInput, MessageFilter } from '../../domain/message.entity.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 
 export default interface IMessageRepository {
   /**
@@ -19,7 +19,7 @@ export default interface IMessageRepository {
     filter?: MessageFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Message>;
-  }): Promise<PaginatedResult<{ messages: Message[] }>>;
+  }): Promise<PaginatedResultMeta & { messages: Message[] }>;
 
   /**
    * Find a message by ID

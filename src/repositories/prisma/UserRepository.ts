@@ -1,7 +1,7 @@
 import IUserRepository from '../interfaces/UserRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
-import { isEmptyFilter, getEmptyPaginatedResult, paginateResult } from './utils.js';
+import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
 import {
   User,
   UserCreateInput,
@@ -10,13 +10,8 @@ import {
   LocationCreateInput,
   LocationUpdateInput,
 } from '../../domain/user.entity.js';
-import {
-  PaginationOptions,
-  PaginatedResult,
-  SortOptions,
-  PaginatedResultMeta,
-} from '../../types/query.js';
-import { PrismaClient } from 'src/generated/prisma/client.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
+import { PrismaClient } from '../../generated/prisma/client.js';
 import { IDType } from '../interfaces/Repository.js';
 
 export default class UserRepository extends Repository implements IUserRepository {
@@ -94,7 +89,7 @@ export default class UserRepository extends Repository implements IUserRepositor
     filter: UserFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<User>;
-  }): Promise<PaginatedResult<{ users: User[] }>> {
+  }): Promise<PaginatedResultMeta & { users: User[] }> {
     try {
       const total = await this.prismaClient.user.count({
         where: filter,
@@ -111,17 +106,13 @@ export default class UserRepository extends Repository implements IUserRepositor
         orderBy: sortQuery,
       });
 
-      return paginateResult(
-        {
-          users: users.map((u) => this.toDomain(u)),
-        },
-        {
-          ...paginationResult,
-          count: users.length,
-          hasNext: paginationResult.page < paginationResult.totalPages,
-          hasPrev: paginationResult.page > 1,
-        }
-      );
+      return {
+        users: users.map((u) => this.toDomain(u)),
+        ...paginationResult,
+        count: users.length,
+        hasNext: paginationResult.page < paginationResult.totalPages,
+        hasPrev: paginationResult.page > 1,
+      };
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findMany');
     }
@@ -135,7 +126,7 @@ export default class UserRepository extends Repository implements IUserRepositor
     filter: UserFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<User>;
-  }): Promise<PaginatedResult<{ users: User[] }>> {
+  }): Promise<PaginatedResultMeta & { users: User[] }> {
     try {
       const whereCondition = {
         ...filter,
@@ -157,17 +148,13 @@ export default class UserRepository extends Repository implements IUserRepositor
         orderBy: sortQuery,
       });
 
-      return paginateResult(
-        {
-          users: users.map((u) => this.toDomain(u)),
-        },
-        {
-          ...paginationResult,
-          count: users.length,
-          hasNext: paginationResult.page < paginationResult.totalPages,
-          hasPrev: paginationResult.page > 1,
-        }
-      );
+      return {
+        users: users.map((u) => this.toDomain(u)),
+        ...paginationResult,
+        count: users.length,
+        hasNext: paginationResult.page < paginationResult.totalPages,
+        hasPrev: paginationResult.page > 1,
+      };
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findOnline');
     }
@@ -332,10 +319,7 @@ export default class UserRepository extends Repository implements IUserRepositor
     }
   }
 
-  async findLocations(params: {
-    filter: { userId: IDType };
-    pagination?: PaginationOptions;
-  }): Promise<PaginatedResult<{ locations: Location[] }>> {
+  async findLocations(params: { filter: { userId: IDType } }): Promise<Location[]> {
     try {
       const locations = await this.prismaClient.$queryRaw<Location[]>`
         SELECT id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain",
@@ -343,16 +327,7 @@ export default class UserRepository extends Repository implements IUserRepositor
         FROM locations
         WHERE "userId" = ${params.filter.userId}
       `;
-      const { paginationResult, paginationQuery } = handlePagination({
-        paginationOptions: params.pagination,
-      });
-      return {
-        locations: locations.map((l) => this.toDomainLocation(l)),
-        ...paginationResult,
-        count: locations.length,
-        hasNext: paginationResult.page < paginationResult.totalPages,
-        hasPrev: paginationResult.page > 1,
-      };
+      return locations.map((l) => this.toDomainLocation(l));
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findLocations');
     }

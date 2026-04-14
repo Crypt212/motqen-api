@@ -18,19 +18,16 @@ const errorHandler: ErrorRequestHandler = function (
     return res.status(500).json({
       status: 'error',
       message: 'Bad error format',
-      details: null,
     });
   }
 
   // Handle RepositoryError - extract status code from the error
   if (err instanceof RepositoryError) {
     return res.status(500).json({
-      status: 'error',
       message:
         'Database error: ' +
         err.code +
         (environment.nodeEnv === 'development' ? ' - Details: ' + err.message : ''),
-      details: null,
       stack: environment.nodeEnv === 'development' ? err.stack : undefined,
     });
   }
@@ -38,18 +35,15 @@ const errorHandler: ErrorRequestHandler = function (
   if (!(err instanceof OperationalError)) {
     // unknown error
     return res.status(500).json({
-      status: 'error',
       message: err.message,
-      details: null,
       stack: environment.nodeEnv === 'development' ? err.stack : undefined,
     });
   }
 
   if (err instanceof ValidationError) {
     return res.status(422).json({
-      status: 'error',
       message: err.message,
-      details: null,
+      issues: err.issues,
       stack: environment.nodeEnv === 'development' ? err.stack : undefined,
     });
   } else if (err instanceof AppError) {
@@ -66,6 +60,7 @@ const errorHandler: ErrorRequestHandler = function (
     return res.status(err.statusCode).json({
       status: err.status,
       message: err.message,
+      error: err,
       details: err.details && err.details.toJSON(),
       stack: environment.nodeEnv === 'development' ? err.stack : undefined,
     });
@@ -73,8 +68,7 @@ const errorHandler: ErrorRequestHandler = function (
 
   return res.status(500).json({
     status: 'error',
-    message: 'Bad Error format',
-    details: null,
+    message: 'WTH is this error?!',
   });
 };
 

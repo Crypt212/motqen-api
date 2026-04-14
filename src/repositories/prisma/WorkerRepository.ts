@@ -2,7 +2,7 @@ import IWorkerProfileRepository from '../interfaces/WorkerRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { IDType } from '../interfaces/Repository.js';
 import { SpecializationsTree } from '../../domain/specialization.entity.js';
-import { isEmptyFilter, getEmptyPaginatedResult, paginateResult } from './utils.js';
+import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
 import {
   WorkerProfile,
   WorkerProfileCreateInput,
@@ -12,7 +12,7 @@ import {
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import {
   AccountStatus,
   Prisma,
@@ -171,7 +171,7 @@ export default class WorkerProfileRepository
     workerFilter: WorkerProfileFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<WorkerProfile>;
-  }): Promise<PaginatedResult<{ workerProfiles: WorkerProfile[] }>> {
+  }): Promise<PaginatedResultMeta & { workerProfiles: WorkerProfile[] }> {
     try {
       const whereCondition = {
         user: { isOnline: true },
@@ -193,17 +193,13 @@ export default class WorkerProfileRepository
         orderBy: sortQuery,
       });
 
-      return paginateResult(
-        {
-          workerProfiles: profiles.map((p) => this.toDomain(p)),
-        },
-        {
-          ...paginationResult,
-          count: profiles.length,
-          hasNext: paginationResult.page < paginationResult.totalPages,
-          hasPrev: paginationResult.page > 1,
-        }
-      );
+      return {
+        workerProfiles: profiles.map((p) => this.toDomain(p)),
+        ...paginationResult,
+        count: profiles.length,
+        hasNext: paginationResult.page < paginationResult.totalPages,
+        hasPrev: paginationResult.page > 1,
+      };
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findOnline');
     }
@@ -215,7 +211,7 @@ export default class WorkerProfileRepository
   }: {
     workerFilter: WorkerProfileFilter;
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResult<{ governmentIds: IDType[] }>> {
+  }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }> {
     try {
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
         where: workerFilter,
@@ -223,7 +219,7 @@ export default class WorkerProfileRepository
       });
 
       if (!workerProfile) {
-        return getEmptyPaginatedResult({ governmentIds: [] });
+        return { ...getEmptyPaginatedResult(), governmentIds: [] };
       }
 
       const governmentIds = workerProfile.workGovernments.map((g) => g.id);
@@ -232,20 +228,16 @@ export default class WorkerProfileRepository
       const limit = pagination?.limit || 10;
       const totalPages = Math.ceil(total / limit);
 
-      return paginateResult(
-        {
-          governmentIds,
-        },
-        {
-          page,
-          limit,
-          count: governmentIds.length,
-          total,
-          totalPages,
-          hasNext: page < totalPages,
-          hasPrev: page > 1,
-        }
-      );
+      return {
+        governmentIds,
+        page,
+        limit,
+        count: governmentIds.length,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      };
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findWorkGovernments');
     }
@@ -281,7 +273,7 @@ export default class WorkerProfileRepository
     mainSpecializationIds: IDType[];
     filter: WorkerProfileFilter;
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResult<{ specializationIds: IDType[] }>> {
+  }): Promise<PaginatedResultMeta & { specializationIds: IDType[] }> {
     try {
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
         where: filter,
@@ -289,7 +281,7 @@ export default class WorkerProfileRepository
       });
 
       if (!workerProfile) {
-        return getEmptyPaginatedResult({ specializationIds: [] });
+        return { ...getEmptyPaginatedResult(), specializationIds: [] };
       }
 
       let specializationIds = workerProfile.chosenSpecializations.map((s) => s.specializationId);
@@ -304,20 +296,16 @@ export default class WorkerProfileRepository
       const limit = pagination?.limit || 10;
       const totalPages = Math.ceil(total / limit);
 
-      return paginateResult(
-        {
-          specializationIds: uniqueIds,
-        },
-        {
-          page,
-          limit,
-          count: uniqueIds.length,
-          total,
-          totalPages,
-          hasNext: page < totalPages,
-          hasPrev: page > 1,
-        }
-      );
+      return {
+        specializationIds: uniqueIds,
+        page,
+        limit,
+        count: uniqueIds.length,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      };
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findSpecializations');
     }
@@ -673,238 +661,240 @@ export default class WorkerProfileRepository
   /**
    * Search for approved workers with pagination, filtering, and sorting
    */
-  async searchWorkers({
-    specializationId,
-    subSpecializationId,
-    governmentId,
-    availability,
-    acceptsUrgentJobs,
-    highestRated,
-    nearest,
-    location,
-    page = 1,
-    limit = 10,
-  }: {
-    specializationId: string;
-    subSpecializationId?: string;
-    governmentId?: string;
-    availability?: boolean;
-    acceptsUrgentJobs?: boolean;
-    highestRated?: boolean;
-    nearest?: boolean;
-    location?: { latitude: number; longitude: number };
-    page: number;
-    limit: number;
-  }): Promise<PaginatedResult<{
-      workers: {
-        workerId: string;
-        name: string;
-        profileImage: string | null;
-        rating: number;
-        ratingCount: number;
-        completedServices: number;
-        distance?: number;
-        isAvailableNow: boolean;
-      }[] 
-    }> {
 
-    const parsedLimit     = typeof limit === 'string' ? Math.min(parseInt(limit, 10),20) : Math.min(limit,20);
+async searchWorkers({
+  specializationId,
+  subSpecializationId,
+  governmentId,
+  availability,
+  acceptsUrgentJobs,
+  highestRated,
+  nearest,
+  location,
+  page = 1,
+  limit = 10,
+}: {
+  specializationId: string;
+  subSpecializationId?: string;
+  governmentId?: string;
+  availability?: boolean;
+  acceptsUrgentJobs?: boolean;
+  highestRated?: boolean;
+  nearest?: boolean;
+  location?: { latitude: number; longitude: number };
+  page: number;
+  limit: number;
+}): Promise<{
+  workers: {
+    workerId: string;
+    name: string;
+    profileImage: string | null;
+    rating: number;
+    ratingCount: number;
+    completedServices: number;
+    distance?: number;
+    isAvailableNow: boolean;
+  }[];
+  page: number;
+  limit: number;
+  count: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}> {
 
-    const parsedPage      = typeof page  === 'string' ? parseInt(page,  10) : page;
-    const normalizedLimit = Math.min(Math.max(parsedLimit || 10, 1), 50);
-    const normalizedPage  = Math.max(parsedPage || 1, 1);
-    const offset          = (normalizedPage - 1) * normalizedLimit;
-    const fetchLimit      = normalizedLimit + 1; 
+  const parsedLimit     = typeof limit === 'string' ? Math.min(parseInt(limit, 10),20) : Math.min(limit,20);
 
-    const customerLat  = location?.latitude;
-    const customerLong = location?.longitude;
-    const hasCoords    = Number.isFinite(customerLat) && Number.isFinite(customerLong);
+  const parsedPage      = typeof page  === 'string' ? parseInt(page,  10) : page;
+  const normalizedLimit = Math.min(Math.max(parsedLimit || 10, 1), 50);
+  const normalizedPage  = Math.max(parsedPage || 1, 1);
+  const offset          = (normalizedPage - 1) * normalizedLimit;
+  const fetchLimit      = normalizedLimit + 1; 
+ 
+  const customerLat  = location?.latitude;
+  const customerLong = location?.longitude;
+  const hasCoords    = Number.isFinite(customerLat) && Number.isFinite(customerLong);
 
-
-    const specFilter = subSpecializationId
+  
+  const specFilter = subSpecializationId
+    ? Prisma.sql`
+        AND EXISTS (
+          SELECT 1 FROM "chosen_specializations" cs
+          WHERE cs."workerProfileId"     = wp."id"
+            AND cs."subSpecializationId" = ${subSpecializationId}
+        )`
+    : specializationId
       ? Prisma.sql`
           AND EXISTS (
             SELECT 1 FROM "chosen_specializations" cs
-            WHERE cs."workerProfileId"     = wp."id"
-              AND cs."subSpecializationId" = ${subSpecializationId}
-          )`
-      : specializationId
-        ? Prisma.sql`
-            AND EXISTS (
-              SELECT 1 FROM "chosen_specializations" cs
-              LEFT JOIN "sub_specializations" ss ON ss."id" = cs."subSpecializationId"
-              WHERE cs."workerProfileId" = wp."id"
-                AND (
-                  cs."specializationId"      = ${specializationId}
-                  OR ss."mainSpecializationId" = ${specializationId}
-                )
-            )`
-        : Prisma.sql``;
-
-
-    const availFilter = availability !== undefined
-      ? Prisma.sql`AND u."isOnline" = ${availability}`
-      : Prisma.sql``;
-
-
-    const urgentFilter = acceptsUrgentJobs
-      ? Prisma.sql`AND wp."acceptsUrgentJobs" = true`
-      : Prisma.sql``;
-
-
-    const govFilter = governmentId
-      ? Prisma.sql`
-          AND EXISTS (
-            SELECT 1 FROM "_GovernmentToWorkerProfile" gfw
-            WHERE gfw."B" = wp."id"
-              AND gfw."A" = ${governmentId}
+            LEFT JOIN "sub_specializations" ss ON ss."id" = cs."subSpecializationId"
+            WHERE cs."workerProfileId" = wp."id"
+              AND (
+                cs."specializationId"      = ${specializationId}
+                OR ss."mainSpecializationId" = ${specializationId}
+              )
           )`
       : Prisma.sql``;
+ 
 
-    // ─── geometry ─────────────────────────────────────────────────────────────
+  const availFilter = availability !== undefined
+    ? Prisma.sql`AND u."isOnline" = ${availability}`
+    : Prisma.sql``;
+ 
 
-    const userPoint = hasCoords
-      ? Prisma.sql`ST_SetSRID(ST_MakePoint(${customerLong}, ${customerLat}), 4326)::geography`
-      : Prisma.sql`NULL::geography`;
+  const urgentFilter = acceptsUrgentJobs
+    ? Prisma.sql`AND wp."acceptsUrgentJobs" = true`
+    : Prisma.sql``;
+ 
+  
+  const govFilter = governmentId
+    ? Prisma.sql`
+        AND EXISTS (
+          SELECT 1 FROM "_GovernmentToWorkerProfile" gfw
+          WHERE gfw."B" = wp."id"
+            AND gfw."A" = ${governmentId}
+        )`
+    : Prisma.sql``;
+ 
+  // ─── geometry ─────────────────────────────────────────────────────────────
+ 
+  const userPoint = hasCoords
+    ? Prisma.sql`ST_SetSRID(ST_MakePoint(${customerLong}, ${customerLat}), 4326)::geography`
+    : Prisma.sql`NULL::geography`;
+ 
 
+  const geoFilter = nearest && hasCoords
+    ? Prisma.sql`
+        AND l."pointGeography" IS NOT NULL
+        AND ST_DWithin(l."pointGeography", ${userPoint}::geography, 100000)`
+    : Prisma.sql``;
+ 
 
-    const geoFilter = nearest && hasCoords
+  const distanceLateral = hasCoords
+    ? Prisma.sql`
+        LEFT JOIN LATERAL (
+          SELECT LEAST((l2."pointGeography" <-> ${userPoint}::geography) / 1000.0, 9999.9) AS distance_km
+          FROM   "locations" l2
+          WHERE  l2."userId" = wp."userId"
+            AND  l2."isMain" = true
+            AND  l2."pointGeography" IS NOT NULL
+          LIMIT 1
+        ) loc_dist ON true`
+    : Prisma.sql``;
+ 
+  const distanceSelect = hasCoords
+    ? Prisma.sql`loc_dist.distance_km`
+    : Prisma.sql`NULL::double precision`;
+ 
+  // ─── ordering ─────────────────────────────────────────────────────────────
+  //
+  // nearest flag    → distance أولاً
+  // highestRated    → rate أولاً
+  // لا flags        → hybrid score عشان نعطي فرصة للـ new workers
+  //                   (rate * 0.4) + (completedJobs * 0.3) + (random * 0.3)
+  //                   الـ random بيتغير مع كل request عشان مفيش worker يتعاقب دايماً في الأول
+ 
+  const orderExpr = nearest && hasCoords
+    ? Prisma.sql`
+        loc_dist.distance_km ASC NULLS LAST,
+        wp."rate"              DESC,
+        wp."completedJobsCount" DESC`
+    : highestRated
       ? Prisma.sql`
-          AND l."pointGeography" IS NOT NULL
-          AND ST_DWithin(l."pointGeography", ${userPoint}::geography, 100000)`
-      : Prisma.sql``;
-
-
-    const distanceLateral = hasCoords
-      ? Prisma.sql`
-          LEFT JOIN LATERAL (
-            SELECT LEAST((l2."pointGeography" <-> ${userPoint}::geography) / 1000.0, 9999.9) AS distance_km
-            FROM   "locations" l2
-            WHERE  l2."userId" = wp."userId"
-              AND  l2."isMain" = true
-              AND  l2."pointGeography" IS NOT NULL
-            LIMIT 1
-          ) loc_dist ON true`
-      : Prisma.sql``;
-
-    const distanceSelect = hasCoords
-      ? Prisma.sql`loc_dist.distance_km`
-      : Prisma.sql`NULL::double precision`;
-
-    // ─── ordering ─────────────────────────────────────────────────────────────
-    //
-    // nearest flag    → distance أولاً
-    // highestRated    → rate أولاً
-    // لا flags        → hybrid score عشان نعطي فرصة للـ new workers
-    //                   (rate * 0.4) + (completedJobs * 0.3) + (random * 0.3)
-    //                   الـ random بيتغير مع كل request عشان مفيش worker يتعاقب دايماً في الأول
-
-    const orderExpr = nearest && hasCoords
-      ? Prisma.sql`
-          loc_dist.distance_km ASC NULLS LAST,
           wp."rate"              DESC,
-          wp."completedJobsCount" DESC`
-      : highestRated
-        ? Prisma.sql`
-            wp."rate"              DESC,
-            wp."completedJobsCount" DESC,
-            wp."experienceYears"    DESC`
-        : Prisma.sql`
-            (
-              COALESCE(wp."rate", 0)               * 0.4 +
-              LEAST(wp."completedJobsCount", 100)  * 0.003 +
-              RANDOM()                             * 0.3
-            ) DESC`;
-    //
-    // ملاحظة على الـ hybrid:
-    // - LEAST(..., 100) عشان متخليش workers بـ 1000 job يطغوا على الـ score بشكل غير عادل
-    // - completedJobsCount * 0.003 يساوي max 0.3 لو عنده 100+ job (نفس وزن الـ random)
-    // - rate max هو 5.0، يعني rate * 0.4 = max 2.0
-    // النتيجة: worker جديد بـ random 0.3 ممكن يتفوق على worker قديم بـ rate وسط
+          wp."completedJobsCount" DESC,
+          wp."experienceYears"    DESC`
+      : Prisma.sql`
+          (
+            COALESCE(wp."rate", 0)               * 0.4 +
+            LEAST(wp."completedJobsCount", 100)  * 0.003 +
+            RANDOM()                             * 0.3
+          ) DESC`;
+  //
+  // ملاحظة على الـ hybrid:
+  // - LEAST(..., 100) عشان متخليش workers بـ 1000 job يطغوا على الـ score بشكل غير عادل
+  // - completedJobsCount * 0.003 يساوي max 0.3 لو عنده 100+ job (نفس وزن الـ random)
+  // - rate max هو 5.0، يعني rate * 0.4 = max 2.0
+  // النتيجة: worker جديد بـ random 0.3 ممكن يتفوق على worker قديم بـ rate وسط
+ 
+  // ─── query ────────────────────────────────────────────────────────────────
+ 
+  type Row = {
+    worker_id:           string;
+    first_name:          string;
+    middle_name:         string | null;
+    last_name:           string;
+    profile_image_url:   string | null;
+    is_online:           boolean;
+    rate:                number;
+    completed_jobs_count: number;
+    distance_km:         number | null;
+  };
+ 
+  const rows = await this.prismaClient.$queryRaw<Row[]>`
+    WITH filtered AS MATERIALIZED (
+      SELECT wp."id"
+      FROM   "worker_profiles" wp
+      JOIN   "users"         u  ON  u."id"              = wp."userId"
+      LEFT JOIN "locations"  l  ON  l."userId"          = wp."userId"
+                                AND l."isMain"          = true
+      WHERE  u."status" = 'ACTIVE'
+        ${availFilter}
+        ${urgentFilter}
+        ${govFilter}
+        ${geoFilter}
+        ${specFilter}
+    )
+ 
+    SELECT
+      wp."id"                 AS worker_id,
+      u."firstName"           AS first_name,
+      u."middleName"          AS middle_name,
+      u."lastName"            AS last_name,
+      u."profileImageUrl"     AS profile_image_url,
+      u."isOnline"            AS is_online,
+      wp."rate"               AS rate,
+      wp."completedJobsCount" AS completed_jobs_count,
+      ${distanceSelect}       AS distance_km
+ 
+    FROM   filtered f
+    JOIN   "worker_profiles" wp ON wp."id" = f."id"
+    JOIN   "users"           u  ON  u."id" = wp."userId"
+    ${distanceLateral}
+ 
+    ORDER BY ${orderExpr}
+    LIMIT    ${fetchLimit}
+    OFFSET   ${offset}
+  `;
+ 
+  // ─── hasNext ──────────────────────────────────────────────────────────────
+ 
+  const hasNext  = rows.length > normalizedLimit;
+  const pageRows = hasNext ? rows.slice(0, normalizedLimit) : rows;
+ 
+  // Rows processed
 
-    // ─── query ────────────────────────────────────────────────────────────────
-
-    type Row = {
-      worker_id:           string;
-      first_name:          string;
-      middle_name:         string | null;
-      last_name:           string;
-      profile_image_url:   string | null;
-      is_online:           boolean;
-      rate:                number;
-      completed_jobs_count: number;
-      distance_km:         number | null;
-    };
-
-    const rows = await this.prismaClient.$queryRaw<Row[]>`
-      WITH filtered AS MATERIALIZED (
-        SELECT wp."id"
-        FROM   "worker_profiles" wp
-        JOIN   "users"         u  ON  u."id"              = wp."userId"
-        LEFT JOIN "locations"  l  ON  l."userId"          = wp."userId"
-                                  AND l."isMain"          = true
-        WHERE  u."status" = 'ACTIVE'
-          ${availFilter}
-          ${urgentFilter}
-          ${govFilter}
-          ${geoFilter}
-          ${specFilter}
-      )
-
-      SELECT
-        wp."id"                 AS worker_id,
-        u."firstName"           AS first_name,
-        u."middleName"          AS middle_name,
-        u."lastName"            AS last_name,
-        u."profileImageUrl"     AS profile_image_url,
-        u."isOnline"            AS is_online,
-        wp."rate"               AS rate,
-        wp."completedJobsCount" AS completed_jobs_count,
-        ${distanceSelect}       AS distance_km
-
-      FROM   filtered f
-      JOIN   "worker_profiles" wp ON wp."id" = f."id"
-      JOIN   "users"           u  ON  u."id" = wp."userId"
-      ${distanceLateral}
-
-      ORDER BY ${orderExpr}
-      LIMIT    ${fetchLimit}
-      OFFSET   ${offset}
-    `;
-
-    // ─── hasNext ──────────────────────────────────────────────────────────────
-
-    const hasNext  = rows.length > normalizedLimit;
-    const pageRows = hasNext ? rows.slice(0, normalizedLimit) : rows;
-
-    // Rows processed
-
-    // ─── format ───────────────────────────────────────────────────────────────
-
-    const workers = pageRows.map((r) => ({
-      workerId:           r.worker_id,
-      name:               `${r.first_name} ${r.middle_name ?? ''} ${r.last_name}`.trim(),
-      profileImage:       r.profile_image_url,
-      rating:             Number(r.rate),
-      ratingCount:        0, // TODO: Add rating count to query when orders table has ratings
-      completedServices:  Number(r.completed_jobs_count),
-      isAvailableNow:     r.is_online,
-      ...(r.distance_km !== null
-        ? { distance: Number(Number(r.distance_km).toFixed(1)) }
-        : {}),
-    }));
-
-      return paginateResult(
-        {
-          workers: data,
-        },
-        {
-          page:    normalizedPage,
-          limit:   normalizedLimit,
-          count:   workers.length,
-          hasNext,
-          hasPrev: normalizedPage > 1,
-        }
-      );
-  }
+  // ─── format ───────────────────────────────────────────────────────────────
+ 
+  const workers = pageRows.map((r) => ({
+    workerId:           r.worker_id,
+    name:               `${r.first_name} ${r.middle_name ?? ''} ${r.last_name}`.trim(),
+    profileImage:       r.profile_image_url,
+    rating:             Number(r.rate),
+    ratingCount:        0, // TODO: Add rating count to query when orders table has ratings
+    completedServices:  Number(r.completed_jobs_count),
+    isAvailableNow:     r.is_online,
+    ...(r.distance_km !== null
+      ? { distance: Number(Number(r.distance_km).toFixed(1)) }
+      : {}),
+  }));
+ 
+  return {
+    workers,
+    page:    normalizedPage,
+    limit:   normalizedLimit,
+    count:   workers.length,
+    hasNext,
+    hasPrev: normalizedPage > 1,
+  };
+}
 }

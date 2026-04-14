@@ -6,7 +6,7 @@ import {
   ConversationUpdateInput,
   ConversationWithParticipantsAndMessages,
 } from '../../domain/conversation.entity.js';
-import { PaginationOptions, SortOptions, PaginatedResult } from '../../types/query.js';
+import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { IDType } from '../interfaces/Repository.js';
 
 export default interface IConversationRepository {
@@ -52,9 +52,9 @@ export default interface IConversationRepository {
     pagination?: PaginationOptions;
     sort?: SortOptions<ConversationWithParticipantsAndMessages>;
   }): Promise<
-    PaginatedResult<{
+    PaginatedResultMeta & {
       conversationParticipantsWithMessages: ConversationWithParticipantsAndMessages[];
-    }>
+    }
   >;
 
   /**
@@ -66,9 +66,9 @@ export default interface IConversationRepository {
     pagination?: PaginationOptions;
     sort?: SortOptions<ConversationWithParticipantsAndMessages>;
   }): Promise<
-    PaginatedResult<{
+    PaginatedResultMeta & {
       conversationParticipantsWithMessages: ConversationWithParticipantsAndMessages[];
-    }>
+    }
   >;
 
   /**
