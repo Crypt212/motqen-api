@@ -1,7 +1,12 @@
 import IUserRepository from '../interfaces/UserRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
-import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
-import { isEmptyFilter, getEmptyPaginatedResult, paginateResult } from './utils.js';
+import {
+  getPaginationQuery,
+  getPaginationResult,
+  handleSort,
+  isEmptyFilter,
+  paginateResult,
+} from '../../utils/handleFilteration.js';
 import {
   User,
   UserCreateInput,
@@ -10,13 +15,8 @@ import {
   LocationCreateInput,
   LocationUpdateInput,
 } from '../../domain/user.entity.js';
-import {
-  PaginationOptions,
-  PaginatedResult,
-  SortOptions,
-  PaginatedResultMeta,
-} from '../../types/query.js';
-import { PrismaClient } from 'src/generated/prisma/client.js';
+import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
+import { PrismaClient } from '../../generated/prisma/client.js';
 import { IDType } from '../interfaces/Repository.js';
 
 export default class UserRepository extends Repository implements IUserRepository {
@@ -94,31 +94,25 @@ export default class UserRepository extends Repository implements IUserRepositor
     sort?: SortOptions<User>;
   }): Promise<PaginatedResult<{ users: User[] }>> {
     try {
-      const total = await this.prismaClient.user.count({
-        where: filter,
-      });
       const sortQuery = handleSort(sort);
-      const { paginationResult, paginationQuery } = handlePagination({
-        total,
-        paginationOptions: pagination,
-      });
+      const paginationQuery = getPaginationQuery(pagination);
 
       const users = await this.prismaClient.user.findMany({
         where: filter,
-        ...paginationQuery,
+        take: paginationQuery.take + 1,
+        skip: paginationQuery.skip,
         orderBy: sortQuery,
       });
 
+      const paginationResult = getPaginationResult({
+        count: users.length,
+        hasNext: users.length > paginationQuery.take,
+        paginationOptions: pagination,
+      });
+
       return paginateResult(
-        {
-          users: users.map((u) => this.toDomain(u)),
-        },
-        {
-          ...paginationResult,
-          count: users.length,
-          hasNext: paginationResult.page < paginationResult.totalPages,
-          hasPrev: paginationResult.page > 1,
-        }
+        { users: users.map((u) => this.toDomain(u)).slice(0, users.length - 1) },
+        paginationResult
       );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findMany');
@@ -140,31 +134,26 @@ export default class UserRepository extends Repository implements IUserRepositor
         isOnline: true,
       };
 
-      const total = await this.prismaClient.user.count({
-        where: whereCondition,
-      });
       const sortQuery = handleSort(sort);
-      const { paginationResult, paginationQuery } = handlePagination({
-        total,
-        paginationOptions: pagination,
-      });
+
+      const paginationQuery = getPaginationQuery(pagination);
 
       const users = await this.prismaClient.user.findMany({
         where: whereCondition,
-        ...paginationQuery,
+        take: paginationQuery.take + 1,
+        skip: paginationQuery.skip,
         orderBy: sortQuery,
       });
 
+      const paginationResult = getPaginationResult({
+        hasNext: users.length > paginationQuery.take,
+        count: users.length,
+        paginationOptions: pagination,
+      });
+
       return paginateResult(
-        {
-          users: users.map((u) => this.toDomain(u)),
-        },
-        {
-          ...paginationResult,
-          count: users.length,
-          hasNext: paginationResult.page < paginationResult.totalPages,
-          hasPrev: paginationResult.page > 1,
-        }
+        { users: users.map((u) => this.toDomain(u)).slice(0, users.length - 1) },
+        paginationResult
       );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findOnline');

@@ -1,9 +1,14 @@
 import IWorkerProfileRepository from '../interfaces/WorkerRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { IDType } from '../interfaces/Repository.js';
-import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
+import {
+  getPaginationQuery,
+  getPaginationResult,
+  handleSort,
+  isEmptyFilter,
+  paginateResult,
+} from '../../utils/handleFilteration.js';
 import { SpecializationsTree } from '../../domain/specialization.entity.js';
-import { isEmptyFilter, getEmptyPaginatedResult, paginateResult } from './utils.js';
 import {
   WorkerProfile,
   WorkerProfileCreateInput,
@@ -96,31 +101,25 @@ export default class WorkerProfileRepository
         ...workerFilter,
       };
 
-      const total = await this.prismaClient.workerProfile.count({
-        where: whereCondition,
-      });
       const sortQuery = handleSort(sort);
-      const { paginationResult, paginationQuery } = handlePagination({
-        total,
-        paginationOptions: pagination,
-      });
+      const paginationQuery = getPaginationQuery(pagination);
 
       const profiles = await this.prismaClient.workerProfile.findMany({
         where: whereCondition,
-        ...paginationQuery,
+        take: paginationQuery.take + 1,
+        skip: paginationQuery.skip,
         orderBy: sortQuery,
       });
 
+      const paginationResult = getPaginationResult({
+        count: profiles.length,
+        hasNext: profiles.length > paginationQuery.take,
+        paginationOptions: pagination,
+      });
+
       return paginateResult(
-        {
-          workerProfiles: profiles.map((p) => this.toDomain(p)),
-        },
-        {
-          ...paginationResult,
-          count: profiles.length,
-          hasNext: paginationResult.page < paginationResult.totalPages,
-          hasPrev: paginationResult.page > 1,
-        }
+        { workerProfiles: profiles.map((p) => this.toDomain(p)).slice(0, profiles.length - 1) },
+        paginationResult
       );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findOnline');
@@ -135,34 +134,26 @@ export default class WorkerProfileRepository
     pagination?: PaginationOptions;
   }): Promise<PaginatedResult<{ governmentIds: IDType[] }>> {
     try {
-      const workerProfile = await this.prismaClient.workerProfile.findFirst({
-        where: workerFilter,
-        include: { workGovernments: true },
+      const paginationQuery = getPaginationQuery(pagination);
+
+      const workGovernments = await this.prismaClient.government.findMany({
+        where: {
+          workers: { some: workerFilter },
+        },
+        take: paginationQuery.take + 1,
+        skip: paginationQuery.skip,
+      });
+      const governmentIds = workGovernments.map((g) => g.id);
+
+      const paginationResult = getPaginationResult({
+        count: governmentIds.length,
+        hasNext: governmentIds.length > paginationQuery.take,
+        paginationOptions: pagination,
       });
 
-      if (!workerProfile) {
-        return getEmptyPaginatedResult({ governmentIds: [] });
-      }
-
-      const governmentIds = workerProfile.workGovernments.map((g) => g.id);
-      const total = governmentIds.length;
-      const page = pagination?.page || 1;
-      const limit = pagination?.limit || 10;
-      const totalPages = Math.ceil(total / limit);
-
       return paginateResult(
-        {
-          governmentIds,
-        },
-        {
-          page,
-          limit,
-          count: governmentIds.length,
-          total,
-          totalPages,
-          hasNext: page < totalPages,
-          hasPrev: page > 1,
-        }
+        { governmentIds: governmentIds.slice(0, governmentIds.length - 1) },
+        paginationResult
       );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findWorkGovernments');
@@ -201,40 +192,28 @@ export default class WorkerProfileRepository
     pagination?: PaginationOptions;
   }): Promise<PaginatedResult<{ specializationIds: IDType[] }>> {
     try {
-      const workerProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
-        include: { chosenSpecializations: true },
+      const paginationQuery = getPaginationQuery(pagination);
+      const chosenSpecializations = await this.prismaClient.chosenSpecialization.findMany({
+        where: { workerProfile: filter },
+        take: paginationQuery.take + 1,
+        skip: paginationQuery.skip,
       });
 
-      if (!workerProfile) {
-        return getEmptyPaginatedResult({ specializationIds: [] });
-      }
-
-      let specializationIds = workerProfile.chosenSpecializations.map((s) => s.specializationId);
+      let specializationIds = chosenSpecializations.map((s) => s.specializationId);
 
       if (mainSpecializationIds.length > 0) {
         specializationIds = specializationIds.filter((id) => mainSpecializationIds.includes(id));
       }
 
-      const uniqueIds = [...new Set(specializationIds)];
-      const total = uniqueIds.length;
-      const page = pagination?.page || 1;
-      const limit = pagination?.limit || 10;
-      const totalPages = Math.ceil(total / limit);
+      const paginationResult = getPaginationResult({
+        count: specializationIds.length,
+        hasNext: specializationIds.length > paginationQuery.take,
+        paginationOptions: pagination,
+      });
 
       return paginateResult(
-        {
-          specializationIds: uniqueIds,
-        },
-        {
-          page,
-          limit,
-          count: uniqueIds.length,
-          total,
-          totalPages,
-          hasNext: page < totalPages,
-          hasPrev: page > 1,
-        }
+        { specializationIds: specializationIds.slice(0, specializationIds.length - 1) },
+        paginationResult
       );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findSpecializations');
@@ -880,13 +859,11 @@ export default class WorkerProfileRepository
         workers: data,
       },
       {
-        total,
         page: normalizedPage,
         limit: normalizedLimit,
         count: data.length,
         hasNext: normalizedPage < totalPages,
         hasPrev: normalizedPage > 1,
-        totalPages,
       }
     );
   }

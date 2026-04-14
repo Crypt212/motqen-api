@@ -1,6 +1,12 @@
 import IMessageRepository from '../interfaces/MessageRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
-import { isEmptyFilter, getEmptyPaginatedResult, paginateResult } from './utils.js';
+import {
+  isEmptyFilter,
+  paginateResult,
+  handleSort,
+  getPaginationResult,
+  getPaginationQuery,
+} from '../../utils/handleFilteration.js';
 import {
   Message,
   MessageCreateInput,
@@ -8,10 +14,9 @@ import {
   MessageType,
 } from '../../domain/message.entity.js';
 import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
-import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { IDType } from '../interfaces/Repository.js';
 import { User } from '../../domain/user.entity.js';
-import { PrismaClient } from 'src/generated/prisma/client.js';
+import { PrismaClient } from '../../generated/prisma/client.js';
 
 export default class MessageRepository extends Repository implements IMessageRepository {
   constructor(prisma: PrismaClient) {
@@ -87,31 +92,25 @@ export default class MessageRepository extends Repository implements IMessageRep
     try {
       const { filter, pagination, sort } = params;
 
-      const total = await this.prismaClient.message.count({
-        where: filter,
-      });
       const sortQuery = handleSort(sort);
-      const { paginationResult, paginationQuery } = handlePagination({
-        total,
-        paginationOptions: pagination,
-      });
+
+      const paginationQuery = getPaginationQuery(pagination);
 
       const messages = await this.prismaClient.message.findMany({
         where: filter,
-        ...paginationQuery,
+        take: paginationQuery.take + 1,
+        skip: paginationQuery.skip,
         orderBy: sortQuery,
+      });
+      const paginationResult = getPaginationResult({
+        hasNext: messages.length > paginationQuery.take,
+        count: messages.length,
+        paginationOptions: pagination,
       });
 
       return paginateResult(
-        {
-          messages: messages.map((m) => this.toDomain(m)),
-        },
-        {
-          ...paginationResult,
-          count: messages.length,
-          hasNext: paginationResult.page < paginationResult.totalPages,
-          hasPrev: paginationResult.page > 1,
-        }
+        { messages: messages.map((m) => this.toDomain(m)).slice(0, messages.length - 1) },
+        paginationResult
       );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findMany');

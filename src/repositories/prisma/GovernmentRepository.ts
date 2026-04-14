@@ -9,8 +9,12 @@ import {
   City,
   CityFilter,
 } from '../../domain/government.entity.js';
-import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
-import { isEmptyFilter, paginateResult } from './utils.js';
+import {
+  getPaginationQuery,
+  getPaginationResult,
+  handleSort,
+} from '../../utils/handleFilteration.js';
+import { isEmptyFilter, paginateResult } from '../../utils/handleFilteration.js';
 import { PaginationOptions, SortOptions, PaginatedResult } from '../../types/query.js';
 import { PrismaClient } from '../../generated/prisma/client.js';
 
@@ -65,23 +69,23 @@ export default class GovernmentRepository extends Repository implements IGovernm
     try {
       const { filter, pagination, sort } = params;
 
-      const total = await this.prismaClient.government.count({
-        where: filter,
-      });
       const sortQuery = handleSort(sort);
-      const { paginationResult, paginationQuery } = handlePagination({
-        total,
-        paginationOptions: pagination,
-      });
+      const paginationQuery = getPaginationQuery(pagination);
 
       const governments = await this.prismaClient.government.findMany({
         where: filter,
-        ...paginationQuery,
+        take: paginationQuery.take + 1,
+        skip: paginationQuery.skip,
         orderBy: sortQuery,
+      });
+      const paginationResult = getPaginationResult({
+        hasNext: governments.length > paginationQuery.take,
+        count: governments.length,
+        paginationOptions: pagination,
       });
 
       return paginateResult(
-        { governments: governments.map((g) => this.toDomain(g)) },
+        { governments: governments.map((g) => this.toDomain(g)).slice(0, governments.length - 1) },
         paginationResult
       );
     } catch (error: unknown) {
@@ -110,31 +114,26 @@ export default class GovernmentRepository extends Repository implements IGovernm
     try {
       const { filter, pagination, sort } = params;
 
-      const total = await this.prismaClient.city.count({
-        where: filter,
-      });
       const sortQuery = handleSort(sort);
-      const { paginationResult, paginationQuery } = handlePagination({
-        total,
-        paginationOptions: pagination,
-      });
+
+      const paginationQuery = getPaginationQuery(pagination);
 
       const cities = await this.prismaClient.city.findMany({
         where: filter,
-        ...paginationQuery,
+        take: paginationQuery.take + 1,
+        skip: paginationQuery.skip,
         orderBy: sortQuery,
       });
 
+      const paginationResult = getPaginationResult({
+        hasNext: cities.length > paginationQuery.take,
+        count: cities.length,
+        paginationOptions: pagination,
+      });
+
       return paginateResult(
-        {
-          cities: cities.map((c) => this.toDomainCity(c)),
-        },
-        {
-          ...paginationResult,
-          count: cities.length,
-          hasNext: paginationResult.page < paginationResult.totalPages,
-          hasPrev: paginationResult.page > 1,
-        }
+        { cities: cities.map((c) => this.toDomainCity(c)).slice(0, cities.length - 1) },
+        paginationResult
       );
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findCities');
