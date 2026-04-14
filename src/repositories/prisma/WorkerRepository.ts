@@ -673,6 +673,7 @@ async searchWorkers({
   location,
   page = 1,
   limit = 10,
+  excludeUserId,
 }: {
   specializationId: string;
   subSpecializationId?: string;
@@ -684,6 +685,7 @@ async searchWorkers({
   location?: { latitude: number; longitude: number };
   page: number;
   limit: number;
+  excludeUserId?: string;
 }): Promise<{
   workers: {
     workerId: string;
@@ -695,11 +697,13 @@ async searchWorkers({
     distance?: number;
     isAvailableNow: boolean;
   }[];
-  page: number;
-  limit: number;
-  count: number;
-  hasNext: boolean;
-  hasPrev: boolean;
+  meta: {
+    page: number;
+    limit: number;
+    count: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
 }> {
 
   const parsedLimit     = typeof limit === 'string' ? Math.min(parseInt(limit, 10),20) : Math.min(limit,20);
@@ -785,13 +789,19 @@ async searchWorkers({
     ? Prisma.sql`loc_dist.distance_km`
     : Prisma.sql`NULL::double precision`;
  
+  // ─── exclude own profile ────────────────────────────────────────────────────
+
+  const excludeSelfFilter = excludeUserId
+    ? Prisma.sql`AND wp."userId" != ${excludeUserId}`
+    : Prisma.sql``;
+
   // ─── ordering ─────────────────────────────────────────────────────────────
   //
   // nearest flag    → distance أولاً
   // highestRated    → rate أولاً
   // لا flags        → hybrid score عشان نعطي فرصة للـ new workers
-  //                   (rate * 0.4) + (completedJobs * 0.3) + (random * 0.3)
-  //                   الـ random بيتغير مع كل request عشان مفيش worker يتعاقب دايماً في الأول
+  //                   (rate * 0.4) + (completedJobs * 0.3) + (userHash * 0.3)
+  //                   الـ userHash ثابت لكل يوزر (نفس قيمة الـ random لكن ثابتة للمستخدم)
  
   const orderExpr = nearest && hasCoords
     ? Prisma.sql`
@@ -807,7 +817,7 @@ async searchWorkers({
           (
             COALESCE(wp."rate", 0)               * 0.4 +
             LEAST(wp."completedJobsCount", 100)  * 0.003 +
-            RANDOM()                             * 0.3
+            (ABS(HASHTEXT(wp."userId" || ${excludeUserId ?? ''})) % 1000 / 1000.0) * 0.3
           ) DESC`;
   //
   // ملاحظة على الـ hybrid:
@@ -843,6 +853,7 @@ async searchWorkers({
         ${govFilter}
         ${geoFilter}
         ${specFilter}
+        ${excludeSelfFilter}
     )
  
     SELECT
@@ -890,11 +901,13 @@ async searchWorkers({
  
   return {
     workers,
-    page:    normalizedPage,
-    limit:   normalizedLimit,
-    count:   workers.length,
-    hasNext,
-    hasPrev: normalizedPage > 1,
+    meta: {
+      page:    normalizedPage,
+      limit:   normalizedLimit,
+      count:   workers.length,
+      hasNext,
+      hasPrev: normalizedPage > 1,
+    },
   };
 }
 }

@@ -63,6 +63,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
       : undefined,
     page,
     limit,
+    excludeUserId: req.userState?.userId,
   });
 
   new SuccessResponse('Workers results retrieved successfully', result, 200).send(res);

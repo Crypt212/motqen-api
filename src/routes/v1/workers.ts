@@ -140,7 +140,7 @@ const workersRouter = Router();
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
-workersRouter.get('/',authenticateAccess,validateQuery(ExploreSearchSchema), searchWorkers);
+workersRouter.get('/',validateQuery(ExploreSearchSchema), searchWorkers);
 
 /**
  * @swagger
@@ -189,6 +189,6 @@ workersRouter.get('/',authenticateAccess,validateQuery(ExploreSearchSchema), sea
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
-workersRouter.get('/:id', authenticateAccess, validateParams(ExploreWorkerIdParamsSchema), getWorkerById);
+workersRouter.get('/:id', validateParams(ExploreWorkerIdParamsSchema), getWorkerById);
 
 export default workersRouter;
