@@ -100,6 +100,7 @@ model WorkerProfile {
 
   @@index([userId], map: "idx_worker_profiles_user_id")
   @@index([acceptsUrgentJobs, userId])
+  @@index([rate(sort: Desc), completedJobsCount(sort: Desc)]) // NEW: covers ORDER BY for highestRated sort
   @@index([rate])
   @@index([completedJobsCount])
   @@map("worker_profiles")
@@ -178,6 +179,7 @@ model SubSpecialization {
   mainSpecialization   Specialization         @relation(fields: [mainSpecializationId], references: [id], onDelete: Cascade)
 
   @@index([name])
+  @@index([mainSpecializationId]) // NEW: covers the ss.mainSpecializationId lookup in spec fallback filter
   @@map("sub_specializations")
 }
 
@@ -192,7 +194,6 @@ model Government {
   citys     City[]
   locations Location[]
   workers   WorkerProfile[] @relation("GovernmentToWorkerProfile")
-
 
   @@map("governments")
 }
@@ -222,9 +223,6 @@ model WorkerBadge {
   @@unique([workerProfileId, badgeType])
   @@map("worker_badges")
 }
-
-
-
 
 model Order {
   id              String        @id @default(uuid())
