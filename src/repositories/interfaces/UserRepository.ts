@@ -7,7 +7,12 @@ import {
   LocationCreateInput,
   LocationUpdateInput,
 } from '../../domain/user.entity.js';
-import { PaginationOptions, PaginatedResult, SortOptions } from '../../types/query.js';
+import {
+  PaginationOptions,
+  PaginatedResult,
+  SortOptions,
+  PaginatedResultMeta,
+} from '../../types/query.js';
 import { IDType } from './Repository.js';
 
 export default interface IUserRepository {
@@ -59,7 +64,10 @@ export default interface IUserRepository {
     filter: UserFilter;
   }): Promise<(User & { location: Location }) | null>;
 
-  findLocations(params: { filter: { userId: IDType } }): Promise<Location[]>;
+  findLocations(params: {
+    filter: { userId: IDType };
+    pagination?: PaginationOptions;
+  }): Promise<PaginatedResultMeta & { locations: Location[] }>;
   updateLocation(params: {
     filter: { id: IDType; userId: IDType };
     location: LocationUpdateInput;
