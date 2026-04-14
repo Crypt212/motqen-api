@@ -16,14 +16,15 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     specializationId,
     subSpecializationId,
     governmentId,
-    flaged,
+    highestRated,
+    nearest,
+    availableNow,
+    acceptsUrgentJobs,
     page,
     limit,
     'location[latitude]': latitude,
     'location[longitude]': longitude,
   } = ExploreSearchSchema.parse(req.query);
-
-  const flagedSet = new Set(flaged);
 
   let customerLatitude = latitude;
   let customerLongitude = longitude;
@@ -51,10 +52,10 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     specializationId,
     subSpecializationId,
     governmentId,
-    availability: flagedSet.has('availability') ? true : undefined,
-    acceptsUrgentJobs: flagedSet.has('acceptUrgentJobs') ? true : undefined,
-    highestRated: flagedSet.has('highestRated')? true : undefined,
-    nearest: flagedSet.has('nearest'),
+    availability: availableNow ? true : undefined,
+    acceptsUrgentJobs: acceptsUrgentJobs ? true : undefined,
+    highestRated,
+    nearest,
     location: hasValidLocation
       ? {
           latitude: customerLatitude!,

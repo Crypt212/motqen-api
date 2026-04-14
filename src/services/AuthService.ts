@@ -15,6 +15,7 @@ import IRateLimitCache from '../cache/interfaces/RateLimitCache.js';
 import ITokenCache from '../cache/interfaces/tokenCache.js';
 import { generateToken, verifyAndDecodeToken } from '../utils/tokens.js';
 import { logger } from '../libs/winston.js';
+import { emitToUser } from '../socket/socket-emitter.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
@@ -455,7 +456,10 @@ export default class AuthService extends Service {
       throw new AppError('Refresh token has been revoked', 400);
     }
     if (session.expiresAt.getTime() < Date.now()) {
-      await this.sessionRepository.delete({ filter: { id: session.id } });
+      await this.sessionRepository.revoke({
+        filter: { id: session.id },
+        revokedBy: params.userId,
+      });
       throw new AppError('Refresh token has expired', 400);
     }
 
@@ -472,15 +476,15 @@ export default class AuthService extends Service {
 
   /**
    * Creates a new refresh token for the given user ID and device fingerprint.
-   * @description Creates a new session, revokes existing ones for the same device
+   * @description Creates a new session, revokes existing ones for the same user and device
    */
   async login(params: {
     phoneNumber: string;
     deviceId: IDType;
     expiresAt: Date;
   }): Promise<{ session: Session; user: User; unHashedRefreshToken: string }> {
-    await this.sessionRepository.delete({ filter: { deviceId: params.deviceId } });
     const user = await this.userRepository.find({ filter: { phoneNumber: params.phoneNumber } });
+
     const unHashedRefreshToken = generateToken({
       type: 'refresh',
       userId: user.id,
@@ -502,6 +506,20 @@ export default class AuthService extends Service {
         token: hashedToken,
       },
     });
+
+    // Revoke ALL existing sessions for this user except the new one (single session per user)
+    await this.sessionRepository.revokeMany({
+      filter: { userId: user.id },
+      revokedBy: session.id,
+      excludeId: session.id,
+    });
+
+    // Notify the user that all other sessions have been revoked
+    emitToUser(user.id, 'session_revoked', {
+      reason: 'new_login',
+      message: 'You have been logged out because a new session was started on another device',
+    });
+
     return { session, user, unHashedRefreshToken: unHashedRefreshToken };
   }
 
@@ -556,11 +574,12 @@ export default class AuthService extends Service {
    */
   async logout(params: { userId: IDType; deviceId: string }): Promise<void> {
     try {
-      await this.sessionRepository.delete({
+      await this.sessionRepository.revoke({
         filter: {
           userId: params.userId,
           deviceId: params.deviceId,
         },
+        revokedBy: params.userId,
       });
     } catch (err) {
       logger.error('Failed to revoke session:', err);

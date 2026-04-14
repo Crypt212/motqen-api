@@ -23,7 +23,7 @@ const workersRouter = Router();
  *       - governmentId (optional)
  *       - cityId (optional)
  *       - latitude & longitude (optional, for nearest sorting)
- *       - flaged (optional front flags)
+ *       - highestRated, nearest, availableNow, acceptsUrgentJobs (optional boolean filters)
  *     tags: [Workers]
  *     security:
  *       - bearerAuth: []
@@ -70,22 +70,34 @@ const workersRouter = Router();
  *           type: number
  *           format: float
  *         description: Customer longitude for nearest sorting. If not provided, will try to use user's main location.
- *       - name: flaged
+ *       - name: highestRated
  *         in: query
  *         required: false
  *         schema:
- *           type: array
- *           items:
- *             type: string
- *             enum: [availability, nearest, acceptUrgentJobs, highestRated]
- *         style: form
- *         explode: false
- *         description: |
- *           Front flags collection.
- *           availability => availability filter (online workers)
- *           nearest => nearest-first sorting using PostgreSQL distance calculation
- *           acceptUrgentJobs => only workers accepting urgent jobs
- *           highestRated => sort by highest rating
+ *           type: boolean
+ *           default: false
+ *         description: Sort by highest rating first
+ *       - name: nearest
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Sort by nearest distance first (requires location coordinates)
+ *       - name: availableNow
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Filter only online workers
+ *       - name: acceptsUrgentJobs
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Filter only workers accepting urgent jobs
  *       - name: page
  *         in: query
  *         required: false

@@ -24,8 +24,7 @@
  */
 
 import { logger } from '../libs/winston.js';
-import { chatService, conversationRepository, contactDetectionService } from '../state.js';
-import prisma from '../libs/database.js';
+import { chatService, conversationRepository, contactDetectionService, presenceService } from '../state.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { ConversationWithParticipantsAndMessages } from '../domain/conversation.entity.js';
 
@@ -267,52 +266,7 @@ export function registerSocketHandlers(
   // ─── disconnect ─────────────────────────────────────────────────────────────
   socket.on('disconnect', async () => {
     try {
-      // 1. Remove socket from online set
-      void presence.removeSocket({ userId, socketId: socket.id });
-
-      // 2. Remove socket from all inChat sets
-      const convs =
-        await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
-          userId,
-          filter: {},
-          pagination: { page: 1, limit: 10 },
-        });
-      const conversationIds = convs.conversationParticipantsWithMessages.map((c) => c.id);
-      void presence.leaveAllChats({ userId, socketId: socket.id, conversationIds });
-
-      // 2b. Emit partner_offline to all active online partners using Promise.all
-      await Promise.all(
-        convs.conversationParticipantsWithMessages.map(async (conv) => {
-          const partnerId = getPartnerId(conv as ConversationWithParticipantsAndMessages, userId);
-          if (!partnerId) return;
-          const isPartnerOnline = await presence.isOnline({ userId: partnerId });
-          if (isPartnerOnline) {
-            io.to(`user:${partnerId}`).emit('partner_offline', { conversationId: conv.id });
-          }
-        })
-      );
-
-      // 3. Check if all devices are now offline
-      const remaining = await presence.countSockets({ userId });
-
-      if (remaining === 0) {
-        // 4. Full cleanup — remove all presence keys to prevent leaks
-        await Promise.all([
-          presence.removeAllSockets({ userId }),
-          presence.removeAllInChat({ userId, conversationIds }),
-        ]);
-
-        // 5. Persist availability state in DB
-        await prisma.user.update({
-          where: { id: userId },
-          data: { isOnline: false },
-        });
-
-        // 6. Emit user_offline to all partner rooms
-        await emitToPartners(io, userId, 'user_offline', { userId });
-
-        logger.info(`[socket] user ${userId} is now fully offline`);
-      }
+      await presenceService.handleSocketDisconnect({ userId, socketId: socket.id });
     } catch (err) {
       logger.error('[socket] disconnect cleanup error', err);
     }

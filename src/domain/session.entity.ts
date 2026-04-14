@@ -8,6 +8,8 @@ export type Session = {
 
   token: string;
   isRevoked: boolean;
+  revokedAt: Date | null;
+  revokedBy: string | null;
   deviceId: string;
   ipAddress: string;
   userAgent: string;

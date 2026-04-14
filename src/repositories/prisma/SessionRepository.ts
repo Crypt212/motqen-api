@@ -16,6 +16,8 @@ export default class SessionRepository extends Repository implements ISessionRep
       userId: record.userId,
       token: record.token,
       isRevoked: record.isRevoked,
+      revokedAt: record.revokedAt ?? null,
+      revokedBy: record.revokedBy ?? null,
       deviceId: record.deviceId,
       ipAddress: record.ipAddress ?? '',
       userAgent: record.userAgent ?? '',
@@ -88,6 +90,53 @@ export default class SessionRepository extends Repository implements ISessionRep
       });
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'deleteMany');
+    }
+  }
+
+  async revoke(params: { filter: SessionFilter; revokedBy: IDType }): Promise<void> {
+    try {
+      const { filter, revokedBy } = params;
+      if (isEmptyFilter(filter)) return;
+
+      const existingSession = await this.prismaClient.session.findFirst({
+        where: filter,
+      });
+
+      if (!existingSession) return;
+
+      await this.prismaClient.session.update({
+        where: { id: existingSession.id },
+        data: {
+          isRevoked: true,
+          revokedAt: new Date(),
+          revokedBy,
+        },
+      });
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'revoke');
+    }
+  }
+
+  async revokeMany(params: { filter: SessionFilter; revokedBy: IDType; excludeId?: IDType }): Promise<void> {
+    try {
+      const { filter, revokedBy, excludeId } = params;
+      if (isEmptyFilter(filter)) return;
+
+      const where: any = { ...filter };
+      if (excludeId) {
+        where.NOT = { id: excludeId };
+      }
+
+      await this.prismaClient.session.updateMany({
+        where,
+        data: {
+          isRevoked: true,
+          revokedAt: new Date(),
+          revokedBy,
+        },
+      });
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'revokeMany');
     }
   }
 }

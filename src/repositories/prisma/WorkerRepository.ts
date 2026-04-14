@@ -841,7 +841,7 @@ async searchWorkers({
   };
  
   const rows = await this.prismaClient.$queryRaw<Row[]>`
-    WITH filtered AS MATERIALIZED (
+    WITH filtered AS  (
       SELECT wp."id"
       FROM   "worker_profiles" wp
       JOIN   "users"         u  ON  u."id"              = wp."userId"

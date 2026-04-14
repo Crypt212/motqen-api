@@ -7,8 +7,8 @@ export type Government = {
 
   name: string;
   nameAr: string;
-  long: string;
-  lat: string;
+  long: number;
+  lat: number;
 
   createdAt: Date;
   updatedAt: Date;
@@ -17,8 +17,8 @@ export type Government = {
 export type GovernmentCreateInput = {
   name: string;
   nameAr: string;
-  long: string;
-  lat: string;
+  long: number;
+  lat: number;
 };
 
 export type GovernmentUpdateInput = Partial<GovernmentCreateInput>;
@@ -27,8 +27,8 @@ export const GovernmentFilterDescriptor = {
   id: { type: 'uuid' as const },
   name: { type: 'string' as const, minLength: 2, maxLength: 100 },
   nameAr: { type: 'string' as const, minLength: 2, maxLength: 100 },
-  long: { type: 'string' as const, minLength: 2, maxLength: 100 },
-  lat: { type: 'string' as const, minLength: 2, maxLength: 100 },
+  long: { type: 'number' as const },
+  lat: { type: 'number' as const },
 } satisfies Record<string, FieldTypeDefinition>;
 
 export type GovernmentFilter = FilterFromDescriptor<typeof GovernmentFilterDescriptor>;
@@ -41,8 +41,8 @@ export type City = {
 
   name: string;
   nameAr: string;
-  long: string;
-  lat: string;
+  long: number;
+  lat: number;
 
   updatedAt: Date;
   createdAt: Date;
@@ -51,8 +51,8 @@ export type City = {
 export type CityCreateInput = {
   name: string;
   nameAr: string;
-  long: string;
-  lat: string;
+  long: number;
+  lat: number;
 };
 
 export type CityUpdateInput = Partial<CityCreateInput>;
@@ -61,8 +61,8 @@ export const CityFilterDescriptor = {
   id: { type: 'uuid' as const },
   name: { type: 'string' as const, minLength: 2, maxLength: 100 },
   nameAr: { type: 'string' as const, minLength: 2, maxLength: 100 },
-  long: { type: 'string' as const, minLength: 2, maxLength: 100 },
-  lat: { type: 'string' as const, minLength: 2, maxLength: 100 },
+  long: { type: 'number' as const },
+  lat: { type: 'number' as const },
 } satisfies Record<string, FieldTypeDefinition>;
 
 export type CityFilter = FilterFromDescriptor<typeof CityFilterDescriptor>;

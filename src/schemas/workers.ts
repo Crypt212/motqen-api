@@ -1,27 +1,5 @@
 import { z } from '../libs/zod.js';
-import { LongitudeSchema, UUIDSchema } from './common.js';
-
-const parseStringList = (value: unknown): unknown => {
-  if (value === undefined || value === null || value === '') {
-    return undefined;
-  }
-
-  if (Array.isArray(value)) {
-    return value
-      .flatMap((item) => String(item).split(','))
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  if (typeof value === 'string') {
-    return value
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  return undefined;
-};
+import { UUIDSchema } from './common.js';
 
 const parseOptionalUUID = (value: unknown): unknown => {
   if (value === undefined || value === null || value === '') {
@@ -30,13 +8,26 @@ const parseOptionalUUID = (value: unknown): unknown => {
   return value;
 };
 
-const FlagedFilterSchema = z.enum(['availability', 'nearest', 'acceptUrgentJobs', 'highestRated']);
-
 export const ExploreSearchSchema = z.object({
   specializationId: UUIDSchema,
   subSpecializationId: UUIDSchema.optional(),
   governmentId: UUIDSchema.optional(),
-  flaged: z.preprocess(parseStringList, z.array(FlagedFilterSchema).optional().default([])),
+  highestRated: z.preprocess(
+    (val) => (val === 'true' || val === true ? true : false),
+    z.boolean().optional().default(false)
+  ),
+  nearest: z.preprocess(
+    (val) => (val === 'true' || val === true ? true : false),
+    z.boolean().optional().default(false)
+  ),
+  availableNow: z.preprocess(
+    (val) => (val === 'true' || val === true ? true : false),
+    z.boolean().optional().default(false)
+  ),
+  acceptsUrgentJobs: z.preprocess(
+    (val) => (val === 'true' || val === true ? true : false),
+    z.boolean().optional().default(false)
+  ),
   page: z.coerce
     .number()
     .int()

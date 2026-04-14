@@ -19,4 +19,12 @@ export default interface ISessionRepository {
    * Delete all sessions with given filter: device Id, user Id
    */
   deleteMany(params: { filter: SessionFilter }): Promise<void>;
+  /**
+   * Revoke a session (soft delete) - sets isRevoked, revokedAt, revokedBy
+   */
+  revoke(params: { filter: SessionFilter; revokedBy: IDType }): Promise<void>;
+  /**
+   * Revoke multiple sessions (soft delete)
+   */
+  revokeMany(params: { filter: SessionFilter; revokedBy: IDType; excludeId?: IDType }): Promise<void>;
 }

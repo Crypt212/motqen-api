@@ -9,6 +9,7 @@ import { asyncHandler } from '../types/asyncHandler.js';
 import { chatService, conversationRepository } from '../state.js';
 import { matchedData } from 'express-validator';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
+import { emitToUser } from '../socket/socket-emitter.js';
 
 /**
  * POST /api/chat/conversations
@@ -133,6 +134,13 @@ export const sendImageMessage = asyncHandler(async (req, res) => {
     senderId: userId,
     imageBuffer: file.buffer,
   });
+
+  // Emit socket event to partner (like regular text messages)
+  const conv = await conversationRepository.findWithParticipant({ conversationId, userId });
+  const partner = conv.participants.find((p) => p.userId !== userId);
+  if (partner) {
+    emitToUser(partner.userId, 'new_message', { message, conversationId });
+  }
 
   new SuccessResponse('Image message sent', message, 201).send(res);
 });

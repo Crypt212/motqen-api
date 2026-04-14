@@ -2,7 +2,7 @@ import { $Enums } from '../generated/prisma/client.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { FieldTypeDefinition } from '../types/query.js';
 import { FilterFromDescriptor } from '../schemas/common.js';
-import { User } from '../../domain/user.entity.js';
+import { User } from './user.entity.js';
 
 export type MessageType = $Enums.MessageType;
 export type Message = {

@@ -5,7 +5,7 @@
 
 import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
-import { authService, rateLimitService } from '../state.js';
+import { authService, rateLimitService, presenceService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 
 /**
@@ -192,12 +192,19 @@ export const login = asyncHandler(async (req, res) => {
 
 /**
  * Logout user and revoke session
- * @description Revokes the user's session based on device fingerprint
+ * @description Revokes the user's session based on device fingerprint and cleans up presence
  */
 export const logout = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
+  const userId = req.userState.userId;
 
-  await authService.logout({ userId: req.userState.userId, deviceId });
+  await authService.logout({ userId, deviceId });
+
+  // Check if user has active sockets and handle offline cleanup
+  const isUserOnline = await presenceService.isOnline(userId);
+  if (isUserOnline) {
+    await presenceService.handleUserOffline({ userId, reason: 'logout' });
+  }
 
   new SuccessResponse('Logged out successfully', null, 200).send(res);
 });

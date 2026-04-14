@@ -21,6 +21,7 @@ import FlaggedMessageRepository from './repositories/prisma/FlaggedMessageReposi
 import ChatPresenceCache from './cache/redis/ChatPresenceCache.js';
 import ChatService from './services/ChatService.js';
 import ContactDetectionService from './services/ContactDetectionService.js';
+import PresenceService from './services/PresenceService.js';
 import prisma from './libs/database.js';
 import redisClient from './libs/redis.js';
 
@@ -76,3 +77,8 @@ export const chatService = new ChatService({
   presence: chatPresenceCache,
 });
 export const contactDetectionService = new ContactDetectionService(flaggedMessageRepository);
+export const presenceService = new PresenceService({
+  presenceCache: chatPresenceCache,
+  conversationRepository,
+  prisma,
+});
