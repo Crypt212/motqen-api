@@ -1,7 +1,18 @@
 node_modules
+dist
 .env
 
+package-lock.json
+
+**/coverage
 **/logs
 
-src/**/prisma
 prisma/migrations
+src/generated
+
+.github
+.agent
+.specify
+.vscode
+specs
+docs
