@@ -15,7 +15,9 @@ import { PaginationOptions, SortOptions, PaginatedResultMeta } from '../../types
 import { PrismaClient } from '../../generated/prisma/client.js';
 
 export default class GovernmentRepository extends Repository implements IGovernmentRepository {
-  constructor(prisma: PrismaClient) {
+  constructor(
+    prisma: PrismaClient | import('../../generated/prisma/client.js').Prisma.TransactionClient
+  ) {
     super(prisma);
   }
 

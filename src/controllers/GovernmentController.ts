@@ -12,13 +12,13 @@ import { parseQueryParams } from '../schemas/common.js';
 export default class GovernmentController {
   private governmentService: GovernmentService;
 
-  private normalizeCoordinate(value: unknown): string | undefined {
+  private normalizeCoordinate(value: unknown): number | undefined {
     if (typeof value === 'number' && Number.isFinite(value)) {
-      return String(value);
+      return value;
     }
 
     if (typeof value === 'string' && value.trim().length > 0) {
-      return value.trim();
+      return Number(value.trim());
     }
 
     return undefined;
@@ -56,8 +56,8 @@ export default class GovernmentController {
       data: {
         name,
         nameAr,
-        long: normalizedLong as string,
-        lat: normalizedLat as string,
+        long: normalizedLong,
+        lat: normalizedLat,
       },
     });
 

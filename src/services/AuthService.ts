@@ -31,6 +31,11 @@ import { Session } from '../domain/session.entity.js';
 import { SpecializationsTree } from '../domain/specialization.entity.js';
 import { OTPErrorDetails } from '../errors/appErrorDetails/OTPDetails.js';
 
+import { transactionManager } from '../state.js';
+import UserRepository from '../repositories/prisma/UserRepository.js';
+import WorkerProfileRepository from '../repositories/prisma/WorkerRepository.js';
+import ClientProfileRepository from '../repositories/prisma/ClientRepository.js';
+import GovernmentRepository from '../repositories/prisma/GovernmentRepository.js';
 const MAX_VERIFY_ATTEMPTS = 5;
 
 /**
@@ -41,12 +46,18 @@ function parseExpiryToSeconds(expiresIn: string): number {
   if (!match) return 3600;
   const num = parseInt(match[1]);
   switch (match[2]) {
-    case 's': return num;
-    case 'm': return num * 60;
-    case 'h': return num * 60 * 60;
-    case 'd': return num * 60 * 60 * 24;
-    case 'w': return num * 60 * 60 * 24 * 7;
-    default: return 3600;
+    case 's':
+      return num;
+    case 'm':
+      return num * 60;
+    case 'h':
+      return num * 60 * 60;
+    case 'd':
+      return num * 60 * 60 * 24;
+    case 'w':
+      return num * 60 * 60 * 24 * 7;
+    default:
+      return 3600;
   }
 }
 
@@ -136,86 +147,91 @@ export default class AuthService extends Service {
       // Note: governmentId and cityId validation moved to location handling
       // For workers, government associations are handled via workGovernmentIds
 
-      const user = await this.userRepository.create({
-        user: {
-          phoneNumber,
-          role: 'USER',
-          firstName,
-          middleName,
-          lastName,
-          status: 'ACTIVE',
-        },
-      });
+      return await transactionManager.execute(
+        { userRepo: UserRepository, workerRepo: WorkerProfileRepository },
+        async ({ userRepo, workerRepo }) => {
+          const user = await userRepo.create({
+            user: {
+              phoneNumber,
+              role: 'USER',
+              firstName,
+              middleName,
+              lastName,
+              status: 'ACTIVE',
+            },
+          });
 
-      await this.userRepository.addLocation({
-        userId: user.id,
-        location: {
-          ...location,
-          isMain: true,
-        },
-      });
+          await userRepo.addLocation({
+            userId: user.id,
+            location: {
+              ...location,
+              isMain: true,
+            },
+          });
 
-      const profile = await this.workerProfileRepository.create({
-        userId: user.id,
-        workerProfile: {
-          experienceYears,
-          isInTeam: Boolean(isInTeam),
-          acceptsUrgentJobs: Boolean(acceptsUrgentJobs),
-        },
-      });
+          const profile = await workerRepo.create({
+            userId: user.id,
+            workerProfile: {
+              experienceYears,
+              isInTeam: Boolean(isInTeam),
+              acceptsUrgentJobs: Boolean(acceptsUrgentJobs),
+            },
+          });
 
-      const nationalID = (
-        await uploadToCloudinary(idImageBuffer, `${user.id}/verification_info`, 'nationalID')
-      ).url;
+          const nationalID = (
+            await uploadToCloudinary(idImageBuffer, `${user.id}/verification_info`, 'nationalID')
+          ).url;
 
-      const selfiWithID = (
-        await uploadToCloudinary(
-          profileWithIdImageBuffer,
-          `${user.id}/verification_info`,
-          'selfiWithID'
-        )
-      ).url;
+          const selfiWithID = (
+            await uploadToCloudinary(
+              profileWithIdImageBuffer,
+              `${user.id}/verification_info`,
+              'selfiWithID'
+            )
+          ).url;
 
-      await this.workerProfileRepository.find({ workerFilter: { userId: user.id } });
+          await workerRepo.find({ workerFilter: { userId: user.id } });
 
-      const verification = await this.workerProfileRepository.setVerification({
-        workerProfileId: profile.id,
-        verification: {
-          idWithPersonalImageUrl: nationalID,
-          idDocumentUrl: selfiWithID,
-          status: 'PENDING',
-          reason: 'Waiting for verification',
-        },
-      });
+          const verification = await workerRepo.setVerification({
+            workerProfileId: profile.id,
+            verification: {
+              idWithPersonalImageUrl: nationalID,
+              idDocumentUrl: selfiWithID,
+              status: 'PENDING',
+              reason: 'Waiting for verification',
+            },
+          });
 
-      await this.workerProfileRepository.insertWorkGovernments({
-        workerFilter: {
-          userId: user.id,
-        },
-        governmentIds: workGovernmentIds,
-      });
-      await this.workerProfileRepository.insertSubSpecializations({
-        workerFilter: {
-          userId: user.id,
-        },
-        specializationsTree: specializations,
-      });
+          await workerRepo.insertWorkGovernments({
+            workerFilter: {
+              userId: user.id,
+            },
+            governmentIds: workGovernmentIds,
+          });
+          await workerRepo.insertSubSpecializations({
+            workerFilter: {
+              userId: user.id,
+            },
+            specializationsTree: specializations,
+          });
 
-      const { url } = await uploadToCloudinary(
-        profileImageBuffer,
-        `${phoneNumber}/profile_image`,
-        'profileMain'
+          const { url } = await uploadToCloudinary(
+            profileImageBuffer,
+            `${phoneNumber}/profile_image`,
+            'profileMain'
+          );
+
+          await userRepo.update({
+            filter: {
+              id: user.id,
+            },
+            user: { profileImageUrl: url },
+          });
+          user.profileImageUrl = url;
+
+          return { profile, user, verification };
+        }
       );
-
-      await this.userRepository.update({
-        filter: {
-          id: user.id,
-        },
-        user: { profileImageUrl: url },
-      });
-      user.profileImageUrl = url;
-
-      return { profile, user, verification };
     });
   }
 
@@ -231,61 +247,70 @@ export default class AuthService extends Service {
     {}: InputClientType
   ): Promise<{ user: User; profile: ClientProfile }> {
     return tryCatch(async () => {
-      const government = await this.governmentRepository.find({
-        filter: { id: location.governmentId },
-      });
-      if (!government) throw new AppError('Government not found', 404);
-
-      const city = await this.governmentRepository.findCity({ filter: { id: location.cityId } });
-      if (!city) throw new AppError('City not found', 404);
-
-      const user = await this.userRepository.create({
-        user: {
-          phoneNumber,
-          role: 'USER',
-          firstName,
-          middleName,
-          lastName,
-          status: 'ACTIVE',
+      return await transactionManager.execute(
+        {
+          userRepo: UserRepository,
+          clientRepo: ClientProfileRepository,
+          govRepo: GovernmentRepository,
         },
-      });
+        async ({ userRepo, clientRepo, govRepo }) => {
+          const government = await govRepo.find({
+            filter: { id: location.governmentId },
+          });
+          if (!government) throw new AppError('Government not found', 404);
 
-      // Create bare client profile
-      await this.clientProfileRepository.create({
-        userId: user.id,
-        clientProfile: {},
-      });
+          const city = await govRepo.findCity({ filter: { id: location.cityId } });
+          if (!city) throw new AppError('City not found', 404);
 
-      // Add primary location to the User
-      await this.userRepository.addLocation({
-        userId: user.id,
-        location: {
-          ...location,
-          isMain: true,
-        },
-      });
+          const user = await userRepo.create({
+            user: {
+              phoneNumber,
+              role: 'USER',
+              firstName,
+              middleName,
+              lastName,
+              status: 'ACTIVE',
+            },
+          });
 
-      if (profileImageBuffer) {
-        const { url } = await uploadToCloudinary(
-          profileImageBuffer,
-          `${user.id}/profile_image`,
-          'profileMain'
-        );
+          // Create bare client profile
+          await clientRepo.create({
+            userId: user.id,
+            clientProfile: {},
+          });
 
-        await this.userRepository.update({
-          filter: {
-            id: user.id,
-          },
-          user: { profileImageUrl: url },
-        });
-        user.profileImageUrl = url;
-      }
+          // Add primary location to the User
+          await userRepo.addLocation({
+            userId: user.id,
+            location: {
+              ...location,
+              isMain: true,
+            },
+          });
 
-      const profile = await this.clientProfileRepository.find({
-        filter: { userId: user.id },
-      });
+          if (profileImageBuffer) {
+            const { url } = await uploadToCloudinary(
+              profileImageBuffer,
+              `${user.id}/profile_image`,
+              'profileMain'
+            );
 
-      return { profile, user };
+            await userRepo.update({
+              filter: {
+                id: user.id,
+              },
+              user: { profileImageUrl: url },
+            });
+            user.profileImageUrl = url;
+          }
+
+          const profile = await clientRepo.find({
+            filter: { userId: user.id },
+          });
+
+          return { profile: profile!, user };
+        }
+      );
     });
   }
 
