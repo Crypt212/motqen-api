@@ -51,6 +51,8 @@ export default class MessageRepository extends Repository implements IMessageRep
             phoneNumber: record.sender.phoneNumber,
             status: record.sender.status,
             isOnline: record.sender.isOnline,
+            createdAt: record.sender.createdAt,
+            updatedAt: record.sender.updatedAt,
           }
         : undefined,
     };
@@ -154,6 +156,8 @@ export default class MessageRepository extends Repository implements IMessageRep
               status: true,
               isOnline: true,
               profileImageUrl: true,
+              createdAt: true,
+              updatedAt: true,
             },
           },
         },
@@ -174,9 +178,16 @@ export default class MessageRepository extends Repository implements IMessageRep
           sender: {
             select: {
               id: true,
+              phoneNumber: true,
               firstName: true,
+              middleName: true,
               lastName: true,
+              isOnline: true,
+              status: true,
+              role: true,
               profileImageUrl: true,
+              createdAt: true,
+              updatedAt: true,
             },
           },
         },
@@ -281,6 +292,8 @@ export default class MessageRepository extends Repository implements IMessageRep
                 status: true,
                 isOnline: true,
                 profileImageUrl: true,
+                createdAt: true,
+                updatedAt: true,
               },
             },
           },

@@ -29,7 +29,9 @@ export default class WorkerProfileRepository
   extends Repository
   implements IWorkerProfileRepository
 {
-  constructor(prisma: PrismaClient) {
+  constructor(
+    prisma: PrismaClient | import('../../generated/prisma/client.js').Prisma.TransactionClient
+  ) {
     super(prisma);
   }
 

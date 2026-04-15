@@ -15,7 +15,9 @@ import { PrismaClient } from '../../generated/prisma/client.js';
 import { IDType } from '../interfaces/Repository.js';
 
 export default class UserRepository extends Repository implements IUserRepository {
-  constructor(prisma: PrismaClient) {
+  constructor(
+    prisma: PrismaClient | import('../../generated/prisma/client.js').Prisma.TransactionClient
+  ) {
     super(prisma);
   }
 
