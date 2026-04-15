@@ -13,11 +13,7 @@ import {
 } from '../../domain/workerProfile.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
-import {
-  AccountStatus,
-  Prisma,
-  PrismaClient,
-} from '../../generated/prisma/client.js';
+import { AccountStatus, Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import type { ExploreWorkerPublicDetail } from '../../types/exploreWorker.js';
 
 export type { ExploreWorkerPublicDetail };
@@ -33,7 +29,9 @@ export default class WorkerProfileRepository
   extends Repository
   implements IWorkerProfileRepository
 {
-  constructor(prisma: PrismaClient) {
+  constructor(
+    prisma: PrismaClient | import('../../generated/prisma/client.js').Prisma.TransactionClient
+  ) {
     super(prisma);
   }
 
@@ -662,72 +660,71 @@ export default class WorkerProfileRepository
    * Search for approved workers with pagination, filtering, and sorting
    */
 
-async searchWorkers({
-  specializationId,
-  subSpecializationId,
-  governmentId,
-  availability,
-  acceptsUrgentJobs,
-  highestRated,
-  nearest,
-  location,
-  page = 1,
-  limit = 10,
-  excludeUserId,
-}: {
-  specializationId: string;
-  subSpecializationId?: string;
-  governmentId?: string;
-  availability?: boolean;
-  acceptsUrgentJobs?: boolean;
-  highestRated?: boolean;
-  nearest?: boolean;
-  location?: { latitude: number; longitude: number };
-  page: number;
-  limit: number;
-  excludeUserId?: string;
-}): Promise<{
-  workers: {
-    workerId: string;
-    name: string;
-    profileImage: string | null;
-    rating: number;
-    ratingCount: number;
-    completedServices: number;
-    distance?: number;
-    isAvailableNow: boolean;
-  }[];
-  meta: {
+  async searchWorkers({
+    specializationId,
+    subSpecializationId,
+    governmentId,
+    availability,
+    acceptsUrgentJobs,
+    highestRated,
+    nearest,
+    location,
+    page = 1,
+    limit = 10,
+    excludeUserId,
+  }: {
+    specializationId: string;
+    subSpecializationId?: string;
+    governmentId?: string;
+    availability?: boolean;
+    acceptsUrgentJobs?: boolean;
+    highestRated?: boolean;
+    nearest?: boolean;
+    location?: { latitude: number; longitude: number };
     page: number;
     limit: number;
-    count: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-}> {
+    excludeUserId?: string;
+  }): Promise<{
+    workers: {
+      workerId: string;
+      name: string;
+      profileImage: string | null;
+      rating: number;
+      ratingCount: number;
+      completedServices: number;
+      distance?: number;
+      isAvailableNow: boolean;
+    }[];
+    meta: {
+      page: number;
+      limit: number;
+      count: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const parsedLimit =
+      typeof limit === 'string' ? Math.min(parseInt(limit, 10), 20) : Math.min(limit, 20);
 
-  const parsedLimit     = typeof limit === 'string' ? Math.min(parseInt(limit, 10),20) : Math.min(limit,20);
+    const parsedPage = typeof page === 'string' ? parseInt(page, 10) : page;
+    const normalizedLimit = Math.min(Math.max(parsedLimit || 10, 1), 50);
+    const normalizedPage = Math.max(parsedPage || 1, 1);
+    const offset = (normalizedPage - 1) * normalizedLimit;
+    const fetchLimit = normalizedLimit + 1;
 
-  const parsedPage      = typeof page  === 'string' ? parseInt(page,  10) : page;
-  const normalizedLimit = Math.min(Math.max(parsedLimit || 10, 1), 50);
-  const normalizedPage  = Math.max(parsedPage || 1, 1);
-  const offset          = (normalizedPage - 1) * normalizedLimit;
-  const fetchLimit      = normalizedLimit + 1; 
- 
-  const customerLat  = location?.latitude;
-  const customerLong = location?.longitude;
-  const hasCoords    = Number.isFinite(customerLat) && Number.isFinite(customerLong);
+    const customerLat = location?.latitude;
+    const customerLong = location?.longitude;
+    const hasCoords = Number.isFinite(customerLat) && Number.isFinite(customerLong);
 
-  
-  const specFilter = subSpecializationId
-    ? Prisma.sql`
+    const specFilter = subSpecializationId
+      ? Prisma.sql`
         AND EXISTS (
           SELECT 1 FROM "chosen_specializations" cs
           WHERE cs."workerProfileId"     = wp."id"
             AND cs."subSpecializationId" = ${subSpecializationId}
         )`
-    : specializationId
-      ? Prisma.sql`
+      : specializationId
+        ? Prisma.sql`
           AND EXISTS (
             SELECT 1 FROM "chosen_specializations" cs
             LEFT JOIN "sub_specializations" ss ON ss."id" = cs."subSpecializationId"
@@ -737,44 +734,39 @@ async searchWorkers({
                 OR ss."mainSpecializationId" = ${specializationId}
               )
           )`
+        : Prisma.sql``;
+
+    const availFilter =
+      availability !== undefined ? Prisma.sql`AND u."isOnline" = ${availability}` : Prisma.sql``;
+
+    const urgentFilter = acceptsUrgentJobs
+      ? Prisma.sql`AND wp."acceptsUrgentJobs" = true`
       : Prisma.sql``;
- 
 
-  const availFilter = availability !== undefined
-    ? Prisma.sql`AND u."isOnline" = ${availability}`
-    : Prisma.sql``;
- 
-
-  const urgentFilter = acceptsUrgentJobs
-    ? Prisma.sql`AND wp."acceptsUrgentJobs" = true`
-    : Prisma.sql``;
- 
-  
-  const govFilter = governmentId
-    ? Prisma.sql`
+    const govFilter = governmentId
+      ? Prisma.sql`
         AND EXISTS (
           SELECT 1 FROM "_GovernmentToWorkerProfile" gfw
           WHERE gfw."B" = wp."id"
             AND gfw."A" = ${governmentId}
         )`
-    : Prisma.sql``;
- 
-  // ─── geometry ─────────────────────────────────────────────────────────────
- 
-  const userPoint = hasCoords
-    ? Prisma.sql`ST_SetSRID(ST_MakePoint(${customerLong}, ${customerLat}), 4326)::geography`
-    : Prisma.sql`NULL::geography`;
- 
+      : Prisma.sql``;
 
-  const geoFilter = nearest && hasCoords
-    ? Prisma.sql`
+    // ─── geometry ─────────────────────────────────────────────────────────────
+
+    const userPoint = hasCoords
+      ? Prisma.sql`ST_SetSRID(ST_MakePoint(${customerLong}, ${customerLat}), 4326)::geography`
+      : Prisma.sql`NULL::geography`;
+
+    const geoFilter =
+      nearest && hasCoords
+        ? Prisma.sql`
         AND l."pointGeography" IS NOT NULL
         AND ST_DWithin(l."pointGeography", ${userPoint}::geography, 100000)`
-    : Prisma.sql``;
- 
+        : Prisma.sql``;
 
-  const distanceLateral = hasCoords
-    ? Prisma.sql`
+    const distanceLateral = hasCoords
+      ? Prisma.sql`
         LEFT JOIN LATERAL (
           SELECT LEAST((l2."pointGeography" <-> ${userPoint}::geography) / 1000.0, 9999.9) AS distance_km
           FROM   "locations" l2
@@ -783,64 +775,65 @@ async searchWorkers({
             AND  l2."pointGeography" IS NOT NULL
           LIMIT 1
         ) loc_dist ON true`
-    : Prisma.sql``;
- 
-  const distanceSelect = hasCoords
-    ? Prisma.sql`loc_dist.distance_km`
-    : Prisma.sql`NULL::double precision`;
- 
-  // ─── exclude own profile ────────────────────────────────────────────────────
+      : Prisma.sql``;
 
-  const excludeSelfFilter = excludeUserId
-    ? Prisma.sql`AND wp."userId" != ${excludeUserId}`
-    : Prisma.sql``;
+    const distanceSelect = hasCoords
+      ? Prisma.sql`loc_dist.distance_km`
+      : Prisma.sql`NULL::double precision`;
 
-  // ─── ordering ─────────────────────────────────────────────────────────────
-  //
-  // nearest flag    → distance أولاً
-  // highestRated    → rate أولاً
-  // لا flags        → hybrid score عشان نعطي فرصة للـ new workers
-  //                   (rate * 0.4) + (completedJobs * 0.3) + (userHash * 0.3)
-  //                   الـ userHash ثابت لكل يوزر (نفس قيمة الـ random لكن ثابتة للمستخدم)
- 
-  const orderExpr = nearest && hasCoords
-    ? Prisma.sql`
+    // ─── exclude own profile ────────────────────────────────────────────────────
+
+    const excludeSelfFilter = excludeUserId
+      ? Prisma.sql`AND wp."userId" != ${excludeUserId}`
+      : Prisma.sql``;
+
+    // ─── ordering ─────────────────────────────────────────────────────────────
+    //
+    // nearest flag    → distance أولاً
+    // highestRated    → rate أولاً
+    // لا flags        → hybrid score عشان نعطي فرصة للـ new workers
+    //                   (rate * 0.4) + (completedJobs * 0.3) + (userHash * 0.3)
+    //                   الـ userHash ثابت لكل يوزر (نفس قيمة الـ random لكن ثابتة للمستخدم)
+
+    const orderExpr =
+      nearest && hasCoords
+        ? Prisma.sql`
         loc_dist.distance_km ASC NULLS LAST,
         wp."rate"              DESC,
         wp."completedJobsCount" DESC`
-    : highestRated
-      ? Prisma.sql`
+        : highestRated
+          ? Prisma.sql`
           wp."rate"              DESC,
           wp."completedJobsCount" DESC,
           wp."experienceYears"    DESC`
-      : Prisma.sql`
+          : Prisma.sql`
           (
             COALESCE(wp."rate", 0)               * 0.4 +
             LEAST(wp."completedJobsCount", 100)  * 0.003 +
             (ABS(HASHTEXT(wp."userId" || ${excludeUserId ?? ''})) % 1000 / 1000.0) * 0.3
           ) DESC`;
-  //
-  // ملاحظة على الـ hybrid:
-  // - LEAST(..., 100) عشان متخليش workers بـ 1000 job يطغوا على الـ score بشكل غير عادل
-  // - completedJobsCount * 0.003 يساوي max 0.3 لو عنده 100+ job (نفس وزن الـ random)
-  // - rate max هو 5.0، يعني rate * 0.4 = max 2.0
-  // النتيجة: worker جديد بـ random 0.3 ممكن يتفوق على worker قديم بـ rate وسط
- 
-  // ─── query ────────────────────────────────────────────────────────────────
- 
-  type Row = {
-    worker_id:           string;
-    first_name:          string;
-    middle_name:         string | null;
-    last_name:           string;
-    profile_image_url:   string | null;
-    is_online:           boolean;
-    rate:                number;
-    completed_jobs_count: number;
-    distance_km:         number | null;
-  };
- 
-  const rows = await this.prismaClient.$queryRaw<Row[]>`
+    //
+    // ملاحظة على الـ hybrid:
+    // - LEAST(..., 100) عشان متخليش workers بـ 1000 job يطغوا على الـ score بشكل غير عادل
+    // - completedJobsCount * 0.003 يساوي max 0.3 لو عنده 100+ job (نفس وزن الـ random)
+    // - rate max هو 5.0، يعني rate * 0.4 = max 2.0
+    // النتيجة: worker جديد بـ random 0.3 ممكن يتفوق على worker قديم بـ rate وسط
+
+    // ─── query ────────────────────────────────────────────────────────────────
+
+    type Row = {
+      worker_id: string;
+      first_name: string;
+      middle_name: string | null;
+      last_name: string;
+      profile_image_url: string | null;
+      is_online: boolean;
+      rate: number;
+      completed_jobs_count: number;
+      distance_km: number | null;
+    };
+
+    const rows = await this.prismaClient.$queryRaw<Row[]>`
     WITH filtered AS  (
       SELECT wp."id"
       FROM   "worker_profiles" wp
@@ -876,38 +869,36 @@ async searchWorkers({
     LIMIT    ${fetchLimit}
     OFFSET   ${offset}
   `;
- 
-  // ─── hasNext ──────────────────────────────────────────────────────────────
- 
-  const hasNext  = rows.length > normalizedLimit;
-  const pageRows = hasNext ? rows.slice(0, normalizedLimit) : rows;
- 
-  // Rows processed
 
-  // ─── format ───────────────────────────────────────────────────────────────
- 
-  const workers = pageRows.map((r) => ({
-    workerId:           r.worker_id,
-    name:               `${r.first_name} ${r.middle_name ?? ''} ${r.last_name}`.trim(),
-    profileImage:       r.profile_image_url,
-    rating:             Number(r.rate),
-    ratingCount:        0, // TODO: Add rating count to query when orders table has ratings
-    completedServices:  Number(r.completed_jobs_count),
-    isAvailableNow:     r.is_online,
-    ...(r.distance_km !== null
-      ? { distance: Number(Number(r.distance_km).toFixed(1)) }
-      : {}),
-  }));
- 
-  return {
-    workers,
-    meta: {
-      page:    normalizedPage,
-      limit:   normalizedLimit,
-      count:   workers.length,
-      hasNext,
-      hasPrev: normalizedPage > 1,
-    },
-  };
-}
+    // ─── hasNext ──────────────────────────────────────────────────────────────
+
+    const hasNext = rows.length > normalizedLimit;
+    const pageRows = hasNext ? rows.slice(0, normalizedLimit) : rows;
+
+    // Rows processed
+
+    // ─── format ───────────────────────────────────────────────────────────────
+
+    const workers = pageRows.map((r) => ({
+      workerId: r.worker_id,
+      name: `${r.first_name} ${r.middle_name ?? ''} ${r.last_name}`.trim(),
+      profileImage: r.profile_image_url,
+      rating: Number(r.rate),
+      ratingCount: 0, // TODO: Add rating count to query when orders table has ratings
+      completedServices: Number(r.completed_jobs_count),
+      isAvailableNow: r.is_online,
+      ...(r.distance_km !== null ? { distance: Number(Number(r.distance_km).toFixed(1)) } : {}),
+    }));
+
+    return {
+      workers,
+      meta: {
+        page: normalizedPage,
+        limit: normalizedLimit,
+        count: workers.length,
+        hasNext,
+        hasPrev: normalizedPage > 1,
+      },
+    };
+  }
 }

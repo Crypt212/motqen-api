@@ -14,7 +14,9 @@ export default class ClientProfileRepository
   extends Repository
   implements IClientProfileRepository
 {
-  constructor(prisma: PrismaClient) {
+  constructor(
+    prisma: PrismaClient | import('../../generated/prisma/client.js').Prisma.TransactionClient
+  ) {
     super(prisma);
   }
 

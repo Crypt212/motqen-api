@@ -59,20 +59,27 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
     logger.info(`[socket] connected: ${userId} (${socket.id})`);
 
     // ─── Global Rate Limiter ───────────────────────────────────────────────────
-    socket.use(async ([event, ...args], next) => {
+    socket.use((async ([event, ...args], next) => {
       if (typeof event !== 'string' || event === 'disconnect') return next();
 
       let limit = 60; // Default for high-frequency (typing_indicator, ping)
       if (event === 'send_message') limit = 30;
       else if (['read'].includes(event)) limit = 20;
-      else if (['enter_chat', 'leave_chat' , 'typing_indicator' ,'ping' ].includes(event)) return next();
+      else if (['enter_chat', 'leave_chat', 'typing_indicator', 'ping'].includes(event))
+        return next();
       try {
         await rateLimitCache.consumeSocketEvent(userId, event, limit, 60);
         next();
-      } catch (err: any) {
+      } catch (err: unknown) {
+        if (
+          !(err instanceof Error) ||
+          !('msBeforeNext' in err && typeof err.msBeforeNext === 'number')
+        ) {
+          throw err;
+        }
         const retryAfter = err.msBeforeNext ? Math.round(err.msBeforeNext / 1000) : 60;
-        
-        // TODO: Implement block/ban logic here for severe abusers if needed 
+
+        // TODO: Implement block/ban logic here for severe abusers if needed
 
         const lastArg = args[args.length - 1];
         if (typeof lastArg === 'function') {
@@ -82,7 +89,7 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
         }
         // Do not call next() -> packet is silently dropped
       }
-    });
+    }) as (event: import('socket.io').Event, next: (err?: Error) => void) => void);
 
     // 1. Join user room — all devices of this user share one room
     await socket.join(`user:${userId}`);

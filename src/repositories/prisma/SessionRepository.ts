@@ -117,12 +117,16 @@ export default class SessionRepository extends Repository implements ISessionRep
     }
   }
 
-  async revokeMany(params: { filter: SessionFilter; revokedBy: IDType; excludeId?: IDType }): Promise<void> {
+  async revokeMany(params: {
+    filter: SessionFilter;
+    revokedBy: IDType;
+    excludeId?: IDType;
+  }): Promise<void> {
     try {
       const { filter, revokedBy, excludeId } = params;
       if (isEmptyFilter(filter)) return;
 
-      const where: any = { ...filter };
+      const where = { ...filter, NOT: undefined as { id: string } | undefined };
       if (excludeId) {
         where.NOT = { id: excludeId };
       }
