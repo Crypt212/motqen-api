@@ -91,8 +91,8 @@ model WorkerProfile {
   updatedAt          DateTime @updatedAt
   rate               Float    @default(0)
   completedJobsCount Int      @default(0)
+  workingHoursId     String?   @unique
 
-  availability          WorkerAvailability[]
   occupiedTimeSlots     WorkerOccupiedTimeSlot[]
   Order                 Order[]
   portfolio             Portfolio?
@@ -101,6 +101,7 @@ model WorkerProfile {
   badges                WorkerBadge[]
   user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   workGovernments       Government[]             @relation("GovernmentToWorkerProfile")
+  workingHours          WorkingHours?            @relation(fields: [workingHoursId], references: [id])
 
   @@index([userId], map: "idx_worker_profiles_user_id")
   @@index([acceptsUrgentJobs, userId])
@@ -110,16 +111,15 @@ model WorkerProfile {
   @@map("worker_profiles")
 }
 
-model WorkerAvailability {
+model WorkingHours {
   id              String @id @default(uuid())
-  workerProfileId String
-  dayOfWeek       Int // 0 (Sunday) to 6 (Saturday)
-  startTime       String // e.g., "09:00"
-  endTime         String // e.g., "17:00"
+  workerProfileId String @unique
 
-  worker WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  daysOfWeek     String[]
+  startTime      String // e.g., "09:00"
+  endTime        String // e.g., "17:00"
+  workerProfiles WorkerProfile[]
 
-  @@unique([workerProfileId, dayOfWeek]) // One rule per day
   @@map("worker_availability")
 }
 
@@ -271,13 +271,12 @@ model Order {
   endTime     DateTime? // Actual end time (set by worker)
 
   // Financials & Rating
-  price   Float?
-  rating  Float?
-  comment String?
+  finalPrice   Float?
 
   // State Machine
   type   OrderType   @default(SERVICE)
-  status OrderStatus @default(PENDING)
+  orderStatus OrderStatus @default(PENDING)
+  workStatus WorkStatus @default(PENDING)
 
   // Relations
   client            ClientProfile           @relation(fields: [clientProfileId], references: [id])
@@ -309,6 +308,8 @@ model Negotiation {
   direction NegotiationDirection
   status    NegotiationStatus    @default(PENDING)
 
+  note      String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -327,10 +328,14 @@ enum OrderStatus {
   PRICE_AGREED
   PAID
   PAID_FAILED
-  WORK_STARTED
-  WORK_DONE
-  RATED
   CANCELLED
+}
+
+enum WorkStatus {
+  PENDING
+  WAITING_FOR_WORK
+  STARTED
+  DONE
 }
 
 enum NegotiationDirection {
