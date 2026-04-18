@@ -33,7 +33,6 @@ export async function seedAll() {
     await execAsync('node seeds/samples/createConversations.js');
 
     console.log('\n--- Complete database seeding finished successfully! ---');
-
   } catch (error) {
     console.error('Error during database seeding:', error);
     throw error;
@@ -47,11 +46,7 @@ export async function createMains() {
 
   const exampleSpecializationTree = await getExampleSpecializationTree();
 
-  const exampleImage = await loadLocalImage(
-    './seeds/samples/',
-    'personal-profile.jpg'
-  );
-
+  const exampleImage = await loadLocalImage('./seeds/samples/', 'personal-profile.jpg');
 
   await authService.registerClient({
     userData: {
@@ -98,10 +93,7 @@ export async function createUsers() {
   const exampleCityId = (await getExampleCityIds(exampleGovernmentId, 1))[0];
   const exampleSpecializationTree = await getExampleSpecializationTree();
 
-  const exampleImage = await loadLocalImage(
-    './seeds/samples/',
-    'personal-profile.jpg'
-  );
+  const exampleImage = await loadLocalImage('./seeds/samples/', 'personal-profile.jpg');
 
   // 3. Seed Test User
   console.log('\n--- Seeding Test User ---');
@@ -122,9 +114,7 @@ export async function createUsers() {
         role: 'USER',
       },
     });
-    console.log(
-      `Created test user: ${testUser.firstName} ${testUser.lastName}`
-    );
+    console.log(`Created test user: ${testUser.firstName} ${testUser.lastName}`);
 
     // Create client profile for test user
     const clientProfile = await prisma.clientProfile.create({
@@ -228,9 +218,7 @@ export async function createUsers() {
       },
     });
 
-    console.log(
-      `Created approved worker: ${worker1.firstName} ${worker1.lastName} (Carpenter)`
-    );
+    console.log(`Created approved worker: ${worker1.firstName} ${worker1.lastName} (Carpenter)`);
   }
 
   // Worker 2: Approved Plumber
@@ -281,9 +269,7 @@ export async function createUsers() {
       },
     });
 
-    console.log(
-      `Created approved worker: ${worker2.firstName} ${worker2.lastName} (Plumber)`
-    );
+    console.log(`Created approved worker: ${worker2.firstName} ${worker2.lastName} (Plumber)`);
   }
 
   // Worker 3: Approved Electrician (accepts urgent jobs)
@@ -326,9 +312,7 @@ export async function createUsers() {
       },
     });
 
-    console.log(
-      `Created approved worker: ${worker3.firstName} ${worker3.lastName} (Electrician)`
-    );
+    console.log(`Created approved worker: ${worker3.firstName} ${worker3.lastName} (Electrician)`);
   }
 
   // Worker 4: Pending approval (for testing filters)
@@ -363,9 +347,7 @@ export async function createUsers() {
       },
     });
 
-    console.log(
-      `Created pending worker: ${worker4.firstName} ${worker4.lastName} (Not Approved)`
-    );
+    console.log(`Created pending worker: ${worker4.firstName} ${worker4.lastName} (Not Approved)`);
   }
 }
 

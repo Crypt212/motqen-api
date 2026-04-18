@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -7,257 +8,345 @@ datasource db {
 }
 
 model Session {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   userId     String
-  token      String   @unique
-  isRevoked  Boolean  @default(false)
+  token      String    @unique
+  isRevoked  Boolean   @default(false)
   revokedAt  DateTime?
   revokedBy  String?
   deviceId   String
   ipAddress  String?
   userAgent  String?
-  lastUsedAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  createdAt  DateTime @default(now())
+  lastUsedAt DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  createdAt  DateTime  @default(now())
   expiresAt  DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
 
 model User {
-  id          String @id @default(uuid())
-  phoneNumber String @unique
-
-  firstName  String
-  middleName String
-  lastName   String
-
+  id              String                    @id @default(uuid())
+  phoneNumber     String                    @unique
+  firstName       String
+  lastName        String
+  status          AccountStatus             @default(ACTIVE)
+  role            Role                      @default(USER)
+  createdAt       DateTime                  @default(now())
+  isOnline        Boolean                   @default(false)
+  middleName      String
   profileImageUrl String?
+  updatedAt       DateTime                  @updatedAt
+  clientProfile   ClientProfile?
+  conversations   ConversationParticipant[]
+  locations       Location[]
+  sentMessages    Message[]
+  sessions        Session[]
+  workerProfile   WorkerProfile?
 
-  status AccountStatus @default(ACTIVE)
-  role   Role          @default(USER)
-
-  isOnline Boolean @default(true)
-
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  sessions      Session[]
-  workerProfile WorkerProfile?
-  clientProfile ClientProfile?
-  conversations ConversationParticipant[]
-  sentMessages  Message[]
-
+  @@index([status, isOnline, id])
   @@map("users")
 }
 
 model ClientProfile {
-  id     String @id @default(uuid())
-  userId String @unique
-
-  updatedAt DateTime @updatedAt
+  id        String   @id @default(uuid())
+  userId    String   @unique
   createdAt DateTime @default(now())
-
-  orders    Order[]
-  locations Location[]
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+  Order     Order[]
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("client_profiles")
 }
 
 model Location {
-  id              String        @id @default(uuid())
-  clientProfileId String
-  governmentId    String
-  cityId          String
-  address         String
-  addressNotes    String
-  isMain          Boolean
-  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
-  government      Government    @relation(fields: [governmentId], references: [id], onDelete: Cascade)
-  city            City          @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  id             String                                @id @default(uuid())
+  userId         String
+  governmentId   String
+  cityId         String
+  address        String
+  addressNotes   String?
+  isMain         Boolean
+  pointGeography Unsupported("geography(Point, 4326)")
+  city           City                                  @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  government     Government                            @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  user           User                                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders         Order[]
+
+  @@index([pointGeography], map: "idx_locations_point", type: Gist)
+  @@index([userId, isMain])
+  @@map("locations")
 }
 
 model WorkerProfile {
-  id     String @id @default(uuid())
-  userId String @unique
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  experienceYears    Int      @default(0)
+  isInTeam           Boolean  @default(false)
+  acceptsUrgentJobs  Boolean  @default(false)
+  bio                String?
+  createdAt          DateTime @default(now())
+  portfolioId        String?  @unique
+  updatedAt          DateTime @updatedAt
+  rate               Float    @default(0)
+  completedJobsCount Int      @default(0)
+  workingHoursId     String?   @unique
 
-  portfolioId       String? @unique
-  experienceYears   Int     @default(0)
-  isInTeam          Boolean @default(false)
-  acceptsUrgentJobs Boolean @default(false)
-  bio               String?
-
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
+  occupiedTimeSlots     WorkerOccupiedTimeSlot[]
+  Order                 Order[]
   portfolio             Portfolio?
-  verification          WorkerVerification?
-  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders                Order[]
   chosenSpecializations ChosenSpecialization[]
-  workGovernments       Government[]
+  verification          WorkerVerification?
   badges                WorkerBadge[]
+  user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workGovernments       Government[]             @relation("GovernmentToWorkerProfile")
+  workingHours          WorkingHours?            @relation(fields: [workingHoursId], references: [id])
 
+  @@index([userId], map: "idx_worker_profiles_user_id")
+  @@index([acceptsUrgentJobs, userId])
+  @@index([rate(sort: Desc), completedJobsCount(sort: Desc)]) // NEW: covers ORDER BY for highestRated sort
+  @@index([rate])
+  @@index([completedJobsCount])
   @@map("worker_profiles")
 }
 
-model Order {
-  id              String @id @default(uuid())
-  clientProfileId String
-  workerProfileId String
-
-  rating      Float?
-  price       Float
-  description String?
-  comment     String?
-  status      OrderStatus @default(ORDERED)
-
-  clientProfile ClientProfile @relation(fields: [clientProfileId], references: [id])
-  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id])
-}
-
-model WorkerVerification {
+model WorkingHours {
   id              String @id @default(uuid())
   workerProfileId String @unique
 
+  daysOfWeek     String[]
+  startTime      String // e.g., "09:00"
+  endTime        String // e.g., "17:00"
+  workerProfiles WorkerProfile[]
+
+  @@map("worker_availability")
+}
+
+model WorkerOccupiedTimeSlot {
+  id              String   @id @default(uuid())
+  workerProfileId String
+  orderId         String   @unique
+  startDate       DateTime
+  endDate         DateTime
+
+  worker WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  order  Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("worker_occupied_timeslots")
+}
+
+model WorkerVerification {
+  id                     String             @id @default(uuid())
+  workerProfileId        String             @unique
   idWithPersonalImageUrl String
   idDocumentUrl          String
   reason                 String?
   status                 VerificationStatus @default(PENDING)
-
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  updatedAt              DateTime           @updatedAt
+  createdAt              DateTime           @default(now())
+  workerProfile          WorkerProfile      @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
 
   @@map("verifications")
 }
 
 model Portfolio {
-  id              String @id @default(uuid())
-  workerProfileId String @unique
-
-  description String?
-
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  projectImages ProjectImage[]
-  workerProfile WorkerProfile  @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  id              String         @id @default(uuid())
+  workerProfileId String         @unique
+  description     String?
+  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime       @default(now())
+  workerProfile   WorkerProfile  @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  projectImages   ProjectImage[]
 }
 
 model ProjectImage {
-  id          String   @id @default(uuid())
-  portfolioId String   @map("projectId")
+  id          String    @id @default(uuid())
+  portfolioId String    @map("projectId")
   imageUrl    String
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
-
-  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 }
 
 model ChosenSpecialization {
   workerProfileId     String
-  subSpecializationId String @unique
   specializationId    String
-
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  workerProfile     WorkerProfile     @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
-  subSpecialization SubSpecialization @relation(fields: [subSpecializationId], references: [id], onDelete: Cascade)
-  specialization    Specialization    @relation(fields: [specializationId], references: [id])
+  createdAt           DateTime          @default(now())
+  subSpecializationId String
+  updatedAt           DateTime          @updatedAt
+  specialization      Specialization    @relation(fields: [specializationId], references: [id])
+  subSpecialization   SubSpecialization @relation(fields: [subSpecializationId], references: [id], onDelete: Cascade)
+  workerProfile       WorkerProfile     @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
 
   @@id([workerProfileId, subSpecializationId])
+  @@index([specializationId])
   @@map("chosen_specializations")
 }
 
 model Specialization {
-  id String @id @default(uuid())
-
-  name     String
-  nameAr   String
-  category SpecializationCategory
-
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  subSpecializations SubSpecialization[]
+  id                 String                 @id @default(uuid())
+  name               String
+  category           SpecializationCategory
+  createdAt          DateTime               @default(now())
+  nameAr             String
+  updatedAt          DateTime               @updatedAt
   choosingWorkers    ChosenSpecialization[]
+  subSpecializations SubSpecialization[]
 
   @@index([name])
   @@map("specializations")
 }
 
 model SubSpecialization {
-  id                   String @id @default(uuid())
+  id                   String                 @id @default(uuid())
+  name                 String
   mainSpecializationId String
-
-  name   String
-  nameAr String
-
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  choosingWorkers    ChosenSpecialization[]
-  mainSpecialization Specialization         @relation(fields: [mainSpecializationId], references: [id], onDelete: Cascade)
+  createdAt            DateTime               @default(now())
+  nameAr               String
+  updatedAt            DateTime               @updatedAt
+  choosingWorkers      ChosenSpecialization[]
+  mainSpecialization   Specialization         @relation(fields: [mainSpecializationId], references: [id], onDelete: Cascade)
+  orders               Order[]
 
   @@index([name])
+  @@index([mainSpecializationId]) // NEW: covers the ss.mainSpecializationId lookup in spec fallback filter
   @@map("sub_specializations")
 }
 
 model Government {
-  id        String   @id @default(uuid())
+  id        String          @id @default(uuid())
   name      String
+  createdAt DateTime        @default(now())
+  lat       Float
+  long      Float
   nameAr    String
-  long      String
-  lat       String
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  workers   WorkerProfile[]
-  locations Location[]
+  updatedAt DateTime        @updatedAt
   citys     City[]
+  locations Location[]
+  workers   WorkerProfile[] @relation("GovernmentToWorkerProfile")
 
   @@map("governments")
 }
 
 model City {
-  id           String   @id @default(uuid())
-  governmentId String
+  id           String     @id @default(uuid())
   name         String
+  governmentId String
+  createdAt    DateTime   @default(now())
+  lat          Float
+  long         Float
   nameAr       String
-  long         String
-  lat          String
-  updatedAt    DateTime @updatedAt
-  createdAt    DateTime @default(now())
-
-  locations  Location[]
-  government Government @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  updatedAt    DateTime   @updatedAt
+  government   Government @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  locations    Location[]
 
   @@map("cities")
 }
 
 model WorkerBadge {
-  id              String   @id @default(uuid())
+  id              String        @id @default(uuid())
   workerProfileId String
-  badgeType       String // e.g., "VERIFIED", "TOP_RATED", "TRUSTED"
-  createdAt       DateTime @default(now())
-
-  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  badgeType       String
+  createdAt       DateTime      @default(now())
+  workerProfile   WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
 
   @@unique([workerProfileId, badgeType])
   @@map("worker_badges")
 }
 
+model Order {
+  id                  String @id @default(uuid())
+  clientProfileId     String
+  workerProfileId     String
+  subSpecializationId String
+  locationId          String
+
+  // Job Details
+  title       String
+  description String
+  isUrgent    Boolean   @default(false)
+  date        DateTime // The requested day
+  startTime   DateTime? // Actual start time (set by worker)
+  endTime     DateTime? // Actual end time (set by worker)
+
+  // Financials & Rating
+  finalPrice   Float?
+
+  // State Machine
+  type   OrderType   @default(SERVICE)
+  orderStatus OrderStatus @default(PENDING)
+  workStatus WorkStatus @default(PENDING)
+
+  // Relations
+  client            ClientProfile           @relation(fields: [clientProfileId], references: [id])
+  worker            WorkerProfile           @relation(fields: [workerProfileId], references: [id])
+  subSpecialization SubSpecialization       @relation(fields: [subSpecializationId], references: [id])
+  location          Location                @relation(fields: [locationId], references: [id])
+  negotiations      Negotiation[]
+  orderImages       OrderImage[]
+  timeSlot          WorkerOccupiedTimeSlot?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workerProfileId], map: "idx_orders_worker_id")
+  @@map("orders")
+}
+
+model OrderImage {
+  id      String @id @default(uuid())
+  orderId String
+  url     String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Negotiation {
+  id        String               @id @default(uuid())
+  orderId   String
+  price     Float
+  direction NegotiationDirection
+  status    NegotiationStatus    @default(PENDING)
+
+  note      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("negotiations")
+}
+
+enum OrderType {
+  PREVIEW // For a diagnostic visit
+  SERVICE // For the actual work
+}
+
 enum OrderStatus {
-  ORDERED
-  APPROVED
-  COMPLETED
-  REVIEWED
+  PENDING
+  TIME_SPECIFIED
+  PRICE_AGREED
+  PAID
+  PAID_FAILED
+  CANCELLED
+}
+
+enum WorkStatus {
+  PENDING
+  WAITING_FOR_WORK
+  STARTED
+  DONE
+}
+
+enum NegotiationDirection {
+  WORKER_TO_CLIENT
+  CLIENT_TO_WORKER
+}
+
+enum NegotiationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
 enum AccountStatus {
@@ -282,12 +371,6 @@ enum VerificationStatus {
   REJECTED
 }
 
-enum WorkerProfileStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 enum SpecializationCategory {
   ELECTRICITY
   PLUMBING
@@ -304,8 +387,6 @@ enum SpecializationCategory {
   DEFAULTCATEGORY
 }
 
-// ─── Chat ────────────────────────────────────────────────────────────────────
-
 enum ConversationRole {
   WORKER
   CLIENT
@@ -314,6 +395,19 @@ enum ConversationRole {
 enum MessageType {
   TEXT
   IMAGE
+}
+
+enum FlagState {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+enum FlagReasonType {
+  PHONE_EGYPT
+  PHONE_INTERNATIONAL
+  URL
+  SOCIAL_HANDLE
 }
 
 model Conversation {
@@ -357,11 +451,28 @@ model Message {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       User         @relation(fields: [senderId], references: [id])
+  conversation Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User            @relation(fields: [senderId], references: [id])
+  flagged      FlaggedMessage?
 
   @@unique([conversationId, messageNumber])
   @@index([conversationId, createdAt])
   @@index([senderId])
   @@map("messages")
+}
+
+model FlaggedMessage {
+  id        String           @id @default(uuid())
+  messageId String           @unique
+  reasons   FlagReasonType[]
+  matches   String[]
+  state     FlagState        @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([state])
+  @@index([createdAt])
+  @@map("flagged_messages")
 }

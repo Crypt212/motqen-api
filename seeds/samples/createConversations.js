@@ -1,7 +1,7 @@
-import "dotenv/config";
-import pkg from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pg from "pg";
+import 'dotenv/config';
+import pkg from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 const { PrismaClient, MessageType } = pkg;
 
 const { Pool } = pg;
@@ -14,24 +14,24 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({
   adapter,
-  log: ["error", "warn"],
+  log: ['error', 'warn'],
 });
 
 async function main() {
   try {
-    console.log("Starting conversation seeding...");
+    console.log('Starting conversation seeding...');
 
     // Get existing users with profiles
     const clients = await prisma.clientProfile.findMany({
-      include: { user: true }
+      include: { user: true },
     });
 
     const workers = await prisma.workerProfile.findMany({
-      include: { user: true }
+      include: { user: true },
     });
 
     if (clients.length === 0 || workers.length === 0) {
-      console.log("No clients or workers found. Please run createTestUsers.js first.");
+      console.log('No clients or workers found. Please run createTestUsers.js first.');
       return;
     }
 
@@ -39,7 +39,7 @@ async function main() {
 
     // Create conversations between clients and workers
     const conversations = [];
-    
+
     // Create conversations for first client with first few workers
     const firstClient = clients[0];
     const workersToConnect = workers.slice(0, 3); // Connect with first 3 workers
@@ -71,12 +71,16 @@ async function main() {
         });
 
         conversations.push(conversation);
-        console.log(`Created conversation between ${firstClient.user.firstName} and ${workerProfile.user.firstName}`);
+        console.log(
+          `Created conversation between ${firstClient.user.firstName} and ${workerProfile.user.firstName}`
+        );
 
         // Add some sample messages
         await createSampleMessages(conversation.id, firstClient.user.id, workerProfile.user.id);
       } else {
-        console.log(`Conversation already exists between ${firstClient.user.firstName} and ${workerProfile.user.firstName}`);
+        console.log(
+          `Conversation already exists between ${firstClient.user.firstName} and ${workerProfile.user.firstName}`
+        );
       }
     }
 
@@ -110,7 +114,9 @@ async function main() {
         });
 
         conversations.push(conversation);
-        console.log(`Created conversation between ${secondClient.user.firstName} and ${fourthWorker.user.firstName}`);
+        console.log(
+          `Created conversation between ${secondClient.user.firstName} and ${fourthWorker.user.firstName}`
+        );
 
         // Add messages with unread/undelivered status
         await createUnreadMessages(conversation.id, secondClient.user.id, fourthWorker.user.id);
@@ -118,10 +124,9 @@ async function main() {
     }
 
     console.log(`\nCreated ${conversations.length} conversations`);
-    console.log("\n--- Conversation seeding completed successfully! ---");
-
+    console.log('\n--- Conversation seeding completed successfully! ---');
   } catch (error) {
-    console.error("Error seeding conversations:", error);
+    console.error('Error seeding conversations:', error);
     throw error;
   } finally {
     await prisma.$disconnect();
@@ -130,12 +135,20 @@ async function main() {
 
 async function createSampleMessages(conversationId, clientId, workerId) {
   const sampleMessages = [
-    { senderId: clientId, content: "مرحباً، هل أنت متاح للعمل اليوم؟", type: MessageType.TEXT },
-    { senderId: workerId, content: "نعم، أنا متاح. ما نوع العمل الذي تحتاجه؟", type: MessageType.TEXT },
-    { senderId: clientId, content: "أحتاج إلى إصلاح صنبور المطبخ", type: MessageType.TEXT },
-    { senderId: workerId, content: "بالتأكيد، يمكنني المساعدة في ذلك. متى يناسبك أن أحضر؟", type: MessageType.TEXT },
-    { senderId: clientId, content: "هل يمكنك الحضور غداً في الصباح؟", type: MessageType.TEXT },
-    { senderId: workerId, content: "نعم، سأكون هناك الساعة 9 صباحاً", type: MessageType.TEXT },
+    { senderId: clientId, content: 'مرحباً، هل أنت متاح للعمل اليوم؟', type: MessageType.TEXT },
+    {
+      senderId: workerId,
+      content: 'نعم، أنا متاح. ما نوع العمل الذي تحتاجه؟',
+      type: MessageType.TEXT,
+    },
+    { senderId: clientId, content: 'أحتاج إلى إصلاح صنبور المطبخ', type: MessageType.TEXT },
+    {
+      senderId: workerId,
+      content: 'بالتأكيد، يمكنني المساعدة في ذلك. متى يناسبك أن أحضر؟',
+      type: MessageType.TEXT,
+    },
+    { senderId: clientId, content: 'هل يمكنك الحضور غداً في الصباح؟', type: MessageType.TEXT },
+    { senderId: workerId, content: 'نعم، سأكون هناك الساعة 9 صباحاً', type: MessageType.TEXT },
   ];
 
   for (let i = 0; i < sampleMessages.length; i++) {
@@ -170,13 +183,20 @@ async function createSampleMessages(conversationId, clientId, workerId) {
 }
 
 async function createUnreadMessages(conversationId, clientId, workerId) {
-
   const unreadMessages = [
-    { senderId: clientId, content: "أحتاج مساعدة في تركيب ستارة", type: MessageType.TEXT },
-    { senderId: workerId, content: "يمكنني المساعدة في ذلك. ما هي أبعاد النافذة؟", type: MessageType.TEXT },
-    { senderId: clientId, content: "العرض حوالي 2 متر والارتفاع 1.5 متر", type: MessageType.TEXT },
-    { senderId: workerId, content: "سأحتاج إلى مواد إضافية. التكلفة ستكون حوالي 500 جنيه", type: MessageType.TEXT },
-    { senderId: clientId, content: "موافق، متى يمكنك الحضور؟", type: MessageType.TEXT },
+    { senderId: clientId, content: 'أحتاج مساعدة في تركيب ستارة', type: MessageType.TEXT },
+    {
+      senderId: workerId,
+      content: 'يمكنني المساعدة في ذلك. ما هي أبعاد النافذة؟',
+      type: MessageType.TEXT,
+    },
+    { senderId: clientId, content: 'العرض حوالي 2 متر والارتفاع 1.5 متر', type: MessageType.TEXT },
+    {
+      senderId: workerId,
+      content: 'سأحتاج إلى مواد إضافية. التكلفة ستكون حوالي 500 جنيه',
+      type: MessageType.TEXT,
+    },
+    { senderId: clientId, content: 'موافق، متى يمكنك الحضور؟', type: MessageType.TEXT },
   ];
 
   for (let i = 0; i < unreadMessages.length; i++) {
@@ -201,9 +221,9 @@ async function createUnreadMessages(conversationId, clientId, workerId) {
   // Set participant statuses to simulate unread/undelivered messages
   // Client has read all messages
   await prisma.conversationParticipant.updateMany({
-    where: { 
+    where: {
       conversationId,
-      userId: clientId 
+      userId: clientId,
     },
     data: {
       lastReadMessageNumber: unreadMessages.length,
@@ -213,9 +233,9 @@ async function createUnreadMessages(conversationId, clientId, workerId) {
 
   // Worker has only received first 3 messages (2 are unread)
   await prisma.conversationParticipant.updateMany({
-    where: { 
+    where: {
       conversationId,
-      userId: workerId 
+      userId: workerId,
     },
     data: {
       lastReadMessageNumber: 2, // Only read first 2 messages
