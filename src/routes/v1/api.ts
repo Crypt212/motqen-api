@@ -12,12 +12,14 @@ import chatRouter from './chat.js';
 import { isActive, authenticateAccess } from '../../middlewares/authMiddleware.js';
 import { sensitiveIpRateLimiter } from '../../middlewares/rateLimitMiddleware.js';
 import workersRouter from './workers.js';
+import ordersRouter from './orders.js';
 
 const mainRouter = Router();
 
 mainRouter.use('/auth', sensitiveIpRateLimiter, authRouter);
 mainRouter.use('/me', authenticateAccess, isActive, dashboardRouter);
 mainRouter.use('/chat', authenticateAccess, isActive, chatRouter);
+mainRouter.use('/orders', ordersRouter);
 mainRouter.use('/workers', workersRouter);
 mainRouter.use('/governments', governmentRouter);
 mainRouter.use('/specializations', specializationRouter);

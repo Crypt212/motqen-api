@@ -220,3 +220,28 @@ export const ExploreWorkersResponseSchema = SuccessResponseSchema(
 export const ExploreWorkerDetailResponseSchema = SuccessResponseSchema(
   z.any().describe('WorkerProfile')
 );
+
+// ============================================
+// Negotiation responses
+// ============================================
+
+export const NegotiationResponseSchema = SuccessResponseSchema(z.any().describe('Negotiation'));
+
+export const NegotiationListResponseSchema = SuccessResponseSchema(
+  z.object({
+    negotiations: z.array(z.any().describe('Negotiation')),
+    total: z.number(),
+    page: z.number(),
+    limit: z.number(),
+    count: z.number(),
+    hasNext: z.boolean(),
+    hasPrev: z.boolean(),
+    totalPages: z.number(),
+  })
+);
+
+// ============================================
+// Order responses
+// ============================================
+
+export const OrderResponseSchema = SuccessResponseSchema(z.any().describe('Order'));

@@ -25,6 +25,8 @@ import PresenceService from './services/PresenceService.js';
 import prisma from './libs/database.js';
 import redisClient from './libs/redis.js';
 import { TransactionManager } from './repositories/prisma/TransactionManager.js';
+import NegotiationRepository from './repositories/prisma/NegotiationRepository.js';
+import NegotiationService from './services/NegotiationService.js';
 
 export const rateLimitCache = new RateLimitCache(redisClient);
 export const otpCache = new OTPCache(redisClient);
@@ -47,6 +49,11 @@ export const messageRepository = new MessageRepository(prisma);
 export const flaggedMessageRepository = new FlaggedMessageRepository(prisma);
 
 export const transactionManager = new TransactionManager(prisma);
+export const negotiationRepository = new NegotiationRepository(prisma);
+export const negotiationService = new NegotiationService({
+  negotiationRepository,
+  transactionManager,
+});
 
 export const rateLimitService = new RateLimitService({ rateLimitCache });
 export const userService = new UserService({
