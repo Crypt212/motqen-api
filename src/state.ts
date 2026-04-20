@@ -25,6 +25,11 @@ import PresenceService from './services/PresenceService.js';
 import prisma from './libs/database.js';
 import redisClient from './libs/redis.js';
 import { TransactionManager } from './repositories/prisma/TransactionManager.js';
+import LocationRepository from './repositories/prisma/LocationRepository.js';
+import OrderRepository from './repositories/prisma/OrderRepository.js';
+import WorkerOccupiedTimeSlotRepository from './repositories/prisma/WorkerOccupiedTimeSlotRepository.js';
+import OrderService from './services/OrderService.js';
+import OrderController from './controllers/OrderController.js';
 
 export const rateLimitCache = new RateLimitCache(redisClient);
 export const otpCache = new OTPCache(redisClient);
@@ -85,3 +90,16 @@ export const presenceService = new PresenceService({
   conversationRepository,
   prisma,
 });
+
+export const locationRepository = new LocationRepository(prisma);
+export const orderRepository = new OrderRepository(prisma);
+export const workerOccupiedTimeSlotRepository = new WorkerOccupiedTimeSlotRepository(prisma);
+
+export const orderService = new OrderService({
+  orderRepository,
+  occupiedTimeSlotRepository: workerOccupiedTimeSlotRepository,
+  locationRepository,
+  transactionManager,
+});
+
+export const orderController = new OrderController({ orderService });
