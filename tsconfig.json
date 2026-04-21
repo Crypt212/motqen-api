@@ -35,7 +35,9 @@
     "noFallthroughCasesInSwitch": true,
     /* Source */
     "baseUrl": ".",
-    "paths": {},
+    "paths": {
+      "src/*": ["./src/*"]
+    },
     "typeRoots": [
       "./src/types",
       "./node_modules/@types"
