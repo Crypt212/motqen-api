@@ -65,8 +65,6 @@ export const workerProfileService = new WorkerProfileService({
 export const authService = new AuthService({
   userRepository,
   workerProfileRepository,
-  clientProfileRepository,
-  governmentRepository,
   otpCache,
   sessionRepository,
   rateLimitCache,
