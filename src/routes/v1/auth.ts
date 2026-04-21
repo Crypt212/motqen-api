@@ -319,7 +319,7 @@ authRouter.post(
   ]),
   authenticateRegister,
   validateBody(RegisterWorkerSchema),
-  generateAccessToken
+  registerWorker
 );
 /**
  * @swagger

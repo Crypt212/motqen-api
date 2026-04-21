@@ -1407,6 +1407,10 @@ const options = {
         description: 'Authenticated user dashboard endpoints (profiles, settings, management)',
       },
       {
+        name: 'Dashboard',
+        description: 'Authenticated user dashboard endpoints (profiles, settings, management)',
+      },
+      {
         name: 'Governments',
         description: 'Government & city lookup and management',
       },

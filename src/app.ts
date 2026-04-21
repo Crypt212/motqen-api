@@ -24,7 +24,7 @@ const initApp = async () => {
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
 
-  app.use('/docs', swaggerUi.serve, swaggerUi.setup(generateOpenAPISpec()));
+  app.use('/api-docs-zod', swaggerUi.serve, swaggerUi.setup(generateOpenAPISpec()));
 
   app.use(
     '/api-docs',
