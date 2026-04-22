@@ -21,7 +21,7 @@ export const getSpecializations = asyncHandler(async (req, res) => {
   const result = await specializationService.getSpecializations({
     filter,
     pagination,
-    sort: sort[0],
+    sort,
   });
 
   new SuccessResponse('Specializations retrieved successfully', result, 200).send(res);
@@ -48,7 +48,7 @@ export const getSubSpecializations = asyncHandler(async (req, res) => {
     parentId,
     filter,
     pagination,
-    sort: sort[0],
+    sort,
   });
 
   new SuccessResponse('Sub-specializations retrieved successfully', result, 200).send(res);

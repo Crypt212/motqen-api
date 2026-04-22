@@ -12,6 +12,9 @@ src/generated
 
 .github
 .agent
+.opencode
 .specify
 .vscode
 specs
+
+PLAN.md

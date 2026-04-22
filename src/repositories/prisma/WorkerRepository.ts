@@ -319,7 +319,7 @@ export default class WorkerProfileRepository
     try {
       const record = await this.prismaClient.workerProfile.create({
         data: {
-          userId: userId,
+          user: { connect: { id: userId } },
           ...workerProfile,
         },
       });
@@ -848,7 +848,7 @@ export default class WorkerProfileRepository
         ${specFilter}
         ${excludeSelfFilter}
     )
- 
+
     SELECT
       wp."id"                 AS worker_id,
       u."firstName"           AS first_name,
@@ -859,12 +859,12 @@ export default class WorkerProfileRepository
       wp."rate"               AS rate,
       wp."completedJobsCount" AS completed_jobs_count,
       ${distanceSelect}       AS distance_km
- 
+
     FROM   filtered f
     JOIN   "worker_profiles" wp ON wp."id" = f."id"
     JOIN   "users"           u  ON  u."id" = wp."userId"
     ${distanceLateral}
- 
+
     ORDER BY ${orderExpr}
     LIMIT    ${fetchLimit}
     OFFSET   ${offset}

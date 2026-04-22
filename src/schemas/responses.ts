@@ -220,3 +220,26 @@ export const ExploreWorkersResponseSchema = SuccessResponseSchema(
 export const ExploreWorkerDetailResponseSchema = SuccessResponseSchema(
   z.any().describe('WorkerProfile')
 );
+
+// ============================================
+// Location responses
+// ============================================
+
+export const LocationResponseSchema = SuccessResponseSchema(
+  z.object({
+    location: z.any().describe('Location object'),
+  })
+);
+
+export const LocationListResponseSchema = SuccessResponseSchema(
+  z.object({
+    locations: z.array(z.any().describe('Location')),
+    total: z.number(),
+    page: z.number(),
+    limit: z.number(),
+    count: z.number(),
+    hasNext: z.boolean(),
+    hasPrev: z.boolean(),
+    totalPages: z.number(),
+  })
+);
