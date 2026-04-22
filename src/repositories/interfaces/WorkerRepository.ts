@@ -8,6 +8,7 @@ import {
   WorkerProfileVerification,
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
+import { WorkingHours } from '../../domain/workingHours.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { IDType } from '../interfaces/Repository.js';
 
@@ -45,6 +46,10 @@ export default interface IWorkerProfileRepository {
   findVerification(params: {
     workerFilter: WorkerProfileFilter;
   }): Promise<WorkerProfileVerification | null>;
+  /**
+   * Find working hours for an authenticated worker by user ID
+   */
+  findWorkingHoursByUserId(params: { userId: IDType }): Promise<WorkingHours | null>;
   /**
    * Find work governments
    */

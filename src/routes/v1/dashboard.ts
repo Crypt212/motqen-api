@@ -15,6 +15,7 @@ import {
   addWorkerGovernments,
   deleteWorkerGovernments,
   getWorkerSpecializations,
+  getWorkerWorkingHours,
   addWorkerSpecializations,
   deleteWorkerSpecializations,
   getClientProfile,
@@ -307,6 +308,7 @@ usersRouter.post(
  *         $ref: '#/components/responses/InternalServerError'
  */
 usersRouter.get('/worker-profile', isActive, authorizeWorker, getWorkerProfile);
+usersRouter.get('/worker-profile/working-hours', isActive, authorizeWorker, getWorkerWorkingHours);
 
 /**
  * @swagger

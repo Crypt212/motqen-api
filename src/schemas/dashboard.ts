@@ -51,6 +51,40 @@ export const UpdateWorkerProfileSchema = WorkerProfileOptionalSchema;
 export type UpdateWorkerProfileDTO = z.infer<typeof UpdateWorkerProfileSchema>;
 
 // ============================================
+// Working hours schemas
+// ============================================
+
+const Time24HourSchema = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Time must be in HH:mm format');
+
+const DaysOfWeekSchema = z.array(z.number().int().min(0).max(6)).min(1).max(7);
+
+export const WorkingHoursSchema = z
+  .object({
+    daysOfWeek: DaysOfWeekSchema,
+    startTime: Time24HourSchema,
+    endTime: Time24HourSchema,
+  })
+  .refine((data) => data.endTime > data.startTime, {
+    message: 'endTime must be after startTime',
+    path: ['endTime'],
+  });
+export type WorkingHoursDTO = z.infer<typeof WorkingHoursSchema>;
+
+export const UpdateWorkingHoursSchema = z
+  .object({
+    daysOfWeek: DaysOfWeekSchema.optional(),
+    startTime: Time24HourSchema.optional(),
+    endTime: Time24HourSchema.optional(),
+  })
+  .refine((data) => !data.startTime || !data.endTime || data.endTime > data.startTime, {
+    message: 'endTime must be after startTime',
+    path: ['endTime'],
+  });
+export type UpdateWorkingHoursDTO = z.infer<typeof UpdateWorkingHoursSchema>;
+
+// ============================================
 // Location schemas
 // ============================================
 

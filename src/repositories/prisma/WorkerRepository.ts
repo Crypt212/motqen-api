@@ -11,6 +11,7 @@ import {
   WorkerProfileVerification,
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
+import { WorkingHours as WorkingHoursEntity } from '../../domain/workingHours.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { AccountStatus, Prisma, PrismaClient } from '../../generated/prisma/client.js';
@@ -58,6 +59,16 @@ export default class WorkerProfileRepository
       status: record.status,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
+    };
+  }
+
+  private toDomainWorkingHours(record: Prisma.WorkingHoursGetPayload<object>): WorkingHoursEntity {
+    return {
+      id: record.id,
+      workerProfileId: record.workerProfileId,
+      daysOfWeek: record.daysOfWeek,
+      startTime: record.startTime,
+      endTime: record.endTime,
     };
   }
 
@@ -260,6 +271,25 @@ export default class WorkerProfileRepository
       return verification ? this.toDomainVerification(verification) : null;
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findVerification');
+    }
+  }
+
+  async findWorkingHoursByUserId({
+    userId,
+  }: {
+    userId: IDType;
+  }): Promise<WorkingHoursEntity | null> {
+    try {
+      const workerProfile = await this.prismaClient.workerProfile.findFirst({
+        where: { userId: userId as string },
+        include: { workingHours: true },
+      });
+
+      if (!workerProfile?.workingHours) return null;
+
+      return this.toDomainWorkingHours(workerProfile.workingHours);
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'findWorkingHoursByUserId');
     }
   }
 

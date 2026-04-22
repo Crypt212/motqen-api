@@ -124,6 +124,13 @@ export const getWorkerProfile = asyncHandler(async (req, res) => {
   new SuccessResponse('retrieved worker profile successfully', { workerProfile }, 200).send(res);
 });
 
+export const getWorkerWorkingHours = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const workingHours = await workerProfileService.getMyWorkingHours({ userId });
+
+  new SuccessResponse('retrieved worker working hours successfully', workingHours, 200).send(res);
+});
+
 export const updateWorkerProfile = asyncHandler(async (req, res) => {
   const { experienceYears, isInTeam, acceptsUrgentJobs } = req.body;
   const workerProfile = await workerProfileService.update({

@@ -17,6 +17,8 @@ import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import { PaginationOptions, PaginatedResultMeta } from '../types/query.js';
 import { GovernmentFilter } from '../domain/government.entity.js';
 import { SpecializationsTree } from '../domain/specialization.entity.js';
+import { WorkingHours } from '../domain/workingHours.entity.js';
+import type { WorkingHoursDTO } from '../schemas/dashboard.js';
 
 type InputWorkerData = {
   experienceYears: number;
@@ -49,6 +51,16 @@ export default class WorkerService extends Service {
     super();
     this.workerProfileRepository = params.workerProfileRepository;
     this.userRepository = params.userRepository;
+  }
+
+  private mapWorkingHoursEntityToDTO(workingHours: WorkingHours): WorkingHoursDTO {
+    return {
+      daysOfWeek: workingHours.daysOfWeek
+        .map((day) => Number.parseInt(day, 10))
+        .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6),
+      startTime: workingHours.startTime,
+      endTime: workingHours.endTime,
+    };
   }
 
   /**
@@ -345,5 +357,17 @@ export default class WorkerService extends Service {
   async hasWorkerProfile(params: { filter: WorkerProfileFilter }): Promise<boolean> {
     const { filter } = params;
     return await this.workerProfileRepository.exists({ workerFilter: filter });
+  }
+
+  async getMyWorkingHours(params: { userId: IDType }): Promise<WorkingHoursDTO[]> {
+    const { userId } = params;
+    return tryCatch(async () => {
+      const workingHours = await this.workerProfileRepository.findWorkingHoursByUserId({ userId });
+
+      if (!workingHours) return [];
+
+      // Keep array response shape to support future multi-slot schedules.
+      return [this.mapWorkingHoursEntityToDTO(workingHours)];
+    });
   }
 }

@@ -41,6 +41,7 @@ export const createMockWorkerProfileRepository = (): {
   findOnline: vi.fn(),
   findWorkGovernments: vi.fn(),
   findVerification: vi.fn(),
+  findWorkingHoursByUserId: vi.fn(),
   findSpecializations: vi.fn(),
   create: vi.fn(),
   insertWorkGovernments: vi.fn(),
