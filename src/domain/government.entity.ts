@@ -59,6 +59,7 @@ export type CityUpdateInput = Partial<CityCreateInput>;
 
 export const CityFilterDescriptor = {
   id: { type: 'uuid' as const },
+  governmentId: { type: 'uuid' as const },
   name: { type: 'string' as const, minLength: 2, maxLength: 100 },
   nameAr: { type: 'string' as const, minLength: 2, maxLength: 100 },
   long: { type: 'number' as const },

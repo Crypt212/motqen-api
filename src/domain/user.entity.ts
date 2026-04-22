@@ -42,32 +42,3 @@ export const UserFilterDescriptor = {
 } satisfies Record<string, FieldTypeDefinition>;
 
 export type UserFilter = FilterFromDescriptor<typeof UserFilterDescriptor>;
-
-// ==================================================
-// Location — belongs to User (not ClientProfile)
-// ==================================================
-
-export interface Location {
-  id: IDType;
-  userId: IDType;
-
-  governmentId: IDType;
-  cityId: IDType;
-  address: string;
-  addressNotes: string;
-  long: number;
-  lat: number;
-  isMain: boolean;
-}
-
-export type LocationCreateInput = {
-  governmentId: IDType;
-  cityId: IDType;
-  address: string;
-  addressNotes: string;
-  long: number;
-  lat: number;
-  isMain: boolean;
-};
-
-export type LocationUpdateInput = Partial<LocationCreateInput>;

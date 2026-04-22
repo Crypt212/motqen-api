@@ -33,7 +33,7 @@ export default class GovernmentController {
     const result = await this.governmentService.getGovernments({
       filter,
       pagination,
-      sort: sort[0],
+      sort,
     });
 
     new SuccessResponse('Governments retrieved successfully', result, 200).send(res);
@@ -98,7 +98,7 @@ export default class GovernmentController {
       governmentId,
       filter,
       pagination,
-      sort: sort[0],
+      sort,
     });
 
     new SuccessResponse('Cities retrieved', result).send(res);

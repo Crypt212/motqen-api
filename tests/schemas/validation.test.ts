@@ -118,28 +118,62 @@ describe('Primitive Schemas', () => {
 });
 
 describe('Composite Schemas', () => {
+  const location = {
+    governmentId: validUUID,
+    cityId: validUUID,
+    address: 'abc123',
+    validUUID,
+    long: 31.2357,
+    lat: 30.0444,
+  };
   describe('UserDataSchema', () => {
-    it('should require firstName and lastName', () => {
+    it('should require firstName, middleName, lastName and location', () => {
       const result = UserDataSchema.safeParse({});
       expect(result.success).toBe(false);
-    });
-
-    it('should accept valid user data with optional middleName', () => {
-      expect(
-        UserDataSchema.safeParse({
-          firstName: 'Ahmed',
-          lastName: 'Hassan',
-        }).success
-      ).toBe(true);
     });
 
     it('should reject empty firstName', () => {
       expect(
         UserDataSchema.safeParse({
           firstName: '',
+          middleName: 'Khalid',
           lastName: 'Hassan',
+          location,
         }).success
       ).toBe(false);
+    });
+
+    it('should accept empty middleName (optional)', () => {
+      expect(
+        UserDataSchema.safeParse({
+          firstName: 'Ahmed',
+          middleName: '',
+          lastName: 'Hassan',
+          location,
+        }).success
+      ).toBe(true);
+    });
+
+    it('should reject empty lastName', () => {
+      expect(
+        UserDataSchema.safeParse({
+          firstName: 'Ahmed',
+          middleName: 'Khalid',
+          lastName: '',
+          location,
+        }).success
+      ).toBe(false);
+    });
+
+    it('should accept full name', () => {
+      const parseResult = UserDataSchema.safeParse({
+        firstName: 'Ahmed',
+        middleName: 'Khalid',
+        lastName: 'Hassan',
+        location,
+      });
+      console.log(parseResult);
+      expect(parseResult.success).toBe(true);
     });
   });
 

@@ -45,7 +45,11 @@ import {
 import { isActive } from '../../middlewares/authMiddleware.js';
 import { validateBody, validateQuery } from '../../middlewares/validateRequest.js';
 
+import locationRouter from './locations.js';
+
 const usersRouter = Router();
+
+usersRouter.use('/locations', locationRouter);
 
 /**
  * @swagger

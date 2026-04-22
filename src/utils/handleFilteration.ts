@@ -42,10 +42,11 @@ export function handlePagination(params: { total: number; paginationOptions: Pag
  * Handle ordering logic
  */
 export function handleSort<T>(sortOptions: SortOptions<T>): { [x: string]: 'asc' | 'desc' }[] {
-  if (!sortOptions || !sortOptions.sortBy) return [];
+  if (sortOptions.length === 0) return [];
 
-  const order = sortOptions.sortOrder || 'asc';
-  return [{ [sortOptions.sortBy]: order }];
+  return sortOptions.map((sortOption) => {
+    return { [sortOption.sortBy]: sortOption.sortOrder || 'asc' };
+  });
 }
 //
 // /**
