@@ -22,20 +22,18 @@ import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepositor
 import { Role, User } from '../domain/user.entity.js';
 import { WorkerProfile, WorkerProfileVerification } from '../domain/workerProfile.entity.js';
 import { ClientProfile } from '../domain/clientProfile.entity.js';
-import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
 import { Method } from '../domain/otp.entity.js';
 import { LoginTokenPayload, RegisterTokenPayload } from '../types/tokens.js';
-import IGovernmentRepository from '../repositories/interfaces/GovernmentRepository.js';
 import ISessionRepository from '../repositories/interfaces/SessionRepository.js';
 import { Session } from '../domain/session.entity.js';
 import { SpecializationsTree } from '../domain/specialization.entity.js';
 import { OTPErrorDetails } from '../errors/appErrorDetails/OTPDetails.js';
 
-import { transactionManager } from '../state.js';
 import UserRepository from '../repositories/prisma/UserRepository.js';
 import WorkerProfileRepository from '../repositories/prisma/WorkerRepository.js';
 import ClientProfileRepository from '../repositories/prisma/ClientRepository.js';
 import GovernmentRepository from '../repositories/prisma/GovernmentRepository.js';
+import { TransactionManager } from 'src/repositories/prisma/TransactionManager.js';
 const MAX_VERIFY_ATTEMPTS = 5;
 
 /**
@@ -101,6 +99,7 @@ export default class AuthService extends Service {
   private rateLimitCache: IRateLimitCache;
   private otpCache: IOtpCache;
   private tokenCache: ITokenCache;
+  private transactionManager: TransactionManager;
 
   /**
    */
@@ -111,6 +110,7 @@ export default class AuthService extends Service {
     rateLimitCache: IRateLimitCache;
     otpCache: IOtpCache;
     tokenCache: ITokenCache;
+    transactionManager: TransactionManager;
   }) {
     super();
     this.userRepository = params.userRepository;
@@ -119,6 +119,7 @@ export default class AuthService extends Service {
     this.rateLimitCache = params.rateLimitCache;
     this.otpCache = params.otpCache;
     this.tokenCache = params.tokenCache;
+    this.transactionManager = params.transactionManager;
   }
 
   /**
@@ -138,7 +139,7 @@ export default class AuthService extends Service {
     }: InputWorkerType
   ): Promise<{ user: User; profile: WorkerProfile; verification: WorkerProfileVerification }> {
     return tryCatch(async () => {
-      const userCreationTransactionResult = await transactionManager.execute(
+      const userCreationTransactionResult = await this.transactionManager.execute(
         { userRepo: UserRepository, workerRepo: WorkerProfileRepository },
         async ({ userRepo, workerRepo }) => {
           const user = await userRepo.create({
@@ -206,7 +207,7 @@ export default class AuthService extends Service {
         'selfiWithID'
       );
 
-      const verificationCreationTransactionResult = await transactionManager.execute(
+      const verificationCreationTransactionResult = await this.transactionManager.execute(
         { userRepo: UserRepository, workerRepo: WorkerProfileRepository },
         async ({ userRepo, workerRepo }) => {
           await userRepo.update({
@@ -248,7 +249,7 @@ export default class AuthService extends Service {
     {}: InputClientType
   ): Promise<{ user: User; profile: ClientProfile }> {
     return tryCatch(async () => {
-      const creationTransactionResult = await transactionManager.execute(
+      const creationTransactionResult = await this.transactionManager.execute(
         {
           userRepo: UserRepository,
           clientRepo: ClientProfileRepository,
@@ -306,7 +307,7 @@ export default class AuthService extends Service {
           'profileMain'
         );
 
-        await transactionManager.execute(
+        await this.transactionManager.execute(
           { userRepo: UserRepository, clientRepo: ClientProfileRepository },
           async ({ userRepo }) => {
             await userRepo.update({

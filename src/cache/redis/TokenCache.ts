@@ -3,7 +3,7 @@
  * @module cache/redis/TokenCache
  */
 
-import environment from 'src/configs/environment.js';
+import environment from '../../configs/environment.js';
 import { RedisClientType } from '../../libs/redis.js';
 import ITokenCache from '../interfaces/tokenCache.js';
 

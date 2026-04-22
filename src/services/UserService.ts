@@ -8,15 +8,8 @@ import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
-import {
-  AccountStatus,
-  Role,
-  User,
-  UserFilter,
-  LocationCreateInput,
-  LocationUpdateInput,
-  Location,
-} from '../domain/user.entity.js';
+import { AccountStatus, Role, User, UserFilter } from '../domain/user.entity.js';
+import { LocationCreateInput, LocationUpdateInput, Location } from '../domain/location.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/query.js';
 import { UserState } from '../types/asyncHandler.js';
 import { IDType } from '../repositories/interfaces/Repository.js';

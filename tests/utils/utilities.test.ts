@@ -118,21 +118,13 @@ describe('handlePagination', () => {
 });
 
 describe('handleSort', () => {
-  it('should return empty array for undefined sort options', () => {
-    expect(handleSort(undefined as any)).toEqual([]);
-  });
-
-  it('should return empty array when sortBy is missing', () => {
-    expect(handleSort({} as any)).toEqual([]);
-  });
-
   it('should default to asc order', () => {
-    const result = handleSort({ sortBy: 'createdAt' } as any);
+    const result = handleSort([{ sortBy: 'createdAt' }]);
     expect(result).toEqual([{ createdAt: 'asc' }]);
   });
 
   it('should use provided sort order', () => {
-    const result = handleSort({ sortBy: 'name', sortOrder: 'desc' } as any);
+    const result = handleSort([{ sortBy: 'name', sortOrder: 'desc' }]);
     expect(result).toEqual([{ name: 'desc' }]);
   });
 });

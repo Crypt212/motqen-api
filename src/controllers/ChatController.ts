@@ -41,7 +41,7 @@ export const getConversations = asyncHandler(async (req, res) => {
   const conversations = await chatService.getConversations({
     userId,
     pagination: { page, limit },
-    sort: { sortBy, sortOrder },
+    sort: [{ sortBy, sortOrder }],
   });
 
   new SuccessResponse('Conversations retrieved', conversations, 200).send(res);
@@ -81,7 +81,7 @@ export const getUnreadSummary = asyncHandler(async (req, res) => {
       userId,
       filter: {},
       pagination: { page, limit },
-      sort: { sortBy, sortOrder },
+      sort: [{ sortBy, sortOrder }],
     });
 
   const unread = conversations.conversationParticipantsWithMessages.filter((c) => {
