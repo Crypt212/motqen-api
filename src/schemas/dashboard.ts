@@ -84,6 +84,28 @@ export const UpdateWorkingHoursSchema = z
   });
 export type UpdateWorkingHoursDTO = z.infer<typeof UpdateWorkingHoursSchema>;
 
+export const SetWorkingHoursSchema = z
+  .object({
+    daysOfWeek: z.array(z.number().int().min(0).max(6)).max(7).default([]),
+    startTime: Time24HourSchema.optional(),
+    endTime: Time24HourSchema.optional(),
+  })
+  .refine(
+    (data) => {
+      // Only strictly require times if there are active days
+      if (data.daysOfWeek.length > 0) {
+        return !!data.startTime && !!data.endTime && data.endTime > data.startTime;
+      }
+      return true;
+    },
+    {
+      message:
+        'startTime and endTime are required and endTime must be after startTime if daysOfWeek is not empty',
+      path: ['endTime'],
+    }
+  );
+export type SetWorkingHoursDTO = z.infer<typeof SetWorkingHoursSchema>;
+
 // ============================================
 // Location schemas
 // ============================================

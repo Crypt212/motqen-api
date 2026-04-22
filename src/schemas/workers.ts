@@ -1,13 +1,6 @@
 import { z } from '../libs/zod.js';
 import { UUIDSchema } from './common.js';
 
-const parseOptionalUUID = (value: unknown): unknown => {
-  if (value === undefined || value === null || value === '') {
-    return undefined;
-  }
-  return value;
-};
-
 export const ExploreSearchSchema = z.object({
   specializationId: UUIDSchema,
   subSpecializationId: UUIDSchema.optional(),
@@ -50,3 +43,13 @@ export const ExploreWorkerIdParamsSchema = z.object({
   id: UUIDSchema,
 });
 export type ExploreWorkerIdParams = z.infer<typeof ExploreWorkerIdParamsSchema>;
+
+export const OccupiedTimeSlotsQuerySchema = z.object({
+  selectedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, expected YYYY-MM-DD'),
+});
+export type OccupiedTimeSlotsQueryDTO = z.infer<typeof OccupiedTimeSlotsQuerySchema>;
+
+export type OccupiedTimeSlotDTO = {
+  startDate: Date;
+  endDate: Date;
+};

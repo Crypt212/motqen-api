@@ -1,3 +1,4 @@
+import AppError from '../../errors/AppError.js';
 import IWorkerProfileRepository from '../interfaces/WorkerRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { IDType } from '../interfaces/Repository.js';
@@ -930,5 +931,103 @@ export default class WorkerProfileRepository
         hasPrev: normalizedPage > 1,
       },
     };
+  }
+
+  async findOccupiedTimeSlots(params: {
+    workerId: string;
+    selectedDate: string;
+  }): Promise<{ startDate: Date; endDate: Date }[]> {
+    const startOfDay = new Date(`${params.selectedDate}T00:00:00.000Z`);
+    const endOfDay = new Date(`${params.selectedDate}T23:59:59.999Z`);
+
+    const slots = await this.prismaClient.workerOccupiedTimeSlot.findMany({
+      where: {
+        workerProfileId: params.workerId,
+        startDate: { lt: endOfDay },
+        endDate: { gt: startOfDay },
+      },
+      select: {
+        startDate: true,
+        endDate: true,
+      },
+      orderBy: { startDate: 'asc' },
+    });
+
+    return slots;
+  }
+
+  async replaceWorkingHours(params: {
+    workerProfileId: string;
+    daysOfWeek: string[];
+    startTime: string;
+    endTime: string;
+  }): Promise<void> {
+    try {
+      await this.prismaClient.$transaction(async (tx) => {
+        // 1. Fetch current working hours
+        const currentHours = await tx.workingHours.findUnique({
+          where: { workerProfileId: params.workerProfileId },
+        });
+
+        const currentDays = currentHours ? currentHours.daysOfWeek : [];
+
+        // Identify which days are being removed from availability
+        const removedDays = currentDays.filter((day) => !params.daysOfWeek.includes(day));
+
+        if (removedDays.length > 0) {
+          // 2. Check for conflicts BEFORE deleting
+          const activeOrders = await tx.order.findMany({
+            where: {
+              workerProfileId: params.workerProfileId,
+              orderStatus: { in: ['TIME_SPECIFIED', 'PRICE_AGREED', 'PAID'] },
+            },
+            select: { id: true, date: true },
+          });
+
+          const conflictOrderIds: string[] = [];
+
+          for (const order of activeOrders) {
+            // getUTCDay() ensures days are consistently mapped to 0-6 without local server timezone shifts
+            const orderDay = order.date.getUTCDay().toString();
+            if (removedDays.includes(orderDay)) {
+              conflictOrderIds.push(order.id);
+            }
+          }
+
+          // 3. If conflict exists, THROW 409 Conflict
+          if (conflictOrderIds.length > 0) {
+            throw new AppError(
+              'You have active orders on the removed days. Cancel or reschedule them before closing this day.',
+              409,
+              {
+                toJSON: () => ({ conflictOrderIds }),
+              }
+            );
+          }
+        }
+
+        // 4. Safe to proceed: Replace-all logic
+        await tx.workingHours.deleteMany({
+          where: { workerProfileId: params.workerProfileId },
+        });
+
+        // Missing days treated as CLOSED (only store if days are provided)
+        if (params.daysOfWeek.length > 0) {
+          await tx.workingHours.create({
+            data: {
+              workerProfileId: params.workerProfileId,
+              daysOfWeek: params.daysOfWeek,
+              startTime: params.startTime,
+              endTime: params.endTime,
+            },
+          });
+        }
+      });
+    } catch (error: unknown) {
+      if (error instanceof AppError) {
+        throw error; // Bubble up our custom 409 Conflict Error
+      }
+      throw handlePrismaError(error as Error, 'replaceWorkingHours');
+    }
   }
 }

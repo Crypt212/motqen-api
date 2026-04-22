@@ -60,6 +60,24 @@ export default interface IWorkerProfileRepository {
   }): Promise<PaginatedResultMeta & { specializationIds: IDType[] }>;
 
   /**
+   * Find occupied time slots for a specific date
+   */
+  findOccupiedTimeSlots(params: {
+    workerId: IDType;
+    selectedDate: string;
+  }): Promise<{ startDate: Date; endDate: Date }[]>;
+
+  /**
+   * Replace all working hours with validation for active orders
+   */
+  replaceWorkingHours(params: {
+    workerProfileId: string;
+    daysOfWeek: string[];
+    startTime: string;
+    endTime: string;
+  }): Promise<void>;
+
+  /**
    * Create a worker profile for a user ID
    */
   create(params: {
