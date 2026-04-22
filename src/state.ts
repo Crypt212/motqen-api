@@ -30,6 +30,8 @@ import OrderRepository from './repositories/prisma/OrderRepository.js';
 import WorkerOccupiedTimeSlotRepository from './repositories/prisma/WorkerOccupiedTimeSlotRepository.js';
 import OrderService from './services/OrderService.js';
 import OrderController from './controllers/OrderController.js';
+import LocationService from './services/LocationService.js';
+import LocationController from './controllers/LocationController.js';
 
 export const rateLimitCache = new RateLimitCache(redisClient);
 export const otpCache = new OTPCache(redisClient);
@@ -47,11 +49,18 @@ export const governmentService = new GovernmentService({ governmentRepository })
 export const governmentController = new GovernmentController({
   governmentService,
 });
+export const transactionManager = new TransactionManager(prisma);
+
+export const locationRepository = new LocationRepository(prisma);
+export const locationService = new LocationService({
+  locationRepository,
+  governmentRepository,
+  transactionManager,
+});
+export const locationController = new LocationController({ locationService });
 export const conversationRepository = new ConversationRepository(prisma);
 export const messageRepository = new MessageRepository(prisma);
 export const flaggedMessageRepository = new FlaggedMessageRepository(prisma);
-
-export const transactionManager = new TransactionManager(prisma);
 
 export const rateLimitService = new RateLimitService({ rateLimitCache });
 export const userService = new UserService({
@@ -70,12 +79,11 @@ export const workerProfileService = new WorkerProfileService({
 export const authService = new AuthService({
   userRepository,
   workerProfileRepository,
-  clientProfileRepository,
-  governmentRepository,
   otpCache,
   sessionRepository,
   rateLimitCache,
   tokenCache,
+  transactionManager,
 });
 export const chatService = new ChatService({
   conversationRepository,

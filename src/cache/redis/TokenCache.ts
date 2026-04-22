@@ -3,6 +3,7 @@
  * @module cache/redis/TokenCache
  */
 
+import environment from '../../configs/environment.js';
 import { RedisClientType } from '../../libs/redis.js';
 import ITokenCache from '../interfaces/tokenCache.js';
 
@@ -43,6 +44,7 @@ export default class TokenCache implements ITokenCache {
   }
 
   async consumeToken(tokenType: 'register' | 'login', tokenHash: string): Promise<boolean> {
+    if (environment.nodeEnv === 'development') return true;
     const key = this.keys.token(tokenType, tokenHash);
     const result = await this.client.eval(TokenCache.CONSUME_SCRIPT, {
       keys: [key],

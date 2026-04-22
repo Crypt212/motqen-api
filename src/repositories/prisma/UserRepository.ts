@@ -2,14 +2,12 @@ import IUserRepository from '../interfaces/UserRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
+import { User, UserCreateInput, UserFilter } from '../../domain/user.entity.js';
 import {
-  User,
-  UserCreateInput,
-  UserFilter,
   Location,
   LocationCreateInput,
   LocationUpdateInput,
-} from '../../domain/user.entity.js';
+} from '../../domain/location.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { PrismaClient } from '../../generated/prisma/client.js';
 import { IDType } from '../interfaces/Repository.js';
@@ -48,6 +46,8 @@ export default class UserRepository extends Repository implements IUserRepositor
       long: record.long,
       lat: record.lat,
       isMain: record.isMain,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
     };
   }
 
@@ -259,9 +259,9 @@ export default class UserRepository extends Repository implements IUserRepositor
       const { governmentId, cityId, address, addressNotes, long, lat, isMain } = params.location;
 
       const records = await this.prismaClient.$queryRaw<Location[]>`
-        INSERT INTO locations (id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain", "pointGeography")
-        VALUES (gen_random_uuid(), ${params.userId}, ${governmentId}, ${cityId}, ${address}, ${addressNotes}, ${isMain}, ST_SetSRID(ST_MakePoint(${long}, ${lat}), 4326))
-        RETURNING id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain", ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat
+        INSERT INTO locations (id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain", "pointGeography", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid(), ${params.userId}, ${governmentId}, ${cityId}, ${address}, ${addressNotes}, ${isMain}, ST_SetSRID(ST_MakePoint(${long}, ${lat}), 4326), current_timestamp, current_timestamp)
+        RETURNING id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain", ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat, "createdAt", "updatedAt"
       `;
 
       return this.toDomainLocation(records[0]);
@@ -277,7 +277,7 @@ export default class UserRepository extends Repository implements IUserRepositor
     try {
       const mainLocations = await this.prismaClient.$queryRaw<Location[]>`
         SELECT id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain",
-               ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat
+               ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat, "createdAt", "updatedAt"
         FROM locations
         WHERE "userId" = ${params.userId} AND "isMain" = true
         LIMIT 1
@@ -299,21 +299,21 @@ export default class UserRepository extends Repository implements IUserRepositor
       const { governmentId, cityId, address, addressNotes, long, lat, isMain } = params.location;
       const updated = await this.prismaClient.$queryRaw<Location[]>`
         UPDATE locations
-        SET 
+        SET
           "governmentId" = COALESCE(${governmentId}, "governmentId"),
           "cityId" = COALESCE(${cityId}, "cityId"),
           address = COALESCE(${address}, address),
           "addressNotes" = COALESCE(${addressNotes}, "addressNotes"),
           "isMain" = COALESCE(${isMain}, "isMain"),
-          "pointGeography" = CASE 
-            WHEN ${long} IS NOT NULL AND ${lat} IS NOT NULL 
+          "pointGeography" = CASE
+            WHEN ${long} IS NOT NULL AND ${lat} IS NOT NULL
             THEN ST_SetSRID(ST_MakePoint(${long}, ${lat}), 4326)
-            ELSE "pointGeography" 
+            ELSE "pointGeography"
           END,
           "updatedAt" = NOW()
         WHERE id = ${mainLocation.id} AND "userId" = ${params.userId}
         RETURNING id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain",
-                  ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat
+                  ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat, "createdAt", "updatedAt"
       `;
       return this.toDomainLocation(updated[0]);
     } catch (error: unknown) {
@@ -325,7 +325,7 @@ export default class UserRepository extends Repository implements IUserRepositor
     try {
       const locations = await this.prismaClient.$queryRaw<Location[]>`
         SELECT id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain",
-               ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat
+               ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat, "createdAt", "updatedAt"
         FROM locations
         WHERE "userId" = ${params.filter.userId}
       `;
@@ -350,19 +350,19 @@ export default class UserRepository extends Repository implements IUserRepositor
       const { governmentId, cityId, address, addressNotes, long, lat, isMain } = params.location;
       const updated = await this.prismaClient.$queryRaw<Location[]>`
         UPDATE locations
-        SET 
+        SET
           "cityId" = COALESCE(${cityId}, "cityId"),
           address = COALESCE(${address}, address),
           "addressNotes" = COALESCE(${addressNotes}, "addressNotes"),
-          "pointGeography" = CASE 
-            WHEN ${long} IS NOT NULL AND ${lat} IS NOT NULL 
+          "pointGeography" = CASE
+            WHEN ${long} IS NOT NULL AND ${lat} IS NOT NULL
             THEN ST_SetSRID(ST_MakePoint(${long}, ${lat}), 4326)
-            ELSE "pointGeography" 
+            ELSE "pointGeography"
           END,
           "updatedAt" = NOW()
         WHERE id = ${params.filter.id} AND "userId" = ${params.filter.userId}
         RETURNING id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain",
-                  ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat
+                  ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat, "createdAt", "updatedAt"
       `;
       return this.toDomainLocation(updated[0]);
     } catch (error: unknown) {

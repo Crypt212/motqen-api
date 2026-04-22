@@ -22,20 +22,18 @@ import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepositor
 import { Role, User } from '../domain/user.entity.js';
 import { WorkerProfile, WorkerProfileVerification } from '../domain/workerProfile.entity.js';
 import { ClientProfile } from '../domain/clientProfile.entity.js';
-import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
 import { Method } from '../domain/otp.entity.js';
 import { LoginTokenPayload, RegisterTokenPayload } from '../types/tokens.js';
-import IGovernmentRepository from '../repositories/interfaces/GovernmentRepository.js';
 import ISessionRepository from '../repositories/interfaces/SessionRepository.js';
 import { Session } from '../domain/session.entity.js';
 import { SpecializationsTree } from '../domain/specialization.entity.js';
 import { OTPErrorDetails } from '../errors/appErrorDetails/OTPDetails.js';
 
-import { transactionManager } from '../state.js';
 import UserRepository from '../repositories/prisma/UserRepository.js';
 import WorkerProfileRepository from '../repositories/prisma/WorkerRepository.js';
 import ClientProfileRepository from '../repositories/prisma/ClientRepository.js';
 import GovernmentRepository from '../repositories/prisma/GovernmentRepository.js';
+import { TransactionManager } from 'src/repositories/prisma/TransactionManager.js';
 const MAX_VERIFY_ATTEMPTS = 5;
 
 /**
@@ -97,34 +95,31 @@ interface InputClientType {}
 export default class AuthService extends Service {
   private userRepository: IUserRepository;
   private workerProfileRepository: IWorkerProfileRepository;
-  private clientProfileRepository: IClientProfileRepository;
-  private governmentRepository: IGovernmentRepository;
   private sessionRepository: ISessionRepository;
   private rateLimitCache: IRateLimitCache;
   private otpCache: IOtpCache;
   private tokenCache: ITokenCache;
+  private transactionManager: TransactionManager;
 
   /**
    */
   constructor(params: {
     userRepository: IUserRepository;
     workerProfileRepository: IWorkerProfileRepository;
-    clientProfileRepository: IClientProfileRepository;
-    governmentRepository: IGovernmentRepository;
     sessionRepository: ISessionRepository;
     rateLimitCache: IRateLimitCache;
     otpCache: IOtpCache;
     tokenCache: ITokenCache;
+    transactionManager: TransactionManager;
   }) {
     super();
     this.userRepository = params.userRepository;
     this.workerProfileRepository = params.workerProfileRepository;
-    this.clientProfileRepository = params.clientProfileRepository;
-    this.governmentRepository = params.governmentRepository;
     this.sessionRepository = params.sessionRepository;
     this.rateLimitCache = params.rateLimitCache;
     this.otpCache = params.otpCache;
     this.tokenCache = params.tokenCache;
+    this.transactionManager = params.transactionManager;
   }
 
   /**
@@ -144,10 +139,7 @@ export default class AuthService extends Service {
     }: InputWorkerType
   ): Promise<{ user: User; profile: WorkerProfile; verification: WorkerProfileVerification }> {
     return tryCatch(async () => {
-      // Note: governmentId and cityId validation moved to location handling
-      // For workers, government associations are handled via workGovernmentIds
-
-      return await transactionManager.execute(
+      const userCreationTransactionResult = await this.transactionManager.execute(
         { userRepo: UserRepository, workerRepo: WorkerProfileRepository },
         async ({ userRepo, workerRepo }) => {
           const user = await userRepo.create({
@@ -178,30 +170,6 @@ export default class AuthService extends Service {
             },
           });
 
-          const nationalID = (
-            await uploadToCloudinary(idImageBuffer, `${user.id}/verification_info`, 'nationalID')
-          ).url;
-
-          const selfiWithID = (
-            await uploadToCloudinary(
-              profileWithIdImageBuffer,
-              `${user.id}/verification_info`,
-              'selfiWithID'
-            )
-          ).url;
-
-          await workerRepo.find({ workerFilter: { userId: user.id } });
-
-          const verification = await workerRepo.setVerification({
-            workerProfileId: profile.id,
-            verification: {
-              idWithPersonalImageUrl: nationalID,
-              idDocumentUrl: selfiWithID,
-              status: 'PENDING',
-              reason: 'Waiting for verification',
-            },
-          });
-
           await workerRepo.insertWorkGovernments({
             workerFilter: {
               userId: user.id,
@@ -215,23 +183,57 @@ export default class AuthService extends Service {
             specializationsTree: specializations,
           });
 
-          const { url } = await uploadToCloudinary(
-            profileImageBuffer,
-            `${phoneNumber}/profile_image`,
-            'profileMain'
-          );
+          return { profile, user };
+        }
+      );
 
+      const { profile, user } = userCreationTransactionResult;
+
+      const { url: profileImageUrl } = await uploadToCloudinary(
+        profileImageBuffer,
+        `${phoneNumber}/profile_image`,
+        'profileMain'
+      );
+
+      const { url: nationalIDImageUrl } = await uploadToCloudinary(
+        idImageBuffer,
+        `${user.id}/verification_info`,
+        'nationalID'
+      );
+
+      const { url: selfiWithIDImageUrl } = await uploadToCloudinary(
+        profileWithIdImageBuffer,
+        `${user.id}/verification_info`,
+        'selfiWithID'
+      );
+
+      const verificationCreationTransactionResult = await this.transactionManager.execute(
+        { userRepo: UserRepository, workerRepo: WorkerProfileRepository },
+        async ({ userRepo, workerRepo }) => {
           await userRepo.update({
             filter: {
               id: user.id,
             },
-            user: { profileImageUrl: url },
+            user: { profileImageUrl: profileImageUrl },
           });
-          user.profileImageUrl = url;
+          user.profileImageUrl = profileImageUrl;
 
-          return { profile, user, verification };
+          await workerRepo.find({ workerFilter: { userId: user.id } });
+
+          const verification = await workerRepo.setVerification({
+            workerProfileId: profile.id,
+            verification: {
+              idWithPersonalImageUrl: nationalIDImageUrl,
+              idDocumentUrl: selfiWithIDImageUrl,
+              status: 'PENDING',
+              reason: 'Waiting for verification',
+            },
+          });
+          return { verification };
         }
       );
+
+      return { user, profile, verification: verificationCreationTransactionResult.verification };
     });
   }
 
@@ -247,7 +249,7 @@ export default class AuthService extends Service {
     {}: InputClientType
   ): Promise<{ user: User; profile: ClientProfile }> {
     return tryCatch(async () => {
-      return await transactionManager.execute(
+      const creationTransactionResult = await this.transactionManager.execute(
         {
           userRepo: UserRepository,
           clientRepo: ClientProfileRepository,
@@ -288,13 +290,26 @@ export default class AuthService extends Service {
             },
           });
 
-          if (profileImageBuffer) {
-            const { url } = await uploadToCloudinary(
-              profileImageBuffer,
-              `${user.id}/profile_image`,
-              'profileMain'
-            );
+          const profile = await clientRepo.find({
+            filter: { userId: user.id },
+          });
 
+          return { profile: profile!, user };
+        }
+      );
+
+      const { user, profile } = creationTransactionResult;
+
+      if (profileImageBuffer) {
+        const { url } = await uploadToCloudinary(
+          profileImageBuffer,
+          `${user.id}/profile_image`,
+          'profileMain'
+        );
+
+        await this.transactionManager.execute(
+          { userRepo: UserRepository, clientRepo: ClientProfileRepository },
+          async ({ userRepo }) => {
             await userRepo.update({
               filter: {
                 id: user.id,
@@ -303,14 +318,10 @@ export default class AuthService extends Service {
             });
             user.profileImageUrl = url;
           }
+        );
+      }
 
-          const profile = await clientRepo.find({
-            filter: { userId: user.id },
-          });
-
-          return { profile: profile!, user };
-        }
-      );
+      return { user, profile };
     });
   }
 

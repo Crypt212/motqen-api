@@ -1,12 +1,9 @@
+import { User, UserCreateInput, UserFilter, UserUpdateInput } from '../../domain/user.entity.js';
 import {
-  User,
-  UserCreateInput,
-  UserFilter,
-  UserUpdateInput,
   Location,
   LocationCreateInput,
   LocationUpdateInput,
-} from '../../domain/user.entity.js';
+} from '../../domain/location.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { IDType } from './Repository.js';
 

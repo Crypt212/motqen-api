@@ -14,7 +14,7 @@ import {
   ClientProfileFilter,
   ClientProfileUpdateInput,
 } from '../domain/clientProfile.entity.js';
-import { LocationCreateInput, LocationUpdateInput } from '../domain/user.entity.js';
+import { LocationCreateInput, LocationUpdateInput } from '../domain/location.entity.js';
 
 /**
  * Client Service - Manages client-related operations

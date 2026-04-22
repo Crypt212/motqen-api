@@ -73,6 +73,8 @@ model Location {
   government     Government                            @relation(fields: [governmentId], references: [id], onDelete: Cascade)
   user           User                                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders         Order[]
+  createdAt      DateTime                              @default(now())
+  updatedAt      DateTime                              @updatedAt
 
   @@index([pointGeography], map: "idx_locations_point", type: Gist)
   @@index([userId, isMain])
