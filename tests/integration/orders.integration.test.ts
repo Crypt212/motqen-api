@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import express, { Express } from 'express';
-import ordersRouter from './orders.js';
-import { orderController } from '../../state.js';
+import ordersRouter from '../../src/routes/v1/orders.js';
+import { orderController } from '../../src/state.js';
 
 vi.mock('../../state.js', () => ({
   orderController: {
