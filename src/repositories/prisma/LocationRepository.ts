@@ -22,8 +22,8 @@ export default class LocationRepository extends Repository implements ILocationR
     return {
       id: record.id,
       userId: record.userId,
-      governmentId: record.governmentId,
-      cityId: record.cityId,
+      government: record.government,
+      city: record.city,
       address: record.address,
       addressNotes: record.addressNotes,
       long: record.long,
@@ -73,14 +73,14 @@ export default class LocationRepository extends Repository implements ILocationR
 
       // We need coordinates, so we use raw SQL or findFirst + raw SQL for coords
       const records = await this.prismaClient.$queryRaw<Location[]>`
-        SELECT id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain",
-               ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat, "createdAt", "updatedAt"
-        FROM locations
-        WHERE ${Prisma.join(
-          Object.entries(filter).map(([key, value]) => Prisma.sql`"${Prisma.raw(key)}" = ${value}`),
-          ' AND '
-        )}
-        LIMIT 1
+  SELECT l.id, l."userId", l."governmentId", l."cityId", l.address, l."addressNotes", l."isMain", ST_X(l."pointGeography"::geometry) as long, ST_Y(l."pointGeography"::geometry) as lat, l."createdAt", l."updatedAt",
+    -- Government data
+    jsonb_build_object( 'id', g.id, 'name', g.name, 'nameAr', 'g.nameAr', 'long', g.long, 'lat', g.lat) as government,
+    -- City data
+    jsonb_build_object( 'id', c.id, 'name', c.name, 'nameAr', 'c.nameAr', 'long', c.long, 'lat', c.lat) as city
+  FROM locations l
+  LEFT JOIN governments g ON l."governmentId" = g.id
+  LEFT JOIN cities c ON l."cityId" = c.id
       `;
 
       if (!records || records.length === 0) return null;
@@ -141,11 +141,17 @@ export default class LocationRepository extends Repository implements ILocationR
       }
 
       const records = await this.prismaClient.$queryRaw<Location[]>`
-SELECT id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain", "createdAt", "updatedAt",
-       ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat
-FROM locations
-WHERE id IN (${Prisma.join(ids.map((i) => i.id))})
-ORDER BY ${Prisma.raw(orderByClause)}
+  SELECT
+    l.id, l."userId", l."governmentId", l."cityId", l.address, l."addressNotes", l."isMain", l."createdAt", l."updatedAt", ST_X(l."pointGeography"::geometry) as long, ST_Y(l."pointGeography"::geometry) as lat,
+    -- Government data
+    jsonb_build_object( 'id', g.id, 'name', g.name, 'nameAr', 'g.nameAr', 'long', g.long, 'lat', g.lat) as government,
+    -- City data
+    jsonb_build_object( 'id', c.id, 'name', c.name, 'nameAr', 'c.nameAr', 'long', c.long, 'lat', c.lat, 'governmentId', c."governmentId") as city
+  FROM locations l
+  LEFT JOIN governments g ON l."governmentId" = g.id
+  LEFT JOIN cities c ON l."cityId" = c.id
+  WHERE l.id IN (${Prisma.join(ids.map((i) => i.id))})
+  ORDER BY ${Prisma.raw(orderByClause)}
 `;
 
       return {
@@ -170,10 +176,13 @@ ORDER BY ${Prisma.raw(orderByClause)}
 
       const record = (
         await this.prismaClient.$queryRaw<Location[]>`
-        INSERT INTO locations (id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain", "pointGeography", "createdAt", "updatedAt")
-        VALUES (gen_random_uuid(), ${userId}, ${governmentId}, ${cityId}, ${address}, ${addressNotes}, ${isMain}, ST_SetSRID(ST_MakePoint(${long}, ${lat}), 4326), current_timestamp, current_timestamp)
-        RETURNING id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain", ST_X("pointGeography"::geometry) as long, ST_Y("pointGeography"::geometry) as lat, "createdAt", "updatedAt"
-      `
+    INSERT INTO locations ( id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain", "pointGeography", "createdAt", "updatedAt")
+    VALUES ( gen_random_uuid(), ${userId}, ${governmentId}, ${cityId}, ${address}, ${addressNotes}, ${isMain}, ST_SetSRID(ST_MakePoint(${long}, ${lat}), 4326), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    RETURNING
+      id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain", "createdAt", "updatedAt", ST_X("pointGeography"::geometry) AS long, ST_Y("pointGeography"::geometry) AS lat,
+      ( SELECT jsonb_build_object( 'id', g.id, 'name', g.name, 'nameAr', 'g.nameAr', 'long', g.long, 'lat', g.lat) FROM governments g WHERE g.id = ${governmentId}) AS government,
+      ( SELECT jsonb_build_object( 'id', c.id, 'name', c.name, 'nameAr', 'c.nameAr', 'long', c.long, 'lat', c.lat, 'governmentId', c."governmentId") FROM cities c WHERE c.id = ${cityId}) AS city
+  `
       )[0];
 
       // Set pointGeography via raw SQL
@@ -183,6 +192,7 @@ ORDER BY ${Prisma.raw(orderByClause)}
         WHERE id = ${record.id}
       `;
 
+      console.log(record);
       return this.find({ filter: { id: record.id } }) as Promise<Location>;
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'create');

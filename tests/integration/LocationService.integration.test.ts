@@ -65,6 +65,7 @@ describe('LocationService Integration Tests (Real DB & Transactions)', () => {
       };
 
       const result = await locationService.createLocation({ userId: testUserId, data: payload });
+      console.log(result);
 
       expect(result.id).toBeDefined();
       expect(result.isMain).toBe(true);
@@ -77,7 +78,7 @@ describe('LocationService Integration Tests (Real DB & Transactions)', () => {
       const payload = {
         governmentId: testGovId,
         cityId: testCityId,
-        address: '2nd Ave',
+        address: '12 Magles Al Madena, Shubra El Kheima 1, Al-Qalyubia Governorate',
         long: 30.2,
         lat: 31.3,
         isMain: true,
@@ -89,7 +90,9 @@ describe('LocationService Integration Tests (Real DB & Transactions)', () => {
       });
 
       expect(secondResult.isMain).toBe(true);
-      expect(secondResult.address).toBe('2nd Ave');
+      expect(secondResult.address).toBe(
+        '12 Magles Al Madena, Shubra El Kheima 1, Al-Qalyubia Governorate'
+      );
 
       // Check first location
       const firstLoc = await locationService.getLocationById({
@@ -111,7 +114,6 @@ describe('LocationService Integration Tests (Real DB & Transactions)', () => {
     it('should delete the main location and promote the other to main', async () => {
       // Find the current main
       const result = await locationService.getLocations({ userId: testUserId, filter: {} });
-      console.log(result);
       const currentMain = result.locations.find((l) => l.isMain)!;
       const otherLocation = result.locations.find((l) => !l.isMain)!;
 

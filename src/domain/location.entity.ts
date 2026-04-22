@@ -1,13 +1,14 @@
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { FilterFromDescriptor } from '../schemas/common.js';
 import { FieldTypeDefinition } from '../types/query.js';
+import { City, Government } from './government.entity.js';
 
 export type Location = {
   id: IDType;
   userId: IDType;
 
-  governmentId: IDType;
-  cityId: IDType;
+  government: Government;
+  city: City;
   address: string;
   addressNotes: string;
   long: number;
@@ -32,8 +33,6 @@ export type LocationUpdateInput = Partial<LocationCreateInput>;
 export const LocationFilterDescriptor = {
   id: { type: 'uuid' as const },
   userId: { type: 'uuid' as const },
-  governmentId: { type: 'uuid' as const },
-  cityId: { type: 'uuid' as const },
   isMain: { type: 'boolean' as const },
 } satisfies Record<string, FieldTypeDefinition>;
 
