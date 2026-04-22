@@ -36,4 +36,4 @@ export type PaginationOptions =
 export type SortOptions<T> = {
   sortBy: keyof T;
   sortOrder?: 'asc' | 'desc';
-};
+}[];

@@ -25,6 +25,9 @@ import PresenceService from './services/PresenceService.js';
 import prisma from './libs/database.js';
 import redisClient from './libs/redis.js';
 import { TransactionManager } from './repositories/prisma/TransactionManager.js';
+import LocationRepository from './repositories/prisma/LocationRepository.js';
+import LocationService from './services/LocationService.js';
+import LocationController from './controllers/LocationController.js';
 
 export const rateLimitCache = new RateLimitCache(redisClient);
 export const otpCache = new OTPCache(redisClient);
@@ -42,11 +45,18 @@ export const governmentService = new GovernmentService({ governmentRepository })
 export const governmentController = new GovernmentController({
   governmentService,
 });
+export const transactionManager = new TransactionManager(prisma);
+
+export const locationRepository = new LocationRepository(prisma);
+export const locationService = new LocationService({
+  locationRepository,
+  governmentRepository,
+  transactionManager,
+});
+export const locationController = new LocationController({ locationService });
 export const conversationRepository = new ConversationRepository(prisma);
 export const messageRepository = new MessageRepository(prisma);
 export const flaggedMessageRepository = new FlaggedMessageRepository(prisma);
-
-export const transactionManager = new TransactionManager(prisma);
 
 export const rateLimitService = new RateLimitService({ rateLimitCache });
 export const userService = new UserService({
@@ -69,6 +79,7 @@ export const authService = new AuthService({
   sessionRepository,
   rateLimitCache,
   tokenCache,
+  transactionManager,
 });
 export const chatService = new ChatService({
   conversationRepository,
