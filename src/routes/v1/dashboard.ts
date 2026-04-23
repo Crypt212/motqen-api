@@ -16,6 +16,7 @@ import {
   deleteWorkerGovernments,
   getWorkerSpecializations,
   getWorkerWorkingHours,
+  setWorkerWorkingHours,
   addWorkerSpecializations,
   deleteWorkerSpecializations,
   getClientProfile,
@@ -42,6 +43,7 @@ import {
   UpdateClientProfileSchema,
   WorkerGovernmentQuerySchema,
   WorkerSpecializationQuerySchema,
+  SetWorkingHoursSchema,
 } from '../../schemas/dashboard.js';
 import { isActive } from '../../middlewares/authMiddleware.js';
 import { validateBody, validateQuery } from '../../middlewares/validateRequest.js';
@@ -313,6 +315,13 @@ usersRouter.post(
  */
 usersRouter.get('/worker-profile', isActive, authorizeWorker, getWorkerProfile);
 usersRouter.get('/worker-profile/working-hours', isActive, authorizeWorker, getWorkerWorkingHours);
+usersRouter.post(
+  '/worker-profile/working-hours',
+  isActive,
+  authorizeWorker,
+  validateBody(SetWorkingHoursSchema),
+  setWorkerWorkingHours
+);
 
 /**
  * @swagger

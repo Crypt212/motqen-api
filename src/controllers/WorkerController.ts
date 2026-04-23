@@ -5,7 +5,7 @@
 
 import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
-import { userRepository, workerProfileRepository } from '../state.js';
+import { workerProfileRepository } from '../state.js';
 import { ExploreSearchSchema } from '../schemas/workers.js';
 
 import { asyncHandler } from '../types/asyncHandler.js';
@@ -85,4 +85,20 @@ export const getWorkerById = asyncHandler(async (req, res) => {
   }
 
   new SuccessResponse('Worker retrieved successfully', worker, 200).send(res);
+});
+
+export const getWorkerOccupiedTimeSlots = asyncHandler(async (req, res) => {
+  const workerId = String(req.params.id);
+  const { selectedDate } = req.query as { selectedDate: string };
+
+  const slots = await workerProfileRepository.findOccupiedTimeSlots({
+    workerId,
+    selectedDate,
+  });
+
+  new SuccessResponse(
+    'Occupied time slots retrieved successfully',
+    { occupiedSlots: slots },
+    200
+  ).send(res);
 });

@@ -370,4 +370,21 @@ export default class WorkerService extends Service {
       return [this.mapWorkingHoursEntityToDTO(workingHours)];
     });
   }
+
+  async setWorkingHours(params: {
+    workerProfileId: IDType;
+    daysOfWeek: string[];
+    startTime: string;
+    endTime: string;
+  }): Promise<void> {
+    const { workerProfileId, daysOfWeek, startTime, endTime } = params;
+    return tryCatch(async () => {
+      await this.workerProfileRepository.replaceWorkingHours({
+        workerProfileId: workerProfileId as string,
+        daysOfWeek,
+        startTime,
+        endTime,
+      });
+    });
+  }
 }

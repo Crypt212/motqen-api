@@ -4,10 +4,17 @@
  */
 
 import { Router } from 'express';
-import { getWorkerById, searchWorkers } from '../../controllers/WorkerController.js';
-import { ExploreSearchSchema, ExploreWorkerIdParamsSchema } from '../../schemas/workers.js';
+import {
+  getWorkerById,
+  searchWorkers,
+  getWorkerOccupiedTimeSlots,
+} from '../../controllers/WorkerController.js';
+import {
+  ExploreSearchSchema,
+  ExploreWorkerIdParamsSchema,
+  OccupiedTimeSlotsQuerySchema,
+} from '../../schemas/workers.js';
 import { validateParams, validateQuery } from '../../middlewares/validateRequest.js';
-import { authenticateAccess } from 'src/middlewares/authMiddleware.js';
 
 const workersRouter = Router();
 
@@ -202,5 +209,12 @@ workersRouter.get('/', validateQuery(ExploreSearchSchema), searchWorkers);
  *         $ref: '#/components/responses/NotFound'
  */
 workersRouter.get('/:id', validateParams(ExploreWorkerIdParamsSchema), getWorkerById);
+
+workersRouter.get(
+  '/:id/occupied-time-slots',
+  validateParams(ExploreWorkerIdParamsSchema),
+  validateQuery(OccupiedTimeSlotsQuerySchema),
+  getWorkerOccupiedTimeSlots
+);
 
 export default workersRouter;

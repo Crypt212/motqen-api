@@ -131,6 +131,20 @@ export const getWorkerWorkingHours = asyncHandler(async (req, res) => {
   new SuccessResponse('retrieved worker working hours successfully', workingHours, 200).send(res);
 });
 
+export const setWorkerWorkingHours = asyncHandler(async (req, res) => {
+  const workerProfileId = req.userState.worker.id;
+  const { daysOfWeek, startTime, endTime } = req.body;
+
+  await workerProfileService.setWorkingHours({
+    workerProfileId,
+    daysOfWeek: daysOfWeek.map(String),
+    startTime: startTime || '',
+    endTime: endTime || '',
+  });
+
+  new SuccessResponse('Working hours updated successfully', null, 200).send(res);
+});
+
 export const updateWorkerProfile = asyncHandler(async (req, res) => {
   const { experienceYears, isInTeam, acceptsUrgentJobs } = req.body;
   const workerProfile = await workerProfileService.update({
