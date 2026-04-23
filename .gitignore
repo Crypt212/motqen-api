@@ -8,7 +8,6 @@ package-lock.json
 **/logs
 
 src/generated
-prisma/migrations
 
 .github
 .agent
