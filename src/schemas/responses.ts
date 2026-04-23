@@ -201,6 +201,22 @@ export const SubSpecializationListResponseSchema = SuccessResponseSchema(
 );
 
 // ============================================
+// Specialization responses
+// ============================================
+
+export const OrderResponseSchema = SuccessResponseSchema(
+  z.object({
+    orders: z.any().describe('Order object'),
+  })
+);
+
+export const OrderListResponseSchema = SuccessResponseSchema(
+  z.object({
+    orders: z.array(z.any().describe('Orders')),
+  })
+);
+
+// ============================================
 // Worker (explore) responses
 // ============================================
 

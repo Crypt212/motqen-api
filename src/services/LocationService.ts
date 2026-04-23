@@ -138,11 +138,11 @@ export default class LocationService extends Service {
       } else if (data.cityId) {
         // City provided without government, validate against existing location's government
         const city = await this.governmentRepository.findCity({
-          filter: { id: data.cityId, governmentId: location.governmentId },
+          filter: { id: data.cityId, governmentId: location.government.id },
         });
         if (!city)
           throw new AppError(
-            `City with ID ${data.cityId} not found in government ${location.governmentId}`,
+            `City with ID ${data.cityId} not found in government ${location.government.id}`,
             400
           );
       }
