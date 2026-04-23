@@ -14,7 +14,7 @@ export default class OrderController {
   }
 
   create = asyncHandler(async (req, res) => {
-    const dto = req.body;
+    const { title, description, subSpecializationId, locationId, startDate, isUrgent } = req.body;
     const userId = req.userState!.userId;
     const images = (req.files as Express.Multer.File[]) || [];
     const clientProfileId = req.userState!.client?.id;
@@ -25,7 +25,15 @@ export default class OrderController {
 
     const order = await this.orderService.createOrder({
       userId,
-      data: { ...dto, clientProfileId },
+      data: {
+        title,
+        description,
+        subSpecializationId,
+        locationId,
+        startDate,
+        isUrgent: isUrgent === 'true',
+        clientProfileId,
+      },
       images,
     });
     new SuccessResponse('Order created successfully', { order }, 201).send(res);
@@ -44,7 +52,7 @@ export default class OrderController {
       workerProfileId: userState.worker?.id,
       filter: filter as FilterFromDescriptor<Record<string, FieldTypeDefinition>>,
       pagination,
-      sort: sort[0] as SortOptions<Order>,
+      sort: sort as SortOptions<Order>,
     });
     new SuccessResponse('Orders retrieved successfully', result, 200).send(res);
   });

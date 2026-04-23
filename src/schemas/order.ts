@@ -2,6 +2,11 @@ import { z } from '../libs/zod.js';
 import { UUIDSchema, buildFilterSchema, createQuerySchema } from './common.js';
 import { OrderFilterDescriptor } from '../domain/order.entity.js';
 
+const stringToBool = z
+  .string()
+  .refine((s) => s === 'true' || s === 'false', { message: 'isUrgent must be boolean' })
+  .transform((s) => s === 'true');
+
 export const CreateOrderSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().min(1),
@@ -10,7 +15,7 @@ export const CreateOrderSchema = z.object({
   startDate: z.coerce
     .date()
     .refine((d) => d > new Date(), { message: 'startDate must be in the future' }),
-  isUrgent: z.boolean().default(false),
+  isUrgent: stringToBool,
 });
 
 export type CreateOrderDTO = z.infer<typeof CreateOrderSchema>;

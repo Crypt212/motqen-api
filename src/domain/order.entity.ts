@@ -2,6 +2,8 @@ import { $Enums } from '../generated/prisma/client.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { FilterFromDescriptor } from '../schemas/common.js';
 import { FieldTypeDefinition } from '../types/query.js';
+import { Location } from './location.entity.js';
+import { SubSpecialization } from './specialization.entity.js';
 
 export type OrderStatus = $Enums.OrderStatus;
 export type WorkStatus = $Enums.WorkStatus;
@@ -13,7 +15,7 @@ export type Order = {
   clientProfileId: string;
   workerProfileId: string | null;
   locationId: string;
-  subSpecializationId: string;
+  subSpecialization: SubSpecialization;
   orderStatus: OrderStatus;
   workStatus: WorkStatus;
   finalPrice: number | null;

@@ -28,7 +28,6 @@ export default interface ILocationRepository {
     filter: LocationFilter;
     location: LocationUpdateInput;
   }): Promise<Location>;
-  delete({ filter }: { filter: LocationFilter }): Promise<void>;
   setAllNonMain({ userId }: { userId: string }): Promise<void>;
   findNextForPromotion({
     userId,

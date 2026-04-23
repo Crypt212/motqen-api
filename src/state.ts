@@ -99,7 +99,6 @@ export const presenceService = new PresenceService({
   prisma,
 });
 
-export const locationRepository = new LocationRepository(prisma);
 export const orderRepository = new OrderRepository(prisma);
 export const workerOccupiedTimeSlotRepository = new WorkerOccupiedTimeSlotRepository(prisma);
 

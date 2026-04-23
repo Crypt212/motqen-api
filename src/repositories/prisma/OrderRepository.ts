@@ -10,10 +10,12 @@ import {
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../../types/query.js';
 
-type PrismaOrderWithImages = Prisma.OrderGetPayload<{ include: { images: true } }>;
+type PrismaOrderWithImagesWithLocationAndSubSpecialization = Prisma.OrderGetPayload<{
+  include: { images: true; subSpecialization: true };
+}>;
 
 export default class OrderRepository extends Repository implements IOrderRepository {
-  private toDomain(record: PrismaOrderWithImages): Order {
+  private toDomain(record: PrismaOrderWithImagesWithLocationAndSubSpecialization): Order {
     return {
       id: record.id,
       title: record.title,
@@ -21,7 +23,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
       clientProfileId: record.clientProfileId,
       workerProfileId: record.workerProfileId,
       locationId: record.locationId,
-      subSpecializationId: record.subSpecializationId,
+      subSpecialization: record.subSpecialization,
       orderStatus: record.orderStatus,
       workStatus: record.workStatus,
       finalPrice: record.finalPrice,
@@ -43,7 +45,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
     try {
       const record = await this.prismaClient.order.findFirst({
         where: filter,
-        include: { images: true },
+        include: { images: true, subSpecialization: true },
       });
       if (!record) return null;
       return this.toDomain(record);
@@ -84,7 +86,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
 
       const records = await this.prismaClient.order.findMany({
         where: filter,
-        include: { images: true },
+        include: { images: true, subSpecialization: true },
         ...paginationQuery,
         orderBy,
       });
@@ -115,7 +117,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
             },
           },
         },
-        include: { images: true },
+        include: { images: true, subSpecialization: true },
       });
       return this.toDomain(record);
     } catch (error) {
@@ -138,7 +140,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
       const record = await this.prismaClient.order.update({
         where: { id: existing.id },
         data: order,
-        include: { images: true },
+        include: { images: true, subSpecialization: true },
       });
       return this.toDomain(record);
     } catch (error) {

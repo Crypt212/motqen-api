@@ -68,6 +68,7 @@ model Location {
   address        String
   addressNotes   String?
   isMain         Boolean
+  isHidden       Boolean @default(false)
   pointGeography Unsupported("geography(Point, 4326)")
   city           City                                  @relation(fields: [cityId], references: [id], onDelete: Cascade)
   government     Government                            @relation(fields: [governmentId], references: [id], onDelete: Cascade)

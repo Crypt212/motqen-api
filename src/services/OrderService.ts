@@ -8,10 +8,11 @@ import WorkerOccupiedTimeSlotRepository from '../repositories/prisma/WorkerOccup
 import AppError from '../errors/AppError.js';
 import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 import { Order, OrderFilter } from '../domain/order.entity.js';
-import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../types/query.js';
+import { PaginationOptions, SortOptions } from '../types/query.js';
 import { canTransitionOrderStatus, canTransitionWorkStatus } from '../utils/stateMachine.js';
 import { hasOverlap } from '../utils/overlapCheck.js';
 import { CreateOrderDTO } from '../schemas/order.js';
+import { OrderStatus } from 'src/generated/prisma/enums.js';
 
 interface OrderServiceDeps {
   orderRepository: IOrderRepository;
@@ -44,7 +45,7 @@ export default class OrderService extends Service {
     images: Express.Multer.File[];
   }) {
     return tryCatch(async () => {
-      const location = await this.locationRepository.findById(data.locationId);
+      const location = await this.locationRepository.find({ filter: { id: data.locationId } });
       if (!location || location.userId !== userId) {
         throw new AppError('Location not found or not owned', 400);
       }
@@ -242,7 +243,7 @@ export default class OrderService extends Service {
 
       if (!canTransitionWorkStatus(order.workStatus, 'DONE'))
         throw new AppError('Cannot finish work in current status', 400);
-      if (!canTransitionOrderStatus(order.orderStatus, 'COMPLETED'))
+      if (!canTransitionOrderStatus(order.orderStatus, OrderStatus.COMPLETED))
         throw new AppError('Cannot complete order in current status', 400);
 
       return await this.transactionManager.execute(
@@ -250,7 +251,11 @@ export default class OrderService extends Service {
         async ({ orderRepo }) => {
           const updated = await orderRepo.update({
             filter: { id: params.orderId },
-            order: { orderStatus: 'COMPLETED', workStatus: 'DONE', workFinishedAt: new Date() },
+            order: {
+              orderStatus: OrderStatus.COMPLETED,
+              workStatus: 'DONE',
+              workFinishedAt: new Date(),
+            },
           });
 
           // TODO: notificationService.notify(order.clientProfileId, 'WORK_FINISHED', { orderId })
