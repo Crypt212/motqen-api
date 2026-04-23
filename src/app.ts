@@ -6,7 +6,6 @@ import errorHandler from './middlewares/errorMiddleware.js';
 import { ipRateLimiter } from './middlewares/rateLimitMiddleware.js';
 import redisClient from './libs/redis.js';
 import prismaClient from './libs/database.js';
-// import swaggerSpec from './configs/swagger.js';
 import swaggerUi from 'swagger-ui-express';
 import { verifyDeviceId } from './middlewares/authMiddleware.js';
 import { asyncHandler } from './types/asyncHandler.js';
@@ -40,30 +39,6 @@ const initApp = async () => {
   );
 
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(generateOpenAPISpec()));
-
-  // app.use(
-  //   '/api-docs',
-  //   swaggerUi.serve,
-  //   swaggerUi.setup(swaggerSpec, {
-  //     customCss: '.swagger-ui .topbar { display: none }',
-  //     customSiteTitle: 'Motqen API Documentation',
-  //     customfavIcon: '/favicon.ico',
-  //     swaggerOptions: {
-  //       persistAuthorization: true,
-  //       displayRequestDuration: true,
-  //     },
-  //   })
-  // );
-  //
-  //
-  // // API JSON documentation endpoint
-  // app.get(
-  //   '/api-docs.json',
-  //   asyncHandler((_, res) => {
-  //     res.setHeader('Content-Type', 'application/json');
-  //     res.send(swaggerSpec);
-  //   })
-  // );
 
   app.use(errorHandler);
 

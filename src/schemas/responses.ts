@@ -150,6 +150,12 @@ export const SpecializationsResponseSchema = SuccessResponseSchema(
   })
 );
 
+export const WorkingHoursResponseSchema = SuccessResponseSchema(
+  z.object({
+    workingHours: z.any().describe('WorkingHours object — daysOfWeek, startTime, endTime'),
+  })
+);
+
 // ============================================
 // Government responses
 // ============================================

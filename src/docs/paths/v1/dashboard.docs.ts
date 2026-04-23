@@ -14,6 +14,7 @@ import {
   UpdateClientProfileSchema,
   WorkerGovernmentQuerySchema,
   WorkerSpecializationQuerySchema,
+  SetWorkingHoursSchema,
 } from '../../../schemas/dashboard.js';
 import {
   UserResponseSchema,
@@ -22,6 +23,7 @@ import {
   WorkGovernmentsResponseSchema,
   SpecializationsResponseSchema,
   MessageOnlyResponseSchema,
+  WorkingHoursResponseSchema,
 } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
@@ -143,6 +145,59 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /me/worker-profile/working-hours
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/me/worker-profile/working-hours',
+    tags: ['Dashboard'],
+    summary: 'Get worker working hours',
+    description: 'Returns the current working-hours schedule for the authenticated worker.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Working hours retrieved',
+        content: { 'application/json': { schema: WorkingHoursResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // POST /me/worker-profile/working-hours
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/me/worker-profile/working-hours',
+    tags: ['Dashboard'],
+    summary: 'Set worker working hours',
+    description:
+      'Sets (upserts) the working-hours schedule for the authenticated worker. Pass an empty `daysOfWeek` array to clear the schedule.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      body: {
+        content: { 'application/json': { schema: SetWorkingHoursSchema } },
+      },
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Working hours set',
+        content: { 'application/json': { schema: WorkingHoursResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
       internalServerError: true,
     }),
   });
