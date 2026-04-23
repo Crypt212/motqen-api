@@ -99,7 +99,7 @@ export default class ChatService extends Service {
       return {
         id: conversationData.conversation.id,
         messageCounter: conversationData.conversation.messageCounter,
-        partner: conversationData.participants.find(p => p.userId !== clientId)?.user ?? null,
+        partner: conversationData.participants.find((p) => p.userId !== clientId)?.user ?? null,
         createdAt: conversationData.conversation.createdAt,
         updatedAt: conversationData.conversation.updatedAt,
         unreadCount: 0,

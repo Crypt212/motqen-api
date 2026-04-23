@@ -103,7 +103,7 @@ export default class UserService extends Service {
    */
   async getStatus(params: { filter: UserFilter }): Promise<UserState> {
     const { filter } = params;
-    console.log(filter)
+    console.log(filter);
     const user = await this.userRepository.find({ filter });
     console.log(user);
     const worker = await this.workerProfileRepository.find({ workerFilter: { userId: user.id } });

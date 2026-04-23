@@ -113,14 +113,13 @@ export default class WorkerProfileRepository
         },
         include: {
           user: true,
-        
+
           portfolio: {
             include: {
               projectImages: { orderBy: { createdAt: 'asc' } },
             },
           },
           chosenSpecializations: true,
-          
         },
       });
 
@@ -991,14 +990,14 @@ export default class WorkerProfileRepository
               workerProfileId: params.workerProfileId,
               orderStatus: { in: ['TIME_SPECIFIED', 'PRICE_AGREED', 'PAID'] },
             },
-            select: { id: true, date: true },
+            select: { id: true, startDate: true },
           });
 
           const conflictOrderIds: string[] = [];
 
           for (const order of activeOrders) {
             // getUTCDay() ensures days are consistently mapped to 0-6 without local server timezone shifts
-            const orderDay = order.date.getUTCDay().toString();
+            const orderDay = order.startDate.getUTCDay().toString();
             if (removedDays.includes(orderDay)) {
               conflictOrderIds.push(order.id);
             }

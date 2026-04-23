@@ -45,7 +45,10 @@ export const ExploreWorkerIdParamsSchema = z.object({
 export type ExploreWorkerIdParams = z.infer<typeof ExploreWorkerIdParamsSchema>;
 
 export const OccupiedTimeSlotsQuerySchema = z.object({
-  selectedDate: z.string().transform((val) => new Date(val).toISOString().slice(0, 10)).pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, expected YYYY-MM-DD')),
+  selectedDate: z
+    .string()
+    .transform((val) => new Date(val).toISOString().slice(0, 10))
+    .pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, expected YYYY-MM-DD')),
 });
 export type OccupiedTimeSlotsQueryDTO = z.infer<typeof OccupiedTimeSlotsQuerySchema>;
 

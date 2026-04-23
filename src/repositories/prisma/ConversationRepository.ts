@@ -79,7 +79,11 @@ export default class ConversationRepository extends Repository implements IConve
     }
   }
 
-  async findByPair(params: { workerId: IDType; clientId: IDType; userId: IDType }): Promise<Conversation | null> {
+  async findByPair(params: {
+    workerId: IDType;
+    clientId: IDType;
+    userId: IDType;
+  }): Promise<Conversation | null> {
     try {
       const conv = await this.prismaClient.conversation.findFirst({
         where: {
@@ -110,9 +114,12 @@ export default class ConversationRepository extends Repository implements IConve
       });
       if (!conv) return null;
 
-      const myParticipant = conv.participants.find(p => p.userId === params.userId);
-      const partnerParticipant = conv.participants.find(p => p.userId !== params.userId);
-      const unreadCount = Math.max(0, conv.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0));
+      const myParticipant = conv.participants.find((p) => p.userId === params.userId);
+      const partnerParticipant = conv.participants.find((p) => p.userId !== params.userId);
+      const unreadCount = Math.max(
+        0,
+        conv.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0)
+      );
 
       return {
         ...this.toDomain(conv),
