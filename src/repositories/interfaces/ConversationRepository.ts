@@ -33,7 +33,7 @@ export default interface IConversationRepository {
   /**
    * Find conversation between worker and client (unique constraint)
    */
-  findByPair(params: { workerId: IDType; clientId: IDType }): Promise<Conversation | null>;
+  findByPair(params: { workerId: IDType; clientId: IDType; userId: IDType }): Promise<Conversation | null>;
 
   /**
    * Find conversation with participant

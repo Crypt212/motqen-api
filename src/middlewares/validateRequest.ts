@@ -19,6 +19,7 @@ export const validateZod = (schema: z.ZodTypeAny, location: Location) =>
       next(new ValidationError('Validation failed', result.error));
       return;
     }
+    Object.assign(req[location], result.data);
     next();
   });
 

@@ -18,7 +18,7 @@ import { emitToUser } from '../socket/socket-emitter.js';
  * clientId is derived from authenticated user (req.userState.userId).
  */
 export const getOrCreateConversation = asyncHandler(async (req, res) => {
-  const { workerId } = matchedData(req, { includeOptionals: true });
+  const { workerId } = req.body;
   const clientId = req.userState.userId;
 
   const conversation = await chatService.getOrCreateConversation({

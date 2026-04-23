@@ -24,7 +24,7 @@ export default interface IWorkerProfileRepository {
   /**
    * Explore: approved + active user, full public payload with user, portfolio, project images
    */
-  findExploreWorkerById(workerProfileId: string): Promise<ExploreWorkerPublicDetail | null>;
+  findExploreWorkerById(userId: string): Promise<ExploreWorkerPublicDetail | null>;
   /**
    * Find many online users' worker profiles
    */

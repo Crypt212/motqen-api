@@ -104,20 +104,23 @@ export default class WorkerProfileRepository
    * Public explore profile: approved worker, active user, with user / portfolio / project images.
    * Missing relations are returned as null; arrays are never undefined.
    */
-  async findExploreWorkerById(workerProfileId: string): Promise<ExploreWorkerPublicDetail | null> {
+  async findExploreWorkerById(userId: string): Promise<ExploreWorkerPublicDetail | null> {
     try {
       const record = await this.prismaClient.workerProfile.findFirst({
         where: {
-          id: workerProfileId,
+          userId: userId,
           user: { status: AccountStatus.ACTIVE },
         },
         include: {
           user: true,
+        
           portfolio: {
             include: {
               projectImages: { orderBy: { createdAt: 'asc' } },
             },
           },
+          chosenSpecializations: true,
+          
         },
       });
 
@@ -881,7 +884,7 @@ export default class WorkerProfileRepository
     )
 
     SELECT
-      wp."id"                 AS worker_id,
+      wp."userId"             AS worker_id,
       u."firstName"           AS first_name,
       u."middleName"          AS middle_name,
       u."lastName"            AS last_name,
@@ -937,12 +940,19 @@ export default class WorkerProfileRepository
     workerId: string;
     selectedDate: string;
   }): Promise<{ startDate: Date; endDate: Date }[]> {
-    const startOfDay = new Date(`${params.selectedDate}T00:00:00.000Z`);
-    const endOfDay = new Date(`${params.selectedDate}T23:59:59.999Z`);
+    const workerProfile = await this.prismaClient.workerProfile.findFirst({
+      where: { userId: params.workerId },
+      select: { id: true },
+    });
+    if (!workerProfile) return [];
+
+    const dateOnly = new Date(params.selectedDate).toISOString().slice(0, 10);
+    const startOfDay = new Date(`${dateOnly}T00:00:00.000Z`);
+    const endOfDay = new Date(`${dateOnly}T23:59:59.999Z`);
 
     const slots = await this.prismaClient.workerOccupiedTimeSlot.findMany({
       where: {
-        workerProfileId: params.workerId,
+        workerProfileId: workerProfile.id,
         startDate: { lt: endOfDay },
         endDate: { gt: startOfDay },
       },

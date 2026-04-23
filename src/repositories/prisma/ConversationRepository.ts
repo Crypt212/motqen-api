@@ -79,9 +79,9 @@ export default class ConversationRepository extends Repository implements IConve
     }
   }
 
-  async findByPair(params: { workerId: IDType; clientId: IDType }): Promise<Conversation | null> {
+  async findByPair(params: { workerId: IDType; clientId: IDType; userId: IDType }): Promise<Conversation | null> {
     try {
-      return await this.prismaClient.conversation.findFirst({
+      const conv = await this.prismaClient.conversation.findFirst({
         where: {
           AND: [
             {
@@ -96,7 +96,35 @@ export default class ConversationRepository extends Repository implements IConve
             },
           ],
         },
+        include: {
+          participants: {
+            include: {
+              user: true,
+            },
+          },
+          messages: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
       });
+      if (!conv) return null;
+
+      const myParticipant = conv.participants.find(p => p.userId === params.userId);
+      const partnerParticipant = conv.participants.find(p => p.userId !== params.userId);
+      const unreadCount = Math.max(0, conv.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0));
+
+      return {
+        ...this.toDomain(conv),
+        partner: partnerParticipant?.user ?? null,
+        unreadCount,
+        LastMessage:
+          conv.messages && conv.messages.length > 0
+            ? { content: conv.messages[0].content, type: conv.messages[0].type }
+            : undefined,
+        partnerLastReceivedMessageNumber: partnerParticipant?.lastReceivedMessageNumber ?? 0,
+        partnerLastReadMessageNumber: partnerParticipant?.lastReadMessageNumber ?? 0,
+      };
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findByPair');
     }
@@ -167,6 +195,8 @@ export default class ConversationRepository extends Repository implements IConve
                   phoneNumber: true,
                   profileImageUrl: true,
                   isOnline: true,
+                  createdAt: true,
+                  updatedAt: true,
                 },
               },
             },
@@ -200,6 +230,8 @@ export default class ConversationRepository extends Repository implements IConve
                   phoneNumber: p.user.phoneNumber,
                   profileImageUrl: p.user.profileImageUrl,
                   isOnline: p.user.isOnline,
+                  createdAt: p.user.createdAt,
+                  updatedAt: p.user.updatedAt,
                 }
               : undefined,
           })),
@@ -255,6 +287,8 @@ export default class ConversationRepository extends Repository implements IConve
                   phoneNumber: true,
                   profileImageUrl: true,
                   isOnline: true,
+                  createdAt: true,
+                  updatedAt: true,
                 },
               },
             },
@@ -284,6 +318,8 @@ export default class ConversationRepository extends Repository implements IConve
                   phoneNumber: p.user.phoneNumber,
                   profileImageUrl: p.user.profileImageUrl,
                   isOnline: p.user.isOnline,
+                  createdAt: p.user.createdAt,
+                  updatedAt: p.user.updatedAt,
                 }
               : undefined,
           })),
@@ -349,12 +385,12 @@ export default class ConversationRepository extends Repository implements IConve
             ],
           },
         },
-        include: { participants: true },
+        include: { participants: { include: { user: true } } },
       });
 
       return {
         conversation: this.toDomain(conversation),
-        participants: conversation.participants.map((p) => this.toDomainParticipant(p)),
+        participants: conversation.participants,
       };
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'createWithParticipants');

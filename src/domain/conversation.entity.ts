@@ -11,6 +11,11 @@ export type Conversation = {
   messageCounter: number;
   createdAt: Date;
   updatedAt: Date;
+  partner?: User | null;
+  unreadCount?: number;
+  LastMessage?: { content: string; type: string };
+  partnerLastReceivedMessageNumber?: number;
+  partnerLastReadMessageNumber?: number;
 };
 
 export type ConversationCreateInput = {
@@ -43,7 +48,7 @@ export type ConversationParticipant = {
   lastReceivedMessageNumber: number;
   createdAt: Date;
   updatedAt: Date;
-  user?: Omit<Omit<User, 'createdAt'>, 'updatedAt'>;
+  user?: User;
 };
 
 export type ConversationWithParticipantsAndMessages = Conversation & {

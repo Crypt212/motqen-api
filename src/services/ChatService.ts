@@ -87,15 +87,26 @@ export default class ChatService extends Service {
     const existing = await this.conversationRepository.findByPair({
       workerId,
       clientId,
+      userId: clientId,
     });
     if (existing) return existing;
 
     try {
-      const { conversation } = await this.conversationRepository.createWithParticipants({
+      const conversationData = await this.conversationRepository.createWithParticipants({
         workerId,
         clientId,
       });
-      return conversation;
+      return {
+        id: conversationData.conversation.id,
+        messageCounter: conversationData.conversation.messageCounter,
+        partner: conversationData.participants.find(p => p.userId !== clientId)?.user ?? null,
+        createdAt: conversationData.conversation.createdAt,
+        updatedAt: conversationData.conversation.updatedAt,
+        unreadCount: 0,
+        LastMessage: undefined,
+        partnerLastReceivedMessageNumber: 0,
+        partnerLastReadMessageNumber: 0,
+      };
     } catch (error) {
       // P2002 = UNIQUE constraint violation — race condition, another request
       // already created this conversation. Return the existing one.
@@ -103,6 +114,7 @@ export default class ChatService extends Service {
         const existingAfterRace = await this.conversationRepository.findByPair({
           workerId,
           clientId,
+          userId: clientId,
         });
         if (existingAfterRace) return existingAfterRace;
       }
