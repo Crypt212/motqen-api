@@ -57,11 +57,4 @@ export default class LocationController {
     const location = await this.locationService.getLocationById({ userId, locationId });
     new SuccessResponse('Location retrieved successfully', { location }, 200).send(res);
   });
-
-  remove = asyncHandler(async (req, res) => {
-    const locationId = req.params.locationId as string;
-    const userId = req.userState!.userId;
-    await this.locationService.deleteLocation({ userId, locationId });
-    new SuccessResponse('Location deleted successfully', null, 200).send(res);
-  });
 }
