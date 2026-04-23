@@ -138,11 +138,11 @@ export default class LocationService extends Service {
       } else if (data.cityId) {
         // City provided without government, validate against existing location's government
         const city = await this.governmentRepository.findCity({
-          filter: { id: data.cityId, governmentId: location.governmentId },
+          filter: { id: data.cityId, governmentId: location.government.id },
         });
         if (!city)
           throw new AppError(
-            `City with ID ${data.cityId} not found in government ${location.governmentId}`,
+            `City with ID ${data.cityId} not found in government ${location.government.id}`,
             400
           );
       }
@@ -192,50 +192,6 @@ export default class LocationService extends Service {
       if (!location) throw new AppError('Location not found', 404);
       if (location.userId !== userId) throw new AppError('Forbidden', 403);
       return location;
-    });
-  }
-
-  async deleteLocation(params: { userId: string; locationId: string }): Promise<void> {
-    return tryCatch(async () => {
-      const { userId, locationId } = params;
-
-      // Find and check ownership
-      const location = await this.locationRepository.find({ filter: { id: locationId } });
-      if (!location) throw new AppError('Location not found', 404);
-      if (location.userId !== userId) throw new AppError('Forbidden', 403);
-
-      // TODO: dummy data until merged with orders
-      const isConnected = await this.locationRepository.isConnectedToOrder({
-        locationId: location.id,
-      });
-      if (isConnected) throw new AppError('Location is linked to an active order', 409);
-
-      // Handle main location promotion
-      if (location.isMain) {
-        await this.transactionManager.execute(
-          { locationRepo: LocationRepository },
-          async ({ locationRepo }) => {
-            // Delete the location
-            await locationRepo.delete({ filter: { id: locationId } });
-
-            // Promote next most recent location
-            const nextLocation = await locationRepo.findNextForPromotion({
-              userId,
-              excludeId: locationId,
-            });
-            if (nextLocation) {
-              await locationRepo.update({
-                filter: { id: nextLocation.id },
-                location: { isMain: true },
-              });
-            }
-          }
-        );
-        return;
-      }
-
-      // Standard delete
-      await this.locationRepository.delete({ filter: { id: locationId } });
     });
   }
 }

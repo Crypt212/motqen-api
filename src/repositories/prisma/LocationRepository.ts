@@ -48,10 +48,9 @@ export default class LocationRepository extends Repository implements ILocationR
 
   async isConnectedToOrder({ locationId }: { locationId: string }): Promise<boolean> {
     try {
-      const count = 0; // dummy data until merged with orders
-      // const count = await this.prismaClient.order.count({
-      //   where: { locationId: locationId, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
-      // });
+      const count = await this.prismaClient.order.count({
+        where: { locationId: locationId, orderStatus: { notIn: ['COMPLETED', 'CANCELLED'] } },
+      });
       return count > 0;
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'isConnectedToOrder');
@@ -225,16 +224,6 @@ export default class LocationRepository extends Repository implements ILocationR
       return this.find({ filter: { id: record.id } }) as Promise<Location>;
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'update');
-    }
-  }
-
-  async delete({ filter }: { filter: LocationFilter }): Promise<void> {
-    try {
-      await this.prismaClient.location.delete({
-        where: filter as Prisma.LocationWhereUniqueInput,
-      });
-    } catch (error: unknown) {
-      throw handlePrismaError(error as Error, 'delete');
     }
   }
 

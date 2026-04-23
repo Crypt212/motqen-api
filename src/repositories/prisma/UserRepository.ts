@@ -1,7 +1,7 @@
 import IUserRepository from '../interfaces/UserRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
-import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
+import { isEmptyFilter } from './utils.js';
 import { User, UserCreateInput, UserFilter } from '../../domain/user.entity.js';
 import {
   Location,
@@ -39,8 +39,8 @@ export default class UserRepository extends Repository implements IUserRepositor
     return {
       id: record.id,
       userId: record.userId,
-      governmentId: record.governmentId,
-      cityId: record.cityId,
+      government: record.government,
+      city: record.city,
       address: record.address,
       addressNotes: record.addressNotes,
       long: record.long,
@@ -351,9 +351,11 @@ export default class UserRepository extends Repository implements IUserRepositor
       const updated = await this.prismaClient.$queryRaw<Location[]>`
         UPDATE locations
         SET
+        "governmentId" = COALESCE(${governmentId}, "governmentId"),
           "cityId" = COALESCE(${cityId}, "cityId"),
           address = COALESCE(${address}, address),
           "addressNotes" = COALESCE(${addressNotes}, "addressNotes"),
+          "isMain" = COALESCE(${isMain}, "isMain"),
           "pointGeography" = CASE
             WHEN ${long} IS NOT NULL AND ${lat} IS NOT NULL
             THEN ST_SetSRID(ST_MakePoint(${long}, ${lat}), 4326)

@@ -26,6 +26,10 @@ import prisma from './libs/database.js';
 import redisClient from './libs/redis.js';
 import { TransactionManager } from './repositories/prisma/TransactionManager.js';
 import LocationRepository from './repositories/prisma/LocationRepository.js';
+import OrderRepository from './repositories/prisma/OrderRepository.js';
+import WorkerOccupiedTimeSlotRepository from './repositories/prisma/WorkerOccupiedTimeSlotRepository.js';
+import OrderService from './services/OrderService.js';
+import OrderController from './controllers/OrderController.js';
 import LocationService from './services/LocationService.js';
 import LocationController from './controllers/LocationController.js';
 
@@ -94,3 +98,15 @@ export const presenceService = new PresenceService({
   conversationRepository,
   prisma,
 });
+
+export const orderRepository = new OrderRepository(prisma);
+export const workerOccupiedTimeSlotRepository = new WorkerOccupiedTimeSlotRepository(prisma);
+
+export const orderService = new OrderService({
+  orderRepository,
+  occupiedTimeSlotRepository: workerOccupiedTimeSlotRepository,
+  locationRepository,
+  transactionManager,
+});
+
+export const orderController = new OrderController({ orderService });
