@@ -13,7 +13,7 @@ export type Order = {
   title: string;
   description: string;
   clientProfileId: string;
-  workerProfileId: string | null;
+  workerProfileId: string;
   locationId: string;
   subSpecialization: SubSpecialization;
   orderStatus: OrderStatus;
@@ -22,6 +22,8 @@ export type Order = {
   startDate: Date;
   endDate: Date | null;
   isUrgent: boolean;
+  rate: number;
+  comment?: string;
   workStartedAt: Date | null;
   workFinishedAt: Date | null;
   createdAt: Date;
@@ -33,6 +35,7 @@ export type OrderCreateInput = {
   title: string;
   description: string;
   clientProfileId: string;
+  workerProfileId: string;
   locationId: string;
   subSpecializationId: string;
   startDate: Date;
@@ -44,7 +47,8 @@ export type OrderUpdateInput = Partial<{
   workStatus: WorkStatus;
   finalPrice: number;
   endDate: Date;
-  workerProfileId: string;
+  rate: number;
+  comment: string;
   workStartedAt: Date;
   workFinishedAt: Date;
 }>;
@@ -53,6 +57,7 @@ export const OrderFilterDescriptor: Record<string, FieldTypeDefinition> = {
   id: { type: 'uuid' },
   clientProfileId: { type: 'uuid' },
   workerProfileId: { type: 'uuid' },
+  rate: { type: 'number' },
   orderStatus: {
     type: 'enum',
     enumValues: ['PENDING', 'TIME_SPECIFIED', 'PRICE_AGREED', 'PAID', 'COMPLETED', 'CANCELLED'],

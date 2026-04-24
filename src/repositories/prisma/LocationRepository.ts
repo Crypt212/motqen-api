@@ -29,6 +29,7 @@ export default class LocationRepository extends Repository implements ILocationR
       long: record.long,
       lat: record.lat,
       isMain: record.isMain,
+      isHidden: record.isHidden,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
