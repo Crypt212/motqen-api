@@ -15,7 +15,7 @@ export const CreateLocationSchema = z.object({
   cityId: UUIDSchema,
   lat: LatitudeSchema,
   long: LongitudeSchema,
-  isHidden: z.boolean(),
+  isHidden: z.boolean().optional(),
   isMain: z.boolean(),
 });
 
