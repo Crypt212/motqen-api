@@ -6,6 +6,7 @@ import {
   OrderQuerySchema,
   OrderIdParamsSchema,
   SpecifyRangeSchema,
+  OrderRateSchema,
 } from '../../schemas/order.js';
 import multer from 'multer';
 
@@ -32,6 +33,12 @@ router.post(
   '/:orderId/finish-work',
   validateParams(OrderIdParamsSchema),
   orderController.finishWork
+);
+router.post(
+  '/:orderId/rate',
+  validateParams(OrderIdParamsSchema),
+  validateBody(OrderRateSchema),
+  orderController.rate
 );
 
 export default router;

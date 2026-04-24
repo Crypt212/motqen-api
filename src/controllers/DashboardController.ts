@@ -53,12 +53,10 @@ export const createClientProfile = asyncHandler(async (req, res) => {
 
 export const updateClientProfile = asyncHandler(async (req, res) => {
   const clientProfileId = req.userState.client.id;
-  const userId = req.userState.userId;
 
   const clientProfile = await clientProfileService.update({
     filter: { id: clientProfileId },
     data: {},
-    userId,
   });
 
   new SuccessResponse('updated client profile successfully', { clientProfile }, 200).send(res);

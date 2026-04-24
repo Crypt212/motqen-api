@@ -14,6 +14,7 @@ export type Location = {
   long: number;
   lat: number;
   isMain: boolean;
+  isHidden: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -26,6 +27,7 @@ export type LocationCreateInput = {
   long: number;
   lat: number;
   isMain: boolean;
+  isHidden?: boolean;
 };
 
 export type LocationUpdateInput = Partial<LocationCreateInput>;
@@ -34,6 +36,7 @@ export const LocationFilterDescriptor = {
   id: { type: 'uuid' as const },
   userId: { type: 'uuid' as const },
   isMain: { type: 'boolean' as const },
+  isHidden: { type: 'boolean' as const },
 } satisfies Record<string, FieldTypeDefinition>;
 
 export type LocationFilter = FilterFromDescriptor<typeof LocationFilterDescriptor>;

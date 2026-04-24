@@ -11,6 +11,7 @@ export const CreateOrderSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().min(1),
   subSpecializationId: UUIDSchema,
+  workerProfileId: UUIDSchema,
   locationId: UUIDSchema,
   startDate: z.coerce
     .date()
@@ -31,6 +32,11 @@ export type SpecifyRangeDTO = z.infer<typeof SpecifyRangeSchema>;
 
 export const OrderIdParamsSchema = z.object({
   orderId: UUIDSchema,
+});
+
+export const OrderRateSchema = z.object({
+  rate: z.int().min(1).max(5),
+  comment: z.string().optional(),
 });
 
 export const OrderFilterSchema = buildFilterSchema(OrderFilterDescriptor);

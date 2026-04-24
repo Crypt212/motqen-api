@@ -37,6 +37,7 @@ export default class WorkerProfileRepository
       isInTeam: record.isInTeam,
       acceptsUrgentJobs: record.acceptsUrgentJobs,
       bio: record.bio ?? undefined,
+      rate: record.rate ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
@@ -1007,6 +1008,22 @@ return {
         hasPrev: normalizedPage > 1,
       },
     };
+  }
+
+  async addRating({
+    workerProfileId,
+    rate,
+  }: {
+    workerProfileId: string;
+    rate: number;
+  }): Promise<void> {
+    await this.prismaClient.$executeRaw`
+UPDATE worker_profiles
+SET
+    rate = (rate * "completedJobsCount" + ${rate}) / ("completedJobsCount" + 1),
+    "completedJobsCount" = "completedJobsCount" + 1
+WHERE worker_profiles.id = ${workerProfileId};
+`;
   }
 
   async findOccupiedTimeSlots(params: {

@@ -14,7 +14,6 @@ import {
   ClientProfileFilter,
   ClientProfileUpdateInput,
 } from '../domain/clientProfile.entity.js';
-import { LocationCreateInput, LocationUpdateInput } from '../domain/location.entity.js';
 
 /**
  * Client Service - Manages client-related operations
@@ -81,10 +80,9 @@ export default class ClientService extends Service {
   async update(params: {
     filter: ClientProfileFilter;
     data: ClientProfileUpdateInput;
-    userId: IDType;
   }): Promise<ClientProfile | null> {
     return tryCatch(async () => {
-      const { filter, data, userId } = params;
+      const { filter, data } = params;
 
       const clientProfile = await this.clientProfileRepository.update({
         filter,

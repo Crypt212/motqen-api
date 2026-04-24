@@ -52,7 +52,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 export const registerClient = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
   const { userData } = req.body;
-  const { firstName, middleName, lastName, location } = JSON.parse(userData);
+  const { firstName, middleName, lastName, location } = userData;
 
   const rawToken = req.headers['authorization']?.split(' ')[1];
   if (!rawToken) throw new AppError('Unauthorized, register token not found', 401);
@@ -100,9 +100,9 @@ export const registerClient = asyncHandler(async (req, res) => {
  */
 export const registerWorker = asyncHandler(async (req, res) => {
   const { userData, workerProfile } = req.body;
-  const { firstName, middleName, lastName, location } = JSON.parse(userData);
+  const { firstName, middleName, lastName, location } = userData;
   const { experienceYears, isInTeam, acceptsUrgentJobs, specializationsTree, workGovernmentIds } =
-    JSON.parse(workerProfile);
+    workerProfile;
 
   const deviceId = req.deviceId;
   const rawToken = req.headers['authorization']?.split(' ')[1];
@@ -246,9 +246,9 @@ export const reviewStatus = asyncHandler(async (req, res) => {
       new SuccessResponse('You are not approved yet', { reason, status }, 200).send(res);
       return;
     }
-    new SuccessResponse('You have been approved by admin', { status }, 200).send(res);
+    new SuccessResponse('You have been approved by admin', { reason: '', status }, 200).send(res);
     return;
   }
 
-  throw new AppError('Who the hell are you?!', 403);
+  throw new AppError('Forbidden', 403);
 });

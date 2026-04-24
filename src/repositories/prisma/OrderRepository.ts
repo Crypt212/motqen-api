@@ -30,6 +30,8 @@ export default class OrderRepository extends Repository implements IOrderReposit
       startDate: record.startDate,
       endDate: record.endDate,
       isUrgent: record.isUrgent,
+      rate: record.rate,
+      comment: record.comment,
       workStartedAt: record.workStartedAt,
       workFinishedAt: record.workFinishedAt,
       createdAt: record.createdAt,
