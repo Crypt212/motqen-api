@@ -13,6 +13,7 @@ import { canTransitionOrderStatus, canTransitionWorkStatus } from '../utils/stat
 import { hasOverlap } from '../utils/overlapCheck.js';
 import { CreateOrderDTO } from '../schemas/order.js';
 import { OrderStatus } from 'src/generated/prisma/enums.js';
+import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
 
 interface OrderServiceDeps {
   orderRepository: IOrderRepository;
@@ -68,6 +69,7 @@ export default class OrderService extends Service {
               title: data.title,
               description: data.description,
               clientProfileId: data.clientProfileId,
+              workerProfileId: data.workerProfileId,
               locationId: data.locationId,
               subSpecializationId: data.subSpecializationId,
               startDate: data.startDate,
@@ -264,5 +266,38 @@ export default class OrderService extends Service {
         }
       );
     });
+  }
+
+  async rateOrder(params: {
+    orderId: string;
+    clientProfileId: string;
+    rate: number;
+    comment?: string;
+  }) {
+    const { orderId, clientProfileId, rate, comment } = params;
+    const order = await this.orderRepository.find({ filter: { id: orderId } });
+    if (!order) throw new AppError('Order not found', 404);
+
+    if (order.clientProfileId !== clientProfileId) throw new AppError('Access denied', 403);
+
+    if (order.orderStatus !== OrderStatus.COMPLETED)
+      throw new AppError('Order must be completed to rate', 400);
+
+    if (order.rate !== -1) throw new AppError('Cannot rate order more than once', 400);
+
+    await this.transactionManager.execute(
+      { orderRepo: OrderRepository, workerProfileRepo: WorkerProfileRepository },
+      async ({ orderRepo, workerProfileRepo }) => {
+        await orderRepo.update({
+          filter: { id: orderId },
+          order: { rate, comment },
+        });
+
+        await workerProfileRepo.addRating({
+          workerProfileId: order.workerProfileId,
+          rate,
+        });
+      }
+    );
   }
 }

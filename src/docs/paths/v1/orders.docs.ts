@@ -5,6 +5,7 @@ import {
   OrderQuerySchema,
   OrderIdParamsSchema,
   SpecifyRangeSchema,
+  OrderRateSchema,
 } from '../../../schemas/order.js';
 import {
   OrderResponseSchema,
@@ -227,6 +228,31 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
       successfulResponse: {
         description: 'Work finished successfully',
         content: { 'application/json': { schema: OrderResponseSchema } },
+      },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/orders/{orderId}/rate',
+    tags: ['Orders'],
+    summary: 'Rate an order',
+    description: '',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      params: OrderIdParamsSchema,
+      body: { content: { 'application/json': { schema: OrderRateSchema } } },
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Order Rated successfully',
       },
       badRequestResponse: true,
       unauthorizedResponse: true,

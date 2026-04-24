@@ -46,6 +46,7 @@ export default class UserRepository extends Repository implements IUserRepositor
       long: record.long,
       lat: record.lat,
       isMain: record.isMain,
+      isHidden: record.isHidden,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
