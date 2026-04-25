@@ -14,6 +14,7 @@ import { hasOverlap } from '../utils/overlapCheck.js';
 import { CreateOrderDTO } from '../schemas/order.js';
 import { OrderStatus } from 'src/generated/prisma/enums.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
+import SpecializationRepository from 'src/repositories/prisma/SpecializationRepository.js';
 
 interface OrderServiceDeps {
   orderRepository: IOrderRepository;
@@ -62,9 +63,9 @@ export default class OrderService extends Service {
 
       // Create order with transaction
       return await this.transactionManager.execute(
-        { orderRepo: OrderRepository },
-        async ({ orderRepo }) => {
-          return await orderRepo.create({
+        { orderRepo: OrderRepository, specializationsRepo: SpecializationRepository },
+        async ({ orderRepo, specializationsRepo }) => {
+          const order = await orderRepo.create({
             order: {
               title: data.title,
               description: data.description,
@@ -77,6 +78,14 @@ export default class OrderService extends Service {
             },
             imageUrls,
           });
+
+          const specialization = await specializationsRepo.findBySubSpecializationId({ subSpecializationId: order.subSpecialization.id });
+          await specializationsRepo.increamentOrderCount({
+            specializationId: specialization.id,
+          });
+
+          return order;
+
         }
       );
     });

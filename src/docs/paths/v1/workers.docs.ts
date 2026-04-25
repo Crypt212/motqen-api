@@ -3,6 +3,7 @@ import { ExploreSearchSchema, ExploreWorkerIdParamsSchema } from '../../../schem
 import {
   ExploreWorkersResponseSchema,
   ExploreWorkerDetailResponseSchema,
+  SpecializationsResponseSchema,
 } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
@@ -56,6 +57,30 @@ Each worker includes userInfo, location (with nested city/government), specializ
       successfulResponse: {
         description: 'Worker details retrieved successfully',
         content: { 'application/json': { schema: ExploreWorkerDetailResponseSchema } },
+      },
+      notFoundResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /workers/:id/specializations/tree
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/workers/{id}/specializations/tree',
+    tags: ['Workers'],
+    summary: 'Get specializations and thier sub-specializations for explored worker details',
+    description:
+      'Returns the specializations and thier sub-specializations for the selected worker card. Only approved workers with active accounts are returned.',
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: { },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Worker details retrieved successfully',
+        content: { 'application/json': { schema: SpecializationsResponseSchema } },
       },
       notFoundResponse: true,
       validationErrorResponse: true,

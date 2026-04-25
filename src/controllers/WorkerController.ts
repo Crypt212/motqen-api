@@ -31,7 +31,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
 
   if ((!customerLatitude || !customerLongitude) && req.userState?.userId) {
     const currentLocation = await prisma.$queryRaw<{ lat: number; long: number }[]>`
-      SELECT 
+      SELECT
         ST_Y("pointGeography"::geometry) as lat,
         ST_X("pointGeography"::geometry) as long
       FROM "locations"
@@ -88,11 +88,11 @@ export const getWorkerById = asyncHandler(async (req, res) => {
 });
 
 export const getWorkerOccupiedTimeSlots = asyncHandler(async (req, res) => {
-  const workerId = String(req.params.id);
+  const workerProfileId = String(req.params.id);
   const { selectedDate } = req.query as { selectedDate: string };
 
   const slots = await workerProfileRepository.findOccupiedTimeSlots({
-    workerId,
+    workerId: workerProfileId,
     selectedDate,
   });
 

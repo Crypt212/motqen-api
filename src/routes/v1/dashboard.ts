@@ -18,6 +18,7 @@ import {
   createClientProfile,
   updateClientProfile,
   deleteClientProfile,
+  getWorkerSpecializationsTree,
 } from '../../controllers/DashboardController.js';
 import { authorizeWorker, unAuthorizeWorker } from '../../middlewares/workerMiddleware.js';
 import { authorizeClient, unAuthorizeClient } from '../../middlewares/clientMiddleware.js';
@@ -121,6 +122,14 @@ usersRouter.delete(
   validateQuery(DeleteWorkerGovernmentsQuerySchema),
   validateBody(DeleteWorkerGovernmentsSchema),
   deleteWorkerGovernments
+);
+
+usersRouter.get(
+  '/worker-profile/specializations/tree',
+  isActive,
+  authorizeWorker,
+  validateQuery(WorkerSpecializationQuerySchema),
+  getWorkerSpecializationsTree
 );
 
 usersRouter.get(

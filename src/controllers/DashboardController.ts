@@ -209,6 +209,16 @@ export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
   new SuccessResponse('deleted worker working governments successfully', null, 200).send(res);
 });
 
+export const getWorkerSpecializationsTree = asyncHandler(async (req, res) => {
+  const workerProfileId = req.userState?.worker.id && String(req.params.id);
+
+  const result = await workerProfileService.getSpecializationsTree({
+    filter: { id: workerProfileId },
+  });
+
+  new SuccessResponse('retrieved worker specialization tree successfully', result, 200).send(res);
+});
+
 export const getWorkerSpecializations = asyncHandler(async (req, res) => {
   const { specializationIds } = req.body;
   const { pagination } = parseQueryParams(req.query, WorkerSpecializationFilterSchema);
@@ -222,8 +232,6 @@ export const getWorkerSpecializations = asyncHandler(async (req, res) => {
   new SuccessResponse('retrieved worker specialization tree successfully', result, 200).send(res);
 });
 
-/**
- */
 export const addWorkerSpecializations = asyncHandler(async (req, res) => {
   const { specializationsTree } = req.body;
 

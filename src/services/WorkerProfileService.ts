@@ -16,7 +16,7 @@ import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepositor
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import { PaginationOptions, PaginatedResultMeta } from '../types/query.js';
 import { GovernmentFilter } from '../domain/government.entity.js';
-import { SpecializationsTree } from '../domain/specialization.entity.js';
+import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../domain/specialization.entity.js';
 import { WorkingHours } from '../domain/workingHours.entity.js';
 import type { WorkingHoursDTO } from '../schemas/dashboard.js';
 
@@ -230,6 +230,20 @@ export default class WorkerService extends Service {
       await this.workerProfileRepository.deleteWorkGovernments({
         workerFilter: filter,
         governmentIds,
+      });
+    });
+  }
+
+  /**
+   * Get specialization tree for worker
+   */
+  async getSpecializationsTree(params: {
+    filter: WorkerProfileFilter;
+  }): Promise<SpecializationsWithSubSpecializations> {
+    const { filter } = params;
+    return tryCatch(async () => {
+      return await this.workerProfileRepository.findSpecializationsWithSubSpecializations({
+        filter,
       });
     });
   }

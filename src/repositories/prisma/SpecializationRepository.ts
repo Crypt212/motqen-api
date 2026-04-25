@@ -18,9 +18,8 @@ import { PrismaClient } from '../../generated/prisma/client.js';
 
 export default class SpecializationRepository
   extends Repository
-  implements ISpecializationRepository
-{
-  constructor(prisma: PrismaClient) {
+  implements ISpecializationRepository {
+  constructor(prisma: PrismaClient | import('../../generated/prisma/client.js').Prisma.TransactionClient) {
     super(prisma);
   }
 
@@ -64,6 +63,20 @@ export default class SpecializationRepository
       return record ? this.toDomain(record) : null;
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'find');
+    }
+  }
+
+  async findBySubSpecializationId (params: { subSpecializationId: string }): Promise<Specialization | null> {
+    try {
+      const { subSpecializationId } = params;
+
+      const record = await this.prismaClient.specialization.findFirst({
+        where: { subSpecializations: { some: { id: subSpecializationId } } },
+      });
+
+      return record ? this.toDomain(record) : null;
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'findBySubSpecializationId');
     }
   }
 
@@ -285,4 +298,22 @@ export default class SpecializationRepository
       throw handlePrismaError(error as Error, 'deleteSubSpecialization');
     }
   }
+
+  async increamentOrderCount(params: {
+    specializationId: IDType,
+  }) {
+    try {
+      const { specializationId } = params;
+      await this.prismaClient.$executeRaw`
+UPDATE specializations
+SET
+    "orderCount" = "orderCount" + 1,
+WHERE specializations.id = ${specializationId};
+`;
+
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'increamentOrderCount');
+    }
+  }
+
 }

@@ -1,5 +1,5 @@
 import type { ExploreWorkerPublicDetail } from '../../types/exploreWorker.js';
-import { SpecializationsTree } from '../../domain/specialization.entity.js';
+import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../../domain/specialization.entity.js';
 import {
   WorkerProfile,
   WorkerProfileCreateInput,
@@ -91,6 +91,11 @@ export default interface IWorkerProfileRepository {
     workerFilter: WorkerProfileFilter;
     governmentIds: IDType[];
   }): Promise<void>;
+
+  /**
+   * Find worker's specializations and their sub-specializations nested inside them
+   */
+  findSpecializationsWithSubSpecializations({ filter }: { filter: WorkerProfileFilter }): Promise<SpecializationsWithSubSpecializations>;
   /**
    * Insert specializations
    */

@@ -15,6 +15,7 @@ import {
   OccupiedTimeSlotsQuerySchema,
 } from '../../schemas/workers.js';
 import { validateParams, validateQuery } from '../../middlewares/validateRequest.js';
+import { getWorkerSpecializationsTree } from 'src/controllers/DashboardController.js';
 
 const workersRouter = Router();
 
@@ -27,6 +28,11 @@ workersRouter.get(
   validateParams(ExploreWorkerIdParamsSchema),
   validateQuery(OccupiedTimeSlotsQuerySchema),
   getWorkerOccupiedTimeSlots
+);
+
+workersRouter.get(
+  '/:id/specializations/tree',
+  getWorkerSpecializationsTree
 );
 
 export default workersRouter;

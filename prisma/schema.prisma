@@ -194,6 +194,7 @@ model Specialization {
   category           SpecializationCategory
   createdAt          DateTime               @default(now())
   nameAr             String
+  ordersCount        Int                    @default(0)
   updatedAt          DateTime               @updatedAt
   choosingWorkers    ChosenSpecialization[]
   subSpecializations SubSpecialization[]

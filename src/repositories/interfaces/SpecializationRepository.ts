@@ -15,6 +15,10 @@ export default interface ISpecializationRepository {
    */
   find: (params: { filter: SpecializationFilter }) => Promise<Specialization | null>;
   /**
+   * Find a specialization by its sub-specialization id
+   */
+  findBySubSpecializationId: (params: { subSpecializationId: string }) => Promise<Specialization | null>;
+  /**
    * Find many specializations
    */
   findMany: (params: {

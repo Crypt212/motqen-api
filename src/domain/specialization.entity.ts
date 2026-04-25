@@ -3,6 +3,7 @@ import { IDType } from '../repositories/interfaces/Repository.js';
 import { FieldTypeDefinition } from '../types/query.js';
 import { FilterFromDescriptor } from '../schemas/common.js';
 
+export type SpecializationsWithSubSpecializations =  (Specialization & { subSpecializations: SubSpecialization[] })[];
 export type SpecializationsTreeNode = { mainId: IDType; subIds: IDType[] };
 export type SpecializationsTree = SpecializationsTreeNode[];
 

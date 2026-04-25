@@ -341,6 +341,31 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // GET /me/worker-profile/specializations/tree
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/me/worker-profile/specializations/tree',
+    tags: ['Dashboard'],
+    summary: 'Get worker specializations and their sub-specializations',
+    description: 'Returns the list of specializations and chosen sub-specializations for the authenticated worker.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Worker specializations retrieved',
+        content: { 'application/json': { schema: SpecializationsResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // GET /me/worker-profile/specializations
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -396,14 +421,14 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // DELETE /me/worker-profile/specializations
+  // DELETE /me/worker-profile/specializations/all
   // ─────────────────────────────────────────────────────────────────────────────
 
   registry.registerPath({
     method: 'delete',
-    path: '/api/v1/me/worker-profile/specializations',
+    path: '/api/v1/me/worker-profile/specializations/all',
     tags: ['Dashboard'],
-    summary: 'Delete worker specializations',
+    summary: 'Delete all worker specializations',
     description:
       'Removes specializations from the authenticated worker. Pass `all=true` to remove all, or `allSub=true` to remove all sub-specializations.',
     security: [{ BearerAuth: [] }],

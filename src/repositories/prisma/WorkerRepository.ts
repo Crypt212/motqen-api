@@ -2,7 +2,7 @@ import AppError from '../../errors/AppError.js';
 import IWorkerProfileRepository from '../interfaces/WorkerRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { IDType } from '../interfaces/Repository.js';
-import { SpecializationsTree } from '../../domain/specialization.entity.js';
+import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../../domain/specialization.entity.js';
 import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
 import {
   WorkerProfile,
@@ -18,10 +18,11 @@ import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types
 import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { ExploreWorkerPublicDetail, Specialization } from '../../types/exploreWorker.js';
 
+type SpecializationsWithSubSpecializationsPrisma = Prisma.SpecializationGetPayload<{ include: { subSpecializations: true } }>;
+
 export default class WorkerProfileRepository
   extends Repository
-  implements IWorkerProfileRepository
-{
+  implements IWorkerProfileRepository {
   constructor(
     prisma: PrismaClient | import('../../generated/prisma/client.js').Prisma.TransactionClient
   ) {
@@ -63,6 +64,21 @@ export default class WorkerProfileRepository
       startTime: record.startTime,
       endTime: record.endTime,
     };
+  }
+
+  private toDomainSpecializationsWithSubSpecializations(records: SpecializationsWithSubSpecializationsPrisma[]): SpecializationsWithSubSpecializations {
+    return records.map(record => ({
+      id: record.id,
+
+      name: record.name,
+      nameAr: record.nameAr,
+      category: record.category,
+      ordersCount: record.ordersCount,
+      subSpecializations: record.subSpecializations,
+
+      updatedAt: record.updatedAt,
+      createdAt: record.createdAt,
+    }));
   }
 
   async exists({ workerFilter }: { workerFilter: WorkerProfileFilter }): Promise<boolean> {
@@ -369,6 +385,40 @@ export default class WorkerProfileRepository
       throw handlePrismaError(error as Error, 'findWorkingHoursByUserId');
     }
   }
+
+  async findSpecializationsWithSubSpecializations({
+    filter,
+  }: {
+    filter: WorkerProfileFilter;
+  }): Promise<SpecializationsWithSubSpecializations> {
+    try {
+      const workerProfile = await this.prismaClient.workerProfile.findFirst({
+        where: filter,
+        include: {
+          chosenSpecializations: {
+            include: {
+              specialization: {
+                include: {
+                  subSpecializations: true
+                }
+              }
+            }
+          },
+        },
+      });
+
+      if (!workerProfile) {
+        return this.toDomainSpecializationsWithSubSpecializations([]);
+      }
+
+      let specializations = workerProfile.chosenSpecializations.map((s) => s.specialization);
+
+      return this.toDomainSpecializationsWithSubSpecializations(specializations);
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'findSpecializations');
+    }
+  }
+
 
   async findSpecializations({
     mainSpecializationIds,

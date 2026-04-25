@@ -1,10 +1,11 @@
+-- Enable PostGIS
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- CreateEnum
 CREATE TYPE "OrderType" AS ENUM ('PREVIEW', 'SERVICE');
 
 -- CreateEnum
-CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'TIME_SPECIFIED', 'PRICE_AGREED', 'PAID', 'PAID_FAILED', 'CANCELLED');
+CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'TIME_SPECIFIED', 'PRICE_AGREED', 'PAID', 'COMPLETED', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "WorkStatus" AS ENUM ('PENDING', 'WAITING_FOR_WORK', 'STARTED', 'DONE');
@@ -97,6 +98,7 @@ CREATE TABLE "locations" (
     "address" TEXT NOT NULL,
     "addressNotes" TEXT,
     "isMain" BOOLEAN NOT NULL,
+    "isHidden" BOOLEAN NOT NULL DEFAULT false,
     "pointGeography" geography(Point, 4326) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -115,7 +117,7 @@ CREATE TABLE "worker_profiles" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "portfolioId" TEXT,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "rate" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "rate" DOUBLE PRECISION NOT NULL DEFAULT -1.0,
     "completedJobsCount" INTEGER NOT NULL DEFAULT 0,
     "workingHoursId" TEXT,
 
@@ -134,14 +136,15 @@ CREATE TABLE "worker_availability" (
 );
 
 -- CreateTable
-CREATE TABLE "worker_occupied_timeslots" (
+CREATE TABLE "worker_occupied_time_slots" (
     "id" TEXT NOT NULL,
     "workerProfileId" TEXT NOT NULL,
     "orderId" TEXT NOT NULL,
     "startDate" TIMESTAMP(3) NOT NULL,
     "endDate" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "worker_occupied_timeslots_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "worker_occupied_time_slots_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -198,6 +201,7 @@ CREATE TABLE "specializations" (
     "category" "SpecializationCategory" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "nameAr" TEXT NOT NULL,
+    "ordersCount" INTEGER NOT NULL DEFAULT 0,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "specializations_pkey" PRIMARY KEY ("id")
@@ -255,20 +259,22 @@ CREATE TABLE "worker_badges" (
 -- CreateTable
 CREATE TABLE "orders" (
     "id" TEXT NOT NULL,
-    "clientProfileId" TEXT NOT NULL,
-    "workerProfileId" TEXT NOT NULL,
-    "subSpecializationId" TEXT NOT NULL,
-    "locationId" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "isUrgent" BOOLEAN NOT NULL DEFAULT false,
-    "date" TIMESTAMP(3) NOT NULL,
-    "startTime" TIMESTAMP(3),
-    "endTime" TIMESTAMP(3),
-    "finalPrice" DOUBLE PRECISION,
-    "type" "OrderType" NOT NULL DEFAULT 'SERVICE',
+    "clientProfileId" TEXT NOT NULL,
+    "workerProfileId" TEXT NOT NULL,
+    "locationId" TEXT NOT NULL,
+    "subSpecializationId" TEXT NOT NULL,
     "orderStatus" "OrderStatus" NOT NULL DEFAULT 'PENDING',
     "workStatus" "WorkStatus" NOT NULL DEFAULT 'PENDING',
+    "finalPrice" DOUBLE PRECISION,
+    "startDate" TIMESTAMP(3) NOT NULL,
+    "endDate" TIMESTAMP(3),
+    "isUrgent" BOOLEAN NOT NULL DEFAULT false,
+    "rate" DOUBLE PRECISION NOT NULL DEFAULT -1.0,
+    "comment" TEXT,
+    "workStartedAt" TIMESTAMP(3),
+    "workFinishedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -276,12 +282,13 @@ CREATE TABLE "orders" (
 );
 
 -- CreateTable
-CREATE TABLE "OrderImage" (
+CREATE TABLE "order_images" (
     "id" TEXT NOT NULL,
     "orderId" TEXT NOT NULL,
-    "url" TEXT NOT NULL,
+    "imageUrl" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "OrderImage_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "order_images_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -403,7 +410,10 @@ CREATE INDEX "worker_profiles_completedJobsCount_idx" ON "worker_profiles"("comp
 CREATE UNIQUE INDEX "worker_availability_workerProfileId_key" ON "worker_availability"("workerProfileId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "worker_occupied_timeslots_orderId_key" ON "worker_occupied_timeslots"("orderId");
+CREATE UNIQUE INDEX "worker_occupied_time_slots_orderId_key" ON "worker_occupied_time_slots"("orderId");
+
+-- CreateIndex
+CREATE INDEX "worker_occupied_time_slots_workerProfileId_idx" ON "worker_occupied_time_slots"("workerProfileId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "verifications_workerProfileId_key" ON "verifications"("workerProfileId");
@@ -427,7 +437,19 @@ CREATE INDEX "sub_specializations_mainSpecializationId_idx" ON "sub_specializati
 CREATE UNIQUE INDEX "worker_badges_workerProfileId_badgeType_key" ON "worker_badges"("workerProfileId", "badgeType");
 
 -- CreateIndex
-CREATE INDEX "idx_orders_worker_id" ON "orders"("workerProfileId");
+CREATE INDEX "orders_clientProfileId_idx" ON "orders"("clientProfileId");
+
+-- CreateIndex
+CREATE INDEX "orders_workerProfileId_idx" ON "orders"("workerProfileId");
+
+-- CreateIndex
+CREATE INDEX "orders_orderStatus_idx" ON "orders"("orderStatus");
+
+-- CreateIndex
+CREATE INDEX "orders_locationId_idx" ON "orders"("locationId");
+
+-- CreateIndex
+CREATE INDEX "order_images_orderId_idx" ON "order_images"("orderId");
 
 -- CreateIndex
 CREATE INDEX "conversation_participants_userId_idx" ON "conversation_participants"("userId");
@@ -481,10 +503,10 @@ ALTER TABLE "worker_profiles" ADD CONSTRAINT "worker_profiles_userId_fkey" FOREI
 ALTER TABLE "worker_profiles" ADD CONSTRAINT "worker_profiles_workingHoursId_fkey" FOREIGN KEY ("workingHoursId") REFERENCES "worker_availability"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "worker_occupied_timeslots" ADD CONSTRAINT "worker_occupied_timeslots_workerProfileId_fkey" FOREIGN KEY ("workerProfileId") REFERENCES "worker_profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "worker_occupied_time_slots" ADD CONSTRAINT "worker_occupied_time_slots_workerProfileId_fkey" FOREIGN KEY ("workerProfileId") REFERENCES "worker_profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "worker_occupied_timeslots" ADD CONSTRAINT "worker_occupied_timeslots_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "worker_occupied_time_slots" ADD CONSTRAINT "worker_occupied_time_slots_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "verifications" ADD CONSTRAINT "verifications_workerProfileId_fkey" FOREIGN KEY ("workerProfileId") REFERENCES "worker_profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -520,13 +542,13 @@ ALTER TABLE "orders" ADD CONSTRAINT "orders_clientProfileId_fkey" FOREIGN KEY ("
 ALTER TABLE "orders" ADD CONSTRAINT "orders_workerProfileId_fkey" FOREIGN KEY ("workerProfileId") REFERENCES "worker_profiles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "orders" ADD CONSTRAINT "orders_subSpecializationId_fkey" FOREIGN KEY ("subSpecializationId") REFERENCES "sub_specializations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "orders" ADD CONSTRAINT "orders_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OrderImage" ADD CONSTRAINT "OrderImage_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "orders" ADD CONSTRAINT "orders_subSpecializationId_fkey" FOREIGN KEY ("subSpecializationId") REFERENCES "sub_specializations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "order_images" ADD CONSTRAINT "order_images_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "negotiations" ADD CONSTRAINT "negotiations_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;

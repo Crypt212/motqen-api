@@ -1,8 +1,3 @@
-/**
- * @fileoverview Specialization Service - Handle specialization operations
- * @module services/SpecializationService
- */
-
 import Service from './Service.js';
 import ISpecializationRepository from '../repositories/interfaces/SpecializationRepository.js';
 import {
