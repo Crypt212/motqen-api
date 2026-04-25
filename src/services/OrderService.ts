@@ -48,8 +48,13 @@ export default class OrderService extends Service {
   }) {
     return tryCatch(async () => {
       const location = await this.locationRepository.find({ filter: { id: data.locationId } });
-      if (!location || location.userId !== userId) {
-        throw new AppError('Location not found or not owned', 400);
+      if (!location) {
+        throw new AppError('Location not found', 400);
+      }
+      console.log("userId of location: ", location.userId);
+      console.log("userId: ", userId);
+      if (location.userId !== userId) {
+        throw new AppError('Location not owned', 400);
       }
 
       if (images.length > 3) {
