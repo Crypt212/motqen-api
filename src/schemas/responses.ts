@@ -226,9 +226,53 @@ export const OrderListResponseSchema = SuccessResponseSchema(
 // Worker (explore) responses
 // ============================================
 
+const AreaInfoSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  nameAr: z.string(),
+  long: z.number(),
+  lat: z.number(),
+});
+
+const SubSpecializationSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  nameAr: z.string(),
+});
+
+const SpecializationSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  nameAr: z.string(),
+  subSpecializations: z.array(SubSpecializationSchema),
+});
+
+const ExploreWorkerSchema = z.object({
+  userInfo: z.object({
+    id: z.string().uuid(),
+    isOnline: z.boolean(),
+    profileImageUrl: z.string().nullable(),
+    name: z.string(),
+  }),
+  location: z.object({
+    id: z.string().uuid(),
+    address: z.string(),
+    addressNotes: z.string(),
+    city: AreaInfoSchema,
+    government: AreaInfoSchema,
+  }).nullable(),
+  specializationTree: z.array(SpecializationSchema),
+  workInfo: z.object({
+    experienceYears: z.number().nullable(),
+    isInTeam: z.boolean().nullable(),
+    acceptsUrgentJobs: z.boolean().nullable(),
+    bio: z.string().nullable(),
+  }),
+});
+
 export const ExploreWorkersResponseSchema = SuccessResponseSchema(
   z.object({
-    workers: z.array(z.any().describe('ExploreWorkerResult')),
+    workers: z.array(ExploreWorkerSchema),
     total: z.number(),
     page: z.number(),
     limit: z.number(),
@@ -240,7 +284,7 @@ export const ExploreWorkersResponseSchema = SuccessResponseSchema(
 );
 
 export const ExploreWorkerDetailResponseSchema = SuccessResponseSchema(
-  z.any().describe('WorkerProfile')
+  ExploreWorkerSchema
 );
 
 // ============================================

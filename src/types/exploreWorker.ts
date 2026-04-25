@@ -1,40 +1,33 @@
-import type { AccountStatus, Role } from '../generated/prisma/client.js';
+import { User } from "../domain/user.entity.js";
+import { Location } from "../domain/location.entity.js";
+import { City } from "src/domain/government.entity.js";
+import { WorkerProfile } from "src/domain/workerProfile.entity.js";
 
-export type ExploreWorkerPublicDetail = {
-  id: string;
-  userId: string;
-  portfolioId: string | null;
-  experienceYears: number;
-  isInTeam: boolean;
-  acceptsUrgentJobs: boolean;
-  bio: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  user: {
-    id: string;
-    phoneNumber: string;
-    firstName: string;
-    middleName: string;
-    lastName: string;
-    profileImageUrl: string | null;
-    status: AccountStatus;
-    role: Role;
-    isOnline: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-  portfolio: {
-    id: string;
-    workerProfileId: string;
-    description: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    projectImages: Array<{
-      id: string;
-      portfolioId: string;
-      imageUrl: string;
-      createdAt: Date;
-      updatedAt: Date;
-    }>;
-  } | null;
+
+type user = Pick<User , 'id'|'isOnline'|'profileImageUrl'>
+type location = Pick<Location , 'id'|'address'|'addressNotes'>
+
+export type Specialization = {
+  id: number;
+  name: string;
+  nameAr: string;
+  subSpecializations: SubSpecialization[];
 };
+type SubSpecialization = Omit<Specialization,'subSpecializations'>
+
+type workInfo = Omit<WorkerProfile , 'createdAt'|'updatedAt'|'userId'|'id'>
+type areaInfo = Pick<City , 'id'|'name'|'nameAr'|'long'|'lat'>
+
+export interface ExploreWorkerPublicDetail {
+  userInfo: user & { name: string };
+
+  location: location & {
+    city: areaInfo;
+    government: areaInfo;
+  };
+
+  specializationTree: Specialization[];
+
+  workInfo: workInfo;
+}
+

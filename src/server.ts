@@ -5,6 +5,7 @@ import prismaClient from './libs/database.js';
 import redisClient from './libs/redis.js';
 import { logger } from './libs/winston.js';
 import { initSocketServer } from './socket/socketManager.js';
+import { connectWhatsApp } from './providers/whatsapp.js';
 
 const startServer = async () => {
   try {
@@ -18,6 +19,7 @@ const startServer = async () => {
     // Initialize Socket.IO (connects own Redis pub/sub clients internally)
     await initSocketServer(httpServer);
 
+    await connectWhatsApp();
     httpServer.listen(environment.backend.port, () =>
       logger.info(`✅ Listening on port ${environment.backend.port}`)
     );

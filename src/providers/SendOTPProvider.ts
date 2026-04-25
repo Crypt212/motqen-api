@@ -8,6 +8,7 @@ import AppError from '../errors/AppError.js';
 import environment from '../configs/environment.js';
 import { logger } from '../libs/winston.js';
 import { Method } from '../domain/otp.entity.js';
+import { sendMessage } from './whatsapp.js';
 
 const { accountSid, authToken, virtualNumber } = environment.twilio;
 
@@ -24,11 +25,8 @@ export default async function (method: Method, OTP: string, phoneNumber: string)
   if (method === 'SMS') {
     await sendViaSMS(`Your OTP is ${OTP}`, phoneNumber);
   } else if (method === 'WHATSAPP') {
-    if (environment.nodeEnv === 'development') {
-      await sendViaWhatsApp(`Your OTP is ${OTP}`, phoneNumber);
-    } else {
-      throw new AppError('this feature is not working yet', 500);
-    }
+    console.log(`Sending OTP ${OTP} to ${phoneNumber} via WhatsApp`); 
+    await sendMessage(`2${phoneNumber}`, `Your OTP is ${OTP}`);
   }
 }
 
@@ -53,6 +51,3 @@ export async function sendViaSMS(message: string, to: string) {
   }
 }
 
-export async function sendViaWhatsApp(message: string, to: string) {
-  // for send message using whatsapp api
-}

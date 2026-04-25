@@ -92,7 +92,7 @@ model WorkerProfile {
   createdAt          DateTime @default(now())
   portfolioId        String?  @unique
   updatedAt          DateTime @updatedAt
-  rate               Float    @default(0)
+  rate               Float    @default(-1.0)
   completedJobsCount Int      @default(0)
   workingHoursId     String?   @unique
 
@@ -264,7 +264,7 @@ model Order {
   title               String
   description         String
   clientProfileId     String
-  workerProfileId     String?
+  workerProfileId     String
   locationId          String
   subSpecializationId String
   orderStatus         OrderStatus   @default(PENDING)
@@ -273,6 +273,8 @@ model Order {
   startDate           DateTime
   endDate             DateTime?
   isUrgent            Boolean       @default(false)
+  rate                Float         @default(-1.0)
+  comment             String?
   workStartedAt       DateTime?
   workFinishedAt      DateTime?
   createdAt           DateTime      @default(now())

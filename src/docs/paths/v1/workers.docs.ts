@@ -19,8 +19,10 @@ export default function registerWorkersDocs(registry: OpenAPIRegistry) {
     description: `Returns a paginated list of approved workers filtered by:
 - specializationId (required)
 - subSpecializationId (optional)
-- governments (optional multi-select)
-- flaged (optional front flags: availbilty, nearest, acceptUrgentJobs, heasetrated)`,
+- governmentId (optional)
+- Flags (optional): availableNow, nearest, acceptsUrgentJobs, highestRated
+
+Each worker includes userInfo, location (with nested city/government), specializationTree, and workInfo.`,
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       query: ExploreSearchSchema,

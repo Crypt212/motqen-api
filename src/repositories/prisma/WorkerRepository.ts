@@ -16,16 +16,8 @@ import { WorkingHours as WorkingHoursEntity } from '../../domain/workingHours.en
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { AccountStatus, Prisma, PrismaClient } from '../../generated/prisma/client.js';
-import type { ExploreWorkerPublicDetail } from '../../types/exploreWorker.js';
+import { ExploreWorkerPublicDetail, Specialization } from '../../types/exploreWorker.js';
 
-export type { ExploreWorkerPublicDetail };
-
-type ExploreWorkerPrismaRow = Prisma.WorkerProfileGetPayload<{
-  include: {
-    user: true;
-    portfolio: { include: { projectImages: true } };
-  };
-}>;
 
 export default class WorkerProfileRepository
   extends Repository
@@ -45,6 +37,7 @@ export default class WorkerProfileRepository
       isInTeam: record.isInTeam,
       acceptsUrgentJobs: record.acceptsUrgentJobs,
       bio: record.bio ?? undefined,
+      rate: record.rate ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
@@ -106,74 +99,156 @@ export default class WorkerProfileRepository
    */
   async findExploreWorkerById(userId: string): Promise<ExploreWorkerPublicDetail | null> {
     try {
-      const record = await this.prismaClient.workerProfile.findFirst({
+      console.log(userId)
+      const record = await this.prismaClient.user.findFirst({
         where: {
-          userId: userId,
-          user: { status: AccountStatus.ACTIVE },
+          id: userId,
         },
-        include: {
-          user: true,
-
-          portfolio: {
+          include: {
+          workerProfile: {
             include: {
-              projectImages: { orderBy: { createdAt: 'asc' } },
+              portfolio: {
+                include: {
+                  projectImages: true,
+                },
+              },
+              chosenSpecializations: {
+                take:3,
+                include:{
+                  specialization:true
+                  , subSpecialization:true
+                }
+              },
             },
           },
-          chosenSpecializations: true,
+          locations: {
+            where: {
+              isMain: true,
+              
+            },
+            include:{
+              government:true,
+              city:true
+            }
+          },
         },
       });
 
-      if (!record) return null;
-      return this.mapExploreWorkerPublicDetail(record as ExploreWorkerPrismaRow);
+      if (!record || !record.workerProfile) return null;
+
+      return this.mapExploreWorkerPublicDetail(record);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findExploreWorkerById');
     }
   }
 
-  private mapExploreWorkerPublicDetail(row: ExploreWorkerPrismaRow): ExploreWorkerPublicDetail {
-    const nullable = <T>(v: T | null | undefined): T | null => (v == null ? null : v);
+  private mapExploreWorkerPublicDetail(row: 
+    Prisma.UserGetPayload<{
+          include: {
+          workerProfile: {
+            include: {
+              portfolio: {
+                include: {
+                  projectImages: true,
+                },
+              },
+              chosenSpecializations: {
+                take:3,
+                include:{
+                  specialization:true
+                  , subSpecialization:true
+                }
+              },
+            },
+          },
+          locations: {
+            where: {
+              isMain: true,
+              
+            },
+            include:{
+              government:true,
+              city:true
+            }
+          },
+        },
+    }
+    >
+  ): ExploreWorkerPublicDetail {
+const chosenSpec = row.workerProfile.chosenSpecializations;
 
-    return {
-      id: row.id,
-      userId: row.userId,
-      portfolioId: nullable(row.portfolioId),
-      experienceYears: row.experienceYears,
-      isInTeam: row.isInTeam,
-      acceptsUrgentJobs: row.acceptsUrgentJobs,
-      bio: nullable(row.bio),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      user: {
-        id: row.user.id,
-        phoneNumber: row.user.phoneNumber,
-        firstName: row.user.firstName,
-        middleName: row.user.middleName,
-        lastName: row.user.lastName,
-        profileImageUrl: nullable(row.user.profileImageUrl),
-        status: row.user.status,
-        role: row.user.role,
-        isOnline: row.user.isOnline,
-        createdAt: row.user.createdAt,
-        updatedAt: row.user.updatedAt,
-      },
-      portfolio: row.portfolio
-        ? {
-            id: row.portfolio.id,
-            workerProfileId: row.portfolio.workerProfileId,
-            description: nullable(row.portfolio.description),
-            createdAt: row.portfolio.createdAt,
-            updatedAt: row.portfolio.updatedAt,
-            projectImages: (row.portfolio.projectImages ?? []).map((img) => ({
-              id: img.id,
-              portfolioId: img.portfolioId,
-              imageUrl: img.imageUrl,
-              createdAt: img.createdAt,
-              updatedAt: img.updatedAt,
-            })),
-          }
-        : null,
-    };
-  }
+const specializationTree = Object.values(
+  chosenSpec.reduce((acc, item) => {
+    const mainId = item.specialization.id;
+
+    if (!acc[mainId]) {
+      acc[mainId] = {
+        id: mainId,
+        name: item.specialization.name,
+        nameAr: item.specialization.nameAr,
+        subSpecializations: []
+      };
+    }
+
+    if (item.subSpecialization) {
+      const exists = acc[mainId].subSpecializations.some(
+        sub => sub.id === item.subSpecialization.id
+      );
+
+      if (!exists) {
+        acc[mainId].subSpecializations.push({
+          id: item.subSpecialization.id,
+          name: item.subSpecialization.name,
+          nameAr: item.subSpecialization.nameAr,
+        });
+      }
+    }
+
+    return acc;
+  }, {} as Specialization[])
+);
+
+const mainLocation = row.locations?.[0];
+
+return {
+  userInfo: {
+    id: row.id,
+    isOnline: row.isOnline,
+    profileImageUrl: row.profileImageUrl,
+    name: `${row.firstName} ${row.middleName} ${row.lastName}`,
+  },
+
+  location: mainLocation && {
+    id: mainLocation.id,
+    address: mainLocation.address,
+    addressNotes: mainLocation.addressNotes,
+    city: {
+      id: mainLocation.cityId,
+      name: mainLocation.city?.name,
+      nameAr: mainLocation.city?.nameAr,
+      long: mainLocation.city?.long,
+      lat: mainLocation.city?.lat,
+    },
+    government: {
+      id: mainLocation.governmentId,
+      name: mainLocation.government?.name,
+      nameAr: mainLocation.government?.nameAr,
+      long: mainLocation.government?.long,
+      lat: mainLocation.government?.lat,
+    },
+  },
+
+  specializationTree,
+
+  workInfo: {
+    bio: row.workerProfile?.bio,
+    experienceYears: row.workerProfile?.experienceYears,
+    isInTeam: row.workerProfile?.isInTeam,
+    acceptsUrgentJobs: row.workerProfile?.acceptsUrgentJobs,
+  },
+
+};
+}
 
   async findOnline({
     workerFilter,
@@ -933,6 +1008,22 @@ export default class WorkerProfileRepository
         hasPrev: normalizedPage > 1,
       },
     };
+  }
+
+  async addRating({
+    workerProfileId,
+    rate,
+  }: {
+    workerProfileId: string;
+    rate: number;
+  }): Promise<void> {
+    await this.prismaClient.$executeRaw`
+UPDATE worker_profiles
+SET
+    rate = (rate * "completedJobsCount" + ${rate}) / ("completedJobsCount" + 1),
+    "completedJobsCount" = "completedJobsCount" + 1
+WHERE worker_profiles.id = ${workerProfileId};
+`;
   }
 
   async findOccupiedTimeSlots(params: {
