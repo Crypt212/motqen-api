@@ -1,8 +1,3 @@
-/**
- * @fileoverview WhatsApp Provider - Baileys-based WhatsApp Web integration with Redis auth state
- * @module providers/whatsapp
- */
-
 import makeWASocket, {
   BufferJSON,
   initAuthCreds,
@@ -21,14 +16,11 @@ import { logger } from '../libs/winston.js';
 
 const KEY_PREFIX = 'wa:auth:';
 
-// ─── Redis Auth State ────────────────────────────────────────────────────────
+// ─── Redis Helpers ─────────────────────────────────────────
 
 async function readData(key: string): Promise<any> {
   const raw = await redisClient.get(KEY_PREFIX + key);
-  if (!raw) {
-    logger.warn(`WA auth key not found: ${KEY_PREFIX + key}`); // ✅
-    return null;
-  }
+  if (!raw) return null;
   return JSON.parse(raw as string, BufferJSON.reviver);
 }
 
@@ -39,6 +31,16 @@ async function writeData(key: string, data: any): Promise<void> {
 async function removeData(key: string): Promise<void> {
   await redisClient.del(KEY_PREFIX + key);
 }
+
+async function clearRedisAuth(): Promise<void> {
+  const keys = await redisClient.keys(`${KEY_PREFIX}*`);
+  if (keys.length) {
+    await redisClient.del(keys);
+  }
+  logger.warn('🗑️ Cleared WA session from Redis');
+}
+
+// ─── Auth State ─────────────────────────────────────────
 
 async function useRedisAuthState(): Promise<{
   state: AuthenticationState;
@@ -74,11 +76,9 @@ async function useRedisAuthState(): Promise<{
         }
       }
 
-      await Promise.all(tasks); // ✅ ده المهم
+      await Promise.all(tasks);
     },
-    clear: async () => {
-      // Not implemented – auth keys are managed individually
-    },
+    clear: async () => {},
   };
 
   return {
@@ -87,73 +87,116 @@ async function useRedisAuthState(): Promise<{
   };
 }
 
-// ─── WhatsApp Manager ────────────────────────────────────────────────────────
+// ─── WA Manager ─────────────────────────────────────────
 
 let sock: WASocket | null = null;
+let isConnecting = false;
+
+// 🔴 قفل socket
+async function destroySocket() {
+  try {
+    if (sock) {
+      sock.ev.removeAllListeners('creds.update');
+      sock.ev.removeAllListeners('connection.update');
+      sock.ws.close();
+      sock = null;
+    }
+  } catch (err) {
+    logger.error('Error destroying socket:', err);
+  }
+}
 
 export async function connectWhatsApp(): Promise<void> {
-  const { version } = await fetchLatestBaileysVersion();
-  logger.info(`Using WA version: ${version.join('.')}`);
+  if (isConnecting) return;
+  isConnecting = true;
 
-  const { state, saveCreds } = await useRedisAuthState();
+  try {
+    const { version } = await fetchLatestBaileysVersion();
+    logger.info(`Using WA version: ${version.join('.')}`);
 
-  const waLogger = {
-    level: 'silent' as const,
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-    trace: () => {},
-    fatal: () => {},
-    child: () => waLogger,
-  };
+    const { state, saveCreds } = await useRedisAuthState();
 
-  sock = makeWASocket({
-    version,
-    defaultQueryTimeoutMs: undefined,
-    syncFullHistory: false,
-    getMessage: async () => undefined,
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, waLogger),
-    },
-  });
+    const waLogger = {
+      level: 'silent' as const,
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      trace: () => {},
+      fatal: () => {},
+      child: () => waLogger,
+    };
 
-  sock.ev.on('creds.update', saveCreds);
+    sock = makeWASocket({
+      version,
+      defaultQueryTimeoutMs: undefined,
+      syncFullHistory: false,
+      getMessage: async () => undefined,
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, waLogger),
+      },
+    });
 
-  sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect, qr } = update;
+    sock.ev.on('creds.update', saveCreds);
 
-    if (qr) {
-      logger.info('WA QR code received – scan it in WhatsApp Linked Devices');
-      qrcode.generate(qr, { small: true });
-    }
+    sock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr } = update;
 
-    if (connection === 'close') {
-      const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-
-      logger.warn(`WA connection closed. Reconnecting: ${shouldReconnect}`);
-
-      if (shouldReconnect) {
-        connectWhatsApp();
+      if (qr) {
+        logger.info('📱 Scan QR code');
+        qrcode.generate(qr, { small: true });
       }
-    } else if (connection === 'open') {
-      logger.info('WA connection opened');
-    }
-  });
+
+      if (connection === 'close') {
+        const error = lastDisconnect?.error as Boom;
+        const statusCode = error?.output?.statusCode;
+
+        logger.warn(`WA closed. Status: ${statusCode}`);
+
+        const isConflict =
+          error?.message?.includes('conflict') ||
+          error?.data?.toString()?.includes('conflict');
+
+        if (statusCode === DisconnectReason.loggedOut || isConflict) {
+          logger.warn('⚠️ Conflict / Logged out → resetting session');
+
+          await destroySocket();
+          await clearRedisAuth();
+
+          setTimeout(() => connectWhatsApp(), 2000);
+        } else {
+          await destroySocket();
+
+          setTimeout(() => connectWhatsApp(), 2000);
+        }
+      }
+
+      if (connection === 'open') {
+        logger.info('✅ WhatsApp connected');
+      }
+    });
+
+  } catch (err) {
+    logger.error('WA connection error:', err);
+  } finally {
+    isConnecting = false;
+  }
 }
+
+// ─── Send Message ─────────────────────────────────────────
 
 export async function sendMessage(phone: string, message: string): Promise<void> {
   if (!sock) {
-    throw new Error('WhatsApp socket not initialized. Call connectWhatsApp() first.');
+    throw new Error('WhatsApp not connected');
   }
 
-  
   const cleanPhone = phone.replace(/\D/g, '');
   const jid = `${cleanPhone}@s.whatsapp.net`;
-  console.log(`Sending WA message to JID: ${jid}`);
-  sock.sendMessage(jid, { text: message }).catch((err) => {
-    console.error(`Failed to send WA message to ${phone}: ${err.message}`);
-  });
+
+  try {
+    await sock.sendMessage(jid, { text: message });
+  } catch (err: any) {
+    logger.error(`Failed to send message: ${err.message}`);
+  }
 }

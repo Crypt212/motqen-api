@@ -16,7 +16,7 @@ import { WorkingHours as WorkingHoursEntity } from '../../domain/workingHours.en
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
-import { ExploreWorkerPublicDetail, Specialization } from '../../types/exploreWorker.js';
+import { ExploreWorkerPublicDetail, } from '../../types/exploreWorker.js';
 
 type SpecializationsWithSubSpecializationsPrisma = Prisma.SpecializationGetPayload<{ include: { subSpecializations: true } }>;
 
@@ -115,7 +115,7 @@ export default class WorkerProfileRepository
   async findExploreWorkerById(userId: string): Promise<ExploreWorkerPublicDetail | null> {
     try {
       console.log(userId);
-      const record = await this.prismaClient.user.findFirst({
+      const record = await this.prismaClient.user.findUnique({
         where: {
           id: userId,
         },
@@ -125,13 +125,6 @@ export default class WorkerProfileRepository
               portfolio: {
                 include: {
                   projectImages: true,
-                },
-              },
-              chosenSpecializations: {
-                take: 3,
-                include: {
-                  specialization: true,
-                  subSpecialization: true,
                 },
               },
             },
@@ -163,14 +156,8 @@ export default class WorkerProfileRepository
           include: {
             portfolio: {
               include: {
+                take: 1,
                 projectImages: true;
-              };
-            };
-            chosenSpecializations: {
-              take: 3;
-              include: {
-                specialization: true;
-                subSpecialization: true;
               };
             };
           };
@@ -187,41 +174,7 @@ export default class WorkerProfileRepository
       };
     }>
   ): ExploreWorkerPublicDetail {
-    const chosenSpec = row.workerProfile.chosenSpecializations;
-
-    const specializationTree = Object.values(
-      chosenSpec.reduce(
-        (acc, item) => {
-          const mainId = item.specialization.id;
-
-          if (!acc.has(mainId)) {
-            acc.set(mainId, {
-              id: mainId,
-              name: item.specialization.name,
-              nameAr: item.specialization.nameAr,
-              subSpecializations: [],
-            });
-          }
-
-          if (item.subSpecialization) {
-            const exists = acc
-              .get(mainId)
-              .subSpecializations.some((sub) => sub.id === item.subSpecialization.id);
-
-            if (!exists) {
-              acc.get(mainId).subSpecializations.push({
-                id: item.subSpecialization.id,
-                name: item.subSpecialization.name,
-                nameAr: item.subSpecialization.nameAr,
-              });
-            }
-          }
-
-          return acc;
-        },
-        {} as Map<String, Specialization>
-      )
-    );
+    console.log(row.workerProfile);
 
     const mainLocation = row.locations?.[0];
 
@@ -252,9 +205,6 @@ export default class WorkerProfileRepository
           lat: mainLocation.government?.lat,
         },
       },
-
-      specializationTree,
-
       workInfo: {
         bio: row.workerProfile?.bio,
         experienceYears: row.workerProfile?.experienceYears,
@@ -262,6 +212,10 @@ export default class WorkerProfileRepository
         isInTeam: row.workerProfile?.isInTeam,
         acceptsUrgentJobs: row.workerProfile?.acceptsUrgentJobs,
       },
+      portfolio: {
+        id: row.workerProfile?.portfolio?.id ?? "",
+        mainImage: row.workerProfile?.portfolio?.projectImages?.[0]?.imageUrl ?? "",
+      }
     };
   }
 
