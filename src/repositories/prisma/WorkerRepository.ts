@@ -15,9 +15,8 @@ import {
 import { WorkingHours as WorkingHoursEntity } from '../../domain/workingHours.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
-import { AccountStatus, Prisma, PrismaClient } from '../../generated/prisma/client.js';
+import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { ExploreWorkerPublicDetail, Specialization } from '../../types/exploreWorker.js';
-
 
 export default class WorkerProfileRepository
   extends Repository
@@ -99,12 +98,12 @@ export default class WorkerProfileRepository
    */
   async findExploreWorkerById(userId: string): Promise<ExploreWorkerPublicDetail | null> {
     try {
-      console.log(userId)
+      console.log(userId);
       const record = await this.prismaClient.user.findFirst({
         where: {
           id: userId,
         },
-          include: {
+        include: {
           workerProfile: {
             include: {
               portfolio: {
@@ -113,23 +112,22 @@ export default class WorkerProfileRepository
                 },
               },
               chosenSpecializations: {
-                take:3,
-                include:{
-                  specialization:true
-                  , subSpecialization:true
-                }
+                take: 3,
+                include: {
+                  specialization: true,
+                  subSpecialization: true,
+                },
               },
             },
           },
           locations: {
             where: {
               isMain: true,
-              
             },
-            include:{
-              government:true,
-              city:true
-            }
+            include: {
+              government: true,
+              city: true,
+            },
           },
         },
       });
@@ -142,113 +140,114 @@ export default class WorkerProfileRepository
     }
   }
 
-  private mapExploreWorkerPublicDetail(row: 
-    Prisma.UserGetPayload<{
+  private mapExploreWorkerPublicDetail(
+    row: Prisma.UserGetPayload<{
+      include: {
+        workerProfile: {
           include: {
-          workerProfile: {
-            include: {
-              portfolio: {
-                include: {
-                  projectImages: true,
-                },
-              },
-              chosenSpecializations: {
-                take:3,
-                include:{
-                  specialization:true
-                  , subSpecialization:true
-                }
-              },
-            },
-          },
-          locations: {
-            where: {
-              isMain: true,
-              
-            },
-            include:{
-              government:true,
-              city:true
-            }
-          },
-        },
-    }
-    >
-  ): ExploreWorkerPublicDetail {
-const chosenSpec = row.workerProfile.chosenSpecializations;
-
-const specializationTree = Object.values(
-  chosenSpec.reduce((acc, item) => {
-    const mainId = item.specialization.id;
-
-    if (!acc[mainId]) {
-      acc[mainId] = {
-        id: mainId,
-        name: item.specialization.name,
-        nameAr: item.specialization.nameAr,
-        subSpecializations: []
+            portfolio: {
+              include: {
+                projectImages: true;
+              };
+            };
+            chosenSpecializations: {
+              take: 3;
+              include: {
+                specialization: true;
+                subSpecialization: true;
+              };
+            };
+          };
+        };
+        locations: {
+          where: {
+            isMain: true;
+          };
+          include: {
+            government: true;
+            city: true;
+          };
+        };
       };
-    }
+    }>
+  ): ExploreWorkerPublicDetail {
+    const chosenSpec = row.workerProfile.chosenSpecializations;
 
-    if (item.subSpecialization) {
-      const exists = acc[mainId].subSpecializations.some(
-        sub => sub.id === item.subSpecialization.id
-      );
+    const specializationTree = Object.values(
+      chosenSpec.reduce(
+        (acc, item) => {
+          const mainId = item.specialization.id;
 
-      if (!exists) {
-        acc[mainId].subSpecializations.push({
-          id: item.subSpecialization.id,
-          name: item.subSpecialization.name,
-          nameAr: item.subSpecialization.nameAr,
-        });
-      }
-    }
+          if (!acc.has(mainId)) {
+            acc.set(mainId, {
+              id: mainId,
+              name: item.specialization.name,
+              nameAr: item.specialization.nameAr,
+              subSpecializations: [],
+            });
+          }
 
-    return acc;
-  }, {} as Specialization[])
-);
+          if (item.subSpecialization) {
+            const exists = acc
+              .get(mainId)
+              .subSpecializations.some((sub) => sub.id === item.subSpecialization.id);
 
-const mainLocation = row.locations?.[0];
+            if (!exists) {
+              acc.get(mainId).subSpecializations.push({
+                id: item.subSpecialization.id,
+                name: item.subSpecialization.name,
+                nameAr: item.subSpecialization.nameAr,
+              });
+            }
+          }
 
-return {
-  userInfo: {
-    id: row.id,
-    isOnline: row.isOnline,
-    profileImageUrl: row.profileImageUrl,
-    name: `${row.firstName} ${row.middleName} ${row.lastName}`,
-  },
+          return acc;
+        },
+        {} as Map<String, Specialization>
+      )
+    );
 
-  location: mainLocation && {
-    id: mainLocation.id,
-    address: mainLocation.address,
-    addressNotes: mainLocation.addressNotes,
-    city: {
-      id: mainLocation.cityId,
-      name: mainLocation.city?.name,
-      nameAr: mainLocation.city?.nameAr,
-      long: mainLocation.city?.long,
-      lat: mainLocation.city?.lat,
-    },
-    government: {
-      id: mainLocation.governmentId,
-      name: mainLocation.government?.name,
-      nameAr: mainLocation.government?.nameAr,
-      long: mainLocation.government?.long,
-      lat: mainLocation.government?.lat,
-    },
-  },
+    const mainLocation = row.locations?.[0];
 
-  specializationTree,
+    return {
+      userInfo: {
+        id: row.id,
+        isOnline: row.isOnline,
+        profileImageUrl: row.profileImageUrl,
+        name: `${row.firstName} ${row.middleName} ${row.lastName}`,
+      },
 
-  workInfo: {
-    bio: row.workerProfile?.bio,
-    experienceYears: row.workerProfile?.experienceYears,
-    isInTeam: row.workerProfile?.isInTeam,
-    acceptsUrgentJobs: row.workerProfile?.acceptsUrgentJobs,
-  },
+      location: mainLocation && {
+        id: mainLocation.id,
+        address: mainLocation.address,
+        addressNotes: mainLocation.addressNotes,
+        city: {
+          id: mainLocation.cityId,
+          name: mainLocation.city?.name,
+          nameAr: mainLocation.city?.nameAr,
+          long: mainLocation.city?.long,
+          lat: mainLocation.city?.lat,
+        },
+        government: {
+          id: mainLocation.governmentId,
+          name: mainLocation.government?.name,
+          nameAr: mainLocation.government?.nameAr,
+          long: mainLocation.government?.long,
+          lat: mainLocation.government?.lat,
+        },
+      },
 
-};
-}
+      specializationTree,
+
+      workInfo: {
+        bio: row.workerProfile?.bio,
+        experienceYears: row.workerProfile?.experienceYears,
+        rate: row.workerProfile?.rate,
+        isInTeam: row.workerProfile?.isInTeam,
+        acceptsUrgentJobs: row.workerProfile?.acceptsUrgentJobs,
+      },
+    };
+  }
 
   async findOnline({
     workerFilter,
