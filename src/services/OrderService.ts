@@ -15,6 +15,7 @@ import { CreateOrderDTO } from '../schemas/order.js';
 import { OrderStatus } from 'src/generated/prisma/enums.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
 import SpecializationRepository from 'src/repositories/prisma/SpecializationRepository.js';
+import prisma from 'src/libs/database.js';
 
 interface OrderServiceDeps {
   orderRepository: IOrderRepository;
@@ -51,10 +52,24 @@ export default class OrderService extends Service {
       if (!location) {
         throw new AppError('Location not found', 400);
       }
-      console.log("userId of location: ", location.userId);
-      console.log("userId: ", userId);
       if (location.userId !== userId) {
         throw new AppError('Location not owned', 400);
+      }
+
+      // Resolve workerProfileId — the client may send either a userId or a workerProfileId
+      let resolvedWorkerProfileId = data.workerProfileId;
+      const workerByUserId = await prisma.workerProfile.findUnique({
+        where: { userId: data.workerProfileId },
+        select: { id: true },
+      });
+      if (workerByUserId) {
+        resolvedWorkerProfileId = workerByUserId.id;
+      } else {
+        const workerById = await prisma.workerProfile.findUnique({
+          where: { id: data.workerProfileId },
+          select: { id: true },
+        });
+        if (!workerById) throw new AppError('Worker not found', 404);
       }
 
       if (images.length > 3) {
@@ -75,7 +90,7 @@ export default class OrderService extends Service {
               title: data.title,
               description: data.description,
               clientProfileId: data.clientProfileId,
-              workerProfileId: data.workerProfileId,
+              workerProfileId: resolvedWorkerProfileId,
               locationId: data.locationId,
               subSpecializationId: data.subSpecializationId,
               startDate: data.startDate,
@@ -90,7 +105,6 @@ export default class OrderService extends Service {
           });
 
           return order;
-
         }
       );
     });

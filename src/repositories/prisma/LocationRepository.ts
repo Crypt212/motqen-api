@@ -69,40 +69,27 @@ export default class LocationRepository extends Repository implements ILocationR
 
   async find({ filter }: { filter: LocationFilter }): Promise<Location | null> {
     try {
-      let query = '';
+      let rawQuery = Prisma.raw('');
       if (!isEmptyFilter(filter)) {
-        query = "WHERE ";
         const filterEntries = Object.entries(filter);
         console.log(filterEntries);
-        for (let i = 0; i < filterEntries.length; i++) {
-          query += `'l.${filterEntries[i][0]}' = '${filterEntries[i][1]}' AND `;
-        }
-        query = query.slice(0, -5);
-
+        const conditions = filterEntries
+          .map(([key, value]) => `l."${key}" = '${value}'`)
+          .join(' AND ');
+        rawQuery = Prisma.raw(`WHERE ${conditions}`);
       }
 
-      console.log(`
-  SELECT l.id, l."userId", l."governmentId", l."cityId", l.address, l."addressNotes", l."isMain", ST_X(l."pointGeography"::geometry) as long, ST_Y(l."pointGeography"::geometry) as lat, l."createdAt", l."updatedAt",
-    -- Government data
-    jsonb_build_object( 'id', g.id, 'name', g.name, 'nameAr', 'g.nameAr', 'long', g.long, 'lat', g.lat) as government,
-    -- City data
-    jsonb_build_object( 'id', c.id, 'name', c.name, 'nameAr', 'c.nameAr', 'long', c.long, 'lat', c.lat) as city
-  FROM locations l
-  LEFT JOIN governments g ON l."governmentId" = g.id
-  LEFT JOIN cities c ON l."cityId" = c.id
-  ${query};`);
-
-      // We need coordinates, so we use raw SQL or findFirst + raw SQL for coords
+      // We need coordinates, so we use raw SQL for PostGIS fields
       const records = await this.prismaClient.$queryRaw<Location[]>`
   SELECT l.id, l."userId", l."governmentId", l."cityId", l.address, l."addressNotes", l."isMain", ST_X(l."pointGeography"::geometry) as long, ST_Y(l."pointGeography"::geometry) as lat, l."createdAt", l."updatedAt",
     -- Government data
-    jsonb_build_object( 'id', g.id, 'name', g.name, 'nameAr', 'g.nameAr', 'long', g.long, 'lat', g.lat) as government,
+    jsonb_build_object( 'id', g.id, 'name', g.name, 'nameAr', g."nameAr", 'long', g.long, 'lat', g.lat) as government,
     -- City data
-    jsonb_build_object( 'id', c.id, 'name', c.name, 'nameAr', 'c.nameAr', 'long', c.long, 'lat', c.lat) as city
+    jsonb_build_object( 'id', c.id, 'name', c.name, 'nameAr', c."nameAr", 'long', c.long, 'lat', c.lat) as city
   FROM locations l
   LEFT JOIN governments g ON l."governmentId" = g.id
   LEFT JOIN cities c ON l."cityId" = c.id
-  ${query}`;
+  ${rawQuery}`;
 
       if (!records || records.length === 0) return null;
       return this.toDomain(records[0]);
