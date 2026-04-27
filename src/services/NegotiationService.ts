@@ -184,7 +184,8 @@ export default class NegotiationService extends Service {
         description: updatedOrder.description,
         orderStatus: updatedOrder.orderStatus,
         finalPrice: updatedOrder.finalPrice,
-        date: updatedOrder.date,
+        startDate: updatedOrder.startDate,
+        endDate: updatedOrder.endDate,
         createdAt: updatedOrder.createdAt,
         updatedAt: updatedOrder.updatedAt,
       };
