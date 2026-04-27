@@ -15,6 +15,7 @@ import {
   acceptNegotiation,
   rejectNegotiation,
 } from '../../controllers/NegotiationController.js';
+import { CreateNegotiationSchema } from '../../schemas/negotiations.js';
 
 
 const router = Router();
@@ -48,7 +49,6 @@ router.post(
   orderController.rate
 );
 
-export default router;
 /**
  * @fileoverview Orders Routes - Negotiation sub-routes nested under /orders/:orderId
  * @module routes/v1/orders
@@ -237,3 +237,4 @@ router.post(
   [validateParams(OrderIdParamsSchema)],
   rejectNegotiation
 );
+export default router;
