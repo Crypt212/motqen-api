@@ -28,6 +28,9 @@ export const createMockUserRepository = (): {
   update: vi.fn(),
   delete: vi.fn(),
   findWithPrimaryLocation: vi.fn(),
+  findLocations: vi.fn(),
+  updateLocation: vi.fn(),
+  deleteLocation: vi.fn(),
   addLocation: vi.fn(),
   updatePrimaryLocation: vi.fn(),
 });
@@ -43,8 +46,11 @@ export const createMockWorkerProfileRepository = (): {
   findVerification: vi.fn(),
   findWorkingHoursByUserId: vi.fn(),
   findSpecializations: vi.fn(),
+  findOccupiedTimeSlots: vi.fn(),
+  replaceWorkingHours: vi.fn(),
   create: vi.fn(),
   insertWorkGovernments: vi.fn(),
+  findSpecializationsWithSubSpecializations: vi.fn(),
   insertSpecializations: vi.fn(),
   insertSubSpecializations: vi.fn(),
   setVerification: vi.fn(),
@@ -77,7 +83,6 @@ export const createMockGovernmentRepository = (): {
   create: vi.fn(),
   createCity: vi.fn(),
   update: vi.fn(),
-  updateCity: vi.fn(),
   delete: vi.fn(),
   deleteCity: vi.fn(),
 });
@@ -86,6 +91,7 @@ export const createMockSpecializationRepository = (): {
   [K in keyof ISpecializationRepository]: ReturnType<typeof vi.fn>;
 } => ({
   find: vi.fn(),
+  findBySubSpecializationId: vi.fn(),
   findMany: vi.fn(),
   findSubSpecialization: vi.fn(),
   findSubSpecializations: vi.fn(),
@@ -101,37 +107,50 @@ export const createMockSessionRepository = (): {
   [K in keyof ISessionRepository]: ReturnType<typeof vi.fn>;
 } => ({
   find: vi.fn(),
-  findMany: vi.fn(),
   create: vi.fn(),
-  update: vi.fn(),
   delete: vi.fn(),
+  deleteMany: vi.fn(),
+  revoke: vi.fn(),
+  revokeMany: vi.fn(),
 });
 
 export const createMockConversationRepository = (): {
   [K in keyof IConversationRepository]: ReturnType<typeof vi.fn>;
 } => ({
+  exists: vi.fn(),
   find: vi.fn(),
+  findById: vi.fn(),
   findByPair: vi.fn(),
-  findMany: vi.fn(),
+  findWithParticipant: vi.fn(),
   findNonEmptyConversationsWithParticipantsAndMessages: vi.fn(),
+  findMany: vi.fn(),
   findParticipant: vi.fn(),
+  create: vi.fn(),
   createWithParticipants: vi.fn(),
   update: vi.fn(),
+  updateMany: vi.fn(),
+  incrementMessageCounter: vi.fn(),
+  delete: vi.fn(),
+  deleteMany: vi.fn(),
   updateLastRead: vi.fn(),
   updateLastReceived: vi.fn(),
-  delete: vi.fn(),
 });
 
 export const createMockMessageRepository = (): {
   [K in keyof IMessageRepository]: ReturnType<typeof vi.fn>;
 } => ({
+  exists: vi.fn(),
+  find: vi.fn(),
+  findMany: vi.fn(),
   findById: vi.fn(),
   findPage: vi.fn(),
-  findMany: vi.fn(),
+  findLatest: vi.fn(),
   create: vi.fn(),
-  update: vi.fn(),
+  createMany: vi.fn(),
+  insertMessage: vi.fn(),
+  atomicSendMessage: vi.fn(),
   updateMany: vi.fn(),
-  delete: vi.fn(),
+  deleteMany: vi.fn(),
 });
 
 // ─── Cache Mocks ──────────────────────────────────────────────────────────────
@@ -152,6 +171,7 @@ export const createMockRateLimitCache = (): {
   incrementAccounts: vi.fn(),
   getAccountsAttempts: vi.fn(),
   resetAfterSuccess: vi.fn(),
+  consumeSocketEvent: vi.fn(),
 });
 
 export const createMockOtpCache = (): {
@@ -300,3 +320,23 @@ export const makeLocation = (overrides: Partial<any> = {}) => ({
   isMain: true,
   ...overrides,
 });
+
+
+/**
+ * Creates a mock TransactionManager.
+ * Includes a helper 'mockImplementation' to automatically execute the callback
+ * with provided mock repositories.
+ */
+export const createMockTransactionManager = () => {
+  const mockExecute = vi.fn();
+
+  return {
+    execute: mockExecute,
+    // A helper to quickly point the transaction to your mock repos
+    mockSuccess: (mockRepos: Record<string, any>) => {
+      mockExecute.mockImplementationOnce(async (reposConstructors, callback) => {
+        return await callback(mockRepos, {} as any);
+      });
+    }
+  };
+};

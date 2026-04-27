@@ -18,21 +18,20 @@ export default class OrderController {
       title,
       description,
       subSpecializationId,
-      workerProfileId,
+      workerUserId,
       locationId,
       startDate,
       isUrgent,
     } = req.body;
     const userId = req.userState!.userId;
     const images = (req.files as Express.Multer.File[]) || [];
-    const clientProfileId = req.userState!.client?.id;
+    const clientUserId = req.userState.userId;
 
-    if (!clientProfileId) {
+    if (!req.userState.client) {
       throw new Error('User must have a client profile to create orders');
     }
 
     const order = await this.orderService.createOrder({
-      userId,
       data: {
         title,
         description,
@@ -40,8 +39,8 @@ export default class OrderController {
         locationId,
         startDate,
         isUrgent: isUrgent === 'true',
-        clientProfileId,
-        workerProfileId,
+        clientUserId,
+        workerUserId,
       },
       images,
     });

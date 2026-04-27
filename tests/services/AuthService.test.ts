@@ -20,7 +20,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AuthService from '../../src/services/AuthService.js';
 import AppError from '../../src/errors/AppError.js';
-import { OTPErrorDetails } from '../../src/errors/appErrorDetails/OTPDetails.js';
 import {
   createMockUserRepository,
   createMockWorkerProfileRepository,
@@ -33,6 +32,7 @@ import {
   makeWorkerProfile,
   makeSession,
   makeGovernment,
+  createMockTransactionManager,
 } from '../helpers/mocks.js';
 
 // Stub external providers so they don't make real network calls
@@ -60,6 +60,7 @@ describe('AuthService', () => {
   let sessionRepo: ReturnType<typeof createMockSessionRepository>;
   let rateLimitCache: ReturnType<typeof createMockRateLimitCache>;
   let otpCache: ReturnType<typeof createMockOtpCache>;
+  let transactionManager: ReturnType<typeof createMockTransactionManager>;
 
   beforeEach(() => {
     userRepo = createMockUserRepository();

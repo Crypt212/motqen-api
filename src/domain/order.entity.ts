@@ -34,8 +34,8 @@ export type Order = {
 export type OrderCreateInput = {
   title: string;
   description: string;
-  clientProfileId: string;
-  workerProfileId: string;
+  clientUserId: string;
+  workerUserId: string;
   locationId: string;
   subSpecializationId: string;
   startDate: Date;

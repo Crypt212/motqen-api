@@ -38,12 +38,10 @@ export default class OrderService extends Service {
   }
 
   async createOrder({
-    userId,
     data,
     images,
   }: {
-    userId: string;
-    data: CreateOrderDTO & { clientProfileId: string };
+    data: CreateOrderDTO & { clientUserId: string };
     images: Express.Multer.File[];
   }) {
     return tryCatch(async () => {
@@ -52,8 +50,9 @@ export default class OrderService extends Service {
         throw new AppError('Location not found', 400);
       }
       console.log("userId of location: ", location.userId);
-      console.log("userId: ", userId);
-      if (location.userId !== userId) {
+      console.log("userId of the client: ", data.clientUserId);
+      console.log("userId of the worker: ", data.workerUserId);
+      if (location.userId !== data.clientUserId) {
         throw new AppError('Location not owned', 400);
       }
 
@@ -74,8 +73,8 @@ export default class OrderService extends Service {
             order: {
               title: data.title,
               description: data.description,
-              clientProfileId: data.clientProfileId,
-              workerProfileId: data.workerProfileId,
+              clientUserId: data.clientUserId,
+              workerUserId: data.workerUserId,
               locationId: data.locationId,
               subSpecializationId: data.subSpecializationId,
               startDate: data.startDate,

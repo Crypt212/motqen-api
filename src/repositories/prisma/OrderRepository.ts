@@ -112,7 +112,16 @@ export default class OrderRepository extends Repository implements IOrderReposit
     try {
       const record = await this.prismaClient.order.create({
         data: {
-          ...order,
+          title: order.title,
+          description: order.description,
+          location: { connect: { id: order.locationId } },
+          subSpecialization: { connect: { id: order.subSpecializationId } },
+          startDate: order.startDate,
+          isUrgent: order.isUrgent,
+
+          clientProfile: { connect: { userId: order.clientUserId } },
+          workerProfile: { connect: { userId: order.workerUserId } },
+
           images: {
             createMany: {
               data: imageUrls.map((url) => ({ imageUrl: url })),
