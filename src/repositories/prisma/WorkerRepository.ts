@@ -114,7 +114,14 @@ export default class WorkerProfileRepository
    */
   async findExploreWorkerById(userId: string): Promise<ExploreWorkerPublicDetail | null> {
     try {
-      console.log(userId);
+
+      const ratedOrdersCount = await this.prismaClient.order.count({
+        where: {
+          workerProfile: { userId },
+          rate: { not: -1.0 },
+        }
+      });
+
       const record = await this.prismaClient.user.findUnique({
         where: {
           id: userId,
@@ -143,7 +150,7 @@ export default class WorkerProfileRepository
 
       if (!record || !record.workerProfile) return null;
 
-      return this.mapExploreWorkerPublicDetail(record);
+      return this.mapExploreWorkerPublicDetail(record, ratedOrdersCount);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findExploreWorkerById');
     }
@@ -172,7 +179,7 @@ export default class WorkerProfileRepository
           };
         };
       };
-    }>
+    }>, ratedOrdersCount: number
   ): ExploreWorkerPublicDetail {
     console.log(row.workerProfile);
 
@@ -211,6 +218,8 @@ export default class WorkerProfileRepository
         rate: row.workerProfile?.rate,
         isInTeam: row.workerProfile?.isInTeam,
         acceptsUrgentJobs: row.workerProfile?.acceptsUrgentJobs,
+        completedJobsCount: row.workerProfile?.completedJobsCount,
+        ratingCount: ratedOrdersCount,
       },
       portfolio: {
         id: row.workerProfile?.portfolio?.id ?? "",
