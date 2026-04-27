@@ -49,13 +49,9 @@ export default class OrderService extends Service {
       if (!location) {
         throw new AppError('Location not found', 400);
       }
-      console.log("userId of location: ", location.userId);
-      console.log("userId of the client: ", data.clientUserId);
-      console.log("userId of the worker: ", data.workerUserId);
       if (location.userId !== data.clientUserId) {
         throw new AppError('Location not owned', 400);
       }
-
       if (images.length > 3) {
         throw new AppError('Maximum 3 images allowed per order', 400);
       }
@@ -89,7 +85,6 @@ export default class OrderService extends Service {
           });
 
           return order;
-
         }
       );
     });

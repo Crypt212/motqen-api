@@ -70,10 +70,10 @@ export default class LocationRepository extends Repository implements ILocationR
   async find({ filter }: { filter: LocationFilter }): Promise<Location | null> {
     try {
       let query = `
-      SELECT l.id, l."userId", l."governmentId", l."cityId", l.address, 
-             l."addressNotes", l."isMain", 
-             ST_X(l."pointGeography"::geometry) as long, 
-             ST_Y(l."pointGeography"::geometry) as lat, 
+      SELECT l.id, l."userId", l."governmentId", l."cityId", l.address,
+             l."addressNotes", l."isMain",
+             ST_X(l."pointGeography"::geometry) as long,
+             ST_Y(l."pointGeography"::geometry) as lat,
              l."createdAt", l."updatedAt",
         jsonb_build_object('id', g.id, 'name', g.name, 'nameAr', 'g.nameAr', 'long', g.long, 'lat', g.lat) as government,
         jsonb_build_object('id', c.id, 'name', c.name, 'nameAr', 'c.nameAr', 'long', c.long, 'lat', c.lat) as city
@@ -162,9 +162,9 @@ export default class LocationRepository extends Repository implements ILocationR
       SELECT
       l.id, l."userId", l."governmentId", l."cityId", l.address, l."addressNotes", l."isMain", l."createdAt", l."updatedAt", ST_X(l."pointGeography":: geometry) as long, ST_Y(l."pointGeography":: geometry) as lat,
         --Government data
-      jsonb_build_object('id', g.id, 'name', g.name, 'nameAr', 'g.nameAr', 'long', g.long, 'lat', g.lat) as government,
+      jsonb_build_object('id', g.id, 'name', g.name, 'nameAr', g."nameAr", 'long', g.long, 'lat', g.lat) as government,
         --City data
-      jsonb_build_object('id', c.id, 'name', c.name, 'nameAr', 'c.nameAr', 'long', c.long, 'lat', c.lat, 'governmentId', c."governmentId") as city
+      jsonb_build_object('id', c.id, 'name', c.name, 'nameAr', c."nameAr", 'long', c.long, 'lat', c.lat, 'governmentId', c."governmentId") as city
   FROM locations l
   LEFT JOIN governments g ON l."governmentId" = g.id
   LEFT JOIN cities c ON l."cityId" = c.id

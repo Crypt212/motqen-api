@@ -32,6 +32,8 @@ import OrderService from './services/OrderService.js';
 import OrderController from './controllers/OrderController.js';
 import LocationService from './services/LocationService.js';
 import LocationController from './controllers/LocationController.js';
+import NegotiationService from './services/NegotiationService.js';
+import NegotiationRepository from './repositories/prisma/NegotiationRepository.js';
 
 export const rateLimitCache = new RateLimitCache(redisClient);
 export const otpCache = new OTPCache(redisClient);
@@ -61,6 +63,7 @@ export const locationController = new LocationController({ locationService });
 export const conversationRepository = new ConversationRepository(prisma);
 export const messageRepository = new MessageRepository(prisma);
 export const flaggedMessageRepository = new FlaggedMessageRepository(prisma);
+export const negotiationRepository = new NegotiationRepository(prisma);
 
 export const rateLimitService = new RateLimitService({ rateLimitCache });
 export const userService = new UserService({
@@ -108,5 +111,11 @@ export const orderService = new OrderService({
   locationRepository,
   transactionManager,
 });
+
+export const negotiationService = new NegotiationService({
+  negotiationRepository,
+  transactionManager
+});
+
 
 export const orderController = new OrderController({ orderService });
