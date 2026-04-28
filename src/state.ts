@@ -107,7 +107,7 @@ export const workerOccupiedTimeSlotRepository = new WorkerOccupiedTimeSlotReposi
 
 export const orderService = new OrderService({
   orderRepository,
-  occupiedTimeSlotRepository: workerOccupiedTimeSlotRepository,
+  workerProfileRepository,
   locationRepository,
   transactionManager,
 });

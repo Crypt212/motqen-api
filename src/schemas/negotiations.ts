@@ -21,3 +21,5 @@ export const CreateNegotiationSchema = z.object({
     .positive('price must be a positive number'),
   note: z.string().max(500, 'note must be at most 500 characters').optional(),
 });
+
+export type CreateNegotiationDTO = z.infer<typeof CreateNegotiationSchema>;
