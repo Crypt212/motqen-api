@@ -241,6 +241,7 @@ export default class WorkerService extends Service {
     filter: WorkerProfileFilter;
   }): Promise<SpecializationsWithSubSpecializations> {
     const { filter } = params;
+    console.log("the filter sent to worker service is: ", filter);
     return tryCatch(async () => {
       return await this.workerProfileRepository.findSpecializationsWithSubSpecializations({
         filter,

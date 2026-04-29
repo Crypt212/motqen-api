@@ -23,9 +23,9 @@ export default async function (method: Method, OTP: string, phoneNumber: string)
     logger.info(`OTP: ${OTP} for ${phoneNumber} via ${method}`);
   }
   if (method === 'SMS') {
-    await sendViaSMS(`Your OTP is ${OTP}`, phoneNumber);
+    // await sendViaSMS(`Your OTP is ${OTP}`, phoneNumber);
   } else if (method === 'WHATSAPP') {
-    console.log(`Sending OTP ${OTP} to ${phoneNumber} via WhatsApp`); 
+    console.log(`Sending OTP ${OTP} to ${phoneNumber} via WhatsApp`);
     await sendMessage(`2${phoneNumber}`, `Your OTP is ${OTP}`);
   }
 }

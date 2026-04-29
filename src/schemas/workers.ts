@@ -2,7 +2,7 @@ import { z } from '../libs/zod.js';
 import { UUIDSchema } from './common.js';
 
 export const ExploreSearchSchema = z.object({
-  specializationId: UUIDSchema,
+  specializationId: UUIDSchema.optional(),
   subSpecializationId: UUIDSchema.optional(),
   governmentId: UUIDSchema.optional(),
   highestRated: z.preprocess(

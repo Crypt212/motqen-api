@@ -197,7 +197,7 @@ export default class OrderService extends Service {
         { orderRepo: OrderRepository, workerRepo: WorkerProfileRepository, timeSlotRepo: WorkerOccupiedTimeSlotRepository },
         async ({ orderRepo, workerRepo, timeSlotRepo }, tx) => {
           // Advisory lock
-          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${params.workerUserId}))`;
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${params.workerUserId}))`;
 
           const workerProfileId = (await workerRepo.find({ workerFilter: { userId: params.workerUserId } })).id;
 

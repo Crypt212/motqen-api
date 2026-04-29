@@ -141,6 +141,14 @@ export default class NegotiationService extends Service {
       const order = await this.getOrderOrThrow(orderId);
       const party = this.resolveOrderParty(order, userState);
 
+      // Guard: only allow negotiation in these order states
+      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'TIME_SPECIFIED') {
+        throw new AppError(
+          'Negotiations are only allowed when order status is PENDING or TIME_SPECIFIED',
+          400
+        );
+      }
+
       const latest = await this.negotiationRepository.findLatestByOrderId({ orderId });
       if (!latest || latest.status !== 'PENDING') {
         throw new AppError('No pending negotiation to accept', 400);
@@ -199,6 +207,14 @@ export default class NegotiationService extends Service {
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
       const party = this.resolveOrderParty(order, userState);
+
+      // Guard: only allow negotiation in these order states
+      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'TIME_SPECIFIED') {
+        throw new AppError(
+          'Negotiations are only allowed when order status is PENDING or TIME_SPECIFIED',
+          400
+        );
+      }
 
       const latest = await this.negotiationRepository.findLatestByOrderId({ orderId });
       if (!latest || latest.status !== 'PENDING') {

@@ -181,7 +181,6 @@ export default class WorkerProfileRepository
       };
     }>, ratedOrdersCount: number
   ): ExploreWorkerPublicDetail {
-    console.log(row.workerProfile);
 
     const mainLocation = row.locations?.[0];
 
@@ -360,11 +359,8 @@ export default class WorkerProfileRepository
         include: {
           chosenSpecializations: {
             include: {
-              specialization: {
-                include: {
-                  subSpecializations: true
-                }
-              }
+              subSpecialization: true,
+              specialization: true,
             }
           },
         },
@@ -374,9 +370,26 @@ export default class WorkerProfileRepository
         return this.toDomainSpecializationsWithSubSpecializations([]);
       }
 
-      let specializations = workerProfile.chosenSpecializations.map((s) => s.specialization);
+      const specializationsTree: SpecializationsWithSubSpecializations = [];
+      for (let specialization of workerProfile.chosenSpecializations) {
+        if (!specializationsTree.find(s => s.id == specialization.specializationId))
+          specializationsTree.push({
+            id: specialization.specializationId,
 
-      return this.toDomainSpecializationsWithSubSpecializations(specializations);
+            name: specialization.specialization.name,
+            nameAr: specialization.specialization.nameAr,
+            category: specialization.specialization.category,
+            ordersCount: specialization.specialization.ordersCount,
+            subSpecializations: [],
+
+            updatedAt: specialization.specialization.updatedAt,
+            createdAt: specialization.specialization.createdAt,
+          });
+
+          specializationsTree.find(s => s.id == specialization.specializationId).subSpecializations.push(specialization.subSpecialization);
+      }
+
+      return this.toDomainSpecializationsWithSubSpecializations(specializationsTree);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findSpecializations');
     }
@@ -793,7 +806,7 @@ export default class WorkerProfileRepository
     limit = 10,
     excludeUserId,
   }: {
-    specializationId: string;
+    specializationId?: string;
     subSpecializationId?: string;
     governmentId?: string;
     availability?: boolean;
