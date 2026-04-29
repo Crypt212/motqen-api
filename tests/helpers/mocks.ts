@@ -14,6 +14,10 @@ import type IMessageRepository from '../../src/repositories/interfaces/MessageRe
 import type IRateLimitCache from '../../src/cache/interfaces/RateLimitCache.js';
 import type IOtpCache from '../../src/cache/interfaces/otpCache.js';
 import type IChatPresenceCache from '../../src/cache/interfaces/ChatPresenceCache.js';
+import type IOrderRepository from '../../src/repositories/interfaces/OrderRepository.js';
+import type ILocationRepository from '../../src/repositories/interfaces/LocationRepository.js';
+import type IWorkerOccupiedTimeSlotRepository from '../../src/repositories/interfaces/WorkerOccupiedTimeSlotRepository.js';
+import type INegotiationRepository from '../../src/repositories/interfaces/NegotiationRepository.js';
 
 // ─── Repository Mocks ─────────────────────────────────────────────────────────
 

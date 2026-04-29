@@ -44,6 +44,8 @@ model User {
   sentMessages    Message[]
   sessions        Session[]
   workerProfile   WorkerProfile?
+  sentNegotiations      Negotiation[] @relation("NegotiationSender")
+  acceptedNegotiations  Negotiation[] @relation("NegotiationAcceptor")
 
   @@index([status, isOnline, id])
   @@map("users")
@@ -308,18 +310,24 @@ model OrderImage {
 }
 
 model Negotiation {
-  id        String               @id @default(uuid())
-  orderId   String
-  price     Float
-  direction NegotiationDirection
-  status    NegotiationStatus    @default(PENDING)
+  id         String               @id @default(uuid())
+  orderId    String
+  price      Float
+  direction  NegotiationDirection
+  status     NegotiationStatus    @default(PENDING)
+  senderId   String
+  acceptedBy String?
 
   note      String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sender     User     @relation("NegotiationSender", fields: [senderId], references: [id])
+  acceptor   User?    @relation("NegotiationAcceptor", fields: [acceptedBy], references: [id])
 
+  @@index([orderId])
+  @@index([senderId])
   @@map("negotiations")
 }
 

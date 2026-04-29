@@ -1,8 +1,3 @@
-/**
- * @fileoverview API Routes - Main router combining all route modules
- * @module routes/api
- */
-
 import { Router } from 'express';
 import authRouter from './auth.js';
 import dashboardRouter from './dashboard.js';
@@ -13,6 +8,7 @@ import { isActive, authenticateAccess } from '../../middlewares/authMiddleware.j
 import { sensitiveIpRateLimiter } from '../../middlewares/rateLimitMiddleware.js';
 import workersRouter from './workers.js';
 import ordersRouter from './orders.js';
+import negotiationsRouter from './negotiations.js';
 
 const mainRouter = Router();
 
@@ -23,5 +19,6 @@ mainRouter.use('/workers', workersRouter);
 mainRouter.use('/governments', governmentRouter);
 mainRouter.use('/specializations', specializationRouter);
 mainRouter.use('/orders', authenticateAccess, isActive, ordersRouter);
+mainRouter.use('/negotiations', authenticateAccess, isActive, negotiationsRouter);
 
 export default mainRouter;
