@@ -68,7 +68,7 @@ model Location {
   address        String
   addressNotes   String?
   isMain         Boolean
-  isHidden       Boolean @default(false)
+  isHidden       Boolean                               @default(false)
   pointGeography Unsupported("geography(Point, 4326)")
   city           City                                  @relation(fields: [cityId], references: [id], onDelete: Cascade)
   government     Government                            @relation(fields: [governmentId], references: [id], onDelete: Cascade)
@@ -94,7 +94,7 @@ model WorkerProfile {
   updatedAt          DateTime @updatedAt
   rate               Float    @default(-1.0)
   completedJobsCount Int      @default(0)
-  workingHoursId     String?   @unique
+  workingHoursId     String?  @unique
 
   occupiedTimeSlots     WorkerOccupiedTimeSlot[]
   Order                 Order[]
@@ -105,6 +105,8 @@ model WorkerProfile {
   user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   workGovernments       Government[]             @relation("GovernmentToWorkerProfile")
   workingHours          WorkingHours?            @relation(fields: [workingHoursId], references: [id])
+  workerBalance         WorkerBalance?
+  payoutMethods         PayoutMethod[]
 
   @@index([userId], map: "idx_worker_profiles_user_id")
   @@index([acceptsUrgentJobs, userId])
@@ -261,33 +263,38 @@ model WorkerBadge {
 }
 
 model Order {
-  id                  String        @id @default(uuid())
+  id                  String      @id @default(uuid())
   title               String
   description         String
   clientProfileId     String
   workerProfileId     String
   locationId          String
   subSpecializationId String
-  orderStatus         OrderStatus   @default(PENDING)
-  workStatus          WorkStatus    @default(PENDING)
+  orderStatus         OrderStatus @default(PENDING)
+  workStatus          WorkStatus  @default(PENDING)
   finalPrice          Float?
   startDate           DateTime
   endDate             DateTime?
-  isUrgent            Boolean       @default(false)
-  rate                Float         @default(-1.0)
+  isUrgent            Boolean     @default(false)
+  rate                Float       @default(-1.0)
   comment             String?
   workStartedAt       DateTime?
   workFinishedAt      DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
-  clientProfile       ClientProfile     @relation(fields: [clientProfileId], references: [id])
-  workerProfile       WorkerProfile?    @relation(fields: [workerProfileId], references: [id])
-  location            Location          @relation(fields: [locationId], references: [id])
-  subSpecialization   SubSpecialization  @relation(fields: [subSpecializationId], references: [id])
-  images              OrderImage[]
-  occupiedTimeSlot    WorkerOccupiedTimeSlot?
-  negotiations        Negotiation[]
+  clientProfile     ClientProfile           @relation(fields: [clientProfileId], references: [id])
+  workerProfile     WorkerProfile?          @relation(fields: [workerProfileId], references: [id])
+  location          Location                @relation(fields: [locationId], references: [id])
+  subSpecialization SubSpecialization       @relation(fields: [subSpecializationId], references: [id])
+  images            OrderImage[]
+  occupiedTimeSlot  WorkerOccupiedTimeSlot?
+  negotiations      Negotiation[]
+  payment           Payment?
+  paymentAttempts   PaymentAttempt[]
+  escrowHold        EscrowHold?
+  disputes          Dispute[]
+  paymentIntentions PaymentIntention[]
 
   @@index([clientProfileId])
   @@index([workerProfileId])
@@ -314,7 +321,7 @@ model Negotiation {
   direction NegotiationDirection
   status    NegotiationStatus    @default(PENDING)
 
-  note      String?
+  note String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -481,4 +488,369 @@ model FlaggedMessage {
   @@index([state])
   @@index([createdAt])
   @@map("flagged_messages")
+}
+
+model FeeRule {
+  id            String   @id @default(uuid())
+  percentage    Float
+  effectiveFrom DateTime @default(now())
+  isActive      Boolean  @default(true)
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive, effectiveFrom])
+  @@map("fee_rules")
+}
+
+model WebhookEvent {
+  id              String             @id @default(uuid())
+  providerEventId String             @unique
+  provider        String             @default("PAYMOB")
+  eventType       String
+  status          WebhookEventStatus @default(RECEIVED)
+  rawPayload      Json
+  processedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  failureReason   String?
+  payment         Payment?
+  paymentAttempts PaymentAttempt[]
+
+  @@map("webhook_events")
+}
+
+model Payment {
+  id                  String   @id @default(uuid())
+  orderId             String   @unique
+  webhookEventId      String   @unique
+  idempotencyKey      String   @unique
+  externalReferenceId String
+  amount              BigInt
+  currency            String   @default("EGP")
+  createdAt           DateTime @default(now())
+
+  order           Order            @relation(fields: [orderId], references: [id])
+  webhookEvent    WebhookEvent     @relation(fields: [webhookEventId], references: [id])
+  escrowHold      EscrowHold?
+  paymentAttempts PaymentAttempt[]
+
+  @@index([orderId])
+  @@map("payments")
+}
+
+model PaymentAttempt {
+  id                      String               @id @default(uuid())
+  orderId                 String
+  paymentId               String?
+  webhookEventId          String
+  status                  PaymentAttemptStatus
+  providerResponseCode    String?
+  providerResponseMessage String?
+  amount                  BigInt
+  createdAt               DateTime             @default(now())
+
+  order        Order        @relation(fields: [orderId], references: [id])
+  payment      Payment?     @relation(fields: [paymentId], references: [id])
+  webhookEvent WebhookEvent @relation(fields: [webhookEventId], references: [id])
+
+  @@index([orderId])
+  @@index([paymentId])
+  @@map("payment_attempts")
+}
+
+model EscrowHold {
+  id                      String           @id @default(uuid())
+  orderId                 String           @unique
+  paymentId               String           @unique
+  totalAmount             BigInt
+  workerAmount            BigInt
+  platformFee             BigInt
+  feeRuleSnapshot         Json
+  status                  EscrowHoldStatus @default(HELD)
+  escrowReleaseEligibleAt DateTime?
+  releasedAt              DateTime?
+  idempotencyKey          String           @unique
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@index([status, escrowReleaseEligibleAt])
+  @@map("escrow_holds")
+}
+
+// ─── Simplified Transaction Log (replaces double-entry LedgerEntry) ─────
+
+model TransactionLog {
+  id            String          @id @default(uuid())
+  userId        String
+  amount        BigInt
+  type          TransactionType
+  referenceId   String
+  referenceType String
+  description   String?
+  createdAt     DateTime        @default(now())
+
+  @@index([userId])
+  @@index([referenceId, referenceType])
+  @@index([type])
+  @@index([createdAt])
+  @@map("transaction_logs")
+}
+
+// ─── Simple Activity Log (replaces complex FinancialAuditLog) ───────────
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actionType String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([actionType])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum DisputeStatus {
+  OPEN
+  AWAITING_INFO
+  RESOLVED
+  DISMISSED
+}
+
+enum DisputeResolution {
+  REFUND_CLIENT
+  FAVOR_WORKER
+  PARTIAL_REFUND
+  NO_ACTION
+}
+
+model WorkerBalance {
+  id               String   @id @default(uuid())
+  workerProfileId  String   @unique
+  totalEarned      BigInt   @default(0)
+  withdrawn        BigInt   @default(0)
+  pendingWithdraw  BigInt   @default(0)
+  onHoldForDispute BigInt   @default(0)
+  deductedForDebts BigInt   @default(0)
+  version          Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id])
+
+  @@map("worker_balances")
+}
+
+model PayoutMethod {
+  id              String           @id @default(uuid())
+  workerProfileId String
+  methodType      PayoutMethodType
+  accountName     String
+  accountNumber   String
+  bankName        String?
+  isDefault       Boolean          @default(false)
+  isVerified      Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id])
+
+  @@index([workerProfileId])
+  @@map("payout_methods")
+}
+
+model WithdrawRequest {
+  id                   String                @id @default(uuid())
+  workerProfileId      String
+  workerBalanceId      String
+  amount               BigInt
+  status               WithdrawRequestStatus @default(PENDING)
+  payoutMethodId       String
+  payoutMethodSnapshot Json
+  idempotencyKey       String                @unique
+  adminNotes           String?
+  processedBy          String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  payoutExecution PayoutExecution?
+
+  @@index([workerProfileId, status])
+  @@index([status])
+  @@map("withdraw_requests")
+}
+
+model PayoutExecution {
+  id                  String                @id @default(uuid())
+  withdrawRequestId   String                @unique
+  amount              BigInt
+  status              PayoutExecutionStatus @default(PENDING)
+  idempotencyKey      String                @unique
+  externalReferenceId String?
+  proofOfPaymentUrl   String?
+  failureReason       String?
+  executedBy          String?
+  executedAt          DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  withdrawRequest WithdrawRequest @relation(fields: [withdrawRequestId], references: [id])
+
+  @@index([status])
+  @@map("payout_executions")
+}
+
+model Refund {
+  id                       String           @id @default(uuid())
+  orderId                  String
+  escrowHoldId             String
+  amount                   BigInt
+  reasonCode               RefundReasonCode
+  refundType               String
+  originalPaymentReference String
+  externalRefundReference  String?
+  initiatedBy              String
+  idempotencyKey           String           @unique
+  notes                    String?
+  createdAt                DateTime         @default(now())
+
+  @@index([orderId])
+  @@index([escrowHoldId])
+  @@map("refunds")
+}
+
+model WorkerDebt {
+  id                String           @id @default(uuid())
+  workerProfileId   String
+  refundId          String           @unique
+  originalAmount    BigInt
+  outstandingAmount BigInt
+  status            WorkerDebtStatus @default(OUTSTANDING)
+  settledAt         DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([workerProfileId, status])
+  @@map("worker_debts")
+}
+
+// ─── Dispute System ─────────────────────────────────────────────────────
+
+model Dispute {
+  id                      String             @id @default(uuid())
+  orderId                 String
+  openedBy                String
+  status                  DisputeStatus      @default(OPEN)
+  resolution              DisputeResolution?
+  resolutionNote          String?
+  resolvedBy              String?
+  resolvedAt              DateTime?
+  evidence                Json               @default("[]")
+  flaggedMessageIds       String[]
+  eventTimeline           Json               @default("[]")
+  linkedTransactionLogIds String[]
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  order    Order            @relation(fields: [orderId], references: [id])
+  messages DisputeMessage[]
+
+  @@index([orderId])
+  @@index([status])
+  @@index([openedBy])
+  @@map("disputes")
+}
+
+model DisputeMessage {
+  id        String   @id @default(uuid())
+  disputeId String
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId])
+  @@map("dispute_messages")
+}
+
+model PaymentIntention {
+  id               String   @id @default(uuid())
+  orderId          String
+  specialReference String   @unique
+  amount           BigInt?
+  createdAt        DateTime @default(now())
+  isPaid           Boolean  @default(false)
+  order            Order    @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@map("payment_intentions")
+}
+
+// ─── Financial Module Enums ──────────────────────────────────────────────
+
+enum EscrowHoldStatus {
+  HELD
+  RELEASED
+  REFUNDED
+}
+
+enum PaymentAttemptStatus {
+  SUCCESS
+  FAILED
+}
+
+enum WithdrawRequestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum PayoutExecutionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum WorkerDebtStatus {
+  OUTSTANDING
+  SETTLING
+  SETTLED
+}
+
+enum WebhookEventStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+  SKIPPED
+}
+
+enum PayoutMethodType {
+  BANK_ACCOUNT
+  INSTAPAY
+  MOBILE_WALLET
+}
+
+enum RefundReasonCode {
+  CLIENT_REQUEST
+  SERVICE_NOT_DELIVERED
+  QUALITY_ISSUE
+  DUPLICATE_PAYMENT
+  ADMIN_INITIATED
+  DISPUTE_RESOLUTION
 }

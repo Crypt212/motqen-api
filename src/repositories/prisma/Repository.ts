@@ -73,3 +73,5 @@ export function handlePrismaError(error: unknown, operation: string): Repository
 export class Repository implements IRepository {
   constructor(public prismaClient: PrismaClient | Prisma.TransactionClient) {}
 }
+
+export type TransactionClient = Prisma.TransactionClient;
