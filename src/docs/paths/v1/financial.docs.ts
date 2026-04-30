@@ -3,7 +3,10 @@ import { UUIDSchema } from '../../../schemas/common.js';
 import { createResponseDoc } from '../../../docs/common.js';
 import { SuccessResponseSchema } from '../../../schemas/responses.js';
 import { z } from '../../../libs/zod.js';
-import { withdrawRequestSchema, payoutMethodSchema } from '../../../schemas/financial/withdrawal.schema.js';
+import {
+  withdrawRequestSchema,
+  payoutMethodSchema,
+} from '../../../schemas/financial/withdrawal.schema.js';
 import { initiateRefundSchema } from '../../../schemas/financial/refund.schema.js';
 
 export default function registerFinancialDocs(registry: OpenAPIRegistry) {
@@ -16,7 +19,10 @@ export default function registerFinancialDocs(registry: OpenAPIRegistry) {
     description: 'Requires admin access.',
     security: [{ BearerAuth: [] }],
     responses: createResponseDoc({
-      successfulResponse: { description: 'List of withdraw requests', content: { 'application/json': { schema: SuccessResponseSchema(z.array(z.any())) } } },
+      successfulResponse: {
+        description: 'List of withdraw requests',
+        content: { 'application/json': { schema: SuccessResponseSchema(z.array(z.any())) } },
+      },
       unauthorizedResponse: true,
     }),
   });
@@ -29,7 +35,10 @@ export default function registerFinancialDocs(registry: OpenAPIRegistry) {
     summary: 'Start processing a withdrawal (PENDING → IN_PROGRESS)',
     security: [{ BearerAuth: [] }],
     request: { params: z.object({ id: UUIDSchema }) },
-    responses: createResponseDoc({ successfulResponse: { description: 'Processing started' }, unauthorizedResponse: true }),
+    responses: createResponseDoc({
+      successfulResponse: { description: 'Processing started' },
+      unauthorizedResponse: true,
+    }),
   });
 
   // Admin: disputes list
@@ -39,7 +48,13 @@ export default function registerFinancialDocs(registry: OpenAPIRegistry) {
     tags: ['Disputes'],
     summary: 'List disputes',
     security: [{ BearerAuth: [] }],
-    responses: createResponseDoc({ successfulResponse: { description: 'List of disputes', content: { 'application/json': { schema: SuccessResponseSchema(z.array(z.any())) } } }, unauthorizedResponse: true }),
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'List of disputes',
+        content: { 'application/json': { schema: SuccessResponseSchema(z.array(z.any())) } },
+      },
+      unauthorizedResponse: true,
+    }),
   });
 
   // Admin: initiate refund for order
@@ -67,12 +82,27 @@ export default function registerFinancialDocs(registry: OpenAPIRegistry) {
     method: 'get',
     path: '/api/v1/workers/me/earnings',
     tags: ['Worker Earnings'],
-    summary: "Get my earnings balance",
+    summary: 'Get my earnings balance',
     description: "Returns the authenticated worker's earnings balance breakdown",
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     responses: createResponseDoc({
-      successfulResponse: { description: 'Earnings balance retrieved', content: { 'application/json': { schema: SuccessResponseSchema(z.object({ total_earned: z.string(), withdrawn: z.string(), pending_withdraw: z.string(), on_hold_for_dispute: z.string(), available_to_withdraw: z.string() })) } },
+      successfulResponse: {
+        description: 'Earnings balance retrieved',
+        content: {
+          'application/json': {
+            schema: SuccessResponseSchema(
+              z.object({
+                total_earned: z.string(),
+                withdrawn: z.string(),
+                pending_withdraw: z.string(),
+                on_hold_for_dispute: z.string(),
+                available_to_withdraw: z.string(),
+              })
+            ),
+          },
+        },
+      },
       unauthorizedResponse: true,
       forbiddenResponse: true,
       internalServerError: true,
@@ -86,7 +116,15 @@ export default function registerFinancialDocs(registry: OpenAPIRegistry) {
     summary: 'List my withdraw requests',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
-    responses: createResponseDoc({ successfulResponse: { description: 'List of withdraw requests', content: { 'application/json': { schema: SuccessResponseSchema(z.array(z.any())) } } }, unauthorizedResponse: true, forbiddenResponse: true, internalServerError: true }),
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'List of withdraw requests',
+        content: { 'application/json': { schema: SuccessResponseSchema(z.array(z.any())) } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
   });
 
   registry.registerPath({
@@ -96,8 +134,17 @@ export default function registerFinancialDocs(registry: OpenAPIRegistry) {
     summary: 'Create withdraw request',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
-    request: { body: { 'application/json': { schema: withdrawRequestSchema } } },
-    responses: createResponseDoc({ createdSuccessfullyResponse: { description: 'Withdraw request created', content: { 'application/json': { schema: SuccessResponseSchema(z.any()) } } }, badRequestResponse: true, unauthorizedResponse: true, forbiddenResponse: true, internalServerError: true }),
+    request: { body: { content: { 'application/json': { schema: withdrawRequestSchema } } } },
+    responses: createResponseDoc({
+      createdSuccessfullyResponse: {
+        description: 'Withdraw request created',
+        content: { 'application/json': { schema: SuccessResponseSchema(z.any()) } },
+      },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
   });
 
   registry.registerPath({
@@ -107,7 +154,15 @@ export default function registerFinancialDocs(registry: OpenAPIRegistry) {
     summary: 'List my payout methods',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
-    responses: createResponseDoc({ successfulResponse: { description: 'List of payout methods', content: { 'application/json': { schema: SuccessResponseSchema(z.array(z.any())) } } }, unauthorizedResponse: true, forbiddenResponse: true, internalServerError: true }),
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'List of payout methods',
+        content: { 'application/json': { schema: SuccessResponseSchema(z.array(z.any())) } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
   });
 
   registry.registerPath({
@@ -117,7 +172,15 @@ export default function registerFinancialDocs(registry: OpenAPIRegistry) {
     summary: 'Add payout method',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
-    request: { body: { 'application/json': { schema: payoutMethodSchema } } },
-    responses: createResponseDoc({ createdSuccessfullyResponse: { description: 'Payout method added', content: { 'application/json': { schema: SuccessResponseSchema(z.any()) } } }, badRequestResponse: true, unauthorizedResponse: true, forbiddenResponse: true, internalServerError: true }),
+    request: { body: { content: { 'application/json': { schema: payoutMethodSchema } } } },
+    responses: createResponseDoc({
+      createdSuccessfullyResponse: {
+        description: 'Payout method added',
+        content: { 'application/json': { schema: SuccessResponseSchema(z.any()) } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
   });
 }

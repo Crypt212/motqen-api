@@ -135,12 +135,12 @@ export class PaymentService {
   private async txCreatePayment(ctx: WebhookContext, obj: any) {
     await this.prisma.$transaction(async (tx) => {
       // ── Pessimistic lock + double check inside tx ──────────
-      const [lockedOrder] = await tx.$queryRaw<{ id: string; status: string }[]>`
-      SELECT id, status FROM orders WHERE id = ${ctx.orderId} FOR UPDATE
+      const [lockedOrder] = await tx.$queryRaw<{ id: string; orderStatus: string }[]>`
+      SELECT id, "orderStatus" FROM orders WHERE id = ${ctx.orderId} FOR UPDATE
     `;
 
-      const allowedStatuses = ['ORDERED', 'APPROVED'];
-      if (!allowedStatuses.includes(lockedOrder.status)) {
+      const allowedStatuses = ['PRICE_AGREED'];
+      if (!allowedStatuses.includes(lockedOrder.orderStatus)) {
         throw new WebhookProcessingError('UNALLOCATED_FUNDS', ctx);
       }
 
@@ -224,7 +224,7 @@ export class PaymentService {
 
       await tx.order.update({
         where: { id: ctx.orderId },
-        data: { orderStatus: 'PAID' },
+        data: { orderStatus: 'PAID', workStatus: 'WAITING_FOR_WORK' },
       });
 
       // ── Activity log ─────────────────────────────────────
@@ -304,8 +304,8 @@ export class PaymentService {
       if (!ctx.userId) throw new WebhookValidationError('USER_ORDER_MISMATCH', ctx);
 
       // ── Status check ───────────────────────────────────────
-      const allowedStatuses = ['ORDERED', 'APPROVED'];
-      if (!allowedStatuses.includes(order.orderStatus)) {
+      const allowedStatuses = 'PRICE_AGREED';
+      if (!(allowedStatuses == order.orderStatus)) {
         throw new WebhookProcessingError('UNALLOCATED_FUNDS', ctx);
       }
 

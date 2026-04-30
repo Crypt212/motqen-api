@@ -1,6 +1,3 @@
--- Enable PostGIS
-CREATE EXTENSION IF NOT EXISTS postgis;
-
 -- CreateEnum
 CREATE TYPE "OrderType" AS ENUM ('PREVIEW', 'SERVICE');
 
@@ -42,6 +39,39 @@ CREATE TYPE "FlagState" AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 
 -- CreateEnum
 CREATE TYPE "FlagReasonType" AS ENUM ('PHONE_EGYPT', 'PHONE_INTERNATIONAL', 'URL', 'SOCIAL_HANDLE');
+
+-- CreateEnum
+CREATE TYPE "TransactionType" AS ENUM ('CREDIT', 'DEBIT');
+
+-- CreateEnum
+CREATE TYPE "DisputeStatus" AS ENUM ('OPEN', 'AWAITING_INFO', 'RESOLVED', 'DISMISSED');
+
+-- CreateEnum
+CREATE TYPE "DisputeResolution" AS ENUM ('REFUND_CLIENT', 'FAVOR_WORKER', 'PARTIAL_REFUND', 'NO_ACTION');
+
+-- CreateEnum
+CREATE TYPE "EscrowHoldStatus" AS ENUM ('HELD', 'RELEASED', 'REFUNDED');
+
+-- CreateEnum
+CREATE TYPE "PaymentAttemptStatus" AS ENUM ('SUCCESS', 'FAILED');
+
+-- CreateEnum
+CREATE TYPE "WithdrawRequestStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'CANCELLED');
+
+-- CreateEnum
+CREATE TYPE "PayoutExecutionStatus" AS ENUM ('PENDING', 'COMPLETED', 'FAILED');
+
+-- CreateEnum
+CREATE TYPE "WorkerDebtStatus" AS ENUM ('OUTSTANDING', 'SETTLING', 'SETTLED');
+
+-- CreateEnum
+CREATE TYPE "WebhookEventStatus" AS ENUM ('RECEIVED', 'PROCESSED', 'FAILED', 'SKIPPED');
+
+-- CreateEnum
+CREATE TYPE "PayoutMethodType" AS ENUM ('BANK_ACCOUNT', 'INSTAPAY', 'MOBILE_WALLET');
+
+-- CreateEnum
+CREATE TYPE "RefundReasonCode" AS ENUM ('CLIENT_REQUEST', 'SERVICE_NOT_DELIVERED', 'QUALITY_ISSUE', 'DUPLICATE_PAYMENT', 'ADMIN_INITIATED', 'DISPUTE_RESOLUTION');
 
 -- CreateTable
 CREATE TABLE "sessions" (
@@ -357,6 +387,254 @@ CREATE TABLE "flagged_messages" (
 );
 
 -- CreateTable
+CREATE TABLE "fee_rules" (
+    "id" TEXT NOT NULL,
+    "percentage" DOUBLE PRECISION NOT NULL,
+    "effectiveFrom" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "fee_rules_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "webhook_events" (
+    "id" TEXT NOT NULL,
+    "providerEventId" TEXT NOT NULL,
+    "provider" TEXT NOT NULL DEFAULT 'PAYMOB',
+    "eventType" TEXT NOT NULL,
+    "status" "WebhookEventStatus" NOT NULL DEFAULT 'RECEIVED',
+    "rawPayload" JSONB NOT NULL,
+    "processedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "failureReason" TEXT,
+
+    CONSTRAINT "webhook_events_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payments" (
+    "id" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
+    "webhookEventId" TEXT NOT NULL,
+    "idempotencyKey" TEXT NOT NULL,
+    "externalReferenceId" TEXT NOT NULL,
+    "amount" BIGINT NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'EGP',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "payments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payment_attempts" (
+    "id" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
+    "paymentId" TEXT,
+    "webhookEventId" TEXT NOT NULL,
+    "status" "PaymentAttemptStatus" NOT NULL,
+    "providerResponseCode" TEXT,
+    "providerResponseMessage" TEXT,
+    "amount" BIGINT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "payment_attempts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "escrow_holds" (
+    "id" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
+    "paymentId" TEXT NOT NULL,
+    "totalAmount" BIGINT NOT NULL,
+    "workerAmount" BIGINT NOT NULL,
+    "platformFee" BIGINT NOT NULL,
+    "feeRuleSnapshot" JSONB NOT NULL,
+    "status" "EscrowHoldStatus" NOT NULL DEFAULT 'HELD',
+    "escrowReleaseEligibleAt" TIMESTAMP(3),
+    "releasedAt" TIMESTAMP(3),
+    "idempotencyKey" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "escrow_holds_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "transaction_logs" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "amount" BIGINT NOT NULL,
+    "type" "TransactionType" NOT NULL,
+    "referenceId" TEXT NOT NULL,
+    "referenceType" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "transaction_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "activity_logs" (
+    "id" TEXT NOT NULL,
+    "actorId" TEXT NOT NULL,
+    "actionType" TEXT NOT NULL,
+    "entityType" TEXT NOT NULL,
+    "entityId" TEXT NOT NULL,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "activity_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "worker_balances" (
+    "id" TEXT NOT NULL,
+    "workerProfileId" TEXT NOT NULL,
+    "totalEarned" BIGINT NOT NULL DEFAULT 0,
+    "withdrawn" BIGINT NOT NULL DEFAULT 0,
+    "pendingWithdraw" BIGINT NOT NULL DEFAULT 0,
+    "onHoldForDispute" BIGINT NOT NULL DEFAULT 0,
+    "deductedForDebts" BIGINT NOT NULL DEFAULT 0,
+    "version" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "worker_balances_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payout_methods" (
+    "id" TEXT NOT NULL,
+    "workerProfileId" TEXT NOT NULL,
+    "methodType" "PayoutMethodType" NOT NULL,
+    "accountName" TEXT NOT NULL,
+    "accountNumber" TEXT NOT NULL,
+    "bankName" TEXT,
+    "isDefault" BOOLEAN NOT NULL DEFAULT false,
+    "isVerified" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "payout_methods_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "withdraw_requests" (
+    "id" TEXT NOT NULL,
+    "workerProfileId" TEXT NOT NULL,
+    "workerBalanceId" TEXT NOT NULL,
+    "amount" BIGINT NOT NULL,
+    "status" "WithdrawRequestStatus" NOT NULL DEFAULT 'PENDING',
+    "payoutMethodId" TEXT NOT NULL,
+    "payoutMethodSnapshot" JSONB NOT NULL,
+    "idempotencyKey" TEXT NOT NULL,
+    "adminNotes" TEXT,
+    "processedBy" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "withdraw_requests_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payout_executions" (
+    "id" TEXT NOT NULL,
+    "withdrawRequestId" TEXT NOT NULL,
+    "amount" BIGINT NOT NULL,
+    "status" "PayoutExecutionStatus" NOT NULL DEFAULT 'PENDING',
+    "idempotencyKey" TEXT NOT NULL,
+    "externalReferenceId" TEXT,
+    "proofOfPaymentUrl" TEXT,
+    "failureReason" TEXT,
+    "executedBy" TEXT,
+    "executedAt" TIMESTAMP(3),
+    "completedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "payout_executions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "refunds" (
+    "id" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
+    "escrowHoldId" TEXT NOT NULL,
+    "amount" BIGINT NOT NULL,
+    "reasonCode" "RefundReasonCode" NOT NULL,
+    "refundType" TEXT NOT NULL,
+    "originalPaymentReference" TEXT NOT NULL,
+    "externalRefundReference" TEXT,
+    "initiatedBy" TEXT NOT NULL,
+    "idempotencyKey" TEXT NOT NULL,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "refunds_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "worker_debts" (
+    "id" TEXT NOT NULL,
+    "workerProfileId" TEXT NOT NULL,
+    "refundId" TEXT NOT NULL,
+    "originalAmount" BIGINT NOT NULL,
+    "outstandingAmount" BIGINT NOT NULL,
+    "status" "WorkerDebtStatus" NOT NULL DEFAULT 'OUTSTANDING',
+    "settledAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "worker_debts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "disputes" (
+    "id" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
+    "openedBy" TEXT NOT NULL,
+    "status" "DisputeStatus" NOT NULL DEFAULT 'OPEN',
+    "resolution" "DisputeResolution",
+    "resolutionNote" TEXT,
+    "resolvedBy" TEXT,
+    "resolvedAt" TIMESTAMP(3),
+    "evidence" JSONB NOT NULL DEFAULT '[]',
+    "flaggedMessageIds" TEXT[],
+    "eventTimeline" JSONB NOT NULL DEFAULT '[]',
+    "linkedTransactionLogIds" TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "disputes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "dispute_messages" (
+    "id" TEXT NOT NULL,
+    "disputeId" TEXT NOT NULL,
+    "senderId" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "dispute_messages_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payment_intentions" (
+    "id" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
+    "specialReference" TEXT NOT NULL,
+    "amount" BIGINT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "isPaid" BOOLEAN NOT NULL DEFAULT false,
+
+    CONSTRAINT "payment_intentions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_GovernmentToWorkerProfile" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
@@ -479,6 +757,123 @@ CREATE INDEX "flagged_messages_state_idx" ON "flagged_messages"("state");
 CREATE INDEX "flagged_messages_createdAt_idx" ON "flagged_messages"("createdAt");
 
 -- CreateIndex
+CREATE INDEX "fee_rules_isActive_effectiveFrom_idx" ON "fee_rules"("isActive", "effectiveFrom");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "webhook_events_providerEventId_key" ON "webhook_events"("providerEventId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payments_orderId_key" ON "payments"("orderId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payments_webhookEventId_key" ON "payments"("webhookEventId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payments_idempotencyKey_key" ON "payments"("idempotencyKey");
+
+-- CreateIndex
+CREATE INDEX "payments_orderId_idx" ON "payments"("orderId");
+
+-- CreateIndex
+CREATE INDEX "payment_attempts_orderId_idx" ON "payment_attempts"("orderId");
+
+-- CreateIndex
+CREATE INDEX "payment_attempts_paymentId_idx" ON "payment_attempts"("paymentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "escrow_holds_orderId_key" ON "escrow_holds"("orderId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "escrow_holds_paymentId_key" ON "escrow_holds"("paymentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "escrow_holds_idempotencyKey_key" ON "escrow_holds"("idempotencyKey");
+
+-- CreateIndex
+CREATE INDEX "escrow_holds_status_escrowReleaseEligibleAt_idx" ON "escrow_holds"("status", "escrowReleaseEligibleAt");
+
+-- CreateIndex
+CREATE INDEX "transaction_logs_userId_idx" ON "transaction_logs"("userId");
+
+-- CreateIndex
+CREATE INDEX "transaction_logs_referenceId_referenceType_idx" ON "transaction_logs"("referenceId", "referenceType");
+
+-- CreateIndex
+CREATE INDEX "transaction_logs_type_idx" ON "transaction_logs"("type");
+
+-- CreateIndex
+CREATE INDEX "transaction_logs_createdAt_idx" ON "transaction_logs"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "activity_logs_actorId_idx" ON "activity_logs"("actorId");
+
+-- CreateIndex
+CREATE INDEX "activity_logs_actionType_idx" ON "activity_logs"("actionType");
+
+-- CreateIndex
+CREATE INDEX "activity_logs_entityType_entityId_idx" ON "activity_logs"("entityType", "entityId");
+
+-- CreateIndex
+CREATE INDEX "activity_logs_createdAt_idx" ON "activity_logs"("createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "worker_balances_workerProfileId_key" ON "worker_balances"("workerProfileId");
+
+-- CreateIndex
+CREATE INDEX "payout_methods_workerProfileId_idx" ON "payout_methods"("workerProfileId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "withdraw_requests_idempotencyKey_key" ON "withdraw_requests"("idempotencyKey");
+
+-- CreateIndex
+CREATE INDEX "withdraw_requests_workerProfileId_status_idx" ON "withdraw_requests"("workerProfileId", "status");
+
+-- CreateIndex
+CREATE INDEX "withdraw_requests_status_idx" ON "withdraw_requests"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payout_executions_withdrawRequestId_key" ON "payout_executions"("withdrawRequestId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payout_executions_idempotencyKey_key" ON "payout_executions"("idempotencyKey");
+
+-- CreateIndex
+CREATE INDEX "payout_executions_status_idx" ON "payout_executions"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "refunds_idempotencyKey_key" ON "refunds"("idempotencyKey");
+
+-- CreateIndex
+CREATE INDEX "refunds_orderId_idx" ON "refunds"("orderId");
+
+-- CreateIndex
+CREATE INDEX "refunds_escrowHoldId_idx" ON "refunds"("escrowHoldId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "worker_debts_refundId_key" ON "worker_debts"("refundId");
+
+-- CreateIndex
+CREATE INDEX "worker_debts_workerProfileId_status_idx" ON "worker_debts"("workerProfileId", "status");
+
+-- CreateIndex
+CREATE INDEX "disputes_orderId_idx" ON "disputes"("orderId");
+
+-- CreateIndex
+CREATE INDEX "disputes_status_idx" ON "disputes"("status");
+
+-- CreateIndex
+CREATE INDEX "disputes_openedBy_idx" ON "disputes"("openedBy");
+
+-- CreateIndex
+CREATE INDEX "dispute_messages_disputeId_idx" ON "dispute_messages"("disputeId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payment_intentions_specialReference_key" ON "payment_intentions"("specialReference");
+
+-- CreateIndex
+CREATE INDEX "payment_intentions_orderId_idx" ON "payment_intentions"("orderId");
+
+-- CreateIndex
 CREATE INDEX "_GovernmentToWorkerProfile_B_index" ON "_GovernmentToWorkerProfile"("B");
 
 -- AddForeignKey
@@ -567,6 +962,45 @@ ALTER TABLE "messages" ADD CONSTRAINT "messages_senderId_fkey" FOREIGN KEY ("sen
 
 -- AddForeignKey
 ALTER TABLE "flagged_messages" ADD CONSTRAINT "flagged_messages_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payments" ADD CONSTRAINT "payments_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payments" ADD CONSTRAINT "payments_webhookEventId_fkey" FOREIGN KEY ("webhookEventId") REFERENCES "webhook_events"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_attempts" ADD CONSTRAINT "payment_attempts_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_attempts" ADD CONSTRAINT "payment_attempts_paymentId_fkey" FOREIGN KEY ("paymentId") REFERENCES "payments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_attempts" ADD CONSTRAINT "payment_attempts_webhookEventId_fkey" FOREIGN KEY ("webhookEventId") REFERENCES "webhook_events"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "escrow_holds" ADD CONSTRAINT "escrow_holds_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "escrow_holds" ADD CONSTRAINT "escrow_holds_paymentId_fkey" FOREIGN KEY ("paymentId") REFERENCES "payments"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "worker_balances" ADD CONSTRAINT "worker_balances_workerProfileId_fkey" FOREIGN KEY ("workerProfileId") REFERENCES "worker_profiles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payout_methods" ADD CONSTRAINT "payout_methods_workerProfileId_fkey" FOREIGN KEY ("workerProfileId") REFERENCES "worker_profiles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payout_executions" ADD CONSTRAINT "payout_executions_withdrawRequestId_fkey" FOREIGN KEY ("withdrawRequestId") REFERENCES "withdraw_requests"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "disputes" ADD CONSTRAINT "disputes_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "dispute_messages" ADD CONSTRAINT "dispute_messages_disputeId_fkey" FOREIGN KEY ("disputeId") REFERENCES "disputes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_intentions" ADD CONSTRAINT "payment_intentions_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_GovernmentToWorkerProfile" ADD CONSTRAINT "_GovernmentToWorkerProfile_A_fkey" FOREIGN KEY ("A") REFERENCES "governments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
