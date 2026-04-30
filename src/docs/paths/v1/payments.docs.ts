@@ -1,4 +1,7 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
+import { z } from '../../../libs/zod.js';
+import { OrderIdParamsSchema } from '../../../schemas/order.js';
+import { SuccessResponseSchema } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerPaymentsDocs(registry: OpenAPIRegistry) {
@@ -12,11 +15,14 @@ export default function registerPaymentsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      // params schema is provided in route; keep minimal here to avoid coupling
+      params: OrderIdParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Payment iframe URL generated successfully',
+        content: {
+          'application/json': { schema: SuccessResponseSchema(z.object({ iframeUrl: z.string() })) },
+        },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,

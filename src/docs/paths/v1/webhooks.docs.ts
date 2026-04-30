@@ -1,4 +1,5 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
+import { paymobWebhookSchema } from '../../../schemas/financial/payment.schema.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerWebhooksDocs(registry: OpenAPIRegistry) {
@@ -10,7 +11,7 @@ export default function registerWebhooksDocs(registry: OpenAPIRegistry) {
     description:
       'Receives and processes Paymob payment transaction webhooks. No authentication required — called by Paymob servers.',
     request: {
-      // Body schema exists in schemas; leave minimal reference here
+      body: { content: { 'application/json': { schema: paymobWebhookSchema } } },
     },
     responses: createResponseDoc({
       successfulResponse: { description: 'Webhook processed successfully' },
