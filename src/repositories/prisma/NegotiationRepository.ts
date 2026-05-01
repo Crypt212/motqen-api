@@ -124,6 +124,7 @@ export default class NegotiationRepository extends Repository implements INegoti
           clientProfileId: true,
           workerProfileId: true,
           orderStatus: true,
+          title:true,
         },
       });
       return record
@@ -132,6 +133,7 @@ export default class NegotiationRepository extends Repository implements INegoti
             clientProfileId: record.clientProfileId,
             workerProfileId: record.workerProfileId,
             orderStatus: record.orderStatus,
+            title: record.title,
           }
         : null;
     } catch (error: unknown) {

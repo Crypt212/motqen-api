@@ -32,6 +32,7 @@ export default class UserRepository extends Repository implements IUserRepositor
       isOnline: record.isOnline,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
+      lastNotificationReadAt: (record as any).lastNotificationReadAt,
     };
   }
 

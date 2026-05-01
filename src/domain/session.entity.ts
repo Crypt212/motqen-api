@@ -13,6 +13,7 @@ export type Session = {
   deviceId: string;
   ipAddress: string;
   userAgent: string;
+  fcmToken: string | null;
   lastUsedAt: Date;
   expiresAt: Date;
 
@@ -26,6 +27,7 @@ export type SessionCreateInput = {
   deviceId: string;
   ipAddress?: string;
   userAgent?: string;
+  fcmToken?: string | null;
   lastUsedAt?: Date;
   expiresAt: Date;
 };

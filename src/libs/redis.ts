@@ -1,4 +1,4 @@
-import redis from 'redis';
+import * as redis from 'redis';
 import environment from '../configs/environment.js';
 import { logger } from './winston.js';
 

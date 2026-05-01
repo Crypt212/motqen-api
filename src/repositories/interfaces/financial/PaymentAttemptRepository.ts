@@ -1,4 +1,4 @@
-import { TransactionClient } from '../Repository.js';
+import type { TransactionClient } from '../../prisma/Repository.js';
 import { PaymentAttempt, PaymentAttemptCreateInput } from '../../../domain/financial/payment.entity.js';
 
 export interface IPaymentAttemptRepository {

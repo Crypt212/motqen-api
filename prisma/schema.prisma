@@ -17,12 +17,14 @@ model Session {
   deviceId   String
   ipAddress  String?
   userAgent  String?
+  fcmToken   String?
   lastUsedAt DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   createdAt  DateTime  @default(now())
   expiresAt  DateTime
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, isRevoked])
   @@map("sessions")
 }
 
@@ -44,9 +46,71 @@ model User {
   sentMessages    Message[]
   sessions        Session[]
   workerProfile   WorkerProfile?
+  lastNotificationReadAt DateTime?
+  notifications          Notification[]
 
   @@index([status, isOnline, id])
   @@map("users")
+}
+
+enum NotificationType {
+  ORDER_ACCEPTED
+  ORDER_CANCELLED
+  ORDER_COMPLETED
+  NEGOTIATION_OFFER
+  NEGOTIATION_ACCEPTED
+  NEGOTIATION_REJECTED
+  WORK_STARTED
+  WORK_DONE
+  PAYMENT_REQUIRED
+  PAYMENT_RECEIVED
+  PAYOUT_COMPLETED
+  DISPUTE_OPENED
+  DISPUTE_UPDATED
+  DISPUTE_RESOLVED
+  REFUND_PROCESSED
+  WITHDRAW_REQUESTED
+  WITHDRAW_APPROVED
+  WITHDRAW_REJECTED
+  ADMIN_ACTION
+}
+
+enum BroadcastTargetRole {
+  WORKER
+  CLIENT
+  ALL
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  data      Json
+  isSent    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([isSent, createdAt])
+  @@map("notifications")
+}
+
+model Broadcast {
+  id          String               @id @default(uuid())
+  type        NotificationType
+  title       String
+  body        String
+  data        Json
+  targetRole  BroadcastTargetRole?
+  targetGovId String?
+  createdAt   DateTime             @default(now())
+
+  @@index([targetRole, createdAt])
+  @@index([targetGovId, createdAt])
+  @@map("broadcasts")
 }
 
 model ClientProfile {

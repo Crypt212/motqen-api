@@ -1,4 +1,4 @@
-import { TransactionClient } from '../Repository.js';
+import type { TransactionClient } from '../../prisma/Repository.js';
 import { Refund, RefundCreateInput } from '../../../domain/financial/refund.entity.js';
 
 export interface IRefundRepository {

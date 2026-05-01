@@ -31,4 +31,10 @@ export default interface ISessionRepository {
     revokedBy: IDType;
     excludeId?: IDType;
   }): Promise<void>;
+
+  /** Find many sessions matching a filter */
+  findMany(params: { filter: SessionFilter }): Promise<Session[]>;
+
+  /** Update FCM token for a session (or clear it) */
+  updateFcmToken(sessionId: string, token: string | null): Promise<void>;
 }

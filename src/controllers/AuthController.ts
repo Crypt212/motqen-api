@@ -7,6 +7,7 @@ import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { authService, rateLimitService, presenceService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
+import prisma from '../libs/database.js';
 
 /**
  * Request OTP for phone number verification
@@ -251,4 +252,30 @@ export const reviewStatus = asyncHandler(async (req, res) => {
   }
 
   throw new AppError('Forbidden', 403);
+});
+
+/**
+ * Update FCM token for the current session
+ */
+export const updateFcmToken = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const deviceId = req.deviceId;
+  const { fcmToken } = req.body;
+
+  // Find the active session by userId + deviceId
+  const session = await prisma.session.findFirst({
+    where: { userId, deviceId, isRevoked: false },
+    select: { id: true },
+  });
+
+  if (!session) {
+    throw new AppError('Session not found', 404);
+  }
+
+  await prisma.session.update({
+    where: { id: session.id },
+    data: { fcmToken },
+  });
+
+  new SuccessResponse('FCM token updated successfully', { success: true }, 200).send(res);
 });

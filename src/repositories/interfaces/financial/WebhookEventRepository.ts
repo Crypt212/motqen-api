@@ -1,4 +1,5 @@
-import { IDType, TransactionClient } from '../Repository.js';
+import type { IDType } from '../../interfaces/Repository.js';
+import type { TransactionClient } from '../../prisma/Repository.js';
 import { WebhookEvent, WebhookEventCreateInput, WebhookEventStatus } from '../../../domain/financial/payment.entity.js';
 
 export interface IWebhookEventRepository {

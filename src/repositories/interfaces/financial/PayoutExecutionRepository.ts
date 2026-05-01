@@ -1,4 +1,4 @@
-import { TransactionClient } from '../Repository.js';
+import type { TransactionClient } from '../../prisma/Repository.js';
 import { PayoutExecution, PayoutExecutionCreateInput, PayoutExecutionStatus } from '../../../domain/financial/withdrawal.entity.js';
 
 export interface IPayoutExecutionRepository {

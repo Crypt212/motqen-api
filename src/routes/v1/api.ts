@@ -13,6 +13,7 @@ import { isActive, authenticateAccess } from '../../middlewares/authMiddleware.j
 import { sensitiveIpRateLimiter } from '../../middlewares/rateLimitMiddleware.js';
 import workersRouter from './workers.js';
 import ordersRouter from './orders.js';
+import notificationRouter from './notifications.js';
 import webhooksRouter from './webhooks.js';
 import escrowRouter from './financial/escrow.js';
 import workerEarningsRouter from './financial/worker-earnings.js';
@@ -31,6 +32,7 @@ mainRouter.use('/workers', workersRouter);
 mainRouter.use('/governments', governmentRouter);
 mainRouter.use('/specializations', specializationRouter);
 mainRouter.use('/orders', authenticateAccess, isActive, ordersRouter);
+mainRouter.use('/notifications', authenticateAccess, isActive, notificationRouter);
 
 mainRouter.use('/webhooks', webhooksRouter);
 mainRouter.use('/admin/escrow-holds', escrowRouter);

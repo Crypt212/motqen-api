@@ -1,4 +1,4 @@
-import { TransactionClient } from '../Repository.js';
+import type { TransactionClient } from '../../prisma/Repository.js';
 import { WorkerDebt, WorkerDebtCreateInput, WorkerDebtStatus } from '../../../domain/financial/debt.entity.js';
 
 export interface IWorkerDebtRepository {
