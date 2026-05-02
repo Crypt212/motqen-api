@@ -1,6 +1,7 @@
 import { PrismaClient } from '../generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
-import admin from '../libs/firebase.js';
+import { FirebaseProvider } from '../providers/FirebaseProvider.js';
+const firebaseProvider = new FirebaseProvider();
 import { logger } from '../libs/winston.js';
 
 const BATCH_SIZE = 100;
@@ -58,9 +59,10 @@ async function retryFailedNotifications(): Promise<void> {
     }
 
     try {
-      const response = await admin.messaging().sendEachForMulticast({
+      const response = await firebaseProvider.sendMulticast({
         tokens,
-        notification: { title: notification.title, body: notification.body },
+        title: notification.title,
+        body: notification.body,
         data: serializedData,
       });
 

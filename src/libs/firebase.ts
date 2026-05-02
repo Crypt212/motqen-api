@@ -1,9 +1,10 @@
 import admin from 'firebase-admin';
 import { logger } from './winston.js';
+import environment from '../configs/environment.js';
 
 let firebaseReady = false;
 
-const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+const raw = environment.firebase.serviceAccount;
 
 if (raw) {
   try {

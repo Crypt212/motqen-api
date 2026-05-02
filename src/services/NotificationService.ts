@@ -1,6 +1,5 @@
 import type { RedisClientType } from '../libs/redis.js';
-import admin from '../libs/firebase.js';
-import { firebaseReady } from '../libs/firebase.js';
+import { IFirebaseProvider } from '../providers/interfaces/IFirebaseProvider.js';
 import { logger } from '../libs/winston.js';
 import type INotificationRepository from '../repositories/interfaces/NotificationRepository.js';
 import type ISessionRepository from '../repositories/interfaces/SessionRepository.js';
@@ -24,7 +23,8 @@ export class NotificationService {
     private redis: RedisClientType,
     private sessionRepo: ISessionRepository,
     private userRepo: IUserRepository,
-  ) { }
+    private firebaseProvider: IFirebaseProvider,
+  ) {}
 
   async notify(userId: string, event: NotificationEventContext): Promise<void> {
     const payload = mapEventToNotification(event);
@@ -53,15 +53,16 @@ export class NotificationService {
     targetRole?: BroadcastTargetRole;
     targetGovId?: string;
   }): Promise<void> {
-    if (!firebaseReady) {
+    if (!this.firebaseProvider.isReady()) {
       logger.warn('Firebase not initialized — skipping broadcast');
       return;
     }
 
     try {
-      await admin.messaging().send({
+      await this.firebaseProvider.sendTopic({
         topic: options.topic,
-        notification: { title: options.title, body: options.body },
+        title: options.title,
+        body: options.body,
         data: options.data,
       });
     } catch (err) {
@@ -108,7 +109,7 @@ export class NotificationService {
     payload: NotificationPayload,
     notificationId: string,
   ): Promise<void> {
-    if (!firebaseReady) {
+    if (!this.firebaseProvider.isReady()) {
       logger.warn('Firebase not initialized — skipping FCM send', { userId });
       return;
     }
@@ -119,9 +120,10 @@ export class NotificationService {
 
     const serializedData = this.serializeData(payload.data);
 
-    const response = await admin.messaging().sendEachForMulticast({
+    const response = await this.firebaseProvider.sendMulticast({
       tokens,
-      notification: { title: payload.title, body: payload.body },
+      title: payload.title,
+      body: payload.body,
       data: serializedData,
     });
 

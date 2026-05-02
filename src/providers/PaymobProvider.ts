@@ -110,10 +110,10 @@ export class PaymobProvider implements IPaymentProvider {
     }
 
     try {
-      // let authToken = this.cachedAuthToken;
-      // if (!authToken || Date.now() > this.authTokenExpiresAt) {
-      //   authToken = await this.setAuth();
-      // }
+    //   let authToken = this.cachedAuthToken;
+    //   if (!authToken || Date.now() > this.authTokenExpiresAt) {
+    //     authToken = await this.setAuth();
+    //   }
       let order = await this.api.post<PaymobIntentionResponse>('/v1/intention/', {
         "amount": orderInfo.amountCents,// placeholder for test only i will delete it 
         "currency": "EGP",
@@ -142,7 +142,7 @@ export class PaymobProvider implements IPaymentProvider {
           "state": "dumy"
         },
         "special_reference": orderInfo.specialReference || orderInfo.orderId || "ahshs",
-        "expiration": 60,
+        "expiration": 1800,
         "notification_url": `${environment.api.baseUrl}/api/v1/webhooks/paymob`,
         "redirection_url": `Motqen://payment/${orderInfo.orderId}`,
       }, {

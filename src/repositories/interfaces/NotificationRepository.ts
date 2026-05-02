@@ -1,4 +1,4 @@
-import type { Notification, NotificationCreateInput, NotificationData, NotificationType } from '../../domain/notification.entity.js';
+import type { Notification, NotificationCreateInput} from '../../domain/notification.entity.js';
 
 export default interface INotificationRepository {
   create(data: NotificationCreateInput): Promise<Notification>;

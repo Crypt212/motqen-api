@@ -78,7 +78,6 @@ const twilio = {
   authToken: process.env.TWILIO_AUTH_TOKEN,
   virtualNumber: process.env.TWILIO_VIRTUAL_NUMBER,
 };
-// configs/environment.js  — add these fields
 
 const rateLimit = {
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
@@ -102,6 +101,9 @@ const cron = {
   escrowReleaseInterval: process.env.ESCROW_RELEASE_CRON_INTERVAL || '*/5 * * * *',
 };
 
+const firebase = {
+serviceAccount: process.env.FIREBASE_SERVICE_ACCOUNT,
+};
 const environment = {
   nodeEnv,
   backend,
@@ -118,6 +120,7 @@ const environment = {
   rateLimit,
   paymob,
   cron,
+  firebase,
 };
 
 Object.freeze(environment);
