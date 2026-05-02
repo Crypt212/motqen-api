@@ -5,14 +5,29 @@ import {
   Order,
   OrderCreateInput,
   OrderFilter,
+  OrderStatus,
   OrderUpdateInput,
 } from '../../domain/order.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../../types/query.js';
+import { ClientProfileFilter } from 'src/domain/clientProfile.entity.js';
+import { WorkerProfileFilter } from 'src/domain/workerProfile.entity.js';
 
 type PrismaOrderWithImagesWithLocationAndSubSpecialization = Prisma.OrderGetPayload<{
   include: { images: true; subSpecialization: true, clientProfile: { include: { user: true } }, workerProfile: { include: { user: true } } };
 }>;
+
+type PrismaOrderFilter = {
+  id?: string,
+  clientProfileId?: string,
+  workerProfileId?: string,
+  clientProfile?: ClientProfileFilter,
+  workerProfile?: WorkerProfileFilter,
+  rate?: number,
+  orderStatus?: OrderStatus,
+  isUrgent?: boolean,
+  createdAt?: Date
+};
 
 export default class OrderRepository extends Repository implements IOrderRepository {
   private toDomain(record: PrismaOrderWithImagesWithLocationAndSubSpecialization): Order {
@@ -43,10 +58,27 @@ export default class OrderRepository extends Repository implements IOrderReposit
     };
   }
 
+  private prepare(filter: OrderFilter): PrismaOrderFilter {
+    const preparedFilter: PrismaOrderFilter = {
+      id: filter?.id as string,
+      clientProfileId: filter?.clientProfileId as string,
+      workerProfileId: filter?.workerProfileId as string,
+      clientProfile: filter.clientUserId ? { userId: filter.clientUserId as string } : undefined,
+      workerProfile: filter.workerUserId ? { userId: filter.workerUserId as string } : undefined,
+      rate: filter?.rate as number,
+      orderStatus: filter?.orderStatus as OrderStatus,
+      isUrgent: filter?.isUrgent as boolean,
+      createdAt: filter?.createdAt as Date
+
+    };
+    return preparedFilter;
+  }
+
   async find({ filter }: { filter: OrderFilter }): Promise<Order | null> {
     try {
+      const preparedFilter = this.prepare(filter);
       const record = await this.prismaClient.order.findFirst({
-        where: filter,
+        where: preparedFilter,
         include: { images: true, subSpecialization: true, clientProfile: { include: { user: true } }, workerProfile: { include: { user: true } } }
       });
       if (!record) return null;
@@ -77,8 +109,10 @@ export default class OrderRepository extends Repository implements IOrderReposit
         hasPrev: false,
       };
 
+      const preparedFilter = this.prepare(filter);
+
       if (pagination) {
-        const total = await this.prismaClient.order.count({ where: filter });
+        const total = await this.prismaClient.order.count({ where: preparedFilter });
         const handled = handlePagination({ total, paginationOptions: pagination });
         paginationQuery = handled.paginationQuery;
         paginationResult = handled.paginationResult;
@@ -87,7 +121,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
       const orderBy = sort ? handleSort(sort) : undefined;
 
       const records = await this.prismaClient.order.findMany({
-        where: filter,
+        where: preparedFilter,
         include: { images: true, subSpecialization: true, clientProfile: { include: { user: true } }, workerProfile: { include: { user: true } } },
         ...paginationQuery,
         orderBy,
@@ -144,8 +178,10 @@ export default class OrderRepository extends Repository implements IOrderReposit
     order: OrderUpdateInput;
   }): Promise<Order> {
     try {
+      const preparedFilter = this.prepare(filter);
+
       // First, get the ID from filter, assuming updating by ID
-      const existing = await this.prismaClient.order.findFirst({ where: filter });
+      const existing = await this.prismaClient.order.findFirst({ where: preparedFilter });
       if (!existing) throw new Error('Order not found for update');
 
       const record = await this.prismaClient.order.update({
@@ -161,8 +197,10 @@ export default class OrderRepository extends Repository implements IOrderReposit
 
   async delete({ filter }: { filter: OrderFilter }): Promise<void> {
     try {
+      const preparedFilter = this.prepare(filter);
+
       await this.prismaClient.order.deleteMany({
-        where: filter,
+        where: preparedFilter,
       });
     } catch (error) {
       throw handlePrismaError(error, 'delete order');
