@@ -10,22 +10,35 @@ import swaggerUi from 'swagger-ui-express';
 import { verifyDeviceId } from './middlewares/authMiddleware.js';
 import { asyncHandler } from './types/asyncHandler.js';
 import { generateOpenAPISpec } from './libs/openapi.js';
+import { logger } from './libs/winston.js'; // 👈 استيراد اللوجر
 
 const initApp = async () => {
   const app = express();
 
+  // 1. Security Middlewares
   app.use(helmet());
-  app.use(
-    cors({
-      origin: '*',
-    })
-  );
+  app.use(cors({ origin: '*' }));
+  
+  // 2. Parsers
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
 
+  // 3. 🛡️ Request Logging Middleware (تحقيق بوينت 10)
+  // السطر ده هيسجل كل طلب داخل، والـ winston اللي عدلناه هيمسح منه التوكنز أوتوماتيك
+  app.use((req, res, next) => {
+    logger.info(`${req.method} ${req.url}`, { 
+      metadata: { 
+        ip: req.ip, 
+        userAgent: req.headers['user-agent'] 
+      } 
+    });
+    next();
+  });
+
+  // 4. API Routes
   app.use('/api/v1', verifyDeviceId, ipRateLimiter, v1Router);
 
-  // Health check
+  // 5. Health check
   app.get(
     '/health',
     asyncHandler((_, res) => {
@@ -38,15 +51,20 @@ const initApp = async () => {
     })
   );
 
+  // 6. Documentation
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(generateOpenAPISpec()));
 
-  app.use(errorHandler);
-
+  // 7. Handle 404 Routes
+  // يفضل تكون قبل الـ Error Handler مباشرة
   app.use(
     asyncHandler((_, res) => {
       res.status(404).json({ error: 'Route not found' });
     })
   );
+
+  // 8. 🛡️ Global Error Handler (تحقيق بوينت 7)
+  // لازم يكون آخر حاجة عشان يمسك أي Error من أي مكان فوقه
+  app.use(errorHandler);
 
   return app;
 };

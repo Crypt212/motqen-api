@@ -40,6 +40,9 @@ export function generateToken<T extends keyof TokenTypeMap>(payload: TokenTypeMa
 /**
  * Verify and decode token - with type inference
  */
+/**
+ * Verify and decode token - with type inference
+ */
 export function verifyAndDecodeToken<T extends keyof TokenTypeMap>(
   token: string,
   expectedType: T
@@ -47,11 +50,17 @@ export function verifyAndDecodeToken<T extends keyof TokenTypeMap>(
   const tokenConfig = environment.jwt[expectedType];
 
   try {
-    const decoded = jwt.verify(token, tokenConfig.secret);
+    // 👈 هنا ضفنا الـ algorithms عشان نمنع ثغرة الـ alg:none
+    const decoded = jwt.verify(token, tokenConfig.secret, {
+      algorithms: ['HS256'] 
+    });
+    
     return decoded as TokenTypeMap[T];
   } catch (error) {
+    // ملحوظة: لو عاوز الأخطاء تترمي صح وتتمسك في الـ Middleware، 
+    // يفضل ترمي AppError بدل Error العادي عشان الـ Error Handler يفهمه
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Invalid ${expectedType} token: ${message}`);
+    throw new AppError(`Invalid ${expectedType} token: ${message}`, 401); 
   }
 }
 

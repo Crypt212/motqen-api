@@ -17,7 +17,11 @@ export const getUser = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
   const user = await userService.get({ filter: { id: userId, phoneNumber: undefined } });
 
-  new SuccessResponse('User retrieved successfully', { user }, 200).send(res);
+  // 👇 السطر ده بيفصل رقم التليفون، وبيحط باقي البيانات في متغير اسمه safeUser
+  const { phoneNumber, ...safeUser } = user;
+
+  // 👇 ابعت الـ safeUser بدل الـ user
+  new SuccessResponse('User retrieved successfully', { user: safeUser }, 200).send(res);
 });
 
 export const updateUser = asyncHandler(async (req, res) => {

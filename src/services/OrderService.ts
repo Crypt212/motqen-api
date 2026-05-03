@@ -15,12 +15,14 @@ import { OrderStatus, VerificationStatus } from 'src/generated/prisma/enums.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
 import SpecializationRepository from 'src/repositories/prisma/SpecializationRepository.js';
 import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerRepository.js';
+import ContactDetectionService from './ContactDetectionService.js';
 
 interface OrderServiceDeps {
   orderRepository: IOrderRepository;
   workerProfileRepository: IWorkerProfileRepository;
   locationRepository: ILocationRepository;
   transactionManager: TransactionManager;
+  contactDetectionService: ContactDetectionService; // 🛡️ تمت الإضافة
 }
 
 export default class OrderService extends Service {
@@ -28,6 +30,7 @@ export default class OrderService extends Service {
   private workerProfileRepository: IWorkerProfileRepository;
   private locationRepository: ILocationRepository;
   private transactionManager: TransactionManager;
+  private contactDetectionService: ContactDetectionService; // 🛡️ تمت الإضافة
 
   constructor(deps: OrderServiceDeps) {
     super();
@@ -35,6 +38,7 @@ export default class OrderService extends Service {
     this.workerProfileRepository = deps.workerProfileRepository;
     this.locationRepository = deps.locationRepository;
     this.transactionManager = deps.transactionManager;
+    this.contactDetectionService = deps.contactDetectionService; // 🛡️ تمت الإضافة
   }
 
   async createOrder({
@@ -45,6 +49,17 @@ export default class OrderService extends Service {
     images: Express.Multer.File[];
   }) {
     return tryCatch(async () => {
+      // 🛡️ [Point 6] فحص عنوان الطلب ووصفه لمنع تسريب أرقام التليفونات قبل أي عملية
+      this.contactDetectionService.scanAndFlagFields(
+        'Order',
+        data.clientUserId,
+        {
+          title: data.title,
+          description: data.description,
+        },
+        true // إيقاف العملية فوراً لو تم اكتشاف رقم
+      );
+
       const location = await this.locationRepository.find({ filter: { id: data.locationId } });
       if (!location) {
         throw new AppError('Location not found', 400);
@@ -298,6 +313,17 @@ export default class OrderService extends Service {
     comment?: string;
   }) {
     const { orderId, clientUserId, rate, comment } = params;
+
+    // 🛡️ [Point 6] فحص تعليق التقييم لمنع وضع أرقام تليفونات فيه
+    if (comment) {
+      this.contactDetectionService.scanAndFlagFields(
+        'OrderRating',
+        clientUserId,
+        { comment },
+        true
+      );
+    }
+
     const order = await this.orderRepository.find({ filter: { id: orderId } });
     if (!order) throw new AppError('Order not found', 404);
 

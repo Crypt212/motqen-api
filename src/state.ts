@@ -35,50 +35,61 @@ import LocationController from './controllers/LocationController.js';
 import NegotiationService from './services/NegotiationService.js';
 import NegotiationRepository from './repositories/prisma/NegotiationRepository.js';
 
+// --- Caches ---
 export const rateLimitCache = new RateLimitCache(redisClient);
 export const otpCache = new OTPCache(redisClient);
 export const chatPresenceCache = new ChatPresenceCache(redisClient);
 export const tokenCache = new TokenCache(redisClient);
 
+// --- Repositories ---
 export const sessionRepository = new SessionRepository(prisma);
 export const userRepository = new UserRepository(prisma);
 export const workerProfileRepository = new WorkerProfileRepository(prisma);
 export const clientProfileRepository = new ClientProfileRepository(prisma);
 export const specializationRepository = new SpecializationRepository(prisma);
-export const specializationService = new SpecializationService({ specializationRepository });
 export const governmentRepository = new GovernmentRepository(prisma);
-export const governmentService = new GovernmentService({ governmentRepository });
-export const governmentController = new GovernmentController({
-  governmentService,
-});
 export const transactionManager = new TransactionManager(prisma);
-
 export const locationRepository = new LocationRepository(prisma);
+export const conversationRepository = new ConversationRepository(prisma);
+export const messageRepository = new MessageRepository(prisma);
+export const flaggedMessageRepository = new FlaggedMessageRepository(prisma);
+export const negotiationRepository = new NegotiationRepository(prisma);
+export const orderRepository = new OrderRepository(prisma);
+export const workerOccupiedTimeSlotRepository = new WorkerOccupiedTimeSlotRepository(prisma);
+
+// --- Core Tools & Services (Must be instantiated early) ---
+// 🛡️ تم رفع تعريف السيرفيس دي لفوق عشان نقدر نمررها للـ Services التانية
+export const contactDetectionService = new ContactDetectionService(flaggedMessageRepository);
+
+export const rateLimitService = new RateLimitService({ rateLimitCache });
+
+// --- Business Services ---
+export const userService = new UserService({
+  userRepository,
+  workerProfileRepository,
+  clientProfileRepository,
+  contactDetectionService, // 🛡️ تمت الإضافة
+});
+
+export const specializationService = new SpecializationService({ specializationRepository });
+export const governmentService = new GovernmentService({ governmentRepository });
+
 export const locationService = new LocationService({
   locationRepository,
   governmentRepository,
   transactionManager,
 });
-export const locationController = new LocationController({ locationService });
-export const conversationRepository = new ConversationRepository(prisma);
-export const messageRepository = new MessageRepository(prisma);
-export const flaggedMessageRepository = new FlaggedMessageRepository(prisma);
-export const negotiationRepository = new NegotiationRepository(prisma);
 
-export const rateLimitService = new RateLimitService({ rateLimitCache });
-export const userService = new UserService({
-  userRepository,
-  workerProfileRepository,
-  clientProfileRepository,
-});
 export const clientProfileService = new ClientProfileService({
   userRepository,
   clientProfileRepository,
 });
+
 export const workerProfileService = new WorkerProfileService({
   userRepository,
   workerProfileRepository,
 });
+
 export const authService = new AuthService({
   userRepository,
   workerProfileRepository,
@@ -88,34 +99,41 @@ export const authService = new AuthService({
   tokenCache,
   transactionManager,
 });
+
 export const chatService = new ChatService({
   conversationRepository,
   messageRepository,
   workerProfileRepository,
   clientProfileRepository,
   presence: chatPresenceCache,
+  contactDetectionService // 🛡️ تمت الإضافة
 });
-export const contactDetectionService = new ContactDetectionService(flaggedMessageRepository);
+
 export const presenceService = new PresenceService({
   presenceCache: chatPresenceCache,
   conversationRepository,
   prisma,
 });
 
-export const orderRepository = new OrderRepository(prisma);
-export const workerOccupiedTimeSlotRepository = new WorkerOccupiedTimeSlotRepository(prisma);
-
 export const orderService = new OrderService({
   orderRepository,
   workerProfileRepository,
   locationRepository,
   transactionManager,
+  contactDetectionService, // 🛡️ تمت الإضافة
 });
 
 export const negotiationService = new NegotiationService({
   negotiationRepository,
-  transactionManager
+  transactionManager,
+  contactDetectionService, // 🛡️ تمت الإضافة
 });
 
+// --- Controllers ---
+export const governmentController = new GovernmentController({
+  governmentService,
+});
+
+export const locationController = new LocationController({ locationService });
 
 export const orderController = new OrderController({ orderService });

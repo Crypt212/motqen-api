@@ -122,9 +122,20 @@ export default class WorkerProfileRepository
         }
       });
 
-      const record = await this.prismaClient.user.findUnique({
+      // ❌ استبدل الـ findUnique دي
+      const record = await this.prismaClient.user.findFirst({
         where: {
           id: userId,
+          status: 'ACTIVE', 
+          workerProfile: {
+            is: {
+              verification: {
+                is: {
+                  status: 'APPROVED'
+                }
+              }
+            }
+          }
         },
         include: {
           workerProfile: {
@@ -237,9 +248,19 @@ export default class WorkerProfileRepository
     sort?: SortOptions<WorkerProfile>;
   }): Promise<PaginatedResultMeta & { workerProfiles: WorkerProfile[] }> {
     try {
-      const whereCondition = {
-        user: { isOnline: true },
+      const whereCondition: Prisma.WorkerProfileWhereInput = {
         ...workerFilter,
+        user: {
+          is: {
+            isOnline: true,
+            status: 'ACTIVE',
+          },
+        },
+        verification: { // رجعناها verification زي الـ Schema
+          is: {
+            status: 'APPROVED',
+          },
+        },
       };
 
       const total = await this.prismaClient.workerProfile.count({
@@ -971,9 +992,12 @@ export default class WorkerProfileRepository
       SELECT wp."id"
       FROM   "worker_profiles" wp
       JOIN   "users"         u  ON  u."id"              = wp."userId"
+      -- 👇 السطر الجديد: نعمل ربط مع جدول التوثيق
+      JOIN   "worker_verifications" wv ON wv."workerProfileId" = wp."id" 
       LEFT JOIN "locations"  l  ON  l."userId"          = wp."userId"
                                 AND l."isMain"          = true
       WHERE  u."status" = 'ACTIVE'
+        AND  wv."status" = 'APPROVED' -- 👈 السطر الجديد: العامل لازم يكون مُعتمد
         ${availFilter}
         ${urgentFilter}
         ${govFilter}

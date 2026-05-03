@@ -95,7 +95,6 @@ usersRouter.delete(
   '/worker-profile',
   isActive,
   authorizeWorker,
-  authorizeClient,
   deleteWorkerProfile
 );
 
@@ -178,7 +177,6 @@ usersRouter.put(
 usersRouter.delete(
   '/client-profile',
   isActive,
-  authorizeWorker,
   authorizeClient,
   deleteClientProfile
 );

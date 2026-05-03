@@ -3,6 +3,7 @@
  * @module services/ChatService
  */
 
+import ContactDetectionService from './ContactDetectionService.js';
 import AppError from '../errors/AppError.js';
 import uploadToCloudinary, { deleteFromCloudinary } from '../providers/cloudinaryProvider.js';
 import Service, { tryCatch } from './Service.js';
@@ -45,6 +46,7 @@ export default class ChatService extends Service {
   private messageRepository: IMessageRepository;
   private workerProfileRepository: IWorkerProfileRepository;
   private _presence: IChatPresenceCache;
+  private contactDetectionService: ContactDetectionService; // 🛡️ تمت الإضافة
 
   constructor(params: {
     conversationRepository: IConversationRepository;
@@ -52,12 +54,14 @@ export default class ChatService extends Service {
     clientProfileRepository: IClientProfileRepository;
     workerProfileRepository: IWorkerProfileRepository;
     presence: IChatPresenceCache;
+    contactDetectionService: ContactDetectionService; // 🛡️ تمت الإضافة
   }) {
     super();
     this.conversationRepository = params.conversationRepository;
     this.messageRepository = params.messageRepository;
     this.workerProfileRepository = params.workerProfileRepository;
     this._presence = params.presence;
+    this.contactDetectionService = params.contactDetectionService; // 🛡️ تمت الإضافة
   }
 
   // ─── Conversation ──────────────────────────────────────────────────────────
@@ -211,6 +215,7 @@ export default class ChatService extends Service {
       if (content.length > 2000)
         throw new AppError('Message content cannot exceed 2000 characters', 400);
 
+      // 1. إنشاء الرسالة بشكل طبيعي في الداتا بيز
       const message = await this.messageRepository.atomicSendMessage({
         conversationId,
         senderId,
@@ -223,6 +228,14 @@ export default class ChatService extends Service {
         conversationId,
         userId: senderId,
         messageNumber: message.messageNumber,
+      });
+
+      // 🛡️ 2. تشغيل الفحص في الخلفية (Fire and Forget)
+      // الدالة دي هتحللها، ولو مخالفة هتعمل FlaggedMessage جديدة، 
+      // وهتحدث الرسالة دي وتخلي isFlagged = true!
+      this.contactDetectionService.analyzeAndFlagMessage(message).catch((err) => {
+        // بنعمل Catch هنا عشان لو الفحص ضرب إيرور، ميأثرش على إرسال الرسالة للعميل
+        console.error('[ChatService] Failed to analyze message:', err);
       });
 
       return message;

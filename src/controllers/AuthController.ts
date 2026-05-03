@@ -7,6 +7,7 @@ import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { authService, rateLimitService, presenceService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
+import { contactDetectionService } from '../state.js';
 
 /**
  * Request OTP for phone number verification
@@ -53,6 +54,12 @@ export const registerClient = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
   const { userData } = req.body;
   const { firstName, middleName, lastName, location } = userData;
+  contactDetectionService.scanAndFlagFields(
+    'UserRegistration',
+    'NewUser',
+    { firstName, middleName, lastName },
+    true // الرفض الفوري لو فيه رقم
+  );
 
   const rawToken = req.headers['authorization']?.split(' ')[1];
   if (!rawToken) throw new AppError('Unauthorized, register token not found', 401);
@@ -87,9 +94,12 @@ export const registerClient = asyncHandler(async (req, res) => {
     refreshToken: unHashedRefreshToken,
   });
 
+  // 👇 استبعاد رقم التليفون من بيانات المستخدم قبل إرسالها
+  const { phoneNumber: _phone, ...safeUser } = user;
+
   new SuccessResponse(
     'User created successfully',
-    { user, clientProfile: profile, accessToken, refreshToken: unHashedRefreshToken },
+    { user: safeUser, clientProfile: profile, accessToken, refreshToken: unHashedRefreshToken },
     201
   ).send(res);
 });
@@ -103,6 +113,12 @@ export const registerWorker = asyncHandler(async (req, res) => {
   const { firstName, middleName, lastName, location } = userData;
   const { experienceYears, isInTeam, acceptsUrgentJobs, specializationsTree, workGovernmentIds } =
     workerProfile;
+    contactDetectionService.scanAndFlagFields(
+    'UserRegistration',
+    'NewUser',
+    { firstName, middleName, lastName },
+    true // الرفض الفوري لو فيه رقم
+  );
 
   const deviceId = req.deviceId;
   const rawToken = req.headers['authorization']?.split(' ')[1];
@@ -152,9 +168,12 @@ export const registerWorker = asyncHandler(async (req, res) => {
     refreshToken: unHashedRefreshToken,
   });
 
+  // 👇 استبعاد رقم التليفون من بيانات المستخدم قبل إرسالها
+  const { phoneNumber: _phone, ...safeUser } = user;
+
   new SuccessResponse(
     'User created successfully',
-    { user, workerProfile: profile, accessToken, refreshToken: unHashedRefreshToken },
+    { user: safeUser, workerProfile: profile, accessToken, refreshToken: unHashedRefreshToken },
     201
   ).send(res);
 });
@@ -183,9 +202,12 @@ export const login = asyncHandler(async (req, res) => {
     refreshToken: unHashedRefreshToken,
   });
 
+  // 👇 استبعاد رقم التليفون من بيانات المستخدم قبل إرسالها
+  const { phoneNumber: _phone, ...safeUser } = user;
+
   new SuccessResponse(
     'login successfully',
-    { user, refreshToken: unHashedRefreshToken, accessToken },
+    { user: safeUser, refreshToken: unHashedRefreshToken, accessToken },
     200
   ).send(res);
 });

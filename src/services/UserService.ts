@@ -4,7 +4,7 @@
  */
 
 import Service from './Service.js';
-import uploadToCloudinary from '../providers/cloudinaryProvider.js';
+import uploadToCloudinary, { generateViewUrl } from '../providers/cloudinaryProvider.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
@@ -13,6 +13,7 @@ import { LocationCreateInput, LocationUpdateInput, Location } from '../domain/lo
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/query.js';
 import { UserState } from '../types/asyncHandler.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
+import ContactDetectionService from './ContactDetectionService.js';
 
 type InputUserType = {
   phoneNumber: string;
@@ -31,16 +32,19 @@ export default class UserService extends Service {
   private userRepository: IUserRepository;
   private workerProfileRepository: IWorkerProfileRepository;
   private clientProfileRepository: IClientProfileRepository;
+  private contactDetectionService: ContactDetectionService; // 🛡️ تمت الإضافة
 
   constructor(params: {
     userRepository: IUserRepository;
     workerProfileRepository: IWorkerProfileRepository;
     clientProfileRepository: IClientProfileRepository;
+    contactDetectionService: ContactDetectionService; // 🛡️ تمت الإضافة
   }) {
     super();
     this.userRepository = params.userRepository;
     this.workerProfileRepository = params.workerProfileRepository;
     this.clientProfileRepository = params.clientProfileRepository;
+    this.contactDetectionService = params.contactDetectionService; // 🛡️ تمت الإضافة
   }
 
   /**
@@ -74,15 +78,28 @@ export default class UserService extends Service {
    */
   async update(params: { filter: UserFilter; data: Partial<InputUserType> }): Promise<User | null> {
     const { filter, data } = params;
+
+    // 🛡️ [Point 6] فحص الأسماء لمنع تسريب بيانات الاتصال في الاسم
+    this.contactDetectionService.scanAndFlagFields(
+      'UserUpdate',
+      filter.id as string,
+      {
+        firstName: data.firstName,
+        middleName: data.middleName,
+        lastName: data.lastName,
+      },
+      true // إيقاف العملية فوراً لو تم اكتشاف رقم تليفون
+    );
+      
     let url = undefined;
     if (data.profileImageBuffer) {
-      url = (
-        await uploadToCloudinary(
-          data.profileImageBuffer,
-          `${filter.id}/profile_image`,
-          'profileMain'
-        )
-      ).url;
+      // 🛡️ [Point 5] استخدام generateViewUrl للروابط المؤمنة
+      const uploadResult = await uploadToCloudinary(
+        data.profileImageBuffer,
+        `${filter.id}/profile_image`,
+        'profileMain'
+      );
+      url = generateViewUrl(uploadResult.publicId);
     }
 
     await this.userRepository.update({
@@ -150,6 +167,14 @@ export default class UserService extends Service {
   }
 
   async addLocation(params: { userId: IDType; location: LocationCreateInput }): Promise<Location> {
+    // 🛡️ [Point 6] فحص حقول العنوان بالكامل للتأكد من عدم وضع أرقام هواتف فيها
+    this.contactDetectionService.scanAndFlagFields(
+      'UserAddLocation',
+      params.userId as string,
+      params.location as unknown as Record<string, string>,
+      true
+    );
+
     return await this.userRepository.addLocation(params);
   }
 
@@ -157,10 +182,19 @@ export default class UserService extends Service {
     filter: { id: IDType; userId: IDType };
     location: LocationUpdateInput;
   }): Promise<Location> {
+    // 🛡️ [Point 6] فحص حقول العنوان عند التعديل
+    this.contactDetectionService.scanAndFlagFields(
+      'UserUpdateLocation',
+      params.filter.userId as string,
+      params.location as unknown as Record<string, string>,
+      true
+    );
+
     return await this.userRepository.updateLocation(params);
   }
 
   async deleteLocation(params: { filter: { id: IDType; userId: IDType } }): Promise<void> {
     return await this.userRepository.deleteLocation(params);
   }
+  
 }

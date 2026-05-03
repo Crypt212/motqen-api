@@ -5,18 +5,50 @@ export interface DetectionMatch {
   match: string;
 }
 
+// 1. خريطة الأرقام العربية/الهندية (لتحقيق Test Arabic numerals)
 const ARABIC_DIGITS_MAP: Record<string, string> = {
-  '٠': '0',
-  '١': '1',
-  '٢': '2',
-  '٣': '3',
-  '٤': '4',
-  '٥': '5',
-  '٦': '6',
-  '٧': '7',
-  '٨': '8',
-  '٩': '9',
+  '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+  '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9',
 };
+
+// 2. خريطة الأرقام المكتوبة بالحروف (لتحقيق Test numbers written in words)
+const NUMBER_WORDS_MAP: Record<string, string> = {
+  // English
+  'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4',
+  'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9',
+  // Arabic
+  'صفر': '0', 'زيرو': '0',
+  'واحد': '1',
+  'اتنين': '2', 'اثنين': '2', 'اثنان': '2',
+  'تلاته': '3', 'تلاتة': '3', 'ثلاثه': '3', 'ثلاثة': '3',
+  'اربعه': '4', 'اربعة': '4', 'أربعه': '4', 'أربعة': '4',
+  'خمسه': '5', 'خمسة': '5',
+  'سته': '6', 'ستة': '6',
+  'سبعه': '7', 'سبعة': '7',
+  'تمانيه': '8', 'ثمانيه': '8', 'ثمانية': '8', 'تمانية': '8',
+  'تسعه': '9', 'تسعة': '9'
+};
+
+/**
+ * دالة ذكية لتحويل الكلمات إلى أرقام
+ */
+function replaceWordsWithDigits(text: string): string {
+  let result = text;
+  
+  // تحويل الكلمات الإنجليزية
+  const engWords = Object.keys(NUMBER_WORDS_MAP).filter(k => /^[a-z]+$/.test(k)).join('|');
+  result = result.replace(new RegExp(`\\b(${engWords})\\b`, 'gi'), match => NUMBER_WORDS_MAP[match.toLowerCase()]);
+
+  // تحويل الكلمات العربية (باستخدام حدود آمنة لضمان عدم استبدال جزء من كلمة عادية)
+  const arWords = Object.keys(NUMBER_WORDS_MAP).filter(k => !/^[a-z]+$/.test(k)).join('|');
+  const arRegex = new RegExp(`(^|[\\s\\.,\\-_])(${arWords})(?=[\\s\\.,\\-_]|$)`, 'g');
+  
+  // يتم تشغيلها مرتين للتعامل مع الكلمات المتتالية (مثل: واحد اتنين)
+  result = result.replace(arRegex, (match, p1, p2) => p1 + NUMBER_WORDS_MAP[p2]);
+  result = result.replace(arRegex, (match, p1, p2) => p1 + NUMBER_WORDS_MAP[p2]);
+
+  return result;
+}
 
 function normalizeBaseText(text: string): string {
   return text
@@ -33,10 +65,12 @@ function normalizeBaseText(text: string): string {
 
 /**
  * Phone-only normalization.
- * More aggressive than base normalization, but only used for phone detection.
+ * لتحقيق (Test letter substitution & Numbers written in words)
  */
 function normalizePhoneText(text: string): string {
-  return normalizeBaseText(text).replace(/[oO]/g, '0').replace(/[lI]/g, '1');
+  let normalized = normalizeBaseText(text).replace(/[oO]/g, '0').replace(/[lI]/g, '1');
+  normalized = replaceWordsWithDigits(normalized);
+  return normalized;
 }
 
 function dedupeMatches(matches: DetectionMatch[]): DetectionMatch[] {
@@ -79,6 +113,9 @@ function addRegexMatches(
   }
 }
 
+/**
+ * يزيل أي تشويش بين الأرقام لتحقيق (Test spaced/dashed numbers)
+ */
 function stripPhoneNoise(value: string): string {
   return value.replace(/[\s().\-_/\\]+/g, '');
 }
@@ -86,7 +123,7 @@ function stripPhoneNoise(value: string): string {
 function detectPhones(content: string, matches: DetectionMatch[]) {
   const text = normalizePhoneText(content);
 
-  // Candidate chunks that look like phone numbers, even if obfuscated a bit.
+  // يقبل الأرقام المتباعدة والمنفصلة برموز
   const phoneCandidateRegex = /(?:\+|00)?[\d][\d\s().\-_/\\]{6,}[\d]/g;
 
   phoneCandidateRegex.lastIndex = 0;
@@ -102,21 +139,19 @@ function detectPhones(content: string, matches: DetectionMatch[]) {
       continue;
     }
 
-    // Egypt international format: +20XXXXXXXXXX or 0020XXXXXXXXXX
+    // Egypt international format
     if (/^(?:\+20|0020)1[0125]\d{8}$/.test(compact)) {
       matches.push({ type: FlagReasonType.PHONE_EGYPT, match: raw });
       continue;
     }
 
-    // General international format.
-    // Keep this after Egypt so Egyptian numbers don't get double-classified.
+    // General international format
     if (/^(?:\+|00)\d{8,15}$/.test(compact)) {
       matches.push({ type: FlagReasonType.PHONE_INTERNATIONAL, match: raw });
       continue;
     }
 
-    // Optional fallback: plain long digit chunks that look like phone numbers.
-    // Helpful for cases like "01012345678" without separators or prefix.
+    // Optional fallback
     if (/^\d{8,15}$/.test(compact)) {
       matches.push({ type: FlagReasonType.PHONE_INTERNATIONAL, match: raw });
     }
@@ -128,31 +163,29 @@ export function detectContactInfo(content: string): DetectionMatch[] {
 
   const baseText = normalizeBaseText(content);
 
-  // URLs: keep this stricter to reduce false positives.
-  // Protocol-based URLs and www links.
+  // URLs
   const urlRegex = /\b(?:https?:\/\/|ftp:\/\/|www\.)[^\s<>"')\]]+/gi;
+  const bareDomainRegex = /\b(?<!https?:\/\/)(?<!www\.)((?:[a-z0-9-]+\.)+[a-z]{2,24})(?:\/[^\s<>"')\]]*)?\b/gi;
 
-  // Bare domains only when they look like real domains.
-  const bareDomainRegex =
-    /\b(?<!https?:\/\/)(?<!www\.)((?:[a-z0-9-]+\.)+[a-z]{2,24})(?:\/[^\s<>"')\]]*)?\b/gi;
-
-  // Social handles and platform links.
+  // Social handles and platform links
   const atHandleRegex = /(^|[^a-z0-9_.])@([a-z0-9_.]{3,30})\b/gi;
+  const socialUrlRegex = /\b(?:https?:\/\/)?(?:www\.)?(?:wa\.me|t\.me|telegram\.me|instagram\.com|facebook\.com|messenger\.com|snapchat\.com|tiktok\.com|twitter\.com|x\.com)(?:\/[^\s<>"')\]]*)?/gi;
 
-  const socialUrlRegex =
-    /\b(?:https?:\/\/)?(?:www\.)?(?:wa\.me|t\.me|telegram\.me|instagram\.com|facebook\.com|messenger\.com|snapchat\.com|tiktok\.com|twitter\.com|x\.com)(?:\/[^\s<>"')\]]*)?/gi;
+  // 3. رادار التطبيقات (لتحقيق Test WhatsApp mentions & Telegram/app name mentions)
+  const appMentionsRegex = /\b(whatsapp|telegram|viber|snapchat|insta|instagram)\b|واتس\s*اب|واتساب|واتس|تليجرام|تلجرام|سناب\s*شات|سناب|انستا|فايبر/gi;
 
-  // Phone detection uses its own normalization.
+  // استخراج الأرقام بعد التصفية
   detectPhones(content, matches);
 
   // URLs
   addRegexMatches(baseText, urlRegex, FlagReasonType.URL, matches);
   addRegexMatches(baseText, bareDomainRegex, FlagReasonType.URL, matches);
 
-  // Social URLs
+  // Social URLs & App Mentions
   addRegexMatches(baseText, socialUrlRegex, FlagReasonType.SOCIAL_HANDLE, matches);
+  addRegexMatches(baseText, appMentionsRegex, FlagReasonType.SOCIAL_HANDLE, matches);
 
-  // @handles, but not emails
+  // @handles
   atHandleRegex.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = atHandleRegex.exec(baseText)) !== null) {
@@ -162,7 +195,6 @@ export function detectContactInfo(content: string): DetectionMatch[] {
     const prefix = m[1] ?? '';
     const fullMatch = `${prefix}@${handle}`;
 
-    // Skip obvious email-like patterns
     if (prefix === '' && baseText.includes(`${handle}@`)) continue;
 
     matches.push({ type: FlagReasonType.SOCIAL_HANDLE, match: fullMatch.trim() });

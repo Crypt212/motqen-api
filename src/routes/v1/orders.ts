@@ -17,33 +17,85 @@ import {
 } from '../../controllers/NegotiationController.js';
 import { CreateNegotiationSchema } from '../../schemas/negotiations.js';
 
+// استيراد الـ Middlewares الخاصة بالحماية والصلاحيات
+import { isActive } from '../../middlewares/authMiddleware.js';
+import { authorizeClient } from '../../middlewares/clientMiddleware.js';
+import { authorizeWorker } from '../../middlewares/workerMiddleware.js';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { files: 3 } });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Order CRUD and Actions
+// ─────────────────────────────────────────────────────────────────────────────
+
+// العميل فقط هو اللي يقدر يكريت أوردر
 router.post(
   '/',
+  isActive,
+  authorizeClient,
   upload.array('images', 3),
   validateBody(CreateOrderSchema),
   orderController.create
 );
-router.get('/', validateQuery(OrderQuerySchema), orderController.list);
-router.get('/:orderId', validateParams(OrderIdParamsSchema), orderController.getById);
-router.delete('/:orderId', validateParams(OrderIdParamsSchema), orderController.cancel);
+
+// عرض الطلبات متاح للاتنين (الكنترولر بيصفي حسب اليوزر)
+router.get(
+  '/', 
+  isActive, 
+  validateQuery(OrderQuerySchema), 
+  orderController.list
+);
+
+router.get(
+  '/:orderId', 
+  isActive, 
+  validateParams(OrderIdParamsSchema), 
+  orderController.getById
+);
+
+// العميل فقط هو اللي يقدر يلغي الأوردر
+router.delete(
+  '/:orderId', 
+  isActive, 
+  authorizeClient,
+  validateParams(OrderIdParamsSchema), 
+  orderController.cancel
+);
+
+// العامل فقط هو اللي بيحدد نطاق السعر والميعاد
 router.post(
   '/:orderId/specify-range',
+  isActive,
+  authorizeWorker,
   validateParams(OrderIdParamsSchema),
   validateBody(SpecifyRangeSchema),
   orderController.specifyRange
 );
-router.post('/:orderId/start-work', validateParams(OrderIdParamsSchema), orderController.startWork);
+
+// العامل فقط هو اللي بيبدأ الشغل
+router.post(
+  '/:orderId/start-work', 
+  isActive, 
+  authorizeWorker,
+  validateParams(OrderIdParamsSchema), 
+  orderController.startWork
+);
+
+// العامل فقط هو اللي بينهي الشغل
 router.post(
   '/:orderId/finish-work',
+  isActive,
+  authorizeWorker,
   validateParams(OrderIdParamsSchema),
   orderController.finishWork
 );
+
+// العميل فقط هو اللي بيقيم العامل
 router.post(
   '/:orderId/rate',
+  isActive,
+  authorizeClient,
   validateParams(OrderIdParamsSchema),
   validateBody(OrderRateSchema),
   orderController.rate
@@ -97,7 +149,12 @@ router.post(
  *       404:
  *         description: Order not found
  */
-router.get('/:orderId/negotiations', [validateParams(OrderIdParamsSchema)], getNegotiations);
+router.get(
+  '/:orderId/negotiations', 
+  isActive,
+  [validateParams(OrderIdParamsSchema)], 
+  getNegotiations
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /orders/:orderId/negotiations
@@ -151,6 +208,7 @@ router.get('/:orderId/negotiations', [validateParams(OrderIdParamsSchema)], getN
  */
 router.post(
   '/:orderId/negotiations',
+  isActive,
   [validateParams(OrderIdParamsSchema), validateBody(CreateNegotiationSchema)],
   createNegotiation
 );
@@ -193,6 +251,7 @@ router.post(
  */
 router.post(
   '/:orderId/negotiations/accept',
+  isActive,
   [validateParams(OrderIdParamsSchema)],
   acceptNegotiation
 );
@@ -234,7 +293,9 @@ router.post(
  */
 router.post(
   '/:orderId/negotiations/reject',
+  isActive,
   [validateParams(OrderIdParamsSchema)],
   rejectNegotiation
 );
+
 export default router;

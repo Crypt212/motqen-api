@@ -65,7 +65,7 @@ export const UserDataSchema = z.object({
   middleName: z.string().trim().optional(),
   lastName: z.string().trim().min(1, 'lastName is required'),
   location: LocationSchema,
-});
+}).strict(); // 🛡️ التعديل هنا: إضافة strict()
 
 export const UserDataOptionalSchema = z.object({
   firstName: z.string().trim().min(1, 'firstName is required').optional(),

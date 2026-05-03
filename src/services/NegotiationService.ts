@@ -12,6 +12,7 @@ import NegotiationRepository from '../repositories/prisma/NegotiationRepository.
 import { UserState } from '../types/asyncHandler.js';
 import { PaginatedResultMeta } from '../types/query.js';
 import { emitToUser } from '../socket/socket-emitter.js';
+import ContactDetectionService from './ContactDetectionService.js';
 
 type OrderParty = {
   role: 'CLIENT' | 'WORKER';
@@ -27,14 +28,17 @@ type OrderParty = {
 export default class NegotiationService extends Service {
   private negotiationRepository: INegotiationRepository;
   private transactionManager: TransactionManager;
+  private contactDetectionService: ContactDetectionService; // 🛡️ تمت الإضافة
 
   constructor(params: {
     negotiationRepository: INegotiationRepository;
     transactionManager: TransactionManager;
+    contactDetectionService: ContactDetectionService; // 🛡️ تمت الإضافة
   }) {
     super();
     this.negotiationRepository = params.negotiationRepository;
     this.transactionManager = params.transactionManager;
+    this.contactDetectionService = params.contactDetectionService; // 🛡️ تمت الإضافة
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -98,6 +102,16 @@ export default class NegotiationService extends Service {
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
       const party = this.resolveOrderParty(order, userState);
+
+      // 🛡️ [Point 6] فحص الملاحظات (Notes) المرفقة مع عرض السعر لمنع تسريب الأرقام
+      if (note) {
+        this.contactDetectionService.scanAndFlagFields(
+          'NegotiationOffer',
+          party.profileId,
+          { note },
+          true // إيقاف العملية فوراً لو تم اكتشاف رقم
+        );
+      }
 
       // Guard: only allow negotiation in these order states
       if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'TIME_SPECIFIED') {
