@@ -7,14 +7,14 @@ import {
   SubSpecializationIdParamsSchema,
   SpecializationQuerySchema,
   SubSpecializationQuerySchema,
-} from '../../../schemas/specializations.js';
+} from '../../../schemas/requests/specialization.request.js';
 import {
   SpecializationResponseSchema,
   SpecializationListResponseSchema,
   SubSpecializationResponseSchema,
   SubSpecializationListResponseSchema,
-  MessageOnlyResponseSchema,
-} from '../../../schemas/responses.js';
+} from '../../../schemas/responses/specialization.response.js';
+import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {

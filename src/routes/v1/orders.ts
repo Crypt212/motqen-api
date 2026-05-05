@@ -7,7 +7,7 @@ import {
   OrderIdParamsSchema,
   SpecifyRangeSchema,
   OrderRateSchema,
-} from '../../schemas/order.js';
+} from '../../schemas/requests/order.request.js';
 import multer from 'multer';
 import {
   getNegotiations,
@@ -15,7 +15,7 @@ import {
   acceptNegotiation,
   rejectNegotiation,
 } from '../../controllers/NegotiationController.js';
-import { CreateNegotiationSchema } from '../../schemas/negotiations.js';
+import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
 
 
 const router = Router();

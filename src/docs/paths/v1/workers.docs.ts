@@ -1,11 +1,10 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
-import { ExploreSearchSchema, ExploreWorkerIdParamsSchema } from '../../../schemas/workers.js';
+import { ExploreSearchSchema, ExploreWorkerIdParamsSchema } from '../../../schemas/requests/worker-explore.request.js';
 import {
-  ExploreWorkersResponseSchema,
-  ExploreWorkerDetailResponseSchema,
-  SpecializationsResponseSchema,
-  WorkingHoursResponseSchema,
-} from '../../../schemas/responses.js';
+  ExploreSearchResponseSchema,
+  ExploreDetailResponseSchema,
+} from '../../../schemas/responses/worker-explore.response.js';
+import { DashboardGenericResponseSchema } from '../../../schemas/responses/dashboard.response.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerWorkersDocs(registry: OpenAPIRegistry) {
@@ -32,7 +31,7 @@ Each worker includes userInfo, location (with nested city/government), specializ
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Explore results retrieved successfully',
-        content: { 'application/json': { schema: ExploreWorkersResponseSchema } },
+        content: { 'application/json': { schema: ExploreSearchResponseSchema } },
       },
       validationErrorResponse: true,
       internalServerError: true,
@@ -57,7 +56,7 @@ Each worker includes userInfo, location (with nested city/government), specializ
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker details retrieved successfully',
-        content: { 'application/json': { schema: ExploreWorkerDetailResponseSchema } },
+        content: { 'application/json': { schema: ExploreDetailResponseSchema } },
       },
       notFoundResponse: true,
       validationErrorResponse: true,
@@ -81,7 +80,7 @@ Each worker includes userInfo, location (with nested city/government), specializ
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker details retrieved successfully',
-        content: { 'application/json': { schema: SpecializationsResponseSchema } },
+        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
       },
       notFoundResponse: true,
       validationErrorResponse: true,
@@ -104,7 +103,7 @@ Each worker includes userInfo, location (with nested city/government), specializ
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Working hours retrieved',
-        content: { 'application/json': { schema: WorkingHoursResponseSchema } },
+        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,

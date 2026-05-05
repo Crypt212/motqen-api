@@ -1,36 +1,20 @@
-/**
- * @fileoverview Chat Zod schemas
- */
-
-import { z } from '../libs/zod.js';
-import { buildFilterSchema, createQuerySchema } from './common.js';
-
-// ============================================
-// Conversation schemas
-// ============================================
+import { z } from '../../libs/zod.js';
+import { buildFilterSchema, createQuerySchema } from '../common.js';
 
 export const CreateConversationSchema = z.object({
-  workerId: z.uuid({ message: 'workerId must be a valid UUID' }),
+  workerId: z.string().uuid({ message: 'workerId must be a valid UUID' }),
 });
 export type CreateConversationDTO = z.infer<typeof CreateConversationSchema>;
 
 export const ConversationIdParamsSchema = z.object({
-  conversationId: z.uuid({ message: 'conversationId must be a valid UUID' }),
+  conversationId: z.string().uuid({ message: 'conversationId must be a valid UUID' }),
 });
 export type ConversationIdParams = z.infer<typeof ConversationIdParamsSchema>;
 
-// ============================================
-// Message schemas
-// ============================================
-
 export const MissedMessagesQuerySchema = z.object({
-  after: z.int({ message: 'after is required and must be a non-negative integer' }).gte(0),
+  after: z.number().int({ message: 'after is required and must be a non-negative integer' }).gte(0),
 });
 export type MissedMessagesQuery = z.infer<typeof MissedMessagesQuerySchema>;
-
-// ============================================
-// Query schemas
-// ============================================
 
 export const ConversationListQuerySchema = createQuerySchema(
   buildFilterSchema({

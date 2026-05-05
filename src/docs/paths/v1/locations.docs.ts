@@ -4,12 +4,9 @@ import {
   UpdateLocationSchema,
   LocationIdParamsSchema,
   LocationQuerySchema,
-} from '../../../schemas/location.js';
-import {
-  LocationResponseSchema,
-  LocationListResponseSchema,
-  MessageOnlyResponseSchema,
-} from '../../../schemas/responses.js';
+} from '../../../schemas/requests/location.request.js';
+import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
+import { LocationResponseSchema, LocationListResponseSchema } from '../../../schemas/responses/location.response.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerLocationsDocs(registry: OpenAPIRegistry) {

@@ -36,4 +36,5 @@ export default interface ILocationRepository {
     userId: string;
     excludeId: string;
   }): Promise<Location | null>;
+  findMainLocationByUserId({ userId }: { userId: string }): Promise<{ latitude: number, longitude: number } | null>;
 }

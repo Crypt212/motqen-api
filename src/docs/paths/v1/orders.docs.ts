@@ -6,12 +6,15 @@ import {
   OrderIdParamsSchema,
   SpecifyRangeSchema,
   OrderRateSchema,
-} from '../../../schemas/order.js';
+} from '../../../schemas/requests/order.request.js';
+import { CreateNegotiationSchema } from '../../../schemas/requests/negotiation.request.js';
+import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
+import { OrderResponseSchema, OrderListResponseSchema } from '../../../schemas/responses/order.response.js';
 import {
-  OrderResponseSchema,
-  OrderListResponseSchema,
-  MessageOnlyResponseSchema,
-} from '../../../schemas/responses.js';
+  NegotiationListResponseSchema,
+  NegotiationResponseSchema,
+  NegotiationOrderResponseSchema,
+} from '../../../schemas/responses/negotiation.response.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerOrdersDocs(registry: OpenAPIRegistry) {
@@ -259,6 +262,122 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
       forbiddenResponse: true,
       notFoundResponse: true,
       validationErrorResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /orders/:orderId/negotiations
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/orders/{orderId}/negotiations',
+    tags: ['Negotiations'],
+    summary: 'Get negotiation history for an order',
+    description:
+      'Returns the full negotiation history for the specified order, sorted by createdAt DESC. Only the client of the order or the assigned worker can access it.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      params: OrderIdParamsSchema,
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Negotiation history retrieved',
+        content: { 'application/json': { schema: NegotiationListResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // POST /orders/:orderId/negotiations
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/orders/{orderId}/negotiations',
+    tags: ['Negotiations'],
+    summary: 'Create a new negotiation offer',
+    description:
+      'Submit a new price offer for the order. Only allowed when order status is PENDING or TIME_SPECIFIED. Blocked if the previous offer is still PENDING. Direction is inferred from the requester\'s role.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      params: OrderIdParamsSchema,
+      body: { content: { 'application/json': { schema: CreateNegotiationSchema } } },
+    },
+    responses: createResponseDoc({
+      createdSuccessfullyResponse: {
+        description: 'Negotiation created',
+        content: { 'application/json': { schema: NegotiationResponseSchema } },
+      },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // POST /orders/:orderId/negotiations/accept
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/orders/{orderId}/negotiations/accept',
+    tags: ['Negotiations'],
+    summary: 'Accept the latest pending negotiation',
+    description:
+      'Accepts the most recent PENDING negotiation. Only the opponent of the offer creator can accept. Atomically sets negotiation.status = ACCEPTED, order.finalPrice = negotiation.price, order.orderStatus = PRICE_AGREED.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      params: OrderIdParamsSchema,
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Negotiation accepted, order updated',
+        content: { 'application/json': { schema: NegotiationOrderResponseSchema } },
+      },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // POST /orders/:orderId/negotiations/reject
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/orders/{orderId}/negotiations/reject',
+    tags: ['Negotiations'],
+    summary: 'Reject the latest pending negotiation',
+    description:
+      'Rejects the most recent PENDING negotiation. Only the opponent of the offer creator can reject. Sets negotiation.status = REJECTED, unlocking new offers.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      params: OrderIdParamsSchema,
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Negotiation rejected',
+        content: { 'application/json': { schema: NegotiationResponseSchema } },
+      },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
       internalServerError: true,
     }),
   });

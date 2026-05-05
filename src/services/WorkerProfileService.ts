@@ -5,6 +5,7 @@
 
 import Service, { tryCatch } from './Service.js';
 import uploadToCloudinary from '../providers/cloudinaryProvider.js';
+import AppError from '../errors/AppError.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import {
   WorkerProfile,
@@ -18,7 +19,9 @@ import { PaginationOptions, PaginatedResultMeta } from '../types/query.js';
 import { GovernmentFilter } from '../domain/government.entity.js';
 import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../domain/specialization.entity.js';
 import { WorkingHours } from '../domain/workingHours.entity.js';
-import type { WorkingHoursDTO } from '../schemas/dashboard.js';
+import type { WorkingHoursDTO } from '../schemas/requests/worker-profile.request.js';
+import IDataCache from '../cache/interfaces/DataCache.js';
+import { ExploreWorkerPublicDetail } from 'src/types/exploreWorker.js';
 
 type InputWorkerData = {
   experienceYears: number;
@@ -29,12 +32,14 @@ type InputWorkerData = {
   profileImageBuffer: Buffer;
   idImageBuffer: Buffer;
   profileWithIdImageBuffer: Buffer;
+  bio?: string;
 };
 
 type InputWorkerUpdateData = {
-  experienceYears: number;
-  isInTeam: boolean;
-  acceptsUrgentJobs: boolean;
+  experienceYears?: number;
+  isInTeam?: boolean;
+  acceptsUrgentJobs?: boolean;
+  bio?: string;
 };
 
 /**
@@ -43,14 +48,17 @@ type InputWorkerUpdateData = {
 export default class WorkerService extends Service {
   private workerProfileRepository: IWorkerProfileRepository;
   private userRepository: IUserRepository;
+  private dataCache?: IDataCache;
 
   constructor(params: {
     workerProfileRepository: IWorkerProfileRepository;
     userRepository: IUserRepository;
+    dataCache?: IDataCache;
   }) {
     super();
     this.workerProfileRepository = params.workerProfileRepository;
     this.userRepository = params.userRepository;
+    this.dataCache = params.dataCache;
   }
 
   private mapWorkingHoursEntityToDTO(workingHours: WorkingHours): WorkingHoursDTO {
@@ -79,6 +87,7 @@ export default class WorkerService extends Service {
         profileImageBuffer,
         idImageBuffer,
         profileWithIdImageBuffer,
+        bio,
       },
     } = params;
     return tryCatch(async () => {
@@ -99,6 +108,7 @@ export default class WorkerService extends Service {
           experienceYears,
           isInTeam,
           acceptsUrgentJobs,
+          bio,
         },
       });
 
@@ -147,7 +157,7 @@ export default class WorkerService extends Service {
   }): Promise<WorkerProfile> {
     const {
       workerProfileId,
-      data: { experienceYears, isInTeam, acceptsUrgentJobs },
+      data: { experienceYears, isInTeam, acceptsUrgentJobs, bio },
     } = params;
     return tryCatch(async () => {
       return await this.workerProfileRepository.update({
@@ -156,6 +166,7 @@ export default class WorkerService extends Service {
           experienceYears,
           isInTeam,
           acceptsUrgentJobs,
+          bio,
         },
       });
     });
@@ -234,6 +245,24 @@ export default class WorkerService extends Service {
     });
   }
 
+  async getExploreWorkerById(params: { userId: IDType }): Promise<ExploreWorkerPublicDetail | null> {
+    const { userId } = params;
+    return tryCatch(async () => {
+      const cacheKey = `data:worker:explore:${userId}`;
+      if (this.dataCache) {
+        const cached = await this.dataCache.get<ExploreWorkerPublicDetail>(cacheKey);
+        if (cached) return cached;
+      }
+
+      const result = await this.workerProfileRepository.findExploreWorkerById(userId as string);
+
+      if (result && this.dataCache) {
+        await this.dataCache.set(cacheKey, result, 300);
+      }
+      return result;
+    });
+  }
+
   /**
    * Get specialization tree for worker
    */
@@ -241,11 +270,26 @@ export default class WorkerService extends Service {
     filter: WorkerProfileFilter;
   }): Promise<SpecializationsWithSubSpecializations> {
     const { filter } = params;
-    console.log("the filter sent to worker service is: ", filter);
+
     return tryCatch(async () => {
-      return await this.workerProfileRepository.findSpecializationsWithSubSpecializations({
+      let cacheKey: string | null = null;
+      if (filter.userId) {
+        cacheKey = `data:worker:${filter.userId}:spec-tree`;
+      }
+
+      if (this.dataCache && cacheKey) {
+        const cached = await this.dataCache.get<SpecializationsWithSubSpecializations>(cacheKey);
+        if (cached) return cached;
+      }
+
+      const result = await this.workerProfileRepository.findSpecializationsWithSubSpecializations({
         filter,
       });
+
+      if (this.dataCache && cacheKey) {
+        await this.dataCache.set(cacheKey, result, 600);
+      }
+      return result;
     });
   }
 
@@ -349,10 +393,157 @@ export default class WorkerService extends Service {
    */
   async getVerification(params: {
     filter: WorkerProfileFilter;
-  }): Promise<WorkerProfileVerification | null> {
+  }): Promise<Omit<WorkerProfileVerification, 'idWithPersonalImageUrl' | 'idDocumentUrl'> | null> {
     const { filter } = params;
     return tryCatch(async () => {
-      return await this.workerProfileRepository.findVerification({ workerFilter: filter });
+      const verification = await this.workerProfileRepository.findVerification({ workerFilter: filter });
+      if (!verification) return null;
+      const { idWithPersonalImageUrl, idDocumentUrl, ...safeVerification } = verification;
+      return safeVerification;
+    });
+  }
+
+  /**
+   * Resubmit verification documents
+   */
+  async resubmitVerification(params: {
+    userId: IDType;
+    idImageBuffer: Buffer;
+    profileWithIdImageBuffer: Buffer;
+  }): Promise<Omit<WorkerProfileVerification, 'idWithPersonalImageUrl' | 'idDocumentUrl'>> {
+    const { userId, idImageBuffer, profileWithIdImageBuffer } = params;
+    return tryCatch(async () => {
+      const profile = await this.workerProfileRepository.find({ workerFilter: { userId } });
+      if (!profile) throw new AppError('Worker profile not found', 404);
+
+      const verification = await this.workerProfileRepository.findVerification({ workerFilter: { userId } });
+      if (!verification) throw new AppError('Verification not found', 404);
+
+      if (verification.status === 'PENDING') throw new AppError('Verification review is in progress', 409);
+      if (verification.status === 'APPROVED') throw new AppError('Cannot resubmit when already approved', 409);
+
+      const nationalID = (
+        await uploadToCloudinary(idImageBuffer, `${userId}/verification_info`, 'nationalID')
+      ).url;
+      const selfiWithID = (
+        await uploadToCloudinary(
+          profileWithIdImageBuffer,
+          `${userId}/verification_info`,
+          'selfiWithID'
+        )
+      ).url;
+
+      const updatedVerification = await this.workerProfileRepository.setVerification({
+        workerProfileId: profile.id,
+        verification: {
+          idWithPersonalImageUrl: selfiWithID,
+          idDocumentUrl: nationalID,
+          status: 'PENDING',
+          reason: '',
+        },
+      });
+
+      const { idWithPersonalImageUrl, idDocumentUrl, ...safeVerification } = updatedVerification;
+      return safeVerification;
+    });
+  }
+
+  async createPortfolio(params: { userId: IDType; description?: string }) {
+    const { userId, description } = params;
+    return tryCatch(async () => {
+      const profile = await this.workerProfileRepository.find({ workerFilter: { userId } });
+      if (!profile) throw new AppError('Worker profile not found', 404);
+
+      const existing = await this.workerProfileRepository.findPortfolio({ workerProfileId: profile.id });
+      if (existing) throw new AppError('Portfolio already exists', 409);
+
+      return await this.workerProfileRepository.createPortfolio({ workerProfileId: profile.id, description });
+    });
+  }
+
+  async getPortfolio(params: { userId: IDType }) {
+    const { userId } = params;
+    return tryCatch(async () => {
+      const profile = await this.workerProfileRepository.find({ workerFilter: { userId } });
+      if (!profile) throw new AppError('Worker profile not found', 404);
+
+      return await this.workerProfileRepository.findPortfolio({ workerProfileId: profile.id });
+    });
+  }
+
+  async updatePortfolio(params: { userId: IDType; description?: string }) {
+    const { userId, description } = params;
+    return tryCatch(async () => {
+      const profile = await this.workerProfileRepository.find({ workerFilter: { userId } });
+      if (!profile) throw new AppError('Worker profile not found', 404);
+
+      const portfolio = await this.workerProfileRepository.findPortfolio({ workerProfileId: profile.id });
+      if (!portfolio) throw new AppError('Portfolio must be created first', 404);
+
+      return await this.workerProfileRepository.updatePortfolio({ workerProfileId: profile.id, description });
+    });
+  }
+
+  async addPortfolioImages(params: { userId: IDType; files: Express.Multer.File[] }) {
+    const { userId, files } = params;
+    return tryCatch(async () => {
+      const profile = await this.workerProfileRepository.find({ workerFilter: { userId } });
+      if (!profile) throw new AppError('Worker profile not found', 404);
+
+      const portfolio = await this.workerProfileRepository.findPortfolio({ workerProfileId: profile.id });
+      if (!portfolio) throw new AppError('Portfolio must be created first', 400);
+
+      const currentCount = await this.workerProfileRepository.countPortfolioImages({ portfolioId: portfolio.id });
+      if (currentCount + files.length > 10) throw new AppError('Maximum 10 images allowed per portfolio', 400);
+
+      const uploadPromises = files.map((file, i) => uploadToCloudinary(file.buffer, `${userId}/portfolio`, `img_${Date.now()}_${i}`));
+      const uploaded = await Promise.all(uploadPromises);
+      const imageUrls = uploaded.map(u => u.url);
+
+      return await this.workerProfileRepository.addPortfolioImages({ portfolioId: portfolio.id, imageUrls });
+    });
+  }
+
+  async deletePortfolioImage(params: { userId: IDType; imageId: IDType }) {
+    const { userId, imageId } = params;
+    return tryCatch(async () => {
+      const profile = await this.workerProfileRepository.find({ workerFilter: { userId } });
+      if (!profile) throw new AppError('Worker profile not found', 404);
+
+      const image = await this.workerProfileRepository.findPortfolioImage({ imageId });
+      if (!image) throw new AppError('Portfolio image not found', 404);
+
+      if (image.portfolio.workerProfileId !== profile.id) throw new AppError('Forbidden: Image belongs to another worker', 403);
+
+      await this.workerProfileRepository.deletePortfolioImage({ imageId });
+    });
+  }
+
+  async getWorkerStats(params: { userId: IDType }) {
+    const { userId } = params;
+    return tryCatch(async () => {
+      const profile = await this.workerProfileRepository.find({ workerFilter: { userId } });
+      if (!profile) throw new AppError('Worker profile not found', 404);
+
+      const ratingCount = await this.workerProfileRepository.countRatedOrders({ workerProfileId: profile.id });
+      return { rate: profile.rate, completedJobsCount: profile.completedJobsCount, ratingCount };
+    });
+  }
+
+  async getWorkerBadges(params: { userId: IDType }) {
+    const { userId } = params;
+    return tryCatch(async () => {
+      const profile = await this.workerProfileRepository.find({ workerFilter: { userId } });
+      if (!profile) throw new AppError('Worker profile not found', 404);
+
+      return await this.workerProfileRepository.findWorkerBadges({ workerProfileId: profile.id });
+    });
+  }
+
+  async getWorkerOccupiedTimeSlots(params: { userId: IDType; selectedDate: string }) {
+    const { userId, selectedDate } = params;
+    return tryCatch(async () => {
+      return await this.workerProfileRepository.findOccupiedTimeSlots({ workerId: userId as string, selectedDate });
     });
   }
 

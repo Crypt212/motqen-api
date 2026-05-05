@@ -24,7 +24,7 @@ import {
   SubSpecializationIdParamsSchema,
   SubSpecializationQuerySchema,
   UpdateSpecializationSchema,
-} from '../../schemas/specializations.js';
+} from '../../schemas/requests/specialization.request.js';
 
 const specializationRouter = Router();
 

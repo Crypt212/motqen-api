@@ -4,13 +4,13 @@ import {
   UpdateGovernmentSchema,
   GovernmentIdParamsSchema,
   GovernmentQuerySchema,
-} from '../../../schemas/governments.js';
+} from '../../../schemas/requests/government.request.js';
 import {
   GovernmentResponseSchema,
   GovernmentListResponseSchema,
   CityListResponseSchema,
-  MessageOnlyResponseSchema,
-} from '../../../schemas/responses.js';
+} from '../../../schemas/responses/government.response.js';
+import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerGovernmentsDocs(registry: OpenAPIRegistry) {

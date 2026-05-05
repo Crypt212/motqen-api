@@ -2,7 +2,7 @@ import LocationService from '../services/LocationService.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { parseQueryParams } from '../schemas/common.js';
-import { LocationFilterSchema } from '../schemas/location.js';
+import { LocationFilterSchema } from '../schemas/requests/location.request.js';
 
 export default class LocationController {
   private locationService: LocationService;

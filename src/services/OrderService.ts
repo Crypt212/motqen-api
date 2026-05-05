@@ -10,7 +10,7 @@ import { Order, OrderFilter } from '../domain/order.entity.js';
 import { PaginationOptions, SortOptions } from '../types/query.js';
 import { canTransitionOrderStatus, canTransitionWorkStatus } from '../utils/stateMachine.js';
 import { hasOverlap } from '../utils/overlapCheck.js';
-import { CreateOrderDTO } from '../schemas/order.js';
+import { CreateOrderDTO } from '../schemas/requests/order.request.js';
 import { OrderStatus, VerificationStatus } from 'src/generated/prisma/enums.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
 import SpecializationRepository from 'src/repositories/prisma/SpecializationRepository.js';

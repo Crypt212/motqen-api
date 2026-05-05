@@ -2,7 +2,7 @@ import { asyncHandler } from '../types/asyncHandler.js';
 import SuccessResponse from '../responses/successResponse.js';
 import OrderService from '../services/OrderService.js';
 import { FilterFromDescriptor, parseQueryParams } from '../schemas/common.js';
-import { OrderFilterSchema } from '../schemas/order.js';
+import { OrderFilterSchema } from '../schemas/requests/order.request.js';
 import { FieldTypeDefinition, SortOptions } from 'src/types/query.js';
 import { Order } from 'src/domain/order.entity.js';
 

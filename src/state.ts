@@ -1,5 +1,6 @@
 import UserService from './services/UserService.js';
 import OTPCache from './cache/redis/OTPCache.js';
+import DataCache from './cache/redis/DataCache.js';
 import SessionRepository from './repositories/prisma/SessionRepository.js';
 import UserRepository from './repositories/prisma/UserRepository.js';
 import WorkerProfileRepository from './repositories/prisma/WorkerRepository.js';
@@ -39,15 +40,16 @@ export const rateLimitCache = new RateLimitCache(redisClient);
 export const otpCache = new OTPCache(redisClient);
 export const chatPresenceCache = new ChatPresenceCache(redisClient);
 export const tokenCache = new TokenCache(redisClient);
+export const dataCache = new DataCache(redisClient);
 
 export const sessionRepository = new SessionRepository(prisma);
 export const userRepository = new UserRepository(prisma);
 export const workerProfileRepository = new WorkerProfileRepository(prisma);
 export const clientProfileRepository = new ClientProfileRepository(prisma);
 export const specializationRepository = new SpecializationRepository(prisma);
-export const specializationService = new SpecializationService({ specializationRepository });
+export const specializationService = new SpecializationService({ specializationRepository, dataCache });
 export const governmentRepository = new GovernmentRepository(prisma);
-export const governmentService = new GovernmentService({ governmentRepository });
+export const governmentService = new GovernmentService({ governmentRepository, dataCache });
 export const governmentController = new GovernmentController({
   governmentService,
 });
@@ -78,6 +80,7 @@ export const clientProfileService = new ClientProfileService({
 export const workerProfileService = new WorkerProfileService({
   userRepository,
   workerProfileRepository,
+  dataCache,
 });
 export const authService = new AuthService({
   userRepository,

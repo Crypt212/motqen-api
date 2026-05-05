@@ -3,13 +3,12 @@
  * @module controllers/WorkerController
  */
 
-import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
-import { workerProfileRepository } from '../state.js';
-import { ExploreSearchSchema } from '../schemas/workers.js';
+import { locationRepository, workerProfileService, workerProfileRepository } from '../state.js';
+import { ExploreSearchSchema } from '../schemas/requests/worker-explore.request.js';
 
 import { asyncHandler } from '../types/asyncHandler.js';
-import prisma from '../libs/database.js';
+import AppError from 'src/errors/AppError.js';
 
 export const searchWorkers = asyncHandler(async (req, res) => {
   const {
@@ -30,18 +29,9 @@ export const searchWorkers = asyncHandler(async (req, res) => {
   let customerLongitude = longitude;
 
   if ((!customerLatitude || !customerLongitude) && req.userState?.userId) {
-    const currentLocation = await prisma.$queryRaw<{ lat: number; long: number }[]>`
-      SELECT
-        ST_Y("pointGeography"::geometry) as lat,
-        ST_X("pointGeography"::geometry) as long
-      FROM "locations"
-      WHERE "userId" = ${req.userState.userId}
-      AND "isMain" = true
-      LIMIT 1
-    `;
-    const mainLocation = currentLocation?.[0];
-    customerLatitude = mainLocation?.lat ?? undefined;
-    customerLongitude = mainLocation?.long ?? undefined;
+    const mainLocation = await locationRepository.findMainLocationByUserId({ userId: req.userState.userId });
+    customerLatitude = mainLocation?.latitude ?? undefined;
+    customerLongitude = mainLocation?.longitude ?? undefined;
   }
 
   const hasValidLocation =
@@ -57,9 +47,9 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     nearest,
     location: hasValidLocation
       ? {
-          latitude: customerLatitude!,
-          longitude: customerLongitude!,
-        }
+        latitude: customerLatitude!,
+        longitude: customerLongitude!,
+      }
       : undefined,
     page,
     limit,
@@ -78,7 +68,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
 export const getWorkerById = asyncHandler(async (req, res) => {
   const id = String(req.params.id);
 
-  const worker = await workerProfileRepository.findExploreWorkerById(id);
+  const worker = await workerProfileService.getExploreWorkerById({ userId: id });
 
   if (!worker) {
     throw new AppError('Worker not found or not approved', 404);

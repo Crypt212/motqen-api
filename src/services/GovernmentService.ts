@@ -6,6 +6,7 @@
 import AppError from '../errors/AppError.js';
 import Service, { tryCatch } from './Service.js';
 import IGovernmentRepository from '../repositories/interfaces/GovernmentRepository.js';
+import IDataCache from '../cache/interfaces/DataCache.js';
 import {
   Government,
   GovernmentCreateInput,
@@ -18,10 +19,12 @@ import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/qu
 
 export default class GovernmentService extends Service {
   private governmentRepository: IGovernmentRepository;
+  private dataCache?: IDataCache;
 
-  constructor(params: { governmentRepository: IGovernmentRepository }) {
+  constructor(params: { governmentRepository: IGovernmentRepository, dataCache?: IDataCache }) {
     super();
     this.governmentRepository = params.governmentRepository;
+    this.dataCache = params.dataCache;
   }
 
   async getGovernments(params: {
@@ -30,7 +33,16 @@ export default class GovernmentService extends Service {
     sort?: SortOptions<Government>;
   }): Promise<PaginatedResultMeta & { governments: Government[] }> {
     return tryCatch(async () => {
-      return await this.governmentRepository.findMany(params);
+      const cacheKey = 'data:govs:all';
+      if (this.dataCache) {
+        const cached = await this.dataCache.get<PaginatedResultMeta & { governments: Government[] }>(cacheKey);
+        if (cached) return cached;
+      }
+      const result = await this.governmentRepository.findMany(params);
+      if (this.dataCache) {
+        await this.dataCache.set(cacheKey, result, 86400);
+      }
+      return result;
     });
   }
 
@@ -54,6 +66,7 @@ export default class GovernmentService extends Service {
       if (!government) {
         throw new AppError('Failed to create government', 500);
       }
+      if (this.dataCache) await this.dataCache.delPattern('data:govs:*');
       return government;
     });
   }
@@ -74,6 +87,7 @@ export default class GovernmentService extends Service {
       if (!government) {
         throw new AppError('Failed to update government', 500);
       }
+      if (this.dataCache) await this.dataCache.delPattern('data:govs:*');
       return government;
     });
   }
@@ -87,6 +101,7 @@ export default class GovernmentService extends Service {
         throw new AppError('Government not found', 404);
       }
       await this.governmentRepository.delete({ filter: { id: params.id } });
+      if (this.dataCache) await this.dataCache.delPattern('data:govs:*');
     });
   }
 
@@ -104,15 +119,26 @@ export default class GovernmentService extends Service {
         throw new AppError('Government not found', 404);
       }
 
+      const cacheKey = `data:govs:${params.governmentId}:cities`;
+      if (this.dataCache) {
+        const cached = await this.dataCache.get<PaginatedResultMeta & { cities: City[] }>(cacheKey);
+        if (cached) return cached;
+      }
+
       const finalFilter = {
         governmentId: params.governmentId,
         ...params.filter,
       };
-      return await this.governmentRepository.findCities({
+      const result = await this.governmentRepository.findCities({
         filter: finalFilter,
         pagination: params.pagination,
         sort: params.sort,
       });
+
+      if (this.dataCache) {
+        await this.dataCache.set(cacheKey, result, 86400);
+      }
+      return result;
     });
   }
 }

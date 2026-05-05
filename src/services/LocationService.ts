@@ -40,7 +40,7 @@ export default class LocationService extends Service {
 
   async createLocation(params: {
     userId: string;
-    data: import('../schemas/location.js').CreateLocationDTO;
+    data: import('../schemas/requests/location.request.js').CreateLocationDTO;
   }): Promise<Location> {
     return tryCatch(async () => {
       const { userId, data } = params;
@@ -105,7 +105,7 @@ export default class LocationService extends Service {
   async updateLocation(params: {
     userId: string;
     locationId: string;
-    data: import('../schemas/location.js').UpdateLocationDTO;
+    data: import('../schemas/requests/location.request.js').UpdateLocationDTO;
   }): Promise<Location> {
     return tryCatch(async () => {
       const { userId, locationId, data } = params;
@@ -175,7 +175,7 @@ export default class LocationService extends Service {
 
   async updateMainLocation(params: {
     userId: string;
-    data: import('../schemas/location.js').UpdateLocationDTO;
+    data: import('../schemas/requests/location.request.js').UpdateLocationDTO;
   }): Promise<Location> {
     return tryCatch(async () => {
       const { userId, data } = params;

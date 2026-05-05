@@ -6,7 +6,7 @@ import {
   CreateLocationSchema,
   LocationIdParamsSchema,
   UpdateLocationSchema,
-} from '../../schemas/location.js';
+} from '../../schemas/requests/location.request.js';
 
 const router = Router();
 

@@ -8,6 +8,7 @@ import {
 } from '../domain/specialization.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/query.js';
 import AppError from '../errors/AppError.js';
+import IDataCache from '../cache/interfaces/DataCache.js';
 
 export type CreateSpecializationInput = {
   name: string;
@@ -28,10 +29,12 @@ export type CreateSubSpecializationInput = {
 
 export default class SpecializationService extends Service {
   private specializationRepository: ISpecializationRepository;
+  private dataCache?: IDataCache;
 
-  constructor(params: { specializationRepository: ISpecializationRepository }) {
+  constructor(params: { specializationRepository: ISpecializationRepository, dataCache?: IDataCache }) {
     super();
     this.specializationRepository = params.specializationRepository;
+    this.dataCache = params.dataCache;
   }
 
   async getSpecializations(params: {
@@ -40,11 +43,23 @@ export default class SpecializationService extends Service {
     sort?: SortOptions<Specialization>;
   }): Promise<PaginatedResultMeta & { specializations: Specialization[] }> {
     const { filter, pagination, sort } = params;
-    return await this.specializationRepository.findMany({
+    
+    const cacheKey = 'data:specs:all';
+    if (this.dataCache && !filter && !pagination && !sort) {
+      const cached = await this.dataCache.get<PaginatedResultMeta & { specializations: Specialization[] }>(cacheKey);
+      if (cached) return cached;
+    }
+
+    const result = await this.specializationRepository.findMany({
       filter: filter || {},
       pagination,
       sort,
     });
+
+    if (this.dataCache && !filter && !pagination && !sort) {
+      await this.dataCache.set(cacheKey, result, 43200);
+    }
+    return result;
   }
 
   async getSpecializationById(params: { id: string }): Promise<Specialization> {
@@ -68,21 +83,34 @@ export default class SpecializationService extends Service {
       throw new AppError('Specialization not found', 404);
     }
 
+    const cacheKey = `data:specs:${parentId}:subs`;
+    if (this.dataCache && !filter && !pagination && !sort) {
+      const cached = await this.dataCache.get<PaginatedResultMeta & { subSpecializations: SubSpecialization[] }>(cacheKey);
+      if (cached) return cached;
+    }
+
     const finalFilter = { ...filter, mainSpecializationId: parentId };
-    return await this.specializationRepository.findSubSpecializations({
+    const result = await this.specializationRepository.findSubSpecializations({
       filter: finalFilter,
       pagination,
       sort,
     });
+
+    if (this.dataCache && !filter && !pagination && !sort) {
+      await this.dataCache.set(cacheKey, result, 43200);
+    }
+    return result;
   }
 
   async createSpecialization(params: {
     input: CreateSpecializationInput;
   }): Promise<Specialization> {
     const { name, nameAr, category } = params.input;
-    return await this.specializationRepository.create({
+    const result = await this.specializationRepository.create({
       specialization: { name, nameAr, category },
     });
+    if (this.dataCache) await this.dataCache.delPattern('data:specs:*');
+    return result;
   }
 
   async updateSpecialization(params: {
@@ -96,7 +124,7 @@ export default class SpecializationService extends Service {
       throw new AppError('Specialization not found', 404);
     }
 
-    return await this.specializationRepository.update({
+    const result = await this.specializationRepository.update({
       filter: { id },
       specialization: {
         ...existing,
@@ -105,6 +133,8 @@ export default class SpecializationService extends Service {
         category: input.category ?? existing.category,
       },
     });
+    if (this.dataCache) await this.dataCache.delPattern('data:specs:*');
+    return result;
   }
 
   async deleteSpecialization(params: { id: string }): Promise<void> {
@@ -116,6 +146,7 @@ export default class SpecializationService extends Service {
     }
 
     await this.specializationRepository.delete({ filter: { id } });
+    if (this.dataCache) await this.dataCache.delPattern('data:specs:*');
   }
 
   async createSubSpecialization(params: {
@@ -129,10 +160,12 @@ export default class SpecializationService extends Service {
       throw new AppError('Parent specialization not found', 404);
     }
 
-    return await this.specializationRepository.createSubSpecialization({
+    const result = await this.specializationRepository.createSubSpecialization({
       mainSpecializationId: parentId,
       subSpecialization: { name: input.name, nameAr: input.nameAr },
     });
+    if (this.dataCache) await this.dataCache.delPattern('data:specs:*');
+    return result;
   }
 
   async deleteSubSpecialization(params: { parentId: string; subId: string }): Promise<void> {
@@ -151,5 +184,6 @@ export default class SpecializationService extends Service {
         mainSpecializationId: parentId,
       },
     });
+    if (this.dataCache) await this.dataCache.delPattern('data:specs:*');
   }
 }

@@ -1,12 +1,12 @@
-import { z } from '../libs/zod.js';
+import { z } from '../../libs/zod.js';
 import {
   UUIDSchema,
   LatitudeSchema,
   LongitudeSchema,
   buildFilterSchema,
   createQuerySchema,
-} from './common.js';
-import { LocationFilterDescriptor } from '../domain/location.entity.js';
+} from '../common.js';
+import { LocationFilterDescriptor } from '../../domain/location.entity.js';
 
 export const CreateLocationSchema = z.object({
   address: z.string().trim().min(1),
