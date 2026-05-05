@@ -123,7 +123,7 @@ export const getWorkerProfile = asyncHandler(async (req, res) => {
 });
 
 export const getWorkerWorkingHours = asyncHandler(async (req, res) => {
-  const userId = req.userState.userId;
+  const userId = req.userState?.userId || String(req.params.id);
   const workingHours = await workerProfileService.getMyWorkingHours({ userId });
 
   new SuccessResponse('retrieved worker working hours successfully', workingHours, 200).send(res);
@@ -210,10 +210,10 @@ export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
 });
 
 export const getWorkerSpecializationsTree = asyncHandler(async (req, res) => {
-  const workerProfileId = req.userState?.worker.id && String(req.params.id);
+  const workerUserId = req.userState?.userId || String(req.params.id);
 
   const result = await workerProfileService.getSpecializationsTree({
-    filter: { id: workerProfileId },
+    filter: { userId: workerUserId },
   });
 
   new SuccessResponse('retrieved worker specialization tree successfully', result, 200).send(res);

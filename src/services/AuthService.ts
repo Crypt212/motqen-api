@@ -225,8 +225,8 @@ export default class AuthService extends Service {
             verification: {
               idWithPersonalImageUrl: nationalIDImageUrl,
               idDocumentUrl: selfiWithIDImageUrl,
-              status: 'PENDING',
-              reason: 'Waiting for verification',
+              status: environment.nodeEnv === 'development' ? 'APPROVED' : 'PENDING',
+              reason: environment.nodeEnv === 'development' ? '' : 'Waiting for verification',
             },
           });
           return { verification };

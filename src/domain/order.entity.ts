@@ -1,20 +1,19 @@
+import { IDType } from 'src/repositories/interfaces/Repository.js';
 import { $Enums } from '../generated/prisma/client.js';
-import { IDType } from '../repositories/interfaces/Repository.js';
 import { FilterFromDescriptor } from '../schemas/common.js';
 import { FieldTypeDefinition } from '../types/query.js';
-import { Location } from './location.entity.js';
 import { SubSpecialization } from './specialization.entity.js';
 
 export type OrderStatus = $Enums.OrderStatus;
 export type WorkStatus = $Enums.WorkStatus;
 
 export type Order = {
-  id: string;
+  id: IDType;
   title: string;
   description: string;
-  clientProfileId: string;
-  workerProfileId: string;
-  locationId: string;
+  clientUserId: IDType;
+  workerUserId: IDType;
+  locationId: IDType;
   subSpecialization: SubSpecialization;
   orderStatus: OrderStatus;
   workStatus: WorkStatus;
@@ -34,10 +33,10 @@ export type Order = {
 export type OrderCreateInput = {
   title: string;
   description: string;
-  clientProfileId: string;
-  workerProfileId: string;
-  locationId: string;
-  subSpecializationId: string;
+  clientUserId: IDType;
+  workerUserId: IDType;
+  locationId: IDType;
+  subSpecializationId: IDType;
   startDate: Date;
   isUrgent: boolean;
 };
@@ -55,8 +54,8 @@ export type OrderUpdateInput = Partial<{
 
 export const OrderFilterDescriptor: Record<string, FieldTypeDefinition> = {
   id: { type: 'uuid' },
-  clientProfileId: { type: 'uuid' },
-  workerProfileId: { type: 'uuid' },
+  clientUserId: { type: 'uuid' },
+  workerUserId: { type: 'uuid' },
   rate: { type: 'number' },
   orderStatus: {
     type: 'enum',

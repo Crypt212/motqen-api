@@ -1,6 +1,5 @@
 import Service, { tryCatch } from './Service.js';
 import IOrderRepository from '../repositories/interfaces/OrderRepository.js';
-import IWorkerOccupiedTimeSlotRepository from '../repositories/interfaces/WorkerOccupiedTimeSlotRepository.js';
 import ILocationRepository from '../repositories/interfaces/LocationRepository.js';
 import { TransactionManager } from '../repositories/prisma/TransactionManager.js';
 import OrderRepository from '../repositories/prisma/OrderRepository.js';
@@ -12,48 +11,54 @@ import { PaginationOptions, SortOptions } from '../types/query.js';
 import { canTransitionOrderStatus, canTransitionWorkStatus } from '../utils/stateMachine.js';
 import { hasOverlap } from '../utils/overlapCheck.js';
 import { CreateOrderDTO } from '../schemas/order.js';
-import { OrderStatus } from 'src/generated/prisma/enums.js';
+import { OrderStatus, VerificationStatus } from 'src/generated/prisma/enums.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
 import SpecializationRepository from 'src/repositories/prisma/SpecializationRepository.js';
+import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerRepository.js';
 
 interface OrderServiceDeps {
   orderRepository: IOrderRepository;
-  occupiedTimeSlotRepository: IWorkerOccupiedTimeSlotRepository;
+  workerProfileRepository: IWorkerProfileRepository;
   locationRepository: ILocationRepository;
   transactionManager: TransactionManager;
 }
 
 export default class OrderService extends Service {
   private orderRepository: IOrderRepository;
-  private occupiedTimeSlotRepository: IWorkerOccupiedTimeSlotRepository;
+  private workerProfileRepository: IWorkerProfileRepository;
   private locationRepository: ILocationRepository;
   private transactionManager: TransactionManager;
 
   constructor(deps: OrderServiceDeps) {
     super();
     this.orderRepository = deps.orderRepository;
-    this.occupiedTimeSlotRepository = deps.occupiedTimeSlotRepository;
+    this.workerProfileRepository = deps.workerProfileRepository;
     this.locationRepository = deps.locationRepository;
     this.transactionManager = deps.transactionManager;
   }
 
   async createOrder({
-    userId,
     data,
     images,
   }: {
-    userId: string;
-    data: CreateOrderDTO & { clientProfileId: string };
+    data: CreateOrderDTO & { clientUserId: string };
     images: Express.Multer.File[];
   }) {
     return tryCatch(async () => {
       const location = await this.locationRepository.find({ filter: { id: data.locationId } });
-      if (!location || location.userId !== userId) {
-        throw new AppError('Location not found or not owned', 400);
+      if (!location) {
+        throw new AppError('Location not found', 400);
       }
-
+      if (location.userId !== data.clientUserId) {
+        throw new AppError('Location not owned', 400);
+      }
       if (images.length > 3) {
         throw new AppError('Maximum 3 images allowed per order', 400);
+      }
+
+      const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: data.workerUserId } });
+      if (!workerVerification || workerVerification.status !== VerificationStatus.APPROVED) {
+        throw new AppError('Worker is not verified', 400);
       }
 
       // Upload images
@@ -69,8 +74,8 @@ export default class OrderService extends Service {
             order: {
               title: data.title,
               description: data.description,
-              clientProfileId: data.clientProfileId,
-              workerProfileId: data.workerProfileId,
+              clientUserId: data.clientUserId,
+              workerUserId: data.workerUserId,
               locationId: data.locationId,
               subSpecializationId: data.subSpecializationId,
               startDate: data.startDate,
@@ -85,7 +90,6 @@ export default class OrderService extends Service {
           });
 
           return order;
-
         }
       );
     });
@@ -94,8 +98,8 @@ export default class OrderService extends Service {
   async getOrders(params: {
     userId: string;
     role: string;
-    clientProfileId?: string;
-    workerProfileId?: string;
+    clientUserId?: string;
+    workerUserId?: string;
     filter: OrderFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Order>;
@@ -103,9 +107,9 @@ export default class OrderService extends Service {
     return tryCatch(async () => {
       const roleFilter =
         params.role === 'CLIENT'
-          ? { clientProfileId: params.clientProfileId }
+          ? { clientUserId: params.clientUserId }
           : params.role === 'WORKER'
-            ? { workerProfileId: params.workerProfileId }
+            ? { workerUserId: params.workerUserId }
             : {}; // For ADMIN, see all? Not specified, assume safe fallback
 
       return await this.orderRepository.findMany({
@@ -118,8 +122,8 @@ export default class OrderService extends Service {
 
   async getOrderById(params: {
     orderId: string;
-    clientProfileId?: string;
-    workerProfileId?: string;
+    clientUserId?: string;
+    workerUserId?: string;
   }) {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
@@ -127,8 +131,8 @@ export default class OrderService extends Service {
         throw new AppError('Order not found', 404);
       }
 
-      const isOwner = order.clientProfileId === params.clientProfileId;
-      const isAssigned = order.workerProfileId && order.workerProfileId === params.workerProfileId;
+      const isOwner = order.clientUserId === params.clientUserId;
+      const isAssigned = order.workerUserId && order.workerUserId === params.workerUserId;
 
       if (!isOwner && !isAssigned) {
         throw new AppError('Access denied', 403);
@@ -138,12 +142,12 @@ export default class OrderService extends Service {
     });
   }
 
-  async cancelOrder(params: { orderId: string; clientProfileId?: string }) {
+  async cancelOrder(params: { orderId: string; clientUserId?: string }) {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
       if (!order) throw new AppError('Order not found', 404);
 
-      if (order.clientProfileId !== params.clientProfileId) {
+      if (order.clientUserId !== params.clientUserId) {
         throw new AppError('Access denied', 403);
       }
 
@@ -166,18 +170,23 @@ export default class OrderService extends Service {
 
   async specifyTimeRange(params: {
     orderId: string;
-    workerProfileId?: string;
+    workerUserId?: string;
     startTime: Date;
     endTime: Date;
   }) {
     return tryCatch(async () => {
-      if (!params.workerProfileId) throw new AppError('Worker profile not found', 403);
+      if (!params.workerUserId) throw new AppError('Worker not found', 403);
 
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
       if (!order) throw new AppError('Order not found', 404);
 
-      if (order.workerProfileId !== params.workerProfileId) {
+      if (order.workerUserId !== params.workerUserId) {
         throw new AppError('Access denied', 403);
+      }
+
+      const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: params.workerUserId } });
+      if (!workerVerification || workerVerification.status !== VerificationStatus.APPROVED) {
+        throw new AppError('Worker is not verified', 400);
       }
 
       if (!canTransitionOrderStatus(order.orderStatus, 'TIME_SPECIFIED')) {
@@ -185,13 +194,15 @@ export default class OrderService extends Service {
       }
 
       return await this.transactionManager.execute(
-        { orderRepo: OrderRepository, timeSlotRepo: WorkerOccupiedTimeSlotRepository },
-        async ({ orderRepo, timeSlotRepo }, tx) => {
+        { orderRepo: OrderRepository, workerRepo: WorkerProfileRepository, timeSlotRepo: WorkerOccupiedTimeSlotRepository },
+        async ({ orderRepo, workerRepo, timeSlotRepo }, tx) => {
           // Advisory lock
-          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${params.workerProfileId}))`;
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${params.workerUserId}))`;
+
+          const workerProfileId = (await workerRepo.find({ workerFilter: { userId: params.workerUserId } })).id;
 
           const existingSlots = await timeSlotRepo.findMany({
-            filter: { workerProfileId: params.workerProfileId },
+            filter: { workerProfileId },
           });
 
           for (const slot of existingSlots) {
@@ -202,7 +213,7 @@ export default class OrderService extends Service {
 
           await timeSlotRepo.create({
             slot: {
-              workerProfileId: params.workerProfileId!,
+              workerProfileId,
               orderId: params.orderId,
               startDate: params.startTime,
               endDate: params.endTime,
@@ -218,13 +229,18 @@ export default class OrderService extends Service {
     });
   }
 
-  async startWork(params: { orderId: string; workerProfileId?: string }) {
+  async startWork(params: { orderId: string; workerUserId?: string }) {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
       if (!order) throw new AppError('Order not found', 404);
 
-      if (order.workerProfileId !== params.workerProfileId)
+      if (order.workerUserId !== params.workerUserId)
         throw new AppError('Access denied', 403);
+
+      const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: params.workerUserId } });
+      if (!workerVerification || workerVerification.status !== VerificationStatus.APPROVED) {
+        throw new AppError('Worker is not verified', 400);
+      }
 
       if (order.orderStatus !== 'PAID')
         throw new AppError('Order must be in PAID status to start work', 400);
@@ -244,12 +260,12 @@ export default class OrderService extends Service {
     });
   }
 
-  async finishWork(params: { orderId: string; workerProfileId?: string }) {
+  async finishWork(params: { orderId: string; workerUserId?: string }) {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
       if (!order) throw new AppError('Order not found', 404);
 
-      if (order.workerProfileId !== params.workerProfileId)
+      if (order.workerUserId !== params.workerUserId)
         throw new AppError('Access denied', 403);
 
       if (!canTransitionWorkStatus(order.workStatus, 'DONE'))
@@ -269,8 +285,6 @@ export default class OrderService extends Service {
             },
           });
 
-          // TODO: notificationService.notify(order.clientProfileId, 'WORK_FINISHED', { orderId })
-
           return updated;
         }
       );
@@ -279,15 +293,15 @@ export default class OrderService extends Service {
 
   async rateOrder(params: {
     orderId: string;
-    clientProfileId: string;
+    clientUserId: string;
     rate: number;
     comment?: string;
   }) {
-    const { orderId, clientProfileId, rate, comment } = params;
+    const { orderId, clientUserId, rate, comment } = params;
     const order = await this.orderRepository.find({ filter: { id: orderId } });
     if (!order) throw new AppError('Order not found', 404);
 
-    if (order.clientProfileId !== clientProfileId) throw new AppError('Access denied', 403);
+    if (order.clientUserId !== clientUserId) throw new AppError('Access denied', 403);
 
     if (order.orderStatus !== OrderStatus.COMPLETED)
       throw new AppError('Order must be completed to rate', 400);
@@ -302,8 +316,10 @@ export default class OrderService extends Service {
           order: { rate, comment },
         });
 
+        const workerProfileId = (await workerProfileRepo.find({ workerFilter: { userId: order.workerUserId } })).id;
+
         await workerProfileRepo.addRating({
-          workerProfileId: order.workerProfileId,
+          workerProfileId,
           rate,
         });
       }

@@ -307,7 +307,7 @@ export default class SpecializationRepository
       await this.prismaClient.$executeRaw`
 UPDATE specializations
 SET
-    "orderCount" = "orderCount" + 1,
+    "ordersCount" = "ordersCount" + 1
 WHERE specializations.id = ${specializationId};
 `;
 

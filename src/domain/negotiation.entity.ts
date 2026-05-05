@@ -1,4 +1,5 @@
 import { $Enums } from '../generated/prisma/client.js';
+import { IDType } from '../repositories/interfaces/Repository.js';
 
 export type NegotiationDirection = $Enums.NegotiationDirection;
 export type NegotiationStatus = $Enums.NegotiationStatus;

@@ -11,7 +11,7 @@ export const CreateOrderSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().min(1),
   subSpecializationId: UUIDSchema,
-  workerProfileId: UUIDSchema,
+  workerUserId: UUIDSchema,
   locationId: UUIDSchema,
   startDate: z.coerce
     .date()

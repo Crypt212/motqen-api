@@ -114,7 +114,14 @@ export default class WorkerProfileRepository
    */
   async findExploreWorkerById(userId: string): Promise<ExploreWorkerPublicDetail | null> {
     try {
-      console.log(userId);
+
+      const ratedOrdersCount = await this.prismaClient.order.count({
+        where: {
+          workerProfile: { userId },
+          rate: { not: -1.0 },
+        }
+      });
+
       const record = await this.prismaClient.user.findUnique({
         where: {
           id: userId,
@@ -143,7 +150,7 @@ export default class WorkerProfileRepository
 
       if (!record || !record.workerProfile) return null;
 
-      return this.mapExploreWorkerPublicDetail(record);
+      return this.mapExploreWorkerPublicDetail(record, ratedOrdersCount);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findExploreWorkerById');
     }
@@ -172,9 +179,8 @@ export default class WorkerProfileRepository
           };
         };
       };
-    }>
+    }>, ratedOrdersCount: number
   ): ExploreWorkerPublicDetail {
-    console.log(row.workerProfile);
 
     const mainLocation = row.locations?.[0];
 
@@ -211,6 +217,8 @@ export default class WorkerProfileRepository
         rate: row.workerProfile?.rate,
         isInTeam: row.workerProfile?.isInTeam,
         acceptsUrgentJobs: row.workerProfile?.acceptsUrgentJobs,
+        completedJobsCount: row.workerProfile?.completedJobsCount,
+        ratingCount: ratedOrdersCount,
       },
       portfolio: {
         id: row.workerProfile?.portfolio?.id ?? "",
@@ -351,11 +359,8 @@ export default class WorkerProfileRepository
         include: {
           chosenSpecializations: {
             include: {
-              specialization: {
-                include: {
-                  subSpecializations: true
-                }
-              }
+              subSpecialization: true,
+              specialization: true,
             }
           },
         },
@@ -365,9 +370,26 @@ export default class WorkerProfileRepository
         return this.toDomainSpecializationsWithSubSpecializations([]);
       }
 
-      let specializations = workerProfile.chosenSpecializations.map((s) => s.specialization);
+      const specializationsTree: SpecializationsWithSubSpecializations = [];
+      for (let specialization of workerProfile.chosenSpecializations) {
+        if (!specializationsTree.find(s => s.id == specialization.specializationId))
+          specializationsTree.push({
+            id: specialization.specializationId,
 
-      return this.toDomainSpecializationsWithSubSpecializations(specializations);
+            name: specialization.specialization.name,
+            nameAr: specialization.specialization.nameAr,
+            category: specialization.specialization.category,
+            ordersCount: specialization.specialization.ordersCount,
+            subSpecializations: [],
+
+            updatedAt: specialization.specialization.updatedAt,
+            createdAt: specialization.specialization.createdAt,
+          });
+
+          specializationsTree.find(s => s.id == specialization.specializationId).subSpecializations.push(specialization.subSpecialization);
+      }
+
+      return this.toDomainSpecializationsWithSubSpecializations(specializationsTree);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findSpecializations');
     }
@@ -784,7 +806,7 @@ export default class WorkerProfileRepository
     limit = 10,
     excludeUserId,
   }: {
-    specializationId: string;
+    specializationId?: string;
     subSpecializationId?: string;
     governmentId?: string;
     availability?: boolean;

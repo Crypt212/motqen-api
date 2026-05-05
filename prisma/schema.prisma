@@ -38,14 +38,14 @@ model User {
   middleName      String
   profileImageUrl String?
   updatedAt       DateTime                  @updatedAt
-  clientProfile   ClientProfile?
-  conversations   ConversationParticipant[]
-  locations       Location[]
-  sentMessages    Message[]
-  sessions        Session[]
-  workerProfile   WorkerProfile?
-  sentNegotiations      Negotiation[] @relation("NegotiationSender")
-  acceptedNegotiations  Negotiation[] @relation("NegotiationAcceptor")
+  clientProfile        ClientProfile?
+  conversations        ConversationParticipant[]
+  locations            Location[]
+  sentMessages         Message[]
+  sessions             Session[]
+  workerProfile        WorkerProfile?
+  sentNegotiations     Negotiation[]  @relation("NegotiationSender")
+  acceptedNegotiations Negotiation[]  @relation("NegotiationAccepter")
 
   @@index([status, isOnline, id])
   @@map("users")

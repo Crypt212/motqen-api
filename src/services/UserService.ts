@@ -103,9 +103,8 @@ export default class UserService extends Service {
    */
   async getStatus(params: { filter: UserFilter }): Promise<UserState> {
     const { filter } = params;
-    console.log(filter);
     const user = await this.userRepository.find({ filter });
-    console.log(user);
+    if (user === null) throw new Error('User not found');
     const worker = await this.workerProfileRepository.find({ workerFilter: { userId: user.id } });
     let verification = null;
     if (worker)

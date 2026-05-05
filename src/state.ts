@@ -64,6 +64,7 @@ export const locationController = new LocationController({ locationService });
 export const conversationRepository = new ConversationRepository(prisma);
 export const messageRepository = new MessageRepository(prisma);
 export const flaggedMessageRepository = new FlaggedMessageRepository(prisma);
+export const negotiationRepository = new NegotiationRepository(prisma);
 
 export const rateLimitService = new RateLimitService({ rateLimitCache });
 export const userService = new UserService({
@@ -107,10 +108,16 @@ export const workerOccupiedTimeSlotRepository = new WorkerOccupiedTimeSlotReposi
 
 export const orderService = new OrderService({
   orderRepository,
-  occupiedTimeSlotRepository: workerOccupiedTimeSlotRepository,
+  workerProfileRepository,
   locationRepository,
   transactionManager,
 });
+
+export const negotiationService = new NegotiationService({
+  negotiationRepository,
+  transactionManager
+});
+
 
 export const orderController = new OrderController({ orderService });
 

@@ -1,28 +1,12 @@
 import 'dotenv/config';
-import pkg, { $Enums } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
-const { PrismaClient } = pkg;
-
-const { Pool } = pg;
-
-// Initialize Prisma Client
-const connectionString = process.env.DATABASE_URL;
-const pool = new Pool({
-  connectionString: connectionString,
-});
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({
-  adapter,
-  log: ['error', 'warn'],
-});
+import prisma from '../../src/libs/database.js';
 
 // Craftsman Specializations Data
 const specializations = [
   {
     name: 'Carpentry',
     nameAr: 'النجارة',
-    category: $Enums.SpecializationCategory.CARPENTRY,
+    category: 'CARPENTRY',
     subSpecializations: [
       { name: 'Furniture Making', nameAr: 'صنع الأثاث' },
       { name: 'Wood Carving', nameAr: 'نقش الخشب' },
@@ -34,7 +18,7 @@ const specializations = [
   {
     name: 'Plumbing',
     nameAr: 'السباكة',
-    category: $Enums.SpecializationCategory.PLUMBING,
+    category: 'PLUMBING',
     subSpecializations: [
       { name: 'Water Piping', nameAr: 'تمديدات المياه' },
       { name: 'Drainage Systems', nameAr: 'أنظمة الصرف' },
@@ -46,7 +30,7 @@ const specializations = [
   {
     name: 'Electrical',
     nameAr: 'الكهرباء',
-    category: $Enums.SpecializationCategory.ELECTRICITY,
+    category: 'ELECTRICITY',
     subSpecializations: [
       { name: 'Wiring & Rewiring', nameAr: 'تمديد وأسلاك الكهرباء' },
       { name: 'Switchboard Installation', nameAr: 'تركيب لوحات الكهرباء' },
@@ -58,7 +42,7 @@ const specializations = [
   {
     name: 'Painting',
     nameAr: 'الدهان',
-    category: $Enums.SpecializationCategory.PAINTING,
+    category: 'PAINTING',
     subSpecializations: [
       { name: 'Interior Painting', nameAr: 'دهان داخلي' },
       { name: 'Exterior Painting', nameAr: 'دهان خارجي' },
@@ -70,7 +54,7 @@ const specializations = [
   {
     name: 'Tiling',
     nameAr: 'البلاط',
-    category: $Enums.SpecializationCategory.CONSTRUCTION,
+    category: 'CONSTRUCTION',
     subSpecializations: [
       { name: 'Floor Tiling', nameAr: 'تركيب بلاط الأرضيات' },
       { name: 'Wall Tiling', nameAr: 'تركيب بلاط الجدران' },
@@ -82,7 +66,7 @@ const specializations = [
   {
     name: 'Masonry',
     nameAr: 'البناء',
-    category: $Enums.SpecializationCategory.CONSTRUCTION,
+    category: 'CONSTRUCTION',
     subSpecializations: [
       { name: 'Bricklaying', nameAr: 'البناء بالطوب' },
       { name: 'Block Work', nameAr: 'البناء بالبلوك' },
@@ -94,7 +78,7 @@ const specializations = [
   {
     name: 'Aluminum',
     nameAr: 'الألمنيوم',
-    category: $Enums.SpecializationCategory.INSTALLATION,
+    category: 'INSTALLATION',
     subSpecializations: [
       { name: 'Window Frames', nameAr: 'إطارات النوافذ' },
       { name: 'Door Frames', nameAr: 'إطارات الأبواب' },
@@ -106,7 +90,7 @@ const specializations = [
   {
     name: 'Welding',
     nameAr: 'اللحام',
-    category: $Enums.SpecializationCategory.GENERALMAINTENANCE,
+    category: 'GENERALMAINTENANCE',
     subSpecializations: [
       { name: 'Iron Work', nameAr: 'أعمال الحديد' },
       { name: 'Steel Structures', nameAr: 'الهياكل الفولاذية' },
@@ -118,7 +102,7 @@ const specializations = [
   {
     name: 'HVAC',
     nameAr: 'التكييف والتبريد',
-    category: $Enums.SpecializationCategory.AC,
+    category: 'AC',
     subSpecializations: [
       { name: 'AC Installation', nameAr: 'تركيب التكييف' },
       { name: 'AC Repair', nameAr: 'إصلاح التكييف' },
@@ -130,7 +114,7 @@ const specializations = [
   {
     name: 'Flooring',
     nameAr: 'الأرضيات',
-    category: $Enums.SpecializationCategory.INSTALLATION,
+    category: 'INSTALLATION',
     subSpecializations: [
       { name: 'Wood Flooring', nameAr: 'أرضيات خشبية' },
       { name: 'Laminate Flooring', nameAr: 'أرضيات ملامين' },

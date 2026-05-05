@@ -18,21 +18,19 @@ export default class OrderController {
       title,
       description,
       subSpecializationId,
-      workerProfileId,
+      workerUserId,
       locationId,
       startDate,
       isUrgent,
     } = req.body;
-    const userId = req.userState!.userId;
     const images = (req.files as Express.Multer.File[]) || [];
-    const clientProfileId = req.userState!.client?.id;
+    const clientUserId = req.userState.userId;
 
-    if (!clientProfileId) {
+    if (!req.userState.client) {
       throw new Error('User must have a client profile to create orders');
     }
 
     const order = await this.orderService.createOrder({
-      userId,
       data: {
         title,
         description,
@@ -40,8 +38,8 @@ export default class OrderController {
         locationId,
         startDate,
         isUrgent: isUrgent === 'true',
-        clientProfileId,
-        workerProfileId,
+        clientUserId,
+        workerUserId,
       },
       images,
     });
@@ -57,8 +55,8 @@ export default class OrderController {
     const result = await this.orderService.getOrders({
       userId: userState.userId,
       role: userState.role,
-      clientProfileId: userState.client?.id,
-      workerProfileId: userState.worker?.id,
+      clientUserId: userState.userId,
+      workerUserId: userState.userId,
       filter: filter as FilterFromDescriptor<Record<string, FieldTypeDefinition>>,
       pagination,
       sort: sort as SortOptions<Order>,
@@ -71,8 +69,8 @@ export default class OrderController {
     const userState = req.userState!;
     const order = await this.orderService.getOrderById({
       orderId: orderId as string,
-      clientProfileId: userState.client?.id,
-      workerProfileId: userState.worker?.id,
+      clientUserId: userState.userId,
+      workerUserId: userState.userId,
     });
     new SuccessResponse('Order retrieved successfully', { order }, 200).send(res);
   });
@@ -82,7 +80,7 @@ export default class OrderController {
     const userState = req.userState!;
     await this.orderService.cancelOrder({
       orderId: orderId as string,
-      clientProfileId: userState.client?.id,
+      clientUserId: userState.userId,
     });
     new SuccessResponse('Order cancelled successfully', null, 200).send(res);
   });
@@ -93,7 +91,7 @@ export default class OrderController {
     const userState = req.userState!;
     const order = await this.orderService.specifyTimeRange({
       orderId: orderId as string,
-      workerProfileId: userState.worker?.id,
+      workerUserId: userState.userId,
       startTime,
       endTime,
     });
@@ -105,7 +103,7 @@ export default class OrderController {
     const userState = req.userState!;
     const order = await this.orderService.startWork({
       orderId: orderId as string,
-      workerProfileId: userState.worker?.id,
+      workerUserId: userState.userId,
     });
     new SuccessResponse('Work started successfully', { order }, 200).send(res);
   });
@@ -115,7 +113,7 @@ export default class OrderController {
     const userState = req.userState!;
     const order = await this.orderService.finishWork({
       orderId: orderId as string,
-      workerProfileId: userState.worker?.id,
+      workerUserId: userState.userId,
     });
     new SuccessResponse('Work finished successfully', { order }, 200).send(res);
   });
@@ -126,7 +124,7 @@ export default class OrderController {
     const userState = req.userState!;
     await this.orderService.rateOrder({
       orderId: orderId as string,
-      clientProfileId: userState.client.id,
+      clientUserId: userState.userId,
       rate,
       comment,
     });

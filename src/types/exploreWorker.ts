@@ -7,7 +7,7 @@ import { ProjectImage } from 'src/generated/prisma/client.js';
 type user = Pick<User, 'id' | 'isOnline' | 'profileImageUrl'>;
 type location = Pick<Location, 'id' | 'address' | 'addressNotes'>;
 
-type workInfo = Omit<WorkerProfile, 'createdAt' | 'updatedAt' | 'userId' | 'id'>;
+type workInfo = Omit<WorkerProfile, 'createdAt' | 'updatedAt' | 'userId' | 'id'> & { completedJobsCount: number, ratingCount: number };
 type areaInfo = Pick<City, 'id' | 'name' | 'nameAr' | 'long' | 'lat'>;
 
 export interface ExploreWorkerPublicDetail {

@@ -4,6 +4,7 @@ import {
   ExploreWorkersResponseSchema,
   ExploreWorkerDetailResponseSchema,
   SpecializationsResponseSchema,
+  WorkingHoursResponseSchema,
 } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
@@ -84,6 +85,29 @@ Each worker includes userInfo, location (with nested city/government), specializ
       },
       notFoundResponse: true,
       validationErrorResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /workers/:id/working-hours
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/workesr/{id}/working-hours',
+    tags: ['Dashboard'],
+    summary: 'Get worker working hours',
+    description: 'Returns the current working-hours schedule for the explored worker.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Working hours retrieved',
+        content: { 'application/json': { schema: WorkingHoursResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
       internalServerError: true,
     }),
   });

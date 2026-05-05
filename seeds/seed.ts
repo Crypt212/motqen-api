@@ -108,15 +108,15 @@ async function updateWorkerStats(workerProfileId: string) {
   const orders = await prisma.order.findMany({
     where: {
       workerProfileId,
-      status: 'COMPLETED',
-      rating: { not: null },
+      orderStatus: 'COMPLETED',
+      rate: { not: -1 },
     },
-    select: { rating: true },
+    select: { rate: true },
   });
 
   if (orders.length === 0) return;
 
-  const totalRating = orders.reduce((sum, o) => sum + (o.rating ?? 0), 0);
+  const totalRating = orders.reduce((sum, o) => sum + (o.rate ?? 0), 0);
   const avgRate = totalRating / orders.length;
 
   await prisma.workerProfile.update({
@@ -214,7 +214,9 @@ async function createUserForCity(gov: any, city: any, isWorker: boolean) {
           "address",
           "addressNotes",
           "isMain",
-          "pointGeography"
+          "pointGeography",
+          "createdAt",
+          "updatedAt"
         )
         VALUES (
           ${crypto.randomUUID()},
@@ -224,7 +226,9 @@ async function createUserForCity(gov: any, city: any, isWorker: boolean) {
           ${generateAddress(city.name)},
           ${null},
           ${isMain},
-          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
+          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
         )
       `;
     })
@@ -390,11 +394,21 @@ async function createOrder(clientId: string, workerId: string, priceOverride?: n
 
   const worker = await prisma.workerProfile.findUnique({
     where: { userId: workerId },
+    include: { chosenSpecializations: true },
   });
 
   if (!client || !worker) return null;
+  if (!worker.chosenSpecializations.length) return null;
 
-  const price =
+  // Get client's main location
+  const location = await prisma.location.findFirst({
+    where: { userId: clientId, isMain: true },
+  });
+  if (!location) return null;
+
+  const subSpecId = pick(worker.chosenSpecializations).subSpecializationId;
+
+  const finalPrice =
     priceOverride ??
     pick([randInt(80, 200), randInt(200, 500), randInt(500, 1200), randInt(1200, 3000)]);
 
@@ -402,14 +416,23 @@ async function createOrder(clientId: string, workerId: string, priceOverride?: n
   const comment =
     rating >= 4 ? pick(POSITIVE_COMMENTS) : rating <= 2 ? pick(NEGATIVE_COMMENTS) : null;
 
+  const titles = ['إصلاح عام', 'صيانة منزلية', 'تركيب', 'صيانة', 'تشطيب'];
+
   const order = await prisma.order.create({
     data: {
+      title: pick(titles),
+      description: 'طلب خدمة',
       clientProfileId: client.id,
       workerProfileId: worker.id,
-      price,
-      status: 'COMPLETED',
-      rating,
+      locationId: location.id,
+      subSpecializationId: subSpecId,
+      finalPrice,
+      orderStatus: 'COMPLETED',
+      workStatus: 'DONE',
+      rate: rating,
       comment,
+      startDate: new Date(Date.now() - rand(1, 30) * 24 * 60 * 60 * 1000),
+      workFinishedAt: new Date(),
     },
   });
 

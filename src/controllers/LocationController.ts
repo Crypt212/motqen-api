@@ -14,6 +14,9 @@ export default class LocationController {
   list = asyncHandler(async (req, res) => {
     const { filter, pagination, sort } = parseQueryParams(req.query, LocationFilterSchema);
     const userId = req.userState!.userId;
+
+    if (!("isHidden" in filter)) filter.isHidden = false
+
     const result = await this.locationService.getLocations({
       userId,
       filter,
