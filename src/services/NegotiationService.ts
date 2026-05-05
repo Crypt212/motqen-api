@@ -119,8 +119,9 @@ export default class NegotiationService extends Service {
       // Determine direction from requester role
       const direction = party.role === 'CLIENT' ? 'CLIENT_TO_WORKER' : 'WORKER_TO_CLIENT';
 
+      const senderId = userState.userId;
       const negotiation = await this.negotiationRepository.create({
-        data: { orderId, price, direction, note },
+        data: { orderId, price, senderId, direction, note },
       });
 
       // Notify the opposing party via socket
