@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SuccessResponseSchema } from '../responses.js';
+import { UUIDSchema } from '../common.js';
 
 const VerificationObjectSchema = z.object({
   id: z.string().uuid(),
@@ -80,3 +81,52 @@ export const WorkerOccupiedTimeSlotsResponseSchema = SuccessResponseSchema(
 export const WorkerPortfolioImagesResponseSchema = SuccessResponseSchema(
   z.object({ images: z.array(PortfolioImageObjectSchema) })
 );
+
+const PaginationMetaFields = {
+  page: z.number().optional(),
+  limit: z.number().optional(),
+  total: z.number().optional(),
+  totalPages: z.number().optional(),
+  count: z.number().optional(),
+  hasNext: z.boolean().optional(),
+  hasPrev: z.boolean().optional(),
+};
+
+export const WorkerGovernmentsListResponseSchema = SuccessResponseSchema(
+  z.object({
+    governmentIds: z.array(UUIDSchema),
+    ...PaginationMetaFields,
+  })
+);
+
+export const WorkerSpecializationsListResponseSchema = SuccessResponseSchema(
+  z.object({
+    specializationIds: z.array(UUIDSchema),
+    ...PaginationMetaFields,
+  })
+);
+
+const SubSpecializationObjectSchema = z.object({
+  id: UUIDSchema,
+  mainSpecializationId: UUIDSchema,
+  name: z.string(),
+  nameAr: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+const SpecializationWithSubsSchema = z.object({
+  id: UUIDSchema,
+  name: z.string(),
+  nameAr: z.string(),
+  category: z.string(),
+  ordersCount: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  subSpecializations: z.array(SubSpecializationObjectSchema),
+});
+
+export const WorkerSpecializationsTreeResponseSchema = SuccessResponseSchema(
+  z.array(SpecializationWithSubsSchema)
+);
+

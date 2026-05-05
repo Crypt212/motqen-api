@@ -35,6 +35,9 @@ import {
   WorkerStatsResponseSchema,
   WorkerOccupiedTimeSlotsResponseSchema,
   WorkerPortfolioImagesResponseSchema,
+  WorkerGovernmentsListResponseSchema,
+  WorkerSpecializationsTreeResponseSchema,
+  WorkerSpecializationsListResponseSchema,
 } from '../../../schemas/responses/worker-profile.response.js';
 import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
@@ -284,7 +287,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker governments retrieved',
-        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
+        content: { 'application/json': { schema: WorkerGovernmentsListResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -369,7 +372,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker specializations retrieved',
-        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
+        content: { 'application/json': { schema: WorkerSpecializationsTreeResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -395,7 +398,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker specializations retrieved',
-        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
+        content: { 'application/json': { schema: WorkerSpecializationsListResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -612,7 +615,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
         content: {
           'multipart/form-data': {
             schema: z.object({
-              images: z.any().describe('Array of image files (max 10)'),
+              images: z.array(z.string()).max(10).describe('Array of image files (max 10)'),
             }),
           },
         },

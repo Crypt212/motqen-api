@@ -160,7 +160,7 @@ export default class WorkerService extends Service {
       data: { experienceYears, isInTeam, acceptsUrgentJobs, bio },
     } = params;
     return tryCatch(async () => {
-      return await this.workerProfileRepository.update({
+      const result = await this.workerProfileRepository.update({
         workerFilter: { id: workerProfileId },
         workerProfile: {
           experienceYears,
@@ -169,6 +169,10 @@ export default class WorkerService extends Service {
           bio,
         },
       });
+      if (this.dataCache && result.userId) {
+        await this.dataCache.del(`data:worker:explore:${result.userId}`);
+      }
+      return result;
     });
   }
 
@@ -325,6 +329,9 @@ export default class WorkerService extends Service {
         workerFilter: filter,
         specializationsTree,
       });
+      if (this.dataCache && filter.userId) {
+        await this.dataCache.del(`data:worker:${filter.userId}:spec-tree`).catch(() => {});
+      }
     });
   }
 
@@ -337,6 +344,9 @@ export default class WorkerService extends Service {
       await this.workerProfileRepository.deleteAllSpecializations({
         workerFilter: { userId },
       });
+      if (this.dataCache) {
+        await this.dataCache.del(`data:worker:${userId}:spec-tree`).catch(() => {});
+      }
     });
   }
 
@@ -353,6 +363,9 @@ export default class WorkerService extends Service {
         workerFilter: { userId },
         specializations: mainSpecializationIds,
       });
+      if (this.dataCache) {
+        await this.dataCache.del(`data:worker:${userId}:spec-tree`).catch(() => {});
+      }
     });
   }
 
@@ -369,6 +382,9 @@ export default class WorkerService extends Service {
         workerFilter: { userId },
         specializationsTree,
       });
+      if (this.dataCache) {
+        await this.dataCache.del(`data:worker:${userId}:spec-tree`).catch(() => {});
+      }
     });
   }
 
@@ -422,26 +438,42 @@ export default class WorkerService extends Service {
       if (verification.status === 'PENDING') throw new AppError('Verification review is in progress', 409);
       if (verification.status === 'APPROVED') throw new AppError('Cannot resubmit when already approved', 409);
 
-      const nationalID = (
-        await uploadToCloudinary(idImageBuffer, `${userId}/verification_info`, 'nationalID')
-      ).url;
-      const selfiWithID = (
-        await uploadToCloudinary(
-          profileWithIdImageBuffer,
-          `${userId}/verification_info`,
-          'selfiWithID'
-        )
-      ).url;
+      const prevNationalIdUrl = verification.idDocumentUrl;
+      const prevSelfieUrl = verification.idWithPersonalImageUrl;
 
-      const updatedVerification = await this.workerProfileRepository.setVerification({
-        workerProfileId: profile.id,
-        verification: {
-          idWithPersonalImageUrl: selfiWithID,
-          idDocumentUrl: nationalID,
-          status: 'PENDING',
-          reason: '',
-        },
-      });
+      const nationalIdUpload = await uploadToCloudinary(idImageBuffer, `${userId}/verification_info`, `nationalID_${crypto.randomUUID()}`);
+      const selfieUpload = await uploadToCloudinary(profileWithIdImageBuffer, `${userId}/verification_info`, `selfiWithID_${crypto.randomUUID()}`);
+
+      let updatedVerification;
+      try {
+        updatedVerification = await this.workerProfileRepository.setVerification({
+          workerProfileId: profile.id,
+          verification: {
+            idWithPersonalImageUrl: selfieUpload.url,
+            idDocumentUrl: nationalIdUpload.url,
+            status: 'PENDING',
+            reason: '',
+          },
+        });
+      } catch (err) {
+        await Promise.allSettled([
+          deleteFromCloudinary(nationalIdUpload.publicId),
+          deleteFromCloudinary(selfieUpload.publicId),
+        ]);
+        throw err;
+      }
+
+      const getPublicIdFromUrl = (url: string) => {
+        const parts = url.split('/');
+        return parts.slice(-3).join('/').replace(/\\.[^.]+$/, '');
+      };
+
+      if (prevNationalIdUrl) {
+        deleteFromCloudinary(getPublicIdFromUrl(prevNationalIdUrl)).catch(() => {});
+      }
+      if (prevSelfieUrl) {
+        deleteFromCloudinary(getPublicIdFromUrl(prevSelfieUrl)).catch(() => {});
+      }
 
       const { idWithPersonalImageUrl, idDocumentUrl, ...safeVerification } = updatedVerification;
       return safeVerification;
@@ -457,7 +489,11 @@ export default class WorkerService extends Service {
       const existing = await this.workerProfileRepository.findPortfolio({ workerProfileId: profile.id });
       if (existing) throw new AppError('Portfolio already exists', 409);
 
-      return await this.workerProfileRepository.createPortfolio({ workerProfileId: profile.id, description });
+      const result = await this.workerProfileRepository.createPortfolio({ workerProfileId: profile.id, description });
+      if (this.dataCache) {
+        await this.dataCache.del(`data:worker:explore:${userId}`);
+      }
+      return result;
     });
   }
 
@@ -480,7 +516,11 @@ export default class WorkerService extends Service {
       const portfolio = await this.workerProfileRepository.findPortfolio({ workerProfileId: profile.id });
       if (!portfolio) throw new AppError('Portfolio must be created first', 404);
 
-      return await this.workerProfileRepository.updatePortfolio({ workerProfileId: profile.id, description });
+      const result = await this.workerProfileRepository.updatePortfolio({ workerProfileId: profile.id, description });
+      if (this.dataCache) {
+        await this.dataCache.del(`data:worker:explore:${userId}`);
+      }
+      return result;
     });
   }
 
@@ -493,8 +533,7 @@ export default class WorkerService extends Service {
       const portfolio = await this.workerProfileRepository.findPortfolio({ workerProfileId: profile.id });
       if (!portfolio) throw new AppError('Portfolio must be created first', 400);
 
-      const currentCount = await this.workerProfileRepository.countPortfolioImages({ portfolioId: portfolio.id });
-      if (currentCount + files.length > 10) throw new AppError('Maximum 10 images allowed per portfolio', 400);
+      if (files.length > 10) throw new AppError('Maximum 10 images allowed per portfolio', 400);
 
       const uploadPromises = files.map((file, i) =>
         uploadToCloudinary(file.buffer, `${userId}/portfolio`, `img_${crypto.randomUUID()}_${i}`)
@@ -503,10 +542,17 @@ export default class WorkerService extends Service {
       const imageUrls = uploaded.map(u => u.url);
 
       try {
-        return await this.workerProfileRepository.addPortfolioImages({ portfolioId: portfolio.id, imageUrls });
-      } catch (dbError) {
+        const result = await this.workerProfileRepository.addPortfolioImages({ portfolioId: portfolio.id, imageUrls });
+        if (this.dataCache) {
+          await this.dataCache.del(`data:worker:explore:${userId}`);
+        }
+        return result;
+      } catch (dbError: any) {
         // Rollback: clean up uploaded Cloudinary images if DB write fails
         await Promise.allSettled(uploaded.map(u => deleteFromCloudinary(u.publicId)));
+        if (dbError.message === 'LIMIT_EXCEEDED') {
+           throw new AppError('Maximum 10 images allowed per portfolio', 400);
+        }
         throw dbError;
       }
     });
@@ -528,9 +574,29 @@ export default class WorkerService extends Service {
       const publicIdWithExt = urlParts.slice(-3).join('/'); // folder/subfolder/filename
       const publicId = publicIdWithExt.replace(/\.[^.]+$/, ''); // strip extension
 
+      // Retryable Cloudinary deletion
+      let retries = 3;
+      let cloudDeleted = false;
+      while (retries > 0) {
+        try {
+          await deleteFromCloudinary(publicId);
+          cloudDeleted = true;
+          break;
+        } catch (e) {
+          retries--;
+          if (retries === 0) break;
+          await new Promise(res => setTimeout(res, 1000 * (4 - retries))); // backoff
+        }
+      }
+
+      if (!cloudDeleted) {
+        throw new AppError('Failed to delete image from cloud storage, aborting', 500);
+      }
+
       await this.workerProfileRepository.deletePortfolioImage({ imageId });
-      // Fire-and-forget Cloudinary deletion (non-blocking)
-      deleteFromCloudinary(publicId).catch(() => {/* log externally if needed */});
+      if (this.dataCache) {
+        await this.dataCache.del(`data:worker:explore:${userId}`);
+      }
     });
   }
 

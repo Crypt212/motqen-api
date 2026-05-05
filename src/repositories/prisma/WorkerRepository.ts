@@ -1212,15 +1212,25 @@ WHERE worker_profiles.id = ${workerProfileId};
 
   async addPortfolioImages(params: { portfolioId: IDType; imageUrls: string[] }) {
     try {
-      const data = params.imageUrls.map((url) => ({
-        portfolioId: params.portfolioId as string,
-        imageUrl: url,
-      }));
-      await this.prismaClient.projectImage.createMany({ data });
-      return await this.prismaClient.projectImage.findMany({
-        where: { portfolioId: params.portfolioId as string, imageUrl: { in: params.imageUrls } },
+      return await this.prismaClient.$transaction(async (tx) => {
+        const currentCount = await tx.projectImage.count({
+          where: { portfolioId: params.portfolioId as string }
+        });
+        if (currentCount + params.imageUrls.length > 10) {
+          throw new Error('LIMIT_EXCEEDED');
+        }
+
+        const data = params.imageUrls.map((url) => ({
+          portfolioId: params.portfolioId as string,
+          imageUrl: url,
+        }));
+        await tx.projectImage.createMany({ data });
+        return await tx.projectImage.findMany({
+          where: { portfolioId: params.portfolioId as string, imageUrl: { in: params.imageUrls } },
+        });
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'LIMIT_EXCEEDED') throw error;
       throw handlePrismaError(error as Error, 'addPortfolioImages');
     }
   }
