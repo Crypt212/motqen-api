@@ -3,13 +3,14 @@
  * @module schemas/negotiations
  */
 
-import { z } from '../libs/zod.js';
+import { z } from '../../libs/zod.js';
+import { UUIDSchema } from '../common.js';
 
 /**
  * Validates :orderId path parameter.
  */
 export const OrderIdParamsSchema = z.object({
-  orderId: z.string().uuid('orderId must be a valid UUID'),
+  orderId: UUIDSchema,
 });
 
 /**

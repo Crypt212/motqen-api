@@ -10,7 +10,7 @@ import { parseQueryParams } from '../schemas/common.js';
 import {
   SpecializationFilterSchema,
   SubSpecializationFilterSchema,
-} from '../schemas/specializations.js';
+} from '../schemas/requests/specialization.request.js';
 
 /**
  * Get all specializations with pagination, filtering, and ordering

@@ -6,7 +6,7 @@ import {
   CreateLocationSchema,
   LocationIdParamsSchema,
   UpdateLocationSchema,
-} from '../../schemas/location.js';
+} from '../../schemas/requests/location.request.js';
 
 const router = Router();
 
@@ -19,6 +19,11 @@ router.put(
   validateParams(LocationIdParamsSchema),
   validateBody(UpdateLocationSchema),
   locationController.update
+);
+router.patch(
+  '/:locationId/set-main',
+  validateParams(LocationIdParamsSchema),
+  locationController.setMain
 );
 router.get('/:locationId', validateParams(LocationIdParamsSchema), locationController.getById);
 

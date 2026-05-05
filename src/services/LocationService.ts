@@ -40,7 +40,7 @@ export default class LocationService extends Service {
 
   async createLocation(params: {
     userId: string;
-    data: import('../schemas/location.js').CreateLocationDTO;
+    data: import('../schemas/requests/location.request.js').CreateLocationDTO;
   }): Promise<Location> {
     return tryCatch(async () => {
       const { userId, data } = params;
@@ -64,31 +64,33 @@ export default class LocationService extends Service {
         );
       }
 
-      // 3. Handle main location atomic switch
-      if (data.isMain) {
-        return await this.transactionManager.execute(
-          { locationRepo: LocationRepository },
-          async ({ locationRepo }) => {
-            // Acquire advisory lock to prevent race conditions on "main" status per user
-            await locationRepo.prismaClient.$queryRaw<
-              { locked: boolean }[]
-            >`SELECT pg_try_advisory_xact_lock(hashtext(${userId})) as locked`;
-
-            // Un-set existing main locations
-            await locationRepo.setAllNonMain({ userId });
-
-            // Create new main location
-            return await locationRepo.create({
-              location: { ...data, userId },
-            });
-          }
-        );
-      }
-
-      // 4. Just create if not main
+      // 3. Just create if not main
       return await this.locationRepository.create({
-        location: { ...data, userId },
+        location: { ...data, isMain: false, userId },
       });
+    });
+  }
+
+  async setMainLocation(params: { userId: string; locationId: string }): Promise<Location> {
+    return tryCatch(async () => {
+      const { userId, locationId } = params;
+      return await this.transactionManager.execute(
+        { locationRepo: LocationRepository },
+        async ({ locationRepo }) => {
+          // Acquire advisory lock to prevent race conditions on "main" status per user
+          await locationRepo.prismaClient.$queryRaw<
+            { locked: boolean }[]
+          >`SELECT pg_try_advisory_xact_lock(hashtext(${userId})) as locked`;
+
+          // Un-set existing main locations
+          await locationRepo.setAllNonMain({ userId });
+
+          // Update new main location
+          return await locationRepo.update({
+            location: { isMain: true }, filter: { userId, id: locationId },
+          });
+        }
+      );
     });
   }
 
@@ -105,7 +107,7 @@ export default class LocationService extends Service {
   async updateLocation(params: {
     userId: string;
     locationId: string;
-    data: import('../schemas/location.js').UpdateLocationDTO;
+    data: import('../schemas/requests/location.request.js').UpdateLocationDTO;
   }): Promise<Location> {
     return tryCatch(async () => {
       const { userId, locationId, data } = params;
@@ -147,25 +149,10 @@ export default class LocationService extends Service {
           );
       }
 
-      // 4. Handle main location atomic switch
-      if (data.isMain === true) {
-        return await this.transactionManager.execute(
-          { locationRepo: LocationRepository },
-          async ({ locationRepo }) => {
-            await locationRepo.prismaClient
-              .$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+      // 5. Cannot hide a main location
+      if (data.isHidden && location.isMain) throw new AppError('Cannot hide a main location', 400);
 
-            await locationRepo.setAllNonMain({ userId });
-
-            return await locationRepo.update({
-              filter: { id: locationId },
-              location: data,
-            });
-          }
-        );
-      }
-
-      // 5. Standard update
+      // 6. Standard update
       return await this.locationRepository.update({
         filter: { id: locationId },
         location: data,
@@ -175,7 +162,7 @@ export default class LocationService extends Service {
 
   async updateMainLocation(params: {
     userId: string;
-    data: import('../schemas/location.js').UpdateLocationDTO;
+    data: import('../schemas/requests/location.request.js').UpdateLocationDTO;
   }): Promise<Location> {
     return tryCatch(async () => {
       const { userId, data } = params;

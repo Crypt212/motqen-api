@@ -13,9 +13,10 @@ import {
   ExploreSearchSchema,
   ExploreWorkerIdParamsSchema,
   OccupiedTimeSlotsQuerySchema,
-} from '../../schemas/workers.js';
+} from '../../schemas/requests/worker-explore.request.js';
 import { validateParams, validateQuery } from '../../middlewares/validateRequest.js';
-import { getWorkerSpecializationsTree, getWorkerWorkingHours } from 'src/controllers/DashboardController.js';
+import { getWorkerSpecializationsTree, getWorkerWorkingHours } from '../../controllers/DashboardController.js';
+import { z } from '../../libs/zod.js';
 
 const workersRouter = Router();
 
@@ -34,6 +35,7 @@ workersRouter.get('/:id/working-hours', validateParams(ExploreWorkerIdParamsSche
 
 workersRouter.get(
   '/:id/specializations/tree',
+  validateParams(z.object({ id: z.string().uuid() })),
   getWorkerSpecializationsTree
 );
 
