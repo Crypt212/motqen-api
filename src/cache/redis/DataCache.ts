@@ -6,7 +6,7 @@ export default class DataCache implements IDataCache {
   constructor(private client: RedisClientType) { }
 
   async get<T>(key: string): Promise<T | null> {
-    const data = await this.client.get(key) as string;
+    const data = await this.client.get(key);
     if (!data) return null;
     try {
       return JSON.parse(data) as T;
