@@ -1,9 +1,7 @@
 import { z } from 'zod';
 
-const BaseSuccessResponse = z.object({
-  status: z.literal('success'),
-  message: z.string(),
-});
+import { SuccessResponseSchema } from "../responses.js";
+
 
 const PaginationMetaSchema = z.object({
   page: z.number(),
@@ -31,32 +29,22 @@ export const SubSpecializationObjectSchema = z.object({
   updatedAt: z.date(),
 });
 
-export const SpecializationListResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const SpecializationListResponseSchema = SuccessResponseSchema(z.object({
     specializations: z.array(SpecializationObjectSchema),
     meta: PaginationMetaSchema,
-  }),
-});
+  }),);
 
-export const SpecializationResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const SpecializationResponseSchema = SuccessResponseSchema(z.object({
     specialization: SpecializationObjectSchema,
-  }),
-});
+  }),);
 
-export const SubSpecializationListResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const SubSpecializationListResponseSchema = SuccessResponseSchema(z.object({
     subSpecializations: z.array(SubSpecializationObjectSchema),
     meta: PaginationMetaSchema,
-  }),
-});
+  }),);
 
-export const SubSpecializationResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const SubSpecializationResponseSchema = SuccessResponseSchema(z.object({
     subSpecialization: SubSpecializationObjectSchema,
-  }),
-});
+  }),);
 
-export const DeleteResponseSchema = BaseSuccessResponse.extend({
-  data: z.null(),
-});
+export const DeleteResponseSchema = SuccessResponseSchema(z.null(),);

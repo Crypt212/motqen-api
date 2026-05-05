@@ -1,64 +1,82 @@
 import { z } from 'zod';
+import { SuccessResponseSchema } from '../responses.js';
 
-const BaseSuccessResponse = z.object({
-  status: z.literal('success'),
-  message: z.string(),
+const VerificationObjectSchema = z.object({
+  id: z.string().uuid(),
+  workerProfileId: z.string().uuid(),
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED']),
+  reason: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
-export const WorkerProfileResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
-    profile: z.any(),
-  }),
+const PortfolioImageObjectSchema = z.object({
+  id: z.string().uuid(),
+  portfolioId: z.string().uuid(),
+  imageUrl: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
-export const WorkerVerificationResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
-    verification: z.any(),
-  }),
+const PortfolioObjectSchema = z.object({
+  id: z.string().uuid(),
+  workerProfileId: z.string().uuid(),
+  description: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  projectImages: z.array(PortfolioImageObjectSchema),
 });
 
-export const WorkerPortfolioResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
-    portfolio: z.any(),
-  }),
+const BadgeObjectSchema = z.object({
+  id: z.string().uuid(),
+  workerProfileId: z.string().uuid(),
+  badgeType: z.string(),
+  createdAt: z.date(),
 });
 
-export const WorkerBadgesResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
-    badges: z.array(z.any()),
-  }),
+const WorkingHoursObjectSchema = z.object({
+  id: z.string(),
+  workerProfileId: z.string(),
+  daysOfWeek: z.array(z.number().int().min(0).max(6)),
+  startTime: z.string(),
+  endTime: z.string(),
 });
 
-export const WorkerWorkingHoursResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
-    workingHours: z.any(),
-  }),
+const OccupiedTimeSlotObjectSchema = z.object({
+  startDate: z.date(),
+  endDate: z.date(),
 });
 
-export const WorkerGovernmentsResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
-    governments: z.array(z.any()),
-  }),
-});
+export const WorkerVerificationResponseSchema = SuccessResponseSchema(
+  z.object({ verification: VerificationObjectSchema })
+);
 
-export const WorkerSpecializationsTreeResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
-    specializationsTree: z.array(z.any()),
-  }),
-});
+export const WorkerPortfolioResponseSchema = SuccessResponseSchema(
+  z.object({ portfolio: PortfolioObjectSchema })
+);
 
-export const WorkerOccupiedTimeSlotsResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
-    occupiedSlots: z.array(z.any()),
-  }),
-});
+export const WorkerBadgesResponseSchema = SuccessResponseSchema(
+  z.object({ badges: z.array(BadgeObjectSchema) })
+);
 
-export const WorkerStatsResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const WorkerWorkingHoursResponseSchema = SuccessResponseSchema(
+  z.object({ workingHours: WorkingHoursObjectSchema.nullable() })
+);
+
+export const WorkerStatsResponseSchema = SuccessResponseSchema(
+  z.object({
     stats: z.object({
       rate: z.number(),
       completedJobsCount: z.number(),
       ratingCount: z.number(),
     }),
-  }),
-});
+  })
+);
+
+export const WorkerOccupiedTimeSlotsResponseSchema = SuccessResponseSchema(
+  z.object({ occupiedSlots: z.array(OccupiedTimeSlotObjectSchema) })
+);
+
+export const WorkerPortfolioImagesResponseSchema = SuccessResponseSchema(
+  z.object({ images: z.array(PortfolioImageObjectSchema) })
+);

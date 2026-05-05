@@ -38,7 +38,7 @@ export default class WorkerProfileRepository
       acceptsUrgentJobs: record.acceptsUrgentJobs,
       completedJobsCount: record.completedJobsCount,
       bio: record.bio ?? undefined,
-      rate: record.rate ?? undefined,
+      rate: record.rate ?? 0,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
@@ -1071,7 +1071,10 @@ WHERE worker_profiles.id = ${workerProfileId};
     });
     if (!workerProfile) return [];
 
-    const dateOnly = new Date(params.selectedDate).toISOString().slice(0, 10);
+    const parsedDate = new Date(params.selectedDate);
+    if (isNaN(parsedDate.getTime())) return [];
+
+    const dateOnly = parsedDate.toISOString().slice(0, 10);
     const startOfDay = new Date(`${dateOnly}T00:00:00.000Z`);
     const endOfDay = new Date(`${dateOnly}T23:59:59.999Z`);
 

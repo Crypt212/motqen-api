@@ -54,7 +54,7 @@ export const MessageListResponseSchema = BaseSuccessResponse.extend({
 
 export const UnreadConversationListResponseSchema = BaseSuccessResponse.extend({
   data: z.object({
-    unread: z.array(z.any()), // Can be refined further based on exact unread payload
+    unread: z.array(ConversationObjectSchema),
   }),
 });
 

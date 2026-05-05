@@ -1,10 +1,8 @@
 import { z } from 'zod';
 import { UUIDSchema } from '../common.js';
 
-const BaseSuccessResponse = z.object({
-  status: z.literal('success'),
-  message: z.string(),
-});
+import { SuccessResponseSchema } from "../responses.js";
+
 
 export const NegotiationObjectSchema = z.object({
   id: UUIDSchema,
@@ -17,19 +15,13 @@ export const NegotiationObjectSchema = z.object({
   updatedAt: z.date(),
 });
 
-export const NegotiationListResponseSchema = BaseSuccessResponse.extend({
-  data: z.array(NegotiationObjectSchema),
-});
+export const NegotiationListResponseSchema = SuccessResponseSchema(z.array(NegotiationObjectSchema),);
 
-export const NegotiationResponseSchema = BaseSuccessResponse.extend({
-  data: NegotiationObjectSchema,
-});
+export const NegotiationResponseSchema = SuccessResponseSchema(NegotiationObjectSchema,);
 
-export const NegotiationOrderResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const NegotiationOrderResponseSchema = SuccessResponseSchema(z.object({
     id: z.string().uuid(),
     clientProfileId: z.string().uuid(),
     workerProfileId: z.string().uuid(),
     orderStatus: z.string(),
-  }),
-});
+  }),);

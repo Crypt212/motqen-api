@@ -57,7 +57,7 @@ export default class SpecializationService extends Service {
     });
 
     if (this.dataCache && !filter && !pagination && !sort) {
-      await this.dataCache.set(cacheKey, result, 43200);
+      await this.dataCache.set(cacheKey, result, 86400);
     }
     return result;
   }
@@ -97,7 +97,7 @@ export default class SpecializationService extends Service {
     });
 
     if (this.dataCache && !filter && !pagination && !sort) {
-      await this.dataCache.set(cacheKey, result, 43200);
+      await this.dataCache.set(cacheKey, result, 86400);
     }
     return result;
   }

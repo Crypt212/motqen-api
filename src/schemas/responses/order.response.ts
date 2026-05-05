@@ -1,9 +1,7 @@
 import { z } from 'zod';
 
-const BaseSuccessResponse = z.object({
-  status: z.literal('success'),
-  message: z.string(),
-});
+import { SuccessResponseSchema } from "../responses.js";
+
 
 export const OrderObjectSchema = z.object({
   id: z.string().uuid(),
@@ -21,8 +19,7 @@ export const OrderObjectSchema = z.object({
   updatedAt: z.date(),
 });
 
-export const OrderListResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const OrderListResponseSchema = SuccessResponseSchema(z.object({
     orders: z.array(OrderObjectSchema),
     meta: z.object({
       page: z.number(),
@@ -30,9 +27,6 @@ export const OrderListResponseSchema = BaseSuccessResponse.extend({
       total: z.number(),
       totalPages: z.number(),
     }),
-  }),
-});
+  }),);
 
-export const OrderResponseSchema = BaseSuccessResponse.extend({
-  data: OrderObjectSchema,
-});
+export const OrderResponseSchema = SuccessResponseSchema(OrderObjectSchema,);

@@ -26,8 +26,16 @@ import {
   DashboardUserResponseSchema,
   DashboardWorkerProfileResponseSchema,
   DashboardClientProfileResponseSchema,
-  DashboardGenericResponseSchema,
 } from '../../../schemas/responses/dashboard.response.js';
+import {
+  WorkerVerificationResponseSchema,
+  WorkerPortfolioResponseSchema,
+  WorkerBadgesResponseSchema,
+  WorkerWorkingHoursResponseSchema,
+  WorkerStatsResponseSchema,
+  WorkerOccupiedTimeSlotsResponseSchema,
+  WorkerPortfolioImagesResponseSchema,
+} from '../../../schemas/responses/worker-profile.response.js';
 import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
@@ -168,7 +176,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Working hours retrieved',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: WorkerWorkingHoursResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -197,7 +205,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Working hours set',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: WorkerWorkingHoursResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -276,7 +284,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker governments retrieved',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -361,7 +369,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker specializations retrieved',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -387,7 +395,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker specializations retrieved',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -469,7 +477,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Verification details retrieved',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: WorkerVerificationResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -503,7 +511,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Verification resubmitted successfully',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: WorkerVerificationResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -531,7 +539,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Portfolio created successfully',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: WorkerPortfolioResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -553,7 +561,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Portfolio retrieved',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: WorkerPortfolioResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -580,7 +588,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Portfolio updated successfully',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: WorkerPortfolioResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -613,7 +621,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Images added successfully',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: WorkerPortfolioImagesResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -661,7 +669,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker stats retrieved',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: WorkerStatsResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -683,7 +691,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker badges retrieved',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: WorkerBadgesResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -708,7 +716,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Occupied time slots retrieved',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: WorkerOccupiedTimeSlotsResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,

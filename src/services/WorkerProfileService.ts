@@ -4,7 +4,7 @@
  */
 
 import Service, { tryCatch } from './Service.js';
-import uploadToCloudinary from '../providers/cloudinaryProvider.js';
+import uploadToCloudinary, { deleteFromCloudinary } from '../providers/cloudinaryProvider.js';
 import AppError from '../errors/AppError.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import {
@@ -21,7 +21,7 @@ import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../d
 import { WorkingHours } from '../domain/workingHours.entity.js';
 import type { WorkingHoursDTO } from '../schemas/requests/worker-profile.request.js';
 import IDataCache from '../cache/interfaces/DataCache.js';
-import { ExploreWorkerPublicDetail } from 'src/types/exploreWorker.js';
+import { ExploreWorkerPublicDetail } from '../types/exploreWorker.js';
 
 type InputWorkerData = {
   experienceYears: number;
@@ -496,11 +496,19 @@ export default class WorkerService extends Service {
       const currentCount = await this.workerProfileRepository.countPortfolioImages({ portfolioId: portfolio.id });
       if (currentCount + files.length > 10) throw new AppError('Maximum 10 images allowed per portfolio', 400);
 
-      const uploadPromises = files.map((file, i) => uploadToCloudinary(file.buffer, `${userId}/portfolio`, `img_${Date.now()}_${i}`));
+      const uploadPromises = files.map((file, i) =>
+        uploadToCloudinary(file.buffer, `${userId}/portfolio`, `img_${crypto.randomUUID()}_${i}`)
+      );
       const uploaded = await Promise.all(uploadPromises);
       const imageUrls = uploaded.map(u => u.url);
 
-      return await this.workerProfileRepository.addPortfolioImages({ portfolioId: portfolio.id, imageUrls });
+      try {
+        return await this.workerProfileRepository.addPortfolioImages({ portfolioId: portfolio.id, imageUrls });
+      } catch (dbError) {
+        // Rollback: clean up uploaded Cloudinary images if DB write fails
+        await Promise.allSettled(uploaded.map(u => deleteFromCloudinary(u.publicId)));
+        throw dbError;
+      }
     });
   }
 
@@ -515,7 +523,14 @@ export default class WorkerService extends Service {
 
       if (image.portfolio.workerProfileId !== profile.id) throw new AppError('Forbidden: Image belongs to another worker', 403);
 
+      // Extract Cloudinary public_id from the URL for cleanup
+      const urlParts = image.imageUrl.split('/');
+      const publicIdWithExt = urlParts.slice(-3).join('/'); // folder/subfolder/filename
+      const publicId = publicIdWithExt.replace(/\.[^.]+$/, ''); // strip extension
+
       await this.workerProfileRepository.deletePortfolioImage({ imageId });
+      // Fire-and-forget Cloudinary deletion (non-blocking)
+      deleteFromCloudinary(publicId).catch(() => {/* log externally if needed */});
     });
   }
 

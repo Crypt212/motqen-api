@@ -1,9 +1,7 @@
 import { z } from 'zod';
 
-const BaseSuccessResponse = z.object({
-  status: z.literal('success'),
-  message: z.string(),
-});
+import { SuccessResponseSchema } from "../responses.js";
+
 
 export const GovernmentObjectSchema = z.object({
   id: z.string().uuid(),
@@ -31,26 +29,18 @@ export const PaginationMetaSchema = z.object({
   totalPages: z.number(),
 });
 
-export const GovernmentListResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const GovernmentListResponseSchema = SuccessResponseSchema(z.object({
     governments: z.array(GovernmentObjectSchema),
     meta: PaginationMetaSchema.optional(),
-  }),
-});
+  }),);
 
-export const GovernmentResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const GovernmentResponseSchema = SuccessResponseSchema(z.object({
     government: GovernmentObjectSchema,
-  }),
-});
+  }),);
 
-export const CityListResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const CityListResponseSchema = SuccessResponseSchema(z.object({
     cities: z.array(CityObjectSchema),
     meta: PaginationMetaSchema.optional(),
-  }),
-});
+  }),);
 
-export const DeleteGovernmentResponseSchema = BaseSuccessResponse.extend({
-  data: z.null(),
-});
+export const DeleteGovernmentResponseSchema = SuccessResponseSchema(z.null(),);

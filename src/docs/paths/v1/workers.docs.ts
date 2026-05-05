@@ -4,7 +4,8 @@ import {
   ExploreSearchResponseSchema,
   ExploreDetailResponseSchema,
 } from '../../../schemas/responses/worker-explore.response.js';
-import { DashboardGenericResponseSchema } from '../../../schemas/responses/dashboard.response.js';
+import { WorkerWorkingHoursResponseSchema } from '../../../schemas/responses/worker-profile.response.js';
+import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerWorkersDocs(registry: OpenAPIRegistry) {
@@ -80,7 +81,7 @@ Each worker includes userInfo, location (with nested city/government), specializ
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker details retrieved successfully',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
       },
       notFoundResponse: true,
       validationErrorResponse: true,
@@ -94,8 +95,8 @@ Each worker includes userInfo, location (with nested city/government), specializ
 
   registry.registerPath({
     method: 'get',
-    path: '/api/v1/workesr/{id}/working-hours',
-    tags: ['Dashboard'],
+    path: '/api/v1/workers/{id}/working-hours',
+    tags: ['Workers'],
     summary: 'Get worker working hours',
     description: 'Returns the current working-hours schedule for the explored worker.',
     security: [{ BearerAuth: [] }],
@@ -103,7 +104,7 @@ Each worker includes userInfo, location (with nested city/government), specializ
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Working hours retrieved',
-        content: { 'application/json': { schema: DashboardGenericResponseSchema } },
+        content: { 'application/json': { schema: WorkerWorkingHoursResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,

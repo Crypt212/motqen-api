@@ -1,9 +1,7 @@
 import { z } from 'zod';
 
-const BaseSuccessResponse = z.object({
-  status: z.literal('success'),
-  message: z.string(),
-});
+import { SuccessResponseSchema } from "../responses.js";
+
 
 export const UserObjectSchema = z.object({
   id: z.string().uuid(),
@@ -19,43 +17,31 @@ export const UserObjectSchema = z.object({
   updatedAt: z.date(),
 });
 
-export const RequestOTPResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const RequestOTPResponseSchema = SuccessResponseSchema(z.object({
     phone: z.string(),
-  }),
-});
+  }),);
 
-export const VerifyOTPResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const VerifyOTPResponseSchema = SuccessResponseSchema(z.object({
     accessToken: z.string().optional(),
     user: UserObjectSchema.optional(),
     isRegistered: z.boolean(),
     reviewStatus: z.string().optional(),
-  }),
-});
+  }),);
 
-export const RegisterResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const RegisterResponseSchema = SuccessResponseSchema(z.object({
     accessToken: z.string(),
     user: UserObjectSchema,
-  }),
-});
+  }),);
 
-export const LoginResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const LoginResponseSchema = SuccessResponseSchema(z.object({
     accessToken: z.string(),
     user: UserObjectSchema,
-  }),
-});
+  }),);
 
-export const AccessTokenResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const AccessTokenResponseSchema = SuccessResponseSchema(z.object({
     accessToken: z.string(),
-  }),
-});
+  }),);
 
-export const ReviewStatusResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const ReviewStatusResponseSchema = SuccessResponseSchema(z.object({
     reviewStatus: z.string(),
-  }),
-});
+  }),);

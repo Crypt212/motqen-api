@@ -1,9 +1,7 @@
 import { z } from 'zod';
 
-const BaseSuccessResponse = z.object({
-  status: z.literal('success'),
-  message: z.string(),
-});
+import { SuccessResponseSchema } from "../responses.js";
+
 
 export const LocationObjectSchema = z.object({
   id: z.string().uuid(),
@@ -27,15 +25,11 @@ export const PaginationMetaSchema = z.object({
   totalPages: z.number(),
 });
 
-export const LocationListResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const LocationListResponseSchema = SuccessResponseSchema(z.object({
     locations: z.array(LocationObjectSchema),
     meta: PaginationMetaSchema.optional(),
-  }),
-});
+  }),);
 
-export const LocationResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const LocationResponseSchema = SuccessResponseSchema(z.object({
     location: LocationObjectSchema,
-  }),
-});
+  }),);

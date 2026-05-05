@@ -1,10 +1,6 @@
 import { z } from 'zod';
+import { SuccessResponseSchema } from '../responses.js';
 import { UUIDSchema } from '../common.js';
-
-const BaseSuccessResponse = z.object({
-  status: z.literal('success'),
-  message: z.string(),
-});
 
 export const ExploreWorkerCardSchema = z.object({
   workerId: UUIDSchema,
@@ -17,27 +13,61 @@ export const ExploreWorkerCardSchema = z.object({
   isAvailableNow: z.boolean(),
 });
 
+const ExploreSpecializationSchema = z.object({
+  id: UUIDSchema,
+  name: z.string(),
+  nameAr: z.string().nullable().optional(),
+});
+
+const ExploreWorkingHoursSchema = z.object({
+  daysOfWeek: z.array(z.string()),
+  startTime: z.string(),
+  endTime: z.string(),
+});
+
+const ExploreLocationSchema = z.object({
+  id: UUIDSchema,
+  address: z.string(),
+  government: z.object({ name: z.string() }).nullable().optional(),
+  city: z.object({ name: z.string() }).nullable().optional(),
+});
+
+const ExplorePortfolioSchema = z.object({
+  id: z.string(),
+  mainImage: z.string(),
+});
+
 export const ExploreWorkerDetailSchema = ExploreWorkerCardSchema.extend({
   bio: z.string().nullable().optional(),
   experienceYears: z.number(),
   isInTeam: z.boolean(),
   acceptsUrgentJobs: z.boolean(),
   badges: z.array(z.string()),
-  specializations: z.array(z.any()), // Can be typed further if needed
-  workingHours: z.any().nullable().optional(),
-  portfolio: z.any().nullable().optional(),
-  locations: z.array(z.any()),
+  specializations: z.array(ExploreSpecializationSchema),
+  workingHours: ExploreWorkingHoursSchema.nullable().optional(),
+  portfolio: ExplorePortfolioSchema.nullable().optional(),
+  locations: z.array(ExploreLocationSchema),
 });
 
-export const ExploreSearchResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+const PaginationMetaSchema = z.object({
+  page: z.number(),
+  limit: z.number(),
+  total: z.number(),
+  totalPages: z.number(),
+  count: z.number(),
+  hasNext: z.boolean(),
+  hasPrev: z.boolean(),
+});
+
+export const ExploreSearchResponseSchema = SuccessResponseSchema(
+  z.object({
     workers: z.array(ExploreWorkerCardSchema),
-    meta: z.any(),
-  }),
-});
+    meta: PaginationMetaSchema,
+  })
+);
 
-export const ExploreDetailResponseSchema = BaseSuccessResponse.extend({
-  data: z.object({
+export const ExploreDetailResponseSchema = SuccessResponseSchema(
+  z.object({
     worker: ExploreWorkerDetailSchema,
-  }),
-});
+  })
+);
