@@ -16,6 +16,16 @@ export const unAuthorizeWorker = asyncHandler(async (req, _, next) => {
 export const authorizeWorker = asyncHandler(async (req, _, next) => {
   if (!req.userState.worker)
     return next(new AppError('Unauthorized access for non-worker users', 403));
+
+  next();
+});
+
+/**
+ * Allows only approved worker users to access the route
+ */
+export const authorizeApprovedWorker = asyncHandler(async (req, _, next) => {
+  if (!req.userState.worker)
+    return next(new AppError('Unauthorized access for non-worker users', 403));
   if (req.userState.worker.verification.status !== 'APPROVED')
     return next(new AppError('You are not approved yet', 403));
 

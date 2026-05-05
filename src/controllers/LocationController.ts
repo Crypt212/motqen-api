@@ -47,6 +47,13 @@ export default class LocationController {
     new SuccessResponse('Location updated successfully', { location }, 200).send(res);
   });
 
+  setMain = asyncHandler(async (req, res) => {
+    const locationId = req.params.locationId as string;
+    const userId = req.userState!.userId;
+    const location = await this.locationService.setMainLocation({ userId, locationId });
+    new SuccessResponse('Location has been set as main successfully', { location }, 200).send(res);
+  });
+
   updateMain = asyncHandler(async (req, res) => {
     const userId = req.userState!.userId;
     const dto = req.body;

@@ -58,11 +58,9 @@ export default class OrderRepository extends Repository implements IOrderReposit
     };
   }
 
-  private prepare(filter: OrderFilter): PrismaOrderFilter {
+  private prepareFilter(filter: OrderFilter): PrismaOrderFilter {
     const preparedFilter: PrismaOrderFilter = {
       id: filter?.id as string,
-      clientProfileId: filter?.clientProfileId as string,
-      workerProfileId: filter?.workerProfileId as string,
       clientProfile: filter.clientUserId ? { userId: filter.clientUserId as string } : undefined,
       workerProfile: filter.workerUserId ? { userId: filter.workerUserId as string } : undefined,
       rate: filter?.rate as number,
@@ -76,7 +74,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
 
   async find({ filter }: { filter: OrderFilter }): Promise<Order | null> {
     try {
-      const preparedFilter = this.prepare(filter);
+      const preparedFilter = this.prepareFilter(filter);
       const record = await this.prismaClient.order.findFirst({
         where: preparedFilter,
         include: { images: true, subSpecialization: true, clientProfile: { include: { user: true } }, workerProfile: { include: { user: true } } }
@@ -109,7 +107,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
         hasPrev: false,
       };
 
-      const preparedFilter = this.prepare(filter);
+      const preparedFilter = this.prepareFilter(filter);
 
       if (pagination) {
         const total = await this.prismaClient.order.count({ where: preparedFilter });
@@ -178,7 +176,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
     order: OrderUpdateInput;
   }): Promise<Order> {
     try {
-      const preparedFilter = this.prepare(filter);
+      const preparedFilter = this.prepareFilter(filter);
 
       // First, get the ID from filter, assuming updating by ID
       const existing = await this.prismaClient.order.findFirst({ where: preparedFilter });
@@ -197,7 +195,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
 
   async delete({ filter }: { filter: OrderFilter }): Promise<void> {
     try {
-      const preparedFilter = this.prepare(filter);
+      const preparedFilter = this.prepareFilter(filter);
 
       await this.prismaClient.order.deleteMany({
         where: preparedFilter,

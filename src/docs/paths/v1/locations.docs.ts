@@ -175,15 +175,15 @@ export default function registerLocationsDocs(registry: OpenAPIRegistry) {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // DELETE /me/locations/{locationId}
+  // PATCH /me/locations/{locationId}/set-main
   // ─────────────────────────────────────────────────────────────────────────────
 
   registry.registerPath({
-    method: 'delete',
-    path: '/api/v1/me/locations/{locationId}',
+    method: 'patch',
+    path: '/api/v1/me/locations/{locationId}/set-main',
     tags: ['Locations'],
-    summary: 'Delete location',
-    description: 'Deletes a location by its UUID.',
+    summary: 'Set location to be main by ID',
+    description: 'Sets an existing location to be main by its UUID.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
@@ -191,8 +191,8 @@ export default function registerLocationsDocs(registry: OpenAPIRegistry) {
     },
     responses: createResponseDoc({
       successfulResponse: {
-        description: 'Location deleted',
-        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
+        description: 'Location has been set as main successfully',
+        content: { 'application/json': { schema: LocationResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,

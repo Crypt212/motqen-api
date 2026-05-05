@@ -44,6 +44,7 @@ router.post(
 router.get('/', validateQuery(OrderQuerySchema), orderController.list);
 router.get('/:orderId', validateParams(OrderIdParamsSchema), orderController.getById);
 router.delete('/:orderId', validateParams(OrderIdParamsSchema), orderController.cancel);
+router.get('/:orderId/location', validateParams(OrderIdParamsSchema), orderController.getLocation);
 router.post(
   '/:orderId/specify-range',
   validateParams(OrderIdParamsSchema),

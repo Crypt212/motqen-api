@@ -16,7 +16,6 @@ export const CreateLocationSchema = z.object({
   lat: LatitudeSchema,
   long: LongitudeSchema,
   isHidden: z.boolean().optional(),
-  isMain: z.boolean(),
 });
 
 export type CreateLocationDTO = z.infer<typeof CreateLocationSchema>;

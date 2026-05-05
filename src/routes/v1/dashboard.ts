@@ -30,7 +30,7 @@ import {
   getWorkerBadges,
   getWorkerOccupiedTimeSlots,
 } from '../../controllers/DashboardController.js';
-import { authorizeWorker, unAuthorizeWorker } from '../../middlewares/workerMiddleware.js';
+import { authorizeApprovedWorker, authorizeWorker, unAuthorizeWorker } from '../../middlewares/workerMiddleware.js';
 import { authorizeClient, unAuthorizeClient } from '../../middlewares/clientMiddleware.js';
 import upload from '../../configs/multer.js';
 
@@ -93,7 +93,7 @@ usersRouter.get('/worker-profile/verification', isActive, authorizeWorker, getVe
 usersRouter.put(
   '/worker-profile/verification',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   upload.fields([
     { name: 'id_image', maxCount: 1 },
     { name: 'personal_with_id_image', maxCount: 1 },
@@ -104,17 +104,17 @@ usersRouter.put(
 usersRouter.post(
   '/worker-profile/portfolio',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateBody(CreatePortfolioSchema),
   createPortfolio
 );
 
-usersRouter.get('/worker-profile/portfolio', isActive, authorizeWorker, getPortfolio);
+usersRouter.get('/worker-profile/portfolio', isActive, authorizeApprovedWorker, getPortfolio);
 
 usersRouter.put(
   '/worker-profile/portfolio',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateBody(UpdatePortfolioSchema),
   updatePortfolio
 );
@@ -122,7 +122,7 @@ usersRouter.put(
 usersRouter.post(
   '/worker-profile/portfolio/images',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   upload.array('images', 10),
   addPortfolioImages
 );
@@ -130,27 +130,27 @@ usersRouter.post(
 usersRouter.delete(
   '/worker-profile/portfolio/images/:imageId',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateParams(PortfolioImageIdParamsSchema),
   deletePortfolioImage
 );
 
-usersRouter.get('/worker-profile/stats', isActive, authorizeWorker, getWorkerStats);
-usersRouter.get('/worker-profile/badges', isActive, authorizeWorker, getWorkerBadges);
+usersRouter.get('/worker-profile/stats', isActive, authorizeApprovedWorker, getWorkerStats);
+usersRouter.get('/worker-profile/badges', isActive, authorizeApprovedWorker, getWorkerBadges);
 usersRouter.get(
   '/worker-profile/occupied-time-slots',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateQuery(OccupiedTimeSlotsQuerySchema),
   getWorkerOccupiedTimeSlots
 );
 
-usersRouter.get('/worker-profile', isActive, authorizeWorker, getWorkerProfile);
-usersRouter.get('/worker-profile/working-hours', isActive, authorizeWorker, getWorkerWorkingHours);
+usersRouter.get('/worker-profile', isActive, authorizeApprovedWorker, getWorkerProfile);
+usersRouter.get('/worker-profile/working-hours', isActive, authorizeApprovedWorker, getWorkerWorkingHours);
 usersRouter.post(
   '/worker-profile/working-hours',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateBody(SetWorkingHoursSchema),
   setWorkerWorkingHours
 );
@@ -158,7 +158,7 @@ usersRouter.post(
 usersRouter.put(
   '/worker-profile',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateBody(UpdateWorkerProfileSchema),
   updateWorkerProfile
 );
@@ -166,14 +166,14 @@ usersRouter.put(
 usersRouter.delete(
   '/worker-profile',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   deleteWorkerProfile
 );
 
 usersRouter.get(
   '/worker-profile/work-governments',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateQuery(WorkerGovernmentQuerySchema),
   getWorkerGovernments
 );
@@ -181,7 +181,7 @@ usersRouter.get(
 usersRouter.post(
   '/worker-profile/work-governments',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateBody(AddWorkerGovernmentsSchema),
   addWorkerGovernments
 );
@@ -189,7 +189,7 @@ usersRouter.post(
 usersRouter.delete(
   '/worker-profile/work-governments',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateQuery(DeleteWorkerGovernmentsQuerySchema),
   validateBody(DeleteWorkerGovernmentsSchema),
   deleteWorkerGovernments
@@ -198,7 +198,7 @@ usersRouter.delete(
 usersRouter.get(
   '/worker-profile/specializations/tree',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateQuery(WorkerSpecializationQuerySchema),
   getWorkerSpecializationsTree
 );
@@ -206,7 +206,7 @@ usersRouter.get(
 usersRouter.get(
   '/worker-profile/specializations',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateQuery(WorkerSpecializationQuerySchema),
   getWorkerSpecializations
 );
@@ -214,7 +214,7 @@ usersRouter.get(
 usersRouter.post(
   '/worker-profile/specializations',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateBody(AddWorkerSpecializationsSchema),
   addWorkerSpecializations
 );
@@ -222,7 +222,7 @@ usersRouter.post(
 usersRouter.delete(
   '/worker-profile/specializations',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateQuery(DeleteWorkerSpecializationsQuerySchema),
   validateBody(DeleteWorkerSpecializationsSchema),
   deleteWorkerSpecializations

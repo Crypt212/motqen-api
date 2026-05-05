@@ -121,4 +121,4 @@ export const negotiationService = new NegotiationService({
 });
 
 
-export const orderController = new OrderController({ orderService });
+export const orderController = new OrderController({ orderService, locationService });

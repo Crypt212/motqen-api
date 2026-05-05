@@ -9,7 +9,7 @@ export default class DataCache implements IDataCache {
     const data = await this.client.get(key);
     if (!data) return null;
     try {
-      return JSON.parse(data) as T;
+      return JSON.parse(data as string) as T;
     } catch {
       return null;
     }

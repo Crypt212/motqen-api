@@ -119,6 +119,35 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // GET /orders/:orderId/location
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/orders/{orderId}/location',
+    tags: ['Orders'],
+    summary: 'Get the location assigned to order by ID',
+    description:
+      'Returns the location assigned to the order. Accessible by the client who created it or the assigned worker.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      params: OrderIdParamsSchema,
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Location of order retrieved successfully',
+        content: { 'application/json': { schema: OrderResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // DELETE /orders/:orderId   (cancel)
   // ─────────────────────────────────────────────────────────────────────────────
 
