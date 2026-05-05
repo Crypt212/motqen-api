@@ -38,12 +38,14 @@ model User {
   middleName      String
   profileImageUrl String?
   updatedAt       DateTime                  @updatedAt
-  clientProfile   ClientProfile?
-  conversations   ConversationParticipant[]
-  locations       Location[]
-  sentMessages    Message[]
-  sessions        Session[]
-  workerProfile   WorkerProfile?
+  clientProfile        ClientProfile?
+  conversations        ConversationParticipant[]
+  locations            Location[]
+  sentMessages         Message[]
+  sessions             Session[]
+  workerProfile        WorkerProfile?
+  sentNegotiations     Negotiation[]  @relation("NegotiationSender")
+  acceptedNegotiations Negotiation[]  @relation("NegotiationAccepter")
 
   @@index([status, isOnline, id])
   @@map("users")
@@ -308,18 +310,24 @@ model OrderImage {
 }
 
 model Negotiation {
-  id        String               @id @default(uuid())
-  orderId   String
-  price     Float
-  direction NegotiationDirection
-  status    NegotiationStatus    @default(PENDING)
+  id         String               @id @default(uuid())
+  orderId    String
+  price      Float
+  direction  NegotiationDirection
+  status     NegotiationStatus    @default(PENDING)
+  senderId   String
+  acceptedBy String?
 
   note      String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sender    User     @relation("NegotiationSender", fields: [senderId], references: [id])
+  accepter  User?    @relation("NegotiationAccepter", fields: [acceptedBy], references: [id])
 
+  @@index([orderId])
+  @@index([senderId])
   @@map("negotiations")
 }
 
