@@ -30,4 +30,18 @@ export class FirebaseProvider implements IFirebaseProvider {
       data: options.data,
     });
   }
+
+  async subscribeToTopic(tokens: string[], topic: string): Promise<void> {
+    if (!this.isReady()) {
+      throw new Error('Firebase is not initialized');
+    }
+    await admin.messaging().subscribeToTopic(tokens, topic);
+  }
+
+  async unsubscribeFromTopic(tokens: string[], topic: string): Promise<void> {
+    if (!this.isReady()) {
+      throw new Error('Firebase is not initialized');
+    }
+    await admin.messaging().unsubscribeFromTopic(tokens, topic);
+  }
 }

@@ -254,13 +254,15 @@ const ExploreWorkerSchema = z.object({
     profileImageUrl: z.string().nullable(),
     name: z.string(),
   }),
-  location: z.object({
-    id: z.string().uuid(),
-    address: z.string(),
-    addressNotes: z.string(),
-    city: AreaInfoSchema,
-    government: AreaInfoSchema,
-  }).nullable(),
+  location: z
+    .object({
+      id: z.string().uuid(),
+      address: z.string(),
+      addressNotes: z.string(),
+      city: AreaInfoSchema,
+      government: AreaInfoSchema,
+    })
+    .nullable(),
   specializationTree: z.array(SpecializationSchema),
   workInfo: z.object({
     experienceYears: z.number().nullable(),
@@ -283,9 +285,7 @@ export const ExploreWorkersResponseSchema = SuccessResponseSchema(
   })
 );
 
-export const ExploreWorkerDetailResponseSchema = SuccessResponseSchema(
-  ExploreWorkerSchema
-);
+export const ExploreWorkerDetailResponseSchema = SuccessResponseSchema(ExploreWorkerSchema);
 
 // ============================================
 // Location responses
@@ -307,5 +307,79 @@ export const LocationListResponseSchema = SuccessResponseSchema(
     hasNext: z.boolean(),
     hasPrev: z.boolean(),
     totalPages: z.number(),
+  })
+);
+
+// ============================================
+// Notification responses
+// ============================================
+
+const NotificationDataSchema = z.object({
+  screen: z.enum([
+    'order_details',
+    'negotiation',
+    'payment',
+    'wallet',
+    'dispute_details',
+    'profile',
+    'open_orders',
+    'announcement',
+  ]),
+  entityId: z.string(),
+  entityType: z.enum([
+    'order',
+    'dispute',
+    'payout',
+    'withdraw',
+    'admin_action',
+    'government',
+    'broadcast',
+  ]),
+  actionType: z.enum(['WARNING', 'SUSPENDED', 'BANNED']).optional(),
+  openOrdersCount: z.string().optional(),
+});
+
+const NotificationSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  type: z.enum([
+    'ORDER_ACCEPTED',
+    'ORDER_CANCELLED',
+    'ORDER_COMPLETED',
+    'NEGOTIATION_OFFER',
+    'NEGOTIATION_ACCEPTED',
+    'NEGOTIATION_REJECTED',
+    'WORK_STARTED',
+    'WORK_DONE',
+    'PAYMENT_REQUIRED',
+    'PAYMENT_RECEIVED',
+    'PAYOUT_COMPLETED',
+    'DISPUTE_OPENED',
+    'DISPUTE_UPDATED',
+    'DISPUTE_RESOLVED',
+    'REFUND_PROCESSED',
+    'WITHDRAW_REQUESTED',
+    'WITHDRAW_APPROVED',
+    'WITHDRAW_REJECTED',
+    'ADMIN_ACTION',
+  ]),
+  title: z.string(),
+  body: z.string(),
+  data: NotificationDataSchema,
+  isSent: z.boolean(),
+  createdAt: z.string().datetime(),
+});
+
+export const NotificationsResponseSchema = SuccessResponseSchema(
+  z.object({
+    notifications: z.array(NotificationSchema),
+    nextCursor: z.string().nullable(),
+    unreadCount: z.number(),
+  })
+);
+
+export const MarkAllReadResponseSchema = SuccessResponseSchema(
+  z.object({
+    success: z.boolean(),
   })
 );

@@ -18,4 +18,6 @@ export interface IFirebaseProvider {
   isReady(): boolean;
   sendMulticast(options: MulticastMessageOptions): Promise<BatchResponse>;
   sendTopic(options: TopicMessageOptions): Promise<void>;
+  subscribeToTopic(tokens: string[], topic: string): Promise<void>;
+  unsubscribeFromTopic(tokens: string[], topic: string): Promise<void>;
 }

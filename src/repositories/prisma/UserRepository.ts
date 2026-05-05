@@ -71,6 +71,7 @@ export default class UserRepository extends Repository implements IUserRepositor
     filter: UserFilter;
   }): Promise<(User & { isClient: boolean; isWorker: boolean }) | null> {
     try {
+      console.log('Finding user with filter:', filter);
       const record = await this.prismaClient.user.findFirst({
         where: filter,
       });
