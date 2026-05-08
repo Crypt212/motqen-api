@@ -32,24 +32,18 @@ export default class GovernmentService extends Service {
     pagination?: PaginationOptions;
     sort?: SortOptions<Government>;
   }): Promise<PaginatedResultMeta & { governments: Government[] }> {
+    const { filter, pagination, sort } = params;
     return tryCatch(async () => {
-      const cacheKey = 'data:govs:all';
-      if (this.dataCache) {
-        const cached = await this.dataCache.get<PaginatedResultMeta & { governments: Government[] }>(cacheKey);
-        if (cached) return cached;
-      }
-      const result = await this.governmentRepository.findMany(params);
-      if (this.dataCache) {
-        await this.dataCache.set(cacheKey, result, 86400);
-      }
+      const result = await this.governmentRepository.findMany({ filter, pagination, sort });
       return result;
     });
   }
 
   async getGovernmentById(params: { id: string }): Promise<Government> {
+    const { id } = params;
     return tryCatch(async () => {
       const government = await this.governmentRepository.find({
-        filter: { id: params.id },
+        filter: { id },
       });
       if (!government) {
         throw new AppError('Government not found', 404);
@@ -59,9 +53,10 @@ export default class GovernmentService extends Service {
   }
 
   async createGovernment(params: { data: GovernmentCreateInput }): Promise<Government> {
+    const { data } = params;
     return tryCatch(async () => {
       const government = await this.governmentRepository.create({
-        government: params.data,
+        government: data,
       });
       if (!government) {
         throw new AppError('Failed to create government', 500);
@@ -72,17 +67,18 @@ export default class GovernmentService extends Service {
   }
 
   async updateGovernment(params: { id: string; data: GovernmentUpdateInput }): Promise<Government> {
+    const { id, data } = params;
     return tryCatch(async () => {
       const existing = await this.governmentRepository.find({
-        filter: { id: params.id },
+        filter: { id },
       });
       if (!existing) {
         throw new AppError('Government not found', 404);
       }
 
       const government = await this.governmentRepository.update({
-        filter: { id: params.id },
-        data: params.data,
+        filter: { id },
+        data
       });
       if (!government) {
         throw new AppError('Failed to update government', 500);
@@ -93,14 +89,15 @@ export default class GovernmentService extends Service {
   }
 
   async deleteGovernment(params: { id: string }): Promise<void> {
+    const { id } = params;
     return tryCatch(async () => {
       const existing = await this.governmentRepository.find({
-        filter: { id: params.id },
+        filter: { id },
       });
       if (!existing) {
         throw new AppError('Government not found', 404);
       }
-      await this.governmentRepository.delete({ filter: { id: params.id } });
+      await this.governmentRepository.delete({ filter: { id } });
       if (this.dataCache) await this.dataCache.delPattern('data:govs:*');
     });
   }
@@ -111,33 +108,24 @@ export default class GovernmentService extends Service {
     pagination?: PaginationOptions;
     sort?: SortOptions<City>;
   }): Promise<PaginatedResultMeta & { cities: City[] }> {
+    const { governmentId, filter, pagination, sort } = params;
     return tryCatch(async () => {
       const existing = await this.governmentRepository.find({
-        filter: { id: params.governmentId },
+        filter: { id: governmentId },
       });
       if (!existing) {
         throw new AppError('Government not found', 404);
       }
 
-      const cacheKey = `data:govs:${params.governmentId}:cities`;
-      if (this.dataCache) {
-        const cached = await this.dataCache.get<PaginatedResultMeta & { cities: City[] }>(cacheKey);
-        if (cached) return cached;
-      }
-
       const finalFilter = {
-        governmentId: params.governmentId,
-        ...params.filter,
+        governmentId,
+        ...filter,
       };
       const result = await this.governmentRepository.findCities({
         filter: finalFilter,
-        pagination: params.pagination,
-        sort: params.sort,
+        pagination,
+        sort,
       });
-
-      if (this.dataCache) {
-        await this.dataCache.set(cacheKey, result, 86400);
-      }
       return result;
     });
   }

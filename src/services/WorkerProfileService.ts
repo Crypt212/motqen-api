@@ -252,17 +252,7 @@ export default class WorkerService extends Service {
   async getExploreWorkerById(params: { userId: IDType }): Promise<ExploreWorkerPublicDetail | null> {
     const { userId } = params;
     return tryCatch(async () => {
-      const cacheKey = `data:worker:explore:${userId}`;
-      if (this.dataCache) {
-        const cached = await this.dataCache.get<ExploreWorkerPublicDetail>(cacheKey);
-        if (cached) return cached;
-      }
-
       const result = await this.workerProfileRepository.findExploreWorkerById(userId as string);
-
-      if (result && this.dataCache) {
-        await this.dataCache.set(cacheKey, result, 300);
-      }
       return result;
     });
   }
@@ -276,23 +266,9 @@ export default class WorkerService extends Service {
     const { filter } = params;
 
     return tryCatch(async () => {
-      let cacheKey: string | null = null;
-      if (filter.userId) {
-        cacheKey = `data:worker:${filter.userId}:spec-tree`;
-      }
-
-      if (this.dataCache && cacheKey) {
-        const cached = await this.dataCache.get<SpecializationsWithSubSpecializations>(cacheKey);
-        if (cached) return cached;
-      }
-
       const result = await this.workerProfileRepository.findSpecializationsWithSubSpecializations({
         filter,
       });
-
-      if (this.dataCache && cacheKey) {
-        await this.dataCache.set(cacheKey, result, 600);
-      }
       return result;
     });
   }
@@ -330,7 +306,7 @@ export default class WorkerService extends Service {
         specializationsTree,
       });
       if (this.dataCache && filter.userId) {
-        await this.dataCache.del(`data:worker:${filter.userId}:spec-tree`).catch(() => {});
+        await this.dataCache.del(`data:worker:${filter.userId}:spec-tree`).catch(() => { });
       }
     });
   }
@@ -345,7 +321,7 @@ export default class WorkerService extends Service {
         workerFilter: { userId },
       });
       if (this.dataCache) {
-        await this.dataCache.del(`data:worker:${userId}:spec-tree`).catch(() => {});
+        await this.dataCache.del(`data:worker:${userId}:spec-tree`).catch(() => { });
       }
     });
   }
@@ -364,7 +340,7 @@ export default class WorkerService extends Service {
         specializations: mainSpecializationIds,
       });
       if (this.dataCache) {
-        await this.dataCache.del(`data:worker:${userId}:spec-tree`).catch(() => {});
+        await this.dataCache.del(`data:worker:${userId}:spec-tree`).catch(() => { });
       }
     });
   }
@@ -383,7 +359,7 @@ export default class WorkerService extends Service {
         specializationsTree,
       });
       if (this.dataCache) {
-        await this.dataCache.del(`data:worker:${userId}:spec-tree`).catch(() => {});
+        await this.dataCache.del(`data:worker:${userId}:spec-tree`).catch(() => { });
       }
     });
   }
@@ -469,10 +445,10 @@ export default class WorkerService extends Service {
       };
 
       if (prevNationalIdUrl) {
-        deleteFromCloudinary(getPublicIdFromUrl(prevNationalIdUrl)).catch(() => {});
+        deleteFromCloudinary(getPublicIdFromUrl(prevNationalIdUrl)).catch(() => { });
       }
       if (prevSelfieUrl) {
-        deleteFromCloudinary(getPublicIdFromUrl(prevSelfieUrl)).catch(() => {});
+        deleteFromCloudinary(getPublicIdFromUrl(prevSelfieUrl)).catch(() => { });
       }
 
       const { idWithPersonalImageUrl, idDocumentUrl, ...safeVerification } = updatedVerification;
@@ -551,7 +527,7 @@ export default class WorkerService extends Service {
         // Rollback: clean up uploaded Cloudinary images if DB write fails
         await Promise.allSettled(uploaded.map(u => deleteFromCloudinary(u.publicId)));
         if (dbError.message === 'LIMIT_EXCEEDED') {
-           throw new AppError('Maximum 10 images allowed per portfolio', 400);
+          throw new AppError('Maximum 10 images allowed per portfolio', 400);
         }
         throw dbError;
       }
