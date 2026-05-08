@@ -108,16 +108,16 @@ export const ClientProfileOptionalSchema = ClientProfileSchema.partial();
 type InferFieldType<F extends FieldTypeDefinition> = F extends { type: 'uuid' }
   ? string
   : F extends { type: 'string' }
-    ? string
-    : F extends { type: 'number' }
-      ? number
-      : F extends { type: 'boolean' }
-        ? boolean
-        : F extends { type: 'date' }
-          ? Date
-          : F extends { type: 'enum'; enumValues: infer E extends [string, ...string[]] }
-            ? E[number]
-            : never;
+  ? string
+  : F extends { type: 'number' }
+  ? number
+  : F extends { type: 'boolean' }
+  ? boolean
+  : F extends { type: 'date' }
+  ? Date
+  : F extends { type: 'enum'; enumValues: infer E extends [string, ...string[]] }
+  ? E[number]
+  : never;
 
 export type FilterFromDescriptor<D extends Record<string, FieldTypeDefinition>> = {
   [K in keyof D]?: InferFieldType<D[K]>;

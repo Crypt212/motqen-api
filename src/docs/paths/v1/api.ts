@@ -7,6 +7,7 @@ import registerSpecializationsDocs from './specializations.docs.js';
 import registerWorkersDocs from './workers.docs.js';
 import registerLocationsDocs from './locations.docs.js';
 import registerOrdersDocs from './orders.docs.js';
+import registerReportsDocs from './reports.docs.js';
 
 export const registryV1 = new OpenAPIRegistry();
 
@@ -18,6 +19,7 @@ registerSpecializationsDocs(registryV1);
 registerWorkersDocs(registryV1);
 registerLocationsDocs(registryV1);
 registerOrdersDocs(registryV1);
+registerReportsDocs(registryV1);
 
 registryV1.registerComponent('securitySchemes', 'BearerAuth', {
   type: 'http',

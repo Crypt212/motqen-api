@@ -13,6 +13,7 @@ import { isActive, authenticateAccess } from '../../middlewares/authMiddleware.j
 import { sensitiveIpRateLimiter } from '../../middlewares/rateLimitMiddleware.js';
 import workersRouter from './workers.js';
 import ordersRouter from './orders.js';
+import reportsRouter from './reports.js';
 
 const mainRouter = Router();
 
@@ -23,5 +24,6 @@ mainRouter.use('/workers', workersRouter);
 mainRouter.use('/governments', governmentRouter);
 mainRouter.use('/specializations', specializationRouter);
 mainRouter.use('/orders', authenticateAccess, isActive, ordersRouter);
+mainRouter.use('/reports', authenticateAccess, isActive, reportsRouter);
 
 export default mainRouter;

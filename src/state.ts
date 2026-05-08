@@ -35,6 +35,9 @@ import LocationService from './services/LocationService.js';
 import LocationController from './controllers/LocationController.js';
 import NegotiationService from './services/NegotiationService.js';
 import NegotiationRepository from './repositories/prisma/NegotiationRepository.js';
+import ReportRepository from './repositories/prisma/ReportRepository.js';
+import ReportService from './services/ReportService.js';
+import ReportController from './controllers/ReportController.js';
 
 export const rateLimitCache = new RateLimitCache(redisClient);
 export const otpCache = new OTPCache(redisClient);
@@ -120,5 +123,8 @@ export const negotiationService = new NegotiationService({
   transactionManager
 });
 
-
 export const orderController = new OrderController({ orderService, locationService });
+
+export const reportRepository = new ReportRepository(prisma);
+export const reportService = new ReportService({ reportRepository });
+export const reportController = new ReportController({ reportService });

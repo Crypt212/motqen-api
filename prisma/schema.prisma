@@ -46,6 +46,7 @@ model User {
   workerProfile        WorkerProfile?
   sentNegotiations     Negotiation[]  @relation("NegotiationSender")
   acceptedNegotiations Negotiation[]  @relation("NegotiationAccepter")
+  reports              Report[]       @relation("ReportsByUser")
 
   @@index([status, isOnline, id])
   @@map("users")
@@ -290,6 +291,7 @@ model Order {
   images              OrderImage[]
   occupiedTimeSlot    WorkerOccupiedTimeSlot?
   negotiations        Negotiation[]
+  reports             Report[]          @relation("ReportContextOrder")
 
   @@index([clientProfileId])
   @@index([workerProfileId])
@@ -489,4 +491,79 @@ model FlaggedMessage {
   @@index([state])
   @@index([createdAt])
   @@map("flagged_messages")
+}
+
+model Report {
+  id              String           @id @default(uuid())
+  reporterId      String
+  targetType      ReportTargetType
+  targetId        String
+  contextOrderId  String?
+  problemCategory ProblemCategory
+  problemType     ProblemType
+  description     String
+  status          ReportStatus     @default(PENDING)
+  resolvedBy      String?
+  retainUntil     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  reporter     User          @relation("ReportsByUser", fields: [reporterId], references: [id], onDelete: Cascade)
+  contextOrder Order?        @relation("ReportContextOrder", fields: [contextOrderId], references: [id], onDelete: SetNull)
+  images       ReportImage[]
+
+  @@index([reporterId])
+  @@index([status])
+  @@index([targetType, targetId])
+  @@map("reports")
+}
+
+model ReportImage {
+  id          String    @id @default(uuid())
+  reportId    String
+  url         String
+  createdAt   DateTime  @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@map("report_images")
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+  CANCELLED
+}
+
+enum ReportTargetType {
+  ORDER
+  CHAT_MESSAGE
+  WORKER_PROFILE
+  CLIENT_PROFILE
+}
+
+enum ProblemCategory {
+  ORDER_ISSUE
+  WORKER_CONDUCT
+  CLIENT_CONDUCT
+  CHAT_MESSAGE
+  OTHER
+}
+
+enum ProblemType {
+  UNFINISHED_WORK
+  PAYMENT_DISPUTE
+  NO_SHOW
+  PROPERTY_DAMAGE
+  UNPROFESSIONAL_BEHAVIOR
+  FRAUD
+  PAYMENT_FRAUD
+  UNREASONABLE_DEMANDS
+  SPAM
+  INAPPROPRIATE_CONTENT
+  HARASSMENT
+  OTHER
 }
