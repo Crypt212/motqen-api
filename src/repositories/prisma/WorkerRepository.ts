@@ -3,7 +3,7 @@ import IWorkerProfileRepository from '../interfaces/WorkerRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { IDType } from '../interfaces/Repository.js';
 import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../../domain/specialization.entity.js';
-import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
+import { isEmptyFilter } from './utils.js';
 import {
   WorkerProfile,
   WorkerProfileCreateInput,
@@ -17,6 +17,7 @@ import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { ExploreWorkerPublicDetail, } from '../../types/exploreWorker.js';
+import { Government } from 'src/domain/government.entity.js';
 
 type SpecializationsWithSubSpecializationsPrisma = Prisma.SpecializationGetPayload<{ include: { subSpecializations: true } }>;
 
@@ -36,9 +37,10 @@ export default class WorkerProfileRepository
       experienceYears: record.experienceYears,
       isInTeam: record.isInTeam,
       acceptsUrgentJobs: record.acceptsUrgentJobs,
-      completedJobsCount: record.completedJobsCount,
       bio: record.bio ?? undefined,
       rate: record.rate ?? 0,
+      ratingCount: record.ratingCount,
+      completedJobsCount: record.completedJobsCount,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
@@ -273,7 +275,7 @@ export default class WorkerProfileRepository
   }: {
     workerFilter: WorkerProfileFilter;
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }> {
+  }): Promise<PaginatedResultMeta & { governments: Government[] }> {
     try {
       const page = pagination?.page || 1;
       const limit = pagination?.limit || 10;
@@ -286,7 +288,7 @@ export default class WorkerProfileRepository
 
       if (!profile) {
         return {
-          governmentIds: [],
+          governments: [],
           page,
           limit,
           count: 0,
@@ -310,7 +312,7 @@ export default class WorkerProfileRepository
       const totalPages = Math.ceil(total / limit);
 
       return {
-        governmentIds: governments.map(g => g.id),
+        governments: governments,
         page,
         limit,
         count: governments.length,
@@ -1056,6 +1058,15 @@ export default class WorkerProfileRepository
 UPDATE worker_profiles
 SET
     rate = (rate * "completedJobsCount" + ${rate}) / ("completedJobsCount" + 1),
+    "ratingCount" = "ratingCount" + 1
+WHERE worker_profiles.id = ${workerProfileId};
+`;
+  }
+
+  async increaseCompletedOrders({ workerProfileId }: { workerProfileId: IDType, }): Promise<void> {
+    await this.prismaClient.$executeRaw`
+UPDATE worker_profiles
+SET
     "completedJobsCount" = "completedJobsCount" + 1
 WHERE worker_profiles.id = ${workerProfileId};
 `;

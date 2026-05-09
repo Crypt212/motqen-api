@@ -95,6 +95,7 @@ model WorkerProfile {
   portfolioId        String?  @unique
   updatedAt          DateTime @updatedAt
   rate               Float    @default(-1.0)
+  ratingCount        Int      @default(0)
   completedJobsCount Int      @default(0)
   workingHoursId     String?   @unique
 

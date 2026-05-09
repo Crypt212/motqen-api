@@ -16,7 +16,7 @@ import {
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import { PaginationOptions, PaginatedResultMeta } from '../types/query.js';
-import { GovernmentFilter } from '../domain/government.entity.js';
+import { Government, GovernmentFilter } from '../domain/government.entity.js';
 import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../domain/specialization.entity.js';
 import { WorkingHours } from '../domain/workingHours.entity.js';
 import type { WorkingHoursDTO } from '../schemas/requests/worker-profile.request.js';
@@ -194,7 +194,7 @@ export default class WorkerService extends Service {
     pagination: PaginationOptions;
     filter: WorkerProfileFilter;
     GovernmentFilter: GovernmentFilter;
-  }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }> {
+  }): Promise<PaginatedResultMeta & { governments: Government[] }> {
     const { pagination, GovernmentFilter: filter } = params;
     return tryCatch(async () => {
       const result = await this.workerProfileRepository.findWorkGovernments({
@@ -420,7 +420,7 @@ export default class WorkerService extends Service {
       const nationalIdUpload = await uploadToCloudinary(idImageBuffer, `${userId}/verification_info`, `nationalID_${crypto.randomUUID()}`);
       const selfieUpload = await uploadToCloudinary(profileWithIdImageBuffer, `${userId}/verification_info`, `selfiWithID_${crypto.randomUUID()}`);
 
-      let updatedVerification;
+      let updatedVerification: WorkerProfileVerification;
       try {
         updatedVerification = await this.workerProfileRepository.setVerification({
           workerProfileId: profile.id,
@@ -573,27 +573,6 @@ export default class WorkerService extends Service {
       if (this.dataCache) {
         await this.dataCache.del(`data:worker:explore:${userId}`);
       }
-    });
-  }
-
-  async getWorkerStats(params: { userId: IDType }) {
-    const { userId } = params;
-    return tryCatch(async () => {
-      const profile = await this.workerProfileRepository.find({ workerFilter: { userId } });
-      if (!profile) throw new AppError('Worker profile not found', 404);
-
-      const ratingCount = await this.workerProfileRepository.countRatedOrders({ workerProfileId: profile.id });
-      return { rate: profile.rate, completedJobsCount: profile.completedJobsCount, ratingCount };
-    });
-  }
-
-  async getWorkerBadges(params: { userId: IDType }) {
-    const { userId } = params;
-    return tryCatch(async () => {
-      const profile = await this.workerProfileRepository.find({ workerFilter: { userId } });
-      if (!profile) throw new AppError('Worker profile not found', 404);
-
-      return await this.workerProfileRepository.findWorkerBadges({ workerProfileId: profile.id });
     });
   }
 
