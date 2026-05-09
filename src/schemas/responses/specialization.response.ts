@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
+import { UUIDSchema } from '../common.js';
 
 
 const PaginationMetaSchema = z.object({
@@ -11,7 +12,7 @@ const PaginationMetaSchema = z.object({
 });
 
 export const SpecializationObjectSchema = z.object({
-  id: z.string().uuid(),
+  id: UUIDSchema,
   name: z.string(),
   nameAr: z.string(),
   category: z.string(),
@@ -21,8 +22,8 @@ export const SpecializationObjectSchema = z.object({
 });
 
 export const SubSpecializationObjectSchema = z.object({
-  id: z.string().uuid(),
-  mainSpecializationId: z.string().uuid(),
+  id: UUIDSchema,
+  mainSpecializationId: UUIDSchema,
   name: z.string(),
   nameAr: z.string(),
   createdAt: z.date(),

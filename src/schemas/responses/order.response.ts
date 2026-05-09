@@ -1,14 +1,15 @@
 import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
+import { UUIDSchema } from '../common.js';
 
 
 export const OrderObjectSchema = z.object({
-  id: z.string().uuid(),
-  clientId: z.string().uuid(),
-  workerProfileId: z.string().uuid(),
-  specializationId: z.string().uuid(),
-  locationId: z.string().uuid(),
+  id: UUIDSchema,
+  clientId: UUIDSchema,
+  workerProfileId: UUIDSchema,
+  specializationId: UUIDSchema,
+  locationId: UUIDSchema,
   orderStatus: z.enum(['PENDING', 'ACCEPTED', 'REJECTED', 'COMPLETED', 'CANCELLED']),
   scheduledDate: z.date().optional().nullable(),
   description: z.string().optional().nullable(),

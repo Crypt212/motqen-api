@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { UUIDSchema } from '../common.js';
 
 const BaseSuccessResponse = z.object({
   status: z.literal('success'),
@@ -6,14 +7,14 @@ const BaseSuccessResponse = z.object({
 });
 
 export const UserMinimalSchema = z.object({
-  id: z.string().uuid(),
+  id: UUIDSchema,
   firstName: z.string(),
   lastName: z.string(),
   profileImageUrl: z.string().nullable().optional(),
 });
 
 export const ConversationObjectSchema = z.object({
-  id: z.string().uuid(),
+  id: UUIDSchema,
   messageCounter: z.number(),
   unreadCount: z.number().optional(),
   partner: UserMinimalSchema.nullable().optional(),
@@ -24,9 +25,9 @@ export const ConversationObjectSchema = z.object({
 });
 
 export const MessageObjectSchema = z.object({
-  id: z.string().uuid(),
-  conversationId: z.string().uuid(),
-  senderId: z.string().uuid(),
+  id: UUIDSchema,
+  conversationId: UUIDSchema,
+  senderId: UUIDSchema,
   messageNumber: z.number(),
   content: z.string(),
   type: z.enum(['TEXT', 'IMAGE']),

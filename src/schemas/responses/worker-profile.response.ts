@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import { SuccessResponseSchema } from '../responses.js';
 import { UUIDSchema } from '../common.js';
+import { GovernmentObjectSchema } from './government.response.js';
 
 const VerificationObjectSchema = z.object({
-  id: z.string().uuid(),
-  workerProfileId: z.string().uuid(),
+  id: UUIDSchema,
+  workerProfileId: UUIDSchema,
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED']),
   reason: z.string(),
   createdAt: z.date(),
@@ -12,16 +13,16 @@ const VerificationObjectSchema = z.object({
 });
 
 const PortfolioImageObjectSchema = z.object({
-  id: z.string().uuid(),
-  portfolioId: z.string().uuid(),
+  id: UUIDSchema,
+  portfolioId: UUIDSchema,
   imageUrl: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
 
 const PortfolioObjectSchema = z.object({
-  id: z.string().uuid(),
-  workerProfileId: z.string().uuid(),
+  id: UUIDSchema,
+  workerProfileId: UUIDSchema,
   description: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -29,8 +30,8 @@ const PortfolioObjectSchema = z.object({
 });
 
 const BadgeObjectSchema = z.object({
-  id: z.string().uuid(),
-  workerProfileId: z.string().uuid(),
+  id: UUIDSchema,
+  workerProfileId: UUIDSchema,
   badgeType: z.string(),
   createdAt: z.date(),
 });
@@ -94,7 +95,7 @@ const PaginationMetaFields = {
 
 export const WorkerGovernmentsListResponseSchema = SuccessResponseSchema(
   z.object({
-    governmentIds: z.array(UUIDSchema),
+    governments: z.array(GovernmentObjectSchema),
     ...PaginationMetaFields,
   })
 );

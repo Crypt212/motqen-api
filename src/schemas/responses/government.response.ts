@@ -1,10 +1,11 @@
 import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
+import { UUIDSchema } from '../common.js';
 
 
 export const GovernmentObjectSchema = z.object({
-  id: z.string().uuid(),
+  id: UUIDSchema,
   name: z.string(),
   nameAr: z.string(),
   long: z.number().nullable().optional(),
@@ -14,10 +15,10 @@ export const GovernmentObjectSchema = z.object({
 });
 
 export const CityObjectSchema = z.object({
-  id: z.string().uuid(),
+  id: UUIDSchema,
   name: z.string(),
   nameAr: z.string(),
-  governmentId: z.string().uuid(),
+  governmentId: UUIDSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
 });

@@ -26,8 +26,6 @@ import {
   updatePortfolio,
   addPortfolioImages,
   deletePortfolioImage,
-  getWorkerStats,
-  getWorkerBadges,
   getWorkerOccupiedTimeSlots,
 } from '../../controllers/DashboardController.js';
 import { authorizeApprovedWorker, authorizeWorker, unAuthorizeWorker } from '../../middlewares/workerMiddleware.js';
@@ -135,8 +133,6 @@ usersRouter.delete(
   deletePortfolioImage
 );
 
-usersRouter.get('/worker-profile/stats', isActive, authorizeApprovedWorker, getWorkerStats);
-usersRouter.get('/worker-profile/badges', isActive, authorizeApprovedWorker, getWorkerBadges);
 usersRouter.get(
   '/worker-profile/occupied-time-slots',
   isActive,

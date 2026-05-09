@@ -13,6 +13,7 @@ import { WorkingHours } from '../../domain/workingHours.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { IDType } from '../interfaces/Repository.js';
 import { Portfolio, ProjectImage, WorkerBadge } from '../../generated/prisma/client.js';
+import { Government } from 'src/domain/government.entity.js';
 
 export default interface IWorkerProfileRepository {
   /**
@@ -41,7 +42,7 @@ export default interface IWorkerProfileRepository {
   findWorkGovernments(params: {
     workerFilter: WorkerProfileFilter;
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }>;
+  }): Promise<PaginatedResultMeta & { governments: Government[] }>;
   /**
    * Find verification of a worker profile
    */
@@ -167,6 +168,9 @@ export default interface IWorkerProfileRepository {
   deletePortfolioImage(params: { imageId: IDType }): Promise<void>;
   findPortfolioImage(params: { imageId: IDType }): Promise<(ProjectImage & { portfolio: Portfolio }) | null>;
   countPortfolioImages(params: { portfolioId: IDType }): Promise<number>;
+
+  addRating(params: { workerProfileId: IDType; rate: number }): Promise<void>;
+  increaseCompletedOrders(params: { workerProfileId: IDType }): Promise<void>;
 
   countRatedOrders(params: { workerProfileId: IDType }): Promise<number>;
   findWorkerBadges(params: { workerProfileId: IDType }): Promise<WorkerBadge[]>;

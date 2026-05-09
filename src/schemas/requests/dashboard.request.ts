@@ -68,6 +68,14 @@ export const DeleteWorkerGovernmentsQuerySchema = z.object({
   all: z.coerce.boolean().optional(),
 });
 
+export const GetWorkerVerificationSchema = z.object({
+  id: UUIDSchema,
+  workerProfileId: UUIDSchema,
+  reason: z.string(),
+  status: z.enum(["PENDING", "APPROVED", "REJECTED"], `status must be one of: ${["PENDING", "APPROVED", "REJECTED"].join(', ')}`),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
 export const AddWorkerSpecializationsSchema = z.object({
   specializationsTree: SpecializationsTreeSchema,
 });

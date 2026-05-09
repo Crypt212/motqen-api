@@ -1,5 +1,4 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
-import { z } from '../../../libs/zod.js';
 import {
   UpdateUserSchema,
   SetWorkingHoursSchema,
@@ -21,6 +20,7 @@ import {
   UpdatePortfolioSchema,
   PortfolioImageIdParamsSchema,
   OccupiedTimeSlotsQuerySchema,
+  WorkerProfileVerificationSchema,
 } from '../../../schemas/requests/worker-profile.request.js';
 import {
   DashboardUserResponseSchema,
@@ -81,10 +81,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
       body: {
         content: {
           'multipart/form-data': {
-            schema: z.object({
-              personal_image: z.string().optional().describe('Profile image file (optional)'),
-              ...UpdateUserSchema.shape,
-            }),
+            schema: UpdateUserSchema,
           },
         },
       },
@@ -117,12 +114,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
       body: {
         content: {
           'multipart/form-data': {
-            schema: z.object({
-              personal_image: z.string().describe('Personal photo (required, jpeg/png/webp)'),
-              id_image: z.string().describe('National ID document image (required)'),
-              personal_with_id_image: z.string().describe('Selfie holding national ID (required)'),
-              ...CreateWorkerProfileSchema.shape,
-            }),
+            schema: CreateWorkerProfileSchema,
           },
         },
       },
@@ -436,14 +428,14 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // DELETE /me/worker-profile/specializations/all
+  // DELETE /me/worker-profile/specializations
   // ─────────────────────────────────────────────────────────────────────────────
 
   registry.registerPath({
     method: 'delete',
-    path: '/api/v1/me/worker-profile/specializations/all',
+    path: '/api/v1/me/worker-profile/specializations',
     tags: ['Dashboard'],
-    summary: 'Delete all worker specializations',
+    summary: 'Delete worker specializations and subspecializations',
     description:
       'Removes specializations from the authenticated worker. Pass `all=true` to remove all, or `allSub=true` to remove all sub-specializations.',
     security: [{ BearerAuth: [] }],
@@ -503,10 +495,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
       body: {
         content: {
           'multipart/form-data': {
-            schema: z.object({
-              id_image: z.string().describe('National ID document image (required)'),
-              personal_with_id_image: z.string().describe('Selfie holding national ID (required)'),
-            }),
+            schema: WorkerProfileVerificationSchema,
           },
         },
       },
@@ -614,9 +603,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
       body: {
         content: {
           'multipart/form-data': {
-            schema: z.object({
-              images: z.array(z.string()).max(10).describe('Array of image files (max 10)'),
-            }),
+            schema: CreatePortfolioSchema,
           },
         },
       },

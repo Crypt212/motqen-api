@@ -43,22 +43,12 @@ export default class SpecializationService extends Service {
     sort?: SortOptions<Specialization>;
   }): Promise<PaginatedResultMeta & { specializations: Specialization[] }> {
     const { filter, pagination, sort } = params;
-    
-    const cacheKey = 'data:specs:all';
-    if (this.dataCache && !filter && !pagination && !sort) {
-      const cached = await this.dataCache.get<PaginatedResultMeta & { specializations: Specialization[] }>(cacheKey);
-      if (cached) return cached;
-    }
 
     const result = await this.specializationRepository.findMany({
       filter: filter || {},
       pagination,
       sort,
     });
-
-    if (this.dataCache && !filter && !pagination && !sort) {
-      await this.dataCache.set(cacheKey, result, 86400);
-    }
     return result;
   }
 
@@ -83,12 +73,6 @@ export default class SpecializationService extends Service {
       throw new AppError('Specialization not found', 404);
     }
 
-    const cacheKey = `data:specs:${parentId}:subs`;
-    if (this.dataCache && !filter && !pagination && !sort) {
-      const cached = await this.dataCache.get<PaginatedResultMeta & { subSpecializations: SubSpecialization[] }>(cacheKey);
-      if (cached) return cached;
-    }
-
     const finalFilter = { ...filter, mainSpecializationId: parentId };
     const result = await this.specializationRepository.findSubSpecializations({
       filter: finalFilter,
@@ -96,9 +80,6 @@ export default class SpecializationService extends Service {
       sort,
     });
 
-    if (this.dataCache && !filter && !pagination && !sort) {
-      await this.dataCache.set(cacheKey, result, 86400);
-    }
     return result;
   }
 

@@ -1,15 +1,16 @@
 import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
+import { UUIDSchema } from '../common.js';
 
 
 export const LocationObjectSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: UUIDSchema,
+  userId: UUIDSchema,
   address: z.string(),
   addressNotes: z.string().nullable().optional(),
-  governmentId: z.string().uuid(),
-  cityId: z.string().uuid(),
+  governmentId: UUIDSchema,
+  cityId: UUIDSchema,
   long: z.number(),
   lat: z.number(),
   isMain: z.boolean(),

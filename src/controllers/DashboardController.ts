@@ -371,18 +371,6 @@ export const deletePortfolioImage = asyncHandler(async (req, res) => {
   new SuccessResponse('Image deleted', null, 200).send(res);
 });
 
-export const getWorkerStats = asyncHandler(async (req, res) => {
-  const userId = req.userState.userId;
-  const stats = await workerProfileService.getWorkerStats({ userId });
-  new SuccessResponse('Worker stats retrieved', { stats }, 200).send(res);
-});
-
-export const getWorkerBadges = asyncHandler(async (req, res) => {
-  const userId = req.userState.userId;
-  const badges = await workerProfileService.getWorkerBadges({ userId });
-  new SuccessResponse('Worker badges retrieved', { badges }, 200).send(res);
-});
-
 export const getWorkerOccupiedTimeSlots = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
   const selectedDate = req.query.selectedDate as string;

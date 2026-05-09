@@ -284,8 +284,8 @@ export default class OrderService extends Service {
         throw new AppError('Cannot complete order in current status', 400);
 
       return await this.transactionManager.execute(
-        { orderRepo: OrderRepository },
-        async ({ orderRepo }) => {
+        { orderRepo: OrderRepository, workerProfileRepo: WorkerProfileRepository },
+        async ({ orderRepo, workerProfileRepo }) => {
           const updated = await orderRepo.update({
             filter: { id: params.orderId },
             order: {
@@ -293,6 +293,12 @@ export default class OrderService extends Service {
               workStatus: 'DONE',
               workFinishedAt: new Date(),
             },
+          });
+
+          const workerProfileId = (await workerProfileRepo.find({ workerFilter: { userId: order.workerUserId } })).id;
+
+          await workerProfileRepo.increaseCompletedOrders({
+            workerProfileId,
           });
 
           return updated;

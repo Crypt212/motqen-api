@@ -12,6 +12,7 @@ export type WorkerProfile = {
   isInTeam: boolean;
   acceptsUrgentJobs: boolean;
   rate: number;
+  ratingCount: number;
   completedJobsCount: number;
   bio?: string;
   createdAt: Date;

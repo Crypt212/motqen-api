@@ -1,10 +1,11 @@
 import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
+import { UUIDSchema } from '../common.js';
 
 
 export const UserObjectSchema = z.object({
-  id: z.string().uuid(),
+  id: UUIDSchema,
   firstName: z.string(),
   middleName: z.string().nullable().optional(),
   lastName: z.string(),
@@ -15,30 +16,33 @@ export const UserObjectSchema = z.object({
 });
 
 export const ClientProfileObjectSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: UUIDSchema,
+  userId: UUIDSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
 });
 
 export const WorkerProfileObjectSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: UUIDSchema,
+  userId: UUIDSchema,
   experienceYears: z.number(),
   isInTeam: z.boolean(),
   acceptsUrgentJobs: z.boolean(),
+  rate: z.number(),
+  completedJobsCount: z.number(),
+  ratingCount: z.number(),
   bio: z.string().nullable().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
 
 export const LocationObjectSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: UUIDSchema,
+  userId: UUIDSchema,
   address: z.string(),
   addressNotes: z.string().nullable().optional(),
-  governmentId: z.string().uuid(),
-  cityId: z.string().uuid(),
+  governmentId: UUIDSchema,
+  cityId: UUIDSchema,
   long: z.number(),
   lat: z.number(),
   isMain: z.boolean(),

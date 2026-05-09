@@ -1,10 +1,11 @@
 import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
+import { UUIDSchema } from '../common.js';
 
 
 export const UserObjectSchema = z.object({
-  id: z.string().uuid(),
+  id: UUIDSchema,
   phone: z.string(),
   firstName: z.string(),
   lastName: z.string(),
