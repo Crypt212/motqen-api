@@ -1,11 +1,7 @@
-import { z } from '../libs/zod.js';
-import { buildFilterSchema, UUIDSchema } from './common.js';
-import { NameSchema, LongitudeSchema, LatitudeSchema, createQuerySchema } from './common.js';
-import { CityFilterDescriptor, GovernmentFilterDescriptor } from '../domain/government.entity.js';
-
-// ============================================
-// Government schemas
-// ============================================
+import { z } from '../../libs/zod.js';
+import { buildFilterSchema, UUIDSchema } from '../common.js';
+import { NameSchema, LongitudeSchema, LatitudeSchema, createQuerySchema } from '../common.js';
+import { CityFilterDescriptor, GovernmentFilterDescriptor } from '../../domain/government.entity.js';
 
 export const CreateGovernmentSchema = z.object({
   name: NameSchema('name'),
@@ -19,10 +15,6 @@ export const UpdateGovernmentSchema = CreateGovernmentSchema.partial();
 export type UpdateGovernmentDTO = z.infer<typeof UpdateGovernmentSchema>;
 
 export const GovernmentIdParamsSchema = z.object({ governmentId: UUIDSchema });
-
-// ============================================
-// City schemas
-// ============================================
 
 export const CreateCitySchema = z.object({
   name: NameSchema('name'),
@@ -38,16 +30,10 @@ export type UpdateCityDTO = z.infer<typeof UpdateCitySchema>;
 
 export const CityIdParamsSchema = z.object({ cityId: UUIDSchema });
 
-// ============================================
-// Query schemas
-// ============================================
-
 export const GovernmentFilterSchema = buildFilterSchema(GovernmentFilterDescriptor);
-
 export const GovernmentQuerySchema = createQuerySchema(GovernmentFilterSchema);
 export type GovernmentQuery = z.infer<typeof GovernmentQuerySchema>;
 
 export const CityFilterSchema = buildFilterSchema(CityFilterDescriptor);
-
 export const CityQuerySchema = createQuerySchema(CityFilterSchema);
 export type CityQuery = z.infer<typeof CityQuerySchema>;

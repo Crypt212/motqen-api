@@ -88,9 +88,12 @@ export default class NegotiationRepository extends Repository implements INegoti
   async create(params: { data: CreateNegotiationInput }): Promise<Negotiation> {
     try {
       const { data } = params;
+
+
       const record = await this.prismaClient.negotiation.create({
         data: {
-          orderId: data.orderId,
+          order: { connect: { id: data.orderId } },
+          sender: { connect: { id: data.senderId } },
           price: data.price,
           direction: data.direction,
           note: data.note ?? null,

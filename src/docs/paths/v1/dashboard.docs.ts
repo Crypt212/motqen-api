@@ -1,9 +1,7 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
-import { z } from '../../../libs/zod.js';
 import {
   UpdateUserSchema,
-  CreateWorkerProfileSchema,
-  UpdateWorkerProfileSchema,
+  SetWorkingHoursSchema,
   AddWorkerGovernmentsSchema,
   DeleteWorkerGovernmentsSchema,
   DeleteWorkerGovernmentsQuerySchema,
@@ -14,17 +12,34 @@ import {
   UpdateClientProfileSchema,
   WorkerGovernmentQuerySchema,
   WorkerSpecializationQuerySchema,
-  SetWorkingHoursSchema,
-} from '../../../schemas/dashboard.js';
+} from '../../../schemas/requests/dashboard.request.js';
 import {
-  UserResponseSchema,
-  WorkerProfileResponseSchema,
-  ClientProfileResponseSchema,
-  WorkGovernmentsResponseSchema,
-  SpecializationsResponseSchema,
-  MessageOnlyResponseSchema,
-  WorkingHoursResponseSchema,
-} from '../../../schemas/responses.js';
+  CreateWorkerProfileSchema,
+  UpdateWorkerProfileSchema,
+  CreatePortfolioSchema,
+  UpdatePortfolioSchema,
+  PortfolioImageIdParamsSchema,
+  OccupiedTimeSlotsQuerySchema,
+  WorkerProfileVerificationSchema,
+} from '../../../schemas/requests/worker-profile.request.js';
+import {
+  DashboardUserResponseSchema,
+  DashboardWorkerProfileResponseSchema,
+  DashboardClientProfileResponseSchema,
+} from '../../../schemas/responses/dashboard.response.js';
+import {
+  WorkerVerificationResponseSchema,
+  WorkerPortfolioResponseSchema,
+  WorkerBadgesResponseSchema,
+  WorkerWorkingHoursResponseSchema,
+  WorkerStatsResponseSchema,
+  WorkerOccupiedTimeSlotsResponseSchema,
+  WorkerPortfolioImagesResponseSchema,
+  WorkerGovernmentsListResponseSchema,
+  WorkerSpecializationsTreeResponseSchema,
+  WorkerSpecializationsListResponseSchema,
+} from '../../../schemas/responses/worker-profile.response.js';
+import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerDashboardDocs(registry: OpenAPIRegistry) {
@@ -43,7 +58,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'User retrieved',
-        content: { 'application/json': { schema: UserResponseSchema } },
+        content: { 'application/json': { schema: DashboardUserResponseSchema } },
       },
       unauthorizedResponse: true,
       internalServerError: true,
@@ -66,10 +81,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
       body: {
         content: {
           'multipart/form-data': {
-            schema: z.object({
-              personal_image: z.string().optional().describe('Profile image file (optional)'),
-              ...UpdateUserSchema.shape,
-            }),
+            schema: UpdateUserSchema,
           },
         },
       },
@@ -102,12 +114,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
       body: {
         content: {
           'multipart/form-data': {
-            schema: z.object({
-              personal_image: z.string().describe('Personal photo (required, jpeg/png/webp)'),
-              id_image: z.string().describe('National ID document image (required)'),
-              personal_with_id_image: z.string().describe('Selfie holding national ID (required)'),
-              ...CreateWorkerProfileSchema.shape,
-            }),
+            schema: CreateWorkerProfileSchema,
           },
         },
       },
@@ -115,7 +122,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker profile created',
-        content: { 'application/json': { schema: WorkerProfileResponseSchema } },
+        content: { 'application/json': { schema: DashboardWorkerProfileResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -141,7 +148,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker profile retrieved successfully',
-        content: { 'application/json': { schema: WorkerProfileResponseSchema } },
+        content: { 'application/json': { schema: DashboardWorkerProfileResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -164,7 +171,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Working hours retrieved',
-        content: { 'application/json': { schema: WorkingHoursResponseSchema } },
+        content: { 'application/json': { schema: WorkerWorkingHoursResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -193,7 +200,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Working hours set',
-        content: { 'application/json': { schema: WorkingHoursResponseSchema } },
+        content: { 'application/json': { schema: WorkerWorkingHoursResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -272,7 +279,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker governments retrieved',
-        content: { 'application/json': { schema: WorkGovernmentsResponseSchema } },
+        content: { 'application/json': { schema: WorkerGovernmentsListResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -357,7 +364,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker specializations retrieved',
-        content: { 'application/json': { schema: SpecializationsResponseSchema } },
+        content: { 'application/json': { schema: WorkerSpecializationsTreeResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -383,7 +390,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker specializations retrieved',
-        content: { 'application/json': { schema: SpecializationsResponseSchema } },
+        content: { 'application/json': { schema: WorkerSpecializationsListResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -421,14 +428,14 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // DELETE /me/worker-profile/specializations/all
+  // DELETE /me/worker-profile/specializations
   // ─────────────────────────────────────────────────────────────────────────────
 
   registry.registerPath({
     method: 'delete',
-    path: '/api/v1/me/worker-profile/specializations/all',
+    path: '/api/v1/me/worker-profile/specializations',
     tags: ['Dashboard'],
-    summary: 'Delete all worker specializations',
+    summary: 'Delete worker specializations and subspecializations',
     description:
       'Removes specializations from the authenticated worker. Pass `all=true` to remove all, or `allSub=true` to remove all sub-specializations.',
     security: [{ BearerAuth: [] }],
@@ -447,6 +454,262 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
       unauthorizedResponse: true,
       forbiddenResponse: true,
       validationErrorResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /me/worker-profile/verification
+  // ─────────────────────────────────────────────────────────────────────────────
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/me/worker-profile/verification',
+    tags: ['Dashboard'],
+    summary: 'Get worker verification status',
+    description: 'Returns the verification status and details for the authenticated worker.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Verification details retrieved',
+        content: { 'application/json': { schema: WorkerVerificationResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PUT /me/worker-profile/verification
+  // ─────────────────────────────────────────────────────────────────────────────
+  registry.registerPath({
+    method: 'put',
+    path: '/api/v1/me/worker-profile/verification',
+    tags: ['Dashboard'],
+    summary: 'Resubmit worker verification',
+    description: 'Resubmits verification images for the authenticated worker. Requires `id_image` and `personal_with_id_image`.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      body: {
+        content: {
+          'multipart/form-data': {
+            schema: WorkerProfileVerificationSchema,
+          },
+        },
+      },
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Verification resubmitted successfully',
+        content: { 'application/json': { schema: WorkerVerificationResponseSchema } },
+      },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // POST /me/worker-profile/portfolio
+  // ─────────────────────────────────────────────────────────────────────────────
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/me/worker-profile/portfolio',
+    tags: ['Dashboard'],
+    summary: 'Create worker portfolio',
+    description: 'Creates a portfolio for the authenticated worker.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      body: {
+        content: { 'application/json': { schema: CreatePortfolioSchema } },
+      },
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Portfolio created successfully',
+        content: { 'application/json': { schema: WorkerPortfolioResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /me/worker-profile/portfolio
+  // ─────────────────────────────────────────────────────────────────────────────
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/me/worker-profile/portfolio',
+    tags: ['Dashboard'],
+    summary: 'Get worker portfolio',
+    description: 'Returns the portfolio for the authenticated worker.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Portfolio retrieved',
+        content: { 'application/json': { schema: WorkerPortfolioResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PUT /me/worker-profile/portfolio
+  // ─────────────────────────────────────────────────────────────────────────────
+  registry.registerPath({
+    method: 'put',
+    path: '/api/v1/me/worker-profile/portfolio',
+    tags: ['Dashboard'],
+    summary: 'Update worker portfolio',
+    description: 'Updates the portfolio description for the authenticated worker.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      body: {
+        content: { 'application/json': { schema: UpdatePortfolioSchema } },
+      },
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Portfolio updated successfully',
+        content: { 'application/json': { schema: WorkerPortfolioResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // POST /me/worker-profile/portfolio/images
+  // ─────────────────────────────────────────────────────────────────────────────
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/me/worker-profile/portfolio/images',
+    tags: ['Dashboard'],
+    summary: 'Add portfolio images',
+    description: 'Uploads images to the authenticated worker\'s portfolio. Pass images in the `images` form data field.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      body: {
+        content: {
+          'multipart/form-data': {
+            schema: CreatePortfolioSchema,
+          },
+        },
+      },
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Images added successfully',
+        content: { 'application/json': { schema: WorkerPortfolioImagesResponseSchema } },
+      },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // DELETE /me/worker-profile/portfolio/images/{imageId}
+  // ─────────────────────────────────────────────────────────────────────────────
+  registry.registerPath({
+    method: 'delete',
+    path: '/api/v1/me/worker-profile/portfolio/images/{imageId}',
+    tags: ['Dashboard'],
+    summary: 'Delete portfolio image',
+    description: 'Deletes an image from the authenticated worker\'s portfolio.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      params: PortfolioImageIdParamsSchema,
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Image deleted successfully',
+        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /me/worker-profile/stats
+  // ─────────────────────────────────────────────────────────────────────────────
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/me/worker-profile/stats',
+    tags: ['Dashboard'],
+    summary: 'Get worker stats',
+    description: 'Returns statistics like ratings and completed jobs for the authenticated worker.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Worker stats retrieved',
+        content: { 'application/json': { schema: WorkerStatsResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /me/worker-profile/badges
+  // ─────────────────────────────────────────────────────────────────────────────
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/me/worker-profile/badges',
+    tags: ['Dashboard'],
+    summary: 'Get worker badges',
+    description: 'Returns the badges earned by the authenticated worker.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Worker badges retrieved',
+        content: { 'application/json': { schema: WorkerBadgesResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /me/worker-profile/occupied-time-slots
+  // ─────────────────────────────────────────────────────────────────────────────
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/me/worker-profile/occupied-time-slots',
+    tags: ['Dashboard'],
+    summary: 'Get worker occupied time slots',
+    description: 'Returns the time slots that are currently occupied for the authenticated worker for a specific date.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      query: OccupiedTimeSlotsQuerySchema,
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Occupied time slots retrieved',
+        content: { 'application/json': { schema: WorkerOccupiedTimeSlotsResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
       internalServerError: true,
     }),
   });
@@ -472,7 +735,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Client profile created',
-        content: { 'application/json': { schema: ClientProfileResponseSchema } },
+        content: { 'application/json': { schema: DashboardClientProfileResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -495,7 +758,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Client profile retrieved',
-        content: { 'application/json': { schema: ClientProfileResponseSchema } },
+        content: { 'application/json': { schema: DashboardClientProfileResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -523,7 +786,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Client profile updated',
-        content: { 'application/json': { schema: ClientProfileResponseSchema } },
+        content: { 'application/json': { schema: DashboardClientProfileResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -547,7 +810,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Client profile deleted',
-        content: { 'application/json': { schema: ClientProfileResponseSchema } },
+        content: { 'application/json': { schema: DashboardClientProfileResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,

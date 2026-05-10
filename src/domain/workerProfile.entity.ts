@@ -12,6 +12,8 @@ export type WorkerProfile = {
   isInTeam: boolean;
   acceptsUrgentJobs: boolean;
   rate: number;
+  ratingCount: number;
+  completedJobsCount: number;
   bio?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -77,3 +79,22 @@ export type PortfolioCreateInput = {
 };
 
 export type PortfolioUpdateInput = Partial<PortfolioCreateInput>;
+
+export type ProjectImage = {
+  id: IDType;
+  portfolioId: IDType;
+  imageUrl: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type PortfolioWithImages = Portfolio & {
+  projectImages: ProjectImage[];
+};
+
+export type WorkerBadge = {
+  id: IDType;
+  workerProfileId: IDType;
+  badgeType: string;
+  createdAt: Date;
+};

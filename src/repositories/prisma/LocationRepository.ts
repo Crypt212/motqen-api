@@ -276,4 +276,22 @@ export default class LocationRepository extends Repository implements ILocationR
       throw handlePrismaError(error as Error, 'findNextForPromotion');
     }
   }
+
+  async findMainLocationByUserId({ userId }: { userId: string }): Promise<{ latitude: number, longitude: number } | null> {
+    try {
+      const records = await this.prismaClient.$queryRaw<{ lat: number; long: number }[]>`
+        SELECT
+          ST_Y("pointGeography"::geometry) as lat,
+          ST_X("pointGeography"::geometry) as long
+        FROM "locations"
+        WHERE "userId" = ${userId}
+        AND "isMain" = true
+        LIMIT 1
+      `;
+      if (!records || records.length === 0) return null;
+      return { latitude: records[0].lat, longitude: records[0].long };
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'findMainLocationByUserId');
+    }
+  }
 }

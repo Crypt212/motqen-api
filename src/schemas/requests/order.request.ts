@@ -1,6 +1,6 @@
-import { z } from '../libs/zod.js';
-import { UUIDSchema, buildFilterSchema, createQuerySchema } from './common.js';
-import { OrderFilterDescriptor } from '../domain/order.entity.js';
+import { z } from '../../libs/zod.js';
+import { UUIDSchema, buildFilterSchema, createQuerySchema } from '../common.js';
+import { OrderFilterDescriptor } from '../../domain/order.entity.js';
 
 const stringToBool = z
   .string()
@@ -35,7 +35,7 @@ export const OrderIdParamsSchema = z.object({
 });
 
 export const OrderRateSchema = z.object({
-  rate: z.int().min(1).max(5),
+  rate: z.number().int().min(1).max(5),
   comment: z.string().optional(),
 });
 

@@ -3,7 +3,7 @@ import IWorkerProfileRepository from '../interfaces/WorkerRepository.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import { IDType } from '../interfaces/Repository.js';
 import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../../domain/specialization.entity.js';
-import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
+import { isEmptyFilter } from './utils.js';
 import {
   WorkerProfile,
   WorkerProfileCreateInput,
@@ -17,6 +17,7 @@ import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { ExploreWorkerPublicDetail, } from '../../types/exploreWorker.js';
+import { Government } from 'src/domain/government.entity.js';
 
 type SpecializationsWithSubSpecializationsPrisma = Prisma.SpecializationGetPayload<{ include: { subSpecializations: true } }>;
 
@@ -37,7 +38,9 @@ export default class WorkerProfileRepository
       isInTeam: record.isInTeam,
       acceptsUrgentJobs: record.acceptsUrgentJobs,
       bio: record.bio ?? undefined,
-      rate: record.rate ?? undefined,
+      rate: record.rate ?? 0,
+      ratingCount: record.ratingCount,
+      completedJobsCount: record.completedJobsCount,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
@@ -114,14 +117,6 @@ export default class WorkerProfileRepository
    */
   async findExploreWorkerById(userId: string): Promise<ExploreWorkerPublicDetail | null> {
     try {
-
-      const ratedOrdersCount = await this.prismaClient.order.count({
-        where: {
-          workerProfile: { userId },
-          rate: { not: -1.0 },
-        }
-      });
-
       const record = await this.prismaClient.user.findUnique({
         where: {
           id: userId,
@@ -129,6 +124,11 @@ export default class WorkerProfileRepository
         include: {
           workerProfile: {
             include: {
+              _count: {
+                select: {
+                  Order: { where: { rate: { not: -1 } } },
+                },
+              },
               portfolio: {
                 include: {
                   projectImages: true,
@@ -150,7 +150,7 @@ export default class WorkerProfileRepository
 
       if (!record || !record.workerProfile) return null;
 
-      return this.mapExploreWorkerPublicDetail(record, ratedOrdersCount);
+      return this.mapExploreWorkerPublicDetail(record, record.workerProfile._count.Order);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findExploreWorkerById');
     }
@@ -275,28 +275,47 @@ export default class WorkerProfileRepository
   }: {
     workerFilter: WorkerProfileFilter;
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }> {
+  }): Promise<PaginatedResultMeta & { governments: Government[] }> {
     try {
-      const workerProfile = await this.prismaClient.workerProfile.findFirst({
-        where: workerFilter,
-        include: { workGovernments: true },
-      });
-
-      if (!workerProfile) {
-        return { ...getEmptyPaginatedResult(), governmentIds: [] };
-      }
-
-      const governmentIds = workerProfile.workGovernments.map((g) => g.id);
-      const total = governmentIds.length;
       const page = pagination?.page || 1;
       const limit = pagination?.limit || 10;
+      const offset = (page - 1) * limit;
+
+      const profile = await this.prismaClient.workerProfile.findFirst({
+        where: workerFilter,
+        select: { id: true },
+      });
+
+      if (!profile) {
+        return {
+          governments: [],
+          page,
+          limit,
+          count: 0,
+          total: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        };
+      }
+
+      const total = await this.prismaClient.government.count({
+        where: { workers: { some: { id: profile.id } } },
+      });
+
+      const governments = await this.prismaClient.government.findMany({
+        where: { workers: { some: { id: profile.id } } },
+        skip: offset,
+        take: limit,
+      });
+
       const totalPages = Math.ceil(total / limit);
 
       return {
-        governmentIds,
+        governments: governments,
         page,
         limit,
-        count: governmentIds.length,
+        count: governments.length,
         total,
         totalPages,
         hasNext: page < totalPages,
@@ -370,26 +389,24 @@ export default class WorkerProfileRepository
         return this.toDomainSpecializationsWithSubSpecializations([]);
       }
 
-      const specializationsTree: SpecializationsWithSubSpecializations = [];
+      const treeMap = new Map<string, SpecializationsWithSubSpecializationsPrisma>();
       for (let specialization of workerProfile.chosenSpecializations) {
-        if (!specializationsTree.find(s => s.id == specialization.specializationId))
-          specializationsTree.push({
+        if (!treeMap.has(specialization.specializationId)) {
+          treeMap.set(specialization.specializationId, {
             id: specialization.specializationId,
-
             name: specialization.specialization.name,
             nameAr: specialization.specialization.nameAr,
             category: specialization.specialization.category,
             ordersCount: specialization.specialization.ordersCount,
             subSpecializations: [],
-
             updatedAt: specialization.specialization.updatedAt,
             createdAt: specialization.specialization.createdAt,
           });
-
-          specializationsTree.find(s => s.id == specialization.specializationId).subSpecializations.push(specialization.subSpecialization);
+        }
+        treeMap.get(specialization.specializationId)!.subSpecializations.push(specialization.subSpecialization);
       }
 
-      return this.toDomainSpecializationsWithSubSpecializations(specializationsTree);
+      return this.toDomainSpecializationsWithSubSpecializations(Array.from(treeMap.values()));
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findSpecializations');
     }
@@ -406,32 +423,55 @@ export default class WorkerProfileRepository
     pagination?: PaginationOptions;
   }): Promise<PaginatedResultMeta & { specializationIds: IDType[] }> {
     try {
-      const workerProfile = await this.prismaClient.workerProfile.findFirst({
-        where: filter,
-        include: { chosenSpecializations: true },
-      });
-
-      if (!workerProfile) {
-        return { ...getEmptyPaginatedResult(), specializationIds: [] };
-      }
-
-      let specializationIds = workerProfile.chosenSpecializations.map((s) => s.specializationId);
-
-      if (mainSpecializationIds.length > 0) {
-        specializationIds = specializationIds.filter((id) => mainSpecializationIds.includes(id));
-      }
-
-      const uniqueIds = [...new Set(specializationIds)];
-      const total = uniqueIds.length;
       const page = pagination?.page || 1;
       const limit = pagination?.limit || 10;
+      const offset = (page - 1) * limit;
+
+      const profile = await this.prismaClient.workerProfile.findFirst({
+        where: filter,
+        select: { id: true },
+      });
+
+      if (!profile) {
+        return {
+          specializationIds: [],
+          page,
+          limit,
+          count: 0,
+          total: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        };
+      }
+
+      const whereClause: Prisma.ChosenSpecializationWhereInput = {
+        workerProfileId: profile.id,
+      };
+      if (mainSpecializationIds.length > 0) {
+        whereClause.specializationId = { in: mainSpecializationIds as string[] };
+      }
+
+      const totalGroup = await this.prismaClient.chosenSpecialization.groupBy({
+        by: ['specializationId'],
+        where: whereClause,
+      });
+      const total = totalGroup.length;
+
+      const specs = await this.prismaClient.chosenSpecialization.findMany({
+        where: whereClause,
+        distinct: ['specializationId'],
+        skip: offset,
+        take: limit,
+      });
+
       const totalPages = Math.ceil(total / limit);
 
       return {
-        specializationIds: uniqueIds,
+        specializationIds: specs.map((s) => s.specializationId),
         page,
         limit,
-        count: uniqueIds.length,
+        count: specs.length,
         total,
         totalPages,
         hasNext: page < totalPages,
@@ -472,14 +512,8 @@ export default class WorkerProfileRepository
     try {
       if (isEmptyFilter(workerFilter)) return;
 
-      const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: workerFilter,
-      });
-
-      if (!existingProfile) return;
-
       await this.prismaClient.workerProfile.update({
-        where: { id: existingProfile.id },
+        where: workerFilter as Prisma.WorkerProfileWhereUniqueInput,
         data: {
           workGovernments: {
             connect: governmentIds.map((gid) => ({ id: gid })),
@@ -658,14 +692,8 @@ export default class WorkerProfileRepository
     try {
       if (isEmptyFilter(workerFilter)) return;
 
-      const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: workerFilter,
-      });
-
-      if (!existingProfile) return;
-
       await this.prismaClient.workerProfile.update({
-        where: { id: existingProfile.id },
+        where: workerFilter as Prisma.WorkerProfileWhereUniqueInput,
         data: {
           workGovernments: {
             disconnect: governmentIds.map((gid) => ({ id: gid })),
@@ -687,15 +715,9 @@ export default class WorkerProfileRepository
     try {
       if (isEmptyFilter(workerFilter)) return;
 
-      const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: workerFilter,
-      });
-
-      if (!existingProfile) return;
-
       await this.prismaClient.chosenSpecialization.deleteMany({
         where: {
-          workerProfileId: existingProfile.id,
+          workerProfile: workerFilter as Prisma.WorkerProfileWhereInput,
           specializationId: { in: specializations },
         },
       });
@@ -742,14 +764,8 @@ export default class WorkerProfileRepository
     try {
       if (isEmptyFilter(workerFilter)) return;
 
-      const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: workerFilter,
-      });
-
-      if (!existingProfile) return;
-
       await this.prismaClient.workerProfile.update({
-        where: { id: existingProfile.id },
+        where: workerFilter as Prisma.WorkerProfileWhereUniqueInput,
         data: {
           workGovernments: {
             set: [],
@@ -769,15 +785,9 @@ export default class WorkerProfileRepository
     try {
       if (isEmptyFilter(workerFilter)) return;
 
-      const existingProfile = await this.prismaClient.workerProfile.findFirst({
-        where: workerFilter,
-      });
-
-      if (!existingProfile) return;
-
       await this.prismaClient.chosenSpecialization.deleteMany({
         where: {
-          workerProfileId: existingProfile.id,
+          workerProfile: workerFilter as Prisma.WorkerProfileWhereInput,
         },
       });
     } catch (error: unknown) {
@@ -964,6 +974,7 @@ export default class WorkerProfileRepository
       rate: number;
       completed_jobs_count: number;
       distance_km: number | null;
+      rating_count: number;
     };
 
     const rows = await this.prismaClient.$queryRaw<Row[]>`
@@ -991,7 +1002,8 @@ export default class WorkerProfileRepository
       u."isOnline"            AS is_online,
       wp."rate"               AS rate,
       wp."completedJobsCount" AS completed_jobs_count,
-      ${distanceSelect}       AS distance_km
+      ${distanceSelect}       AS distance_km,
+      (SELECT COUNT(*)::int FROM "orders" o WHERE o."workerProfileId" = wp."id" AND o."rate" != -1) AS rating_count
 
     FROM   filtered f
     JOIN   "worker_profiles" wp ON wp."id" = f."id"
@@ -1017,7 +1029,7 @@ export default class WorkerProfileRepository
       name: `${r.first_name} ${r.middle_name ?? ''} ${r.last_name}`.trim(),
       profileImage: r.profile_image_url,
       rating: Number(r.rate),
-      ratingCount: 0, // TODO: Add rating count to query when orders table has ratings
+      ratingCount: Number(r.rating_count),
       completedServices: Number(r.completed_jobs_count),
       isAvailableNow: r.is_online,
       ...(r.distance_km !== null ? { distance: Number(Number(r.distance_km).toFixed(1)) } : {}),
@@ -1046,6 +1058,15 @@ export default class WorkerProfileRepository
 UPDATE worker_profiles
 SET
     rate = (rate * "completedJobsCount" + ${rate}) / ("completedJobsCount" + 1),
+    "ratingCount" = "ratingCount" + 1
+WHERE worker_profiles.id = ${workerProfileId};
+`;
+  }
+
+  async increaseCompletedOrders({ workerProfileId }: { workerProfileId: IDType, }): Promise<void> {
+    await this.prismaClient.$executeRaw`
+UPDATE worker_profiles
+SET
     "completedJobsCount" = "completedJobsCount" + 1
 WHERE worker_profiles.id = ${workerProfileId};
 `;
@@ -1061,7 +1082,10 @@ WHERE worker_profiles.id = ${workerProfileId};
     });
     if (!workerProfile) return [];
 
-    const dateOnly = new Date(params.selectedDate).toISOString().slice(0, 10);
+    const parsedDate = new Date(params.selectedDate);
+    if (isNaN(parsedDate.getTime())) return [];
+
+    const dateOnly = parsedDate.toISOString().slice(0, 10);
     const startOfDay = new Date(`${dateOnly}T00:00:00.000Z`);
     const endOfDay = new Date(`${dateOnly}T23:59:59.999Z`);
 
@@ -1153,6 +1177,125 @@ WHERE worker_profiles.id = ${workerProfileId};
         throw error; // Bubble up our custom 409 Conflict Error
       }
       throw handlePrismaError(error as Error, 'replaceWorkingHours');
+    }
+  }
+
+  async createPortfolio(params: { workerProfileId: IDType; description?: string }) {
+    try {
+      const created = await this.prismaClient.portfolio.create({
+        data: {
+          workerProfileId: params.workerProfileId as string,
+          description: params.description,
+        },
+        include: { projectImages: true },
+      });
+      return { ...created, description: created.description || '' };
+    } catch (error) {
+      throw handlePrismaError(error as Error, 'createPortfolio');
+    }
+  }
+
+  async findPortfolio(params: { workerProfileId: IDType }) {
+    try {
+      const portfolio = await this.prismaClient.portfolio.findUnique({
+        where: { workerProfileId: params.workerProfileId as string },
+        include: { projectImages: { orderBy: { createdAt: 'desc' } } },
+      });
+      if (!portfolio) return null;
+      return { ...portfolio, description: portfolio.description || '' };
+    } catch (error) {
+      throw handlePrismaError(error as Error, 'findPortfolio');
+    }
+  }
+
+  async updatePortfolio(params: { workerProfileId: IDType; description?: string }) {
+    try {
+      const updated = await this.prismaClient.portfolio.update({
+        where: { workerProfileId: params.workerProfileId as string },
+        data: { description: params.description },
+        include: { projectImages: { orderBy: { createdAt: 'desc' } } },
+      });
+      return { ...updated, description: updated.description || '' };
+    } catch (error) {
+      throw handlePrismaError(error as Error, 'updatePortfolio');
+    }
+  }
+
+  async addPortfolioImages(params: { portfolioId: IDType; imageUrls: string[] }) {
+    try {
+      return await this.prismaClient.$transaction(async (tx) => {
+        const currentCount = await tx.projectImage.count({
+          where: { portfolioId: params.portfolioId as string }
+        });
+        if (currentCount + params.imageUrls.length > 10) {
+          throw new Error('LIMIT_EXCEEDED');
+        }
+
+        const data = params.imageUrls.map((url) => ({
+          portfolioId: params.portfolioId as string,
+          imageUrl: url,
+        }));
+        await tx.projectImage.createMany({ data });
+        return await tx.projectImage.findMany({
+          where: { portfolioId: params.portfolioId as string, imageUrl: { in: params.imageUrls } },
+        });
+      });
+    } catch (error: any) {
+      if (error.message === 'LIMIT_EXCEEDED') throw error;
+      throw handlePrismaError(error as Error, 'addPortfolioImages');
+    }
+  }
+
+  async deletePortfolioImage(params: { imageId: IDType }) {
+    try {
+      await this.prismaClient.projectImage.delete({
+        where: { id: params.imageId as string },
+      });
+    } catch (error) {
+      throw handlePrismaError(error as Error, 'deletePortfolioImage');
+    }
+  }
+
+  async findPortfolioImage(params: { imageId: IDType }) {
+    try {
+      const image = await this.prismaClient.projectImage.findUnique({
+        where: { id: params.imageId as string },
+        include: { portfolio: true },
+      });
+      if (!image) return null;
+      return { ...image, portfolio: { ...image.portfolio, description: image.portfolio.description || '' } };
+    } catch (error) {
+      throw handlePrismaError(error as Error, 'findPortfolioImage');
+    }
+  }
+
+  async countPortfolioImages(params: { portfolioId: IDType }) {
+    try {
+      return await this.prismaClient.projectImage.count({
+        where: { portfolioId: params.portfolioId as string },
+      });
+    } catch (error) {
+      throw handlePrismaError(error as Error, 'countPortfolioImages');
+    }
+  }
+
+  async countRatedOrders(params: { workerProfileId: IDType }) {
+    try {
+      return await this.prismaClient.order.count({
+        where: { workerProfileId: params.workerProfileId as string, rate: { not: -1 } },
+      });
+    } catch (error) {
+      throw handlePrismaError(error as Error, 'countRatedOrders');
+    }
+  }
+
+  async findWorkerBadges(params: { workerProfileId: IDType }) {
+    try {
+      return await this.prismaClient.workerBadge.findMany({
+        where: { workerProfileId: params.workerProfileId as string },
+      });
+    } catch (error) {
+      throw handlePrismaError(error as Error, 'findWorkerBadges');
     }
   }
 }

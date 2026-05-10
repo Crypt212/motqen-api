@@ -52,7 +52,7 @@ export type OrderUpdateInput = Partial<{
   workFinishedAt: Date;
 }>;
 
-export const OrderFilterDescriptor: Record<string, FieldTypeDefinition> = {
+export const OrderFilterDescriptor = {
   id: { type: 'uuid' },
   clientUserId: { type: 'uuid' },
   workerUserId: { type: 'uuid' },
@@ -63,6 +63,6 @@ export const OrderFilterDescriptor: Record<string, FieldTypeDefinition> = {
   },
   isUrgent: { type: 'boolean' },
   createdAt: { type: 'date', sortable: true },
-};
+} satisfies Record<string, FieldTypeDefinition>;
 
 export type OrderFilter = FilterFromDescriptor<typeof OrderFilterDescriptor>;

@@ -1,10 +1,9 @@
-import { z } from '../libs/zod.js';
-import { buildFilterSchema, UUIDSchema } from './common.js';
-import { NameSchema, createQuerySchema } from './common.js';
+import { z } from '../../libs/zod.js';
+import { buildFilterSchema, UUIDSchema, createQuerySchema, NameSchema } from '../common.js';
 import {
   SpecializationFilterDescriptor,
   SubSpecializationFilterDescriptor,
-} from '../domain/specialization.entity.js';
+} from '../../domain/specialization.entity.js';
 
 const CATEGORIES = [
   'ELECTRICITY',
