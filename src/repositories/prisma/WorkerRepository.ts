@@ -12,14 +12,16 @@ import {
   WorkerProfileVerification,
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
-import { WorkingHours as WorkingHoursEntity } from '../../domain/workingHours.entity.js';
+import { Day, DayWorkingHours } from '../../domain/workingHours.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { ExploreWorkerPublicDetail, } from '../../types/exploreWorker.js';
 import { Government } from 'src/domain/government.entity.js';
+import { utcDayToDayEnum } from 'src/utils/dayNumberToEnum.js';
 
 type SpecializationsWithSubSpecializationsPrisma = Prisma.SpecializationGetPayload<{ include: { subSpecializations: true } }>;
+type DayWorkingHoursPrisma = Prisma.DayWorkingHoursGetPayload<{}>;
 
 export default class WorkerProfileRepository
   extends Repository
@@ -59,11 +61,11 @@ export default class WorkerProfileRepository
     };
   }
 
-  private toDomainWorkingHours(record: Prisma.WorkingHoursGetPayload<object>): WorkingHoursEntity {
+  private toDomainDayWorkingHours(record: DayWorkingHoursPrisma): DayWorkingHours {
     return {
       id: record.id,
       workerProfileId: record.workerProfileId,
-      daysOfWeek: record.daysOfWeek,
+      day: record.day,
       startTime: record.startTime,
       endTime: record.endTime,
     };
@@ -352,16 +354,16 @@ export default class WorkerProfileRepository
     userId,
   }: {
     userId: IDType;
-  }): Promise<WorkingHoursEntity | null> {
+  }): Promise<DayWorkingHours[]> {
     try {
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
         where: { userId: userId as string },
-        include: { workingHours: true },
+        include: { daysWorkingHours: true },
       });
 
-      if (!workerProfile?.workingHours) return null;
+      if (!workerProfile?.daysWorkingHours) return null;
 
-      return this.toDomainWorkingHours(workerProfile.workingHours);
+      return workerProfile.daysWorkingHours.map(dayWorkingHours => this.toDomainDayWorkingHours(dayWorkingHours));
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findWorkingHoursByUserId');
     }
@@ -1104,24 +1106,53 @@ WHERE worker_profiles.id = ${workerProfileId};
 
     return slots;
   }
-
-  async replaceWorkingHours(params: {
+  
+  async addDaysWorkingHours(params: {
     workerProfileId: string;
-    daysOfWeek: string[];
-    startTime: string;
-    endTime: string;
+    daysWorkingHours: DayWorkingHours[];
   }): Promise<void> {
     try {
+      const { workerProfileId, daysWorkingHours } = params;
       await this.prismaClient.$transaction(async (tx) => {
         // 1. Fetch current working hours
-        const currentHours = await tx.workingHours.findUnique({
-          where: { workerProfileId: params.workerProfileId },
+        const currentDaysWorkingHours = await tx.dayWorkingHours.findMany({
+          where: { workerProfileId },
         });
 
-        const currentDays = currentHours ? currentHours.daysOfWeek : [];
+        // Identify which days that are already set to not re-set them again
+        const currentDays = currentDaysWorkingHours.map((dwh) => dwh.day);
+        const requestedDays = daysWorkingHours.map((dwh) => dwh.day);
+        const newDays = requestedDays.filter((day) => !currentDays.includes(day));
+        const newDaysWorkingHours = daysWorkingHours.filter((dwh) => newDays.includes(dwh.day));
+
+        await tx.dayWorkingHours.createMany({
+          data: newDaysWorkingHours.map((dwh) => { return { workerProfileId, ...dwh }; }),
+        });
+      });
+    } catch (error: unknown) {
+      if (error instanceof AppError) {
+        throw error; // Bubble up our custom 409 Conflict Error
+      }
+      throw handlePrismaError(error as Error, 'replaceWorkingHours');
+    }
+  }
+
+  async removeDaysWorkingHours(params: {
+    workerProfileId: string;
+    days: Day[];
+  }): Promise<void> {
+    try {
+      const { workerProfileId, days } = params;
+      await this.prismaClient.$transaction(async (tx) => {
+        // 1. Fetch current working hours
+        const currentDaysWorkingHours = await tx.dayWorkingHours.findMany({
+          where: { workerProfileId },
+        });
+
+        const currentDays = currentDaysWorkingHours.map(daysWorkingHours => daysWorkingHours.day);
 
         // Identify which days are being removed from availability
-        const removedDays = currentDays.filter((day) => !params.daysOfWeek.includes(day));
+        const removedDays = currentDays.filter((day) => !days.includes(day));
 
         if (removedDays.length > 0) {
           // 2. Check for conflicts BEFORE deleting
@@ -1136,8 +1167,7 @@ WHERE worker_profiles.id = ${workerProfileId};
           const conflictOrderIds: string[] = [];
 
           for (const order of activeOrders) {
-            // getUTCDay() ensures days are consistently mapped to 0-6 without local server timezone shifts
-            const orderDay = order.startDate.getUTCDay().toString();
+            const orderDay = utcDayToDayEnum(order.startDate.getUTCDay());
             if (removedDays.includes(orderDay)) {
               conflictOrderIds.push(order.id);
             }
@@ -1156,21 +1186,9 @@ WHERE worker_profiles.id = ${workerProfileId};
         }
 
         // 4. Safe to proceed: Replace-all logic
-        await tx.workingHours.deleteMany({
-          where: { workerProfileId: params.workerProfileId },
+        await tx.dayWorkingHours.deleteMany({
+          where: { workerProfileId, day: { in: removedDays } },
         });
-
-        // Missing days treated as CLOSED (only store if days are provided)
-        if (params.daysOfWeek.length > 0) {
-          await tx.workingHours.create({
-            data: {
-              workerProfileId: params.workerProfileId,
-              daysOfWeek: params.daysOfWeek,
-              startTime: params.startTime,
-              endTime: params.endTime,
-            },
-          });
-        }
       });
     } catch (error: unknown) {
       if (error instanceof AppError) {

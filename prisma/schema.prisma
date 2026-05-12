@@ -107,7 +107,7 @@ model WorkerProfile {
   badges                WorkerBadge[]
   user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   workGovernments       Government[]             @relation("GovernmentToWorkerProfile")
-  workingHours          WorkingHours?            @relation(fields: [workingHoursId], references: [id])
+  daysWorkingHours          DayWorkingHours[]
 
   @@index([userId], map: "idx_worker_profiles_user_id")
   @@index([acceptsUrgentJobs, userId])
@@ -117,15 +117,16 @@ model WorkerProfile {
   @@map("worker_profiles")
 }
 
-model WorkingHours {
+model DayWorkingHours {
   id              String @id @default(uuid())
   workerProfileId String @unique
 
-  daysOfWeek     String[]
+  day            Day
   startTime      String // e.g., "09:00"
   endTime        String // e.g., "17:00"
   workerProfiles WorkerProfile[]
 
+  @@unique([workerProfileId, day])
   @@map("worker_availability")
 }
 
@@ -351,6 +352,16 @@ enum WorkStatus {
   WAITING_FOR_WORK
   STARTED
   DONE
+}
+
+enum Day {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
 }
 
 enum NegotiationDirection {

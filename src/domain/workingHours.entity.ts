@@ -1,7 +1,9 @@
-export type WorkingHours = {
+export type Day = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+
+export type DayWorkingHours = {
   id: string;
   workerProfileId: string;
-  daysOfWeek: string[];
+  day: Day;
   startTime: string;
   endTime: string;
 };

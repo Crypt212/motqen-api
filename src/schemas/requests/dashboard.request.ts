@@ -13,6 +13,7 @@ import {
 } from '../common.js';
 import { WorkerProfileFilterDescriptor } from '../../domain/workerProfile.entity.js';
 import { ClientProfileFilterDescriptor } from '../../domain/clientProfile.entity.js';
+import { DayOfWeekSchema, DaysWorkingHoursSchema } from './worker-profile.request.js';
 
 export const UpdateUserSchema = UserDataOptionalSchema;
 export type UpdateUserDTO = z.infer<typeof UpdateUserSchema>;
@@ -27,26 +28,11 @@ const Time24HourSchema = z
   .string()
   .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Time must be in HH:mm format');
 
-export const SetWorkingHoursSchema = z
-  .object({
-    daysOfWeek: z.array(z.number().int().min(0).max(6)).max(7).default([]),
-    startTime: Time24HourSchema.optional(),
-    endTime: Time24HourSchema.optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.daysOfWeek.length > 0) {
-        return !!data.startTime && !!data.endTime && data.endTime > data.startTime;
-      }
-      return true;
-    },
-    {
-      message:
-        'startTime and endTime are required and endTime must be after startTime if daysOfWeek is not empty',
-      path: ['endTime'],
-    }
-  );
-export type SetWorkingHoursDTO = z.infer<typeof SetWorkingHoursSchema>;
+export const AddDaysWorkingHoursSchema = z
+  .array(DaysWorkingHoursSchema);
+export const RemoveDaysWorkingHoursSchema = z
+  .array(DayOfWeekSchema);
+export type SetWorkingHoursDTO = z.infer<typeof AddDaysWorkingHoursSchema>;
 
 export const AddLocationSchema = LocationSchema;
 export type AddLocationDTO = z.infer<typeof AddLocationSchema>;

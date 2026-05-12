@@ -129,18 +129,29 @@ export const getWorkerWorkingHours = asyncHandler(async (req, res) => {
   new SuccessResponse('retrieved worker working hours successfully', workingHours, 200).send(res);
 });
 
-export const setWorkerWorkingHours = asyncHandler(async (req, res) => {
+export const addDaysWorkerWorkingHours = asyncHandler(async (req, res) => {
   const workerProfileId = req.userState.worker.id;
-  const { daysOfWeek, startTime, endTime } = req.body;
+  const { daysWorkingHours } = req.body;
 
-  await workerProfileService.setWorkingHours({
+  await workerProfileService.addDaysWorkingHours({
     workerProfileId,
-    daysOfWeek: daysOfWeek.map(String),
-    startTime: startTime || '',
-    endTime: endTime || '',
+    daysWorkingHours
   });
 
-  new SuccessResponse('Working hours updated successfully', null, 200).send(res);
+  new SuccessResponse('Days working hours added successfully', null, 200).send(res);
+});
+
+
+export const removeWorkerWorkingHours = asyncHandler(async (req, res) => {
+  const workerProfileId = req.userState.worker.id;
+  const { days } = req.body;
+
+  await workerProfileService.removeDaysWorkingHours({
+    workerProfileId,
+    days
+  });
+
+  new SuccessResponse('Days working hours removed successfully', null, 200).send(res);
 });
 
 export const updateWorkerProfile = asyncHandler(async (req, res) => {

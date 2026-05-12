@@ -18,8 +18,8 @@ import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import { PaginationOptions, PaginatedResultMeta } from '../types/query.js';
 import { Government, GovernmentFilter } from '../domain/government.entity.js';
 import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../domain/specialization.entity.js';
-import { WorkingHours } from '../domain/workingHours.entity.js';
-import type { WorkingHoursDTO } from '../schemas/requests/worker-profile.request.js';
+import { Day, DayWorkingHours } from '../domain/workingHours.entity.js';
+import type { DaysWorkingHoursDTO as DaysWorkingHoursDTO } from '../schemas/requests/worker-profile.request.js';
 import IDataCache from '../cache/interfaces/DataCache.js';
 import { ExploreWorkerPublicDetail } from '../types/exploreWorker.js';
 
@@ -61,14 +61,12 @@ export default class WorkerService extends Service {
     this.dataCache = params.dataCache;
   }
 
-  private mapWorkingHoursEntityToDTO(workingHours: WorkingHours): WorkingHoursDTO {
-    return {
-      daysOfWeek: workingHours.daysOfWeek
-        .map((day) => Number.parseInt(day, 10))
-        .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6),
+  private mapWorkingHoursEntityToDTO(daysWorkingHours: DayWorkingHours[]): DaysWorkingHoursDTO {
+    return daysWorkingHours.map((workingHours) => ({
+      day: workingHours.day,
       startTime: workingHours.startTime,
       endTime: workingHours.endTime,
-    };
+    }));
   }
 
   /**
@@ -601,7 +599,10 @@ export default class WorkerService extends Service {
     return await this.workerProfileRepository.exists({ workerFilter: filter });
   }
 
-  async getMyWorkingHours(params: { userId: IDType }): Promise<WorkingHoursDTO[]> {
+  /**
+   * Get worker's working hours of all work days
+   */
+  async getMyWorkingHours(params: { userId: IDType }): Promise<DaysWorkingHoursDTO> {
     const { userId } = params;
     return tryCatch(async () => {
       const workingHours = await this.workerProfileRepository.findWorkingHoursByUserId({ userId });
@@ -609,23 +610,32 @@ export default class WorkerService extends Service {
       if (!workingHours) return [];
 
       // Keep array response shape to support future multi-slot schedules.
-      return [this.mapWorkingHoursEntityToDTO(workingHours)];
+      return this.mapWorkingHoursEntityToDTO(workingHours);
     });
   }
 
-  async setWorkingHours(params: {
+  async addDaysWorkingHours(params: {
     workerProfileId: IDType;
-    daysOfWeek: string[];
-    startTime: string;
-    endTime: string;
+    daysWorkingHours: DayWorkingHours[]
   }): Promise<void> {
-    const { workerProfileId, daysOfWeek, startTime, endTime } = params;
+    const { workerProfileId, daysWorkingHours } = params;
     return tryCatch(async () => {
-      await this.workerProfileRepository.replaceWorkingHours({
+      await this.workerProfileRepository.addDaysWorkingHours({
         workerProfileId: workerProfileId as string,
-        daysOfWeek,
-        startTime,
-        endTime,
+        daysWorkingHours
+      });
+    });
+  }
+
+  async removeDaysWorkingHours(params: {
+    workerProfileId: IDType;
+    days: Day[];
+  }): Promise<void> {
+    const { workerProfileId, days } = params;
+    return tryCatch(async () => {
+      await this.workerProfileRepository.removeDaysWorkingHours({
+        workerProfileId: workerProfileId as string,
+        days
       });
     });
   }
