@@ -190,11 +190,11 @@ export const getWorkerGovernments = asyncHandler(async (req, res) => {
 });
 
 export const addWorkerGovernments = asyncHandler(async (req, res) => {
-  const { governmentIds } = req.body;
+  const { workGovernments } = req.body;
 
   const addedGovernmentsCount = await workerProfileService.insertWorkGovernments({
     filter: { id: req.userState.worker.id },
-    governmentIds,
+    governmentIds: workGovernments,
   });
 
   new SuccessResponse(
@@ -205,7 +205,7 @@ export const addWorkerGovernments = asyncHandler(async (req, res) => {
 });
 
 export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
-  const { governmentIds } = req.body;
+  const { workGovernments: governmentIds } = req.body;
   const all = req.query.all === 'true';
 
   if (all)
