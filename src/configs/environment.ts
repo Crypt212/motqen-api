@@ -86,6 +86,13 @@ const rateLimit = {
   sensitiveWindowMs: parseInt(process.env.RATE_LIMIT_SENSITIVE_WINDOW_MS) || 15 * 60 * 1000,
   sensitiveMax: parseInt(process.env.RATE_LIMIT_SENSITIVE_MAX) || 10,
 };
+
+/** MOTQEN Dashboard admin: must match User.phoneNumber (role ADMIN); password = SHA-256 hex of UTF-8 secret */
+const adminPanel = {
+  phone: process.env.ADMIN_PANEL_PHONE?.trim() || '',
+  passwordSha256Hex: process.env.ADMIN_PANEL_PASSWORD_SHA256?.trim().toLowerCase() || '',
+};
+
 const environment = {
   nodeEnv,
   backend,
@@ -100,6 +107,7 @@ const environment = {
   otps,
   twilio,
   rateLimit,
+  adminPanel,
 };
 
 Object.freeze(environment);

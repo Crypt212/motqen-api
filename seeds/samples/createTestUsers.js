@@ -349,6 +349,29 @@ export async function createUsers() {
 
     console.log(`Created pending worker: ${worker4.firstName} ${worker4.lastName} (Not Approved)`);
   }
+
+  // Dashboard admin user (see ADMIN_PANEL_WIRING.md — ADMIN_PANEL_PHONE + ADMIN_PANEL_PASSWORD_SHA256)
+  const adminPhone = process.env.ADMIN_PANEL_PHONE?.trim() || '01009999999';
+  const existingAdmin = await prisma.user.findFirst({ where: { phoneNumber: adminPhone } });
+  if (!existingAdmin) {
+    await prisma.user.create({
+      data: {
+        phoneNumber: adminPhone,
+        firstName: 'لوحة',
+        middleName: '',
+        lastName: 'الإدارة',
+        status: 'ACTIVE',
+        role: 'ADMIN',
+      },
+    });
+    console.log(`Created admin panel user: ${adminPhone}`);
+  } else if (existingAdmin.role !== 'ADMIN') {
+    await prisma.user.update({
+      where: { id: existingAdmin.id },
+      data: { role: 'ADMIN', status: 'ACTIVE' },
+    });
+    console.log(`Upgraded user to ADMIN: ${adminPhone}`);
+  }
 }
 
 // Run the unified seeding function

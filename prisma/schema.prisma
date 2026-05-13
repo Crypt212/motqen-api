@@ -491,3 +491,123 @@ model FlaggedMessage {
   @@index([createdAt])
   @@map("flagged_messages")
 }
+
+// Additional models for admin dashboard: disputes & finance
+
+model Dispute {
+  id         String   @id @default(uuid())
+  orderId    String?
+  openedById String
+  status     DisputeStatus @default(OPEN)
+  reason     String?
+  resolution String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  order     Order? @relation(fields: [orderId], references: [id])
+  openedBy  User   @relation(fields: [openedById], references: [id])
+  messages  DisputeMessage[]
+
+  @@index([status])
+  @@map("disputes")
+}
+
+model DisputeMessage {
+  id        String   @id @default(uuid())
+  disputeId String
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  sender  User    @relation(fields: [senderId], references: [id])
+
+  @@map("dispute_messages")
+}
+
+model Payment {
+  id           String   @id @default(uuid())
+  orderId      String?
+  amount       Float
+  currency     String  @default("EGP")
+  method       String?
+  status       PaymentStatus @default(PENDING)
+  createdAt    DateTime @default(now())
+
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+}
+
+model Escrow {
+  id         String @id @default(uuid())
+  orderId    String
+  amount     Float
+  released   Boolean @default(false)
+  createdAt  DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@map("escrows")
+}
+
+model LedgerEntry {
+  id        String  @id @default(uuid())
+  reference String?
+  amount    Float
+  type      LedgerEntryType
+  createdAt DateTime @default(now())
+
+  @@map("ledger_entries")
+}
+
+model Withdrawal {
+  id         String   @id @default(uuid())
+  workerId   String
+  amount     Float
+  status     WithdrawalStatus @default(PENDING)
+  createdAt  DateTime @default(now())
+
+  worker WorkerProfile @relation(fields: [workerId], references: [id])
+
+  @@map("withdrawals")
+}
+
+model FeeRule {
+  id                 String  @id @default(uuid())
+  platformFeePercent Float
+  description        String?
+  effectiveFrom      DateTime
+  isActive           Boolean @default(true)
+
+  @@map("fee_rules")
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum LedgerEntryType {
+  CREDIT
+  DEBIT
+}
+
+enum WithdrawalStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+}
+
+enum PaymentMethod {
+  CASH
+  ONLINE
+}

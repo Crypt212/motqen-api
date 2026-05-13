@@ -13,10 +13,14 @@ import { isActive, authenticateAccess } from '../../middlewares/authMiddleware.j
 import { sensitiveIpRateLimiter } from '../../middlewares/rateLimitMiddleware.js';
 import workersRouter from './workers.js';
 import ordersRouter from './orders.js';
+import adminLoginRouter from './admin/login.routes.js';
+import adminProtectedRouter from './admin/protected.routes.js';
 
 const mainRouter = Router();
 
 mainRouter.use('/auth', sensitiveIpRateLimiter, authRouter);
+mainRouter.use('/admin', sensitiveIpRateLimiter, adminLoginRouter);
+mainRouter.use(adminProtectedRouter);
 mainRouter.use('/me', authenticateAccess, isActive, dashboardRouter);
 mainRouter.use('/chat', authenticateAccess, isActive, chatRouter);
 mainRouter.use('/workers', workersRouter);

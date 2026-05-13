@@ -14,7 +14,12 @@ import { ClientProfileFilter } from 'src/domain/clientProfile.entity.js';
 import { WorkerProfileFilter } from 'src/domain/workerProfile.entity.js';
 
 type PrismaOrderWithImagesWithLocationAndSubSpecialization = Prisma.OrderGetPayload<{
-  include: { images: true; subSpecialization: true, clientProfile: { include: { user: true } }, workerProfile: { include: { user: true } } };
+  include: {
+    images: true;
+    subSpecialization: true;
+    clientProfile: { include: { user: true } };
+    workerProfile: { include: { user: true } };
+  };
 }>;
 
 type PrismaOrderFilter = {
@@ -36,7 +41,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
       title: record.title,
       description: record.description,
       clientUserId: record.clientProfile.userId,
-      workerUserId: record.workerProfile.userId,
+      workerUserId: record.workerProfile?.userId ?? '',
       locationId: record.locationId,
       subSpecialization: record.subSpecialization,
       orderStatus: record.orderStatus,

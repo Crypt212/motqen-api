@@ -16,6 +16,7 @@ import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js
 import SpecializationRepository from 'src/repositories/prisma/SpecializationRepository.js';
 import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerRepository.js';
 import { Role } from 'src/domain/user.entity.js';
+import prisma from '../libs/database.js';
 
 interface OrderServiceDeps {
   orderRepository: IOrderRepository;
@@ -134,11 +135,16 @@ export default class OrderService extends Service {
     orderId: string;
     clientUserId?: string;
     workerUserId?: string;
+    viewerRole?: Role;
   }) {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
       if (!order) {
         throw new AppError('Order not found', 404);
+      }
+
+      if (params.viewerRole === 'ADMIN') {
+        return order;
       }
 
       const isOwner = order.clientUserId === params.clientUserId;
@@ -149,6 +155,67 @@ export default class OrderService extends Service {
       }
 
       return order;
+    });
+  }
+
+  /**
+   * Dashboard-friendly order shape for admin users (nested client / craftsman / location text).
+   */
+  async getOrderDetailForAdmin(orderId: string) {
+    return tryCatch(async () => {
+      const row = await prisma.order.findFirst({
+        where: { id: orderId },
+        include: {
+          clientProfile: { include: { user: true } },
+          workerProfile: { include: { user: true } },
+          location: { include: { government: true, city: true } },
+          subSpecialization: true,
+        },
+      });
+      if (!row) {
+        throw new AppError('Order not found', 404);
+      }
+
+      const c = row.clientProfile.user;
+      const clientFullName = [c.firstName, c.middleName, c.lastName].filter(Boolean).join(' ').trim();
+      const locStr = [row.location.government?.name, row.location.city?.name, row.location.address]
+        .filter(Boolean)
+        .join(' — ')
+        .trim();
+
+      const craftsman =
+        row.workerProfile && row.workerProfile.user
+          ? {
+              id: row.workerProfile.user.id,
+              fullName: [row.workerProfile.user.firstName, row.workerProfile.user.middleName, row.workerProfile.user.lastName]
+                .filter(Boolean)
+                .join(' ')
+                .trim(),
+              phoneNumber: row.workerProfile.user.phoneNumber,
+              primarySpecialty: row.subSpecialization.nameAr,
+              overallRating: row.workerProfile.rate >= 0 ? row.workerProfile.rate : undefined,
+            }
+          : undefined;
+
+      return {
+        id: row.id,
+        title: row.title,
+        requestType: 'direct' as const,
+        orderStatus: row.orderStatus,
+        workStatus: row.workStatus,
+        location: locStr || row.location.address,
+        isUrgent: row.isUrgent,
+        finalPrice: row.finalPrice,
+        createdAt: row.createdAt.toISOString(),
+        client: {
+          id: c.id,
+          fullName: clientFullName || c.phoneNumber,
+          phoneNumber: c.phoneNumber,
+        },
+        craftsman,
+        timeline: [] as { id: string; eventType: string; actorType: string; actorId: string; description: string; occurredAt: string }[],
+        chat: [] as { id: string; senderType: string; senderId: string; senderName: string; content: string | null; imageUrl: string | null; isRead: boolean; sentAt: string }[],
+      };
     });
   }
 

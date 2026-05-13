@@ -5,7 +5,6 @@ import { FilterFromDescriptor, parseQueryParams } from '../schemas/common.js';
 import { OrderFilterSchema } from '../schemas/requests/order.request.js';
 import { FieldTypeDefinition, SortOptions } from 'src/types/query.js';
 import { Order } from 'src/domain/order.entity.js';
-import { Role } from 'src/generated/prisma/enums.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
 import LocationService from 'src/services/LocationService.js';
 
@@ -61,7 +60,7 @@ export default class OrderController {
     const result = await this.orderService.getOrders({
       userId: userState.userId,
       role: userState.role,
-      userType: userState.worker ? "WORKER" : "CLIENT",
+      userType: userState.worker ? 'WORKER' : 'CLIENT',
       clientUserId: filter.clientUserId as IDType,
       workerUserId: filter.workerUserId as IDType,
       filter: filter as FilterFromDescriptor<Record<string, FieldTypeDefinition>>,
@@ -74,10 +73,18 @@ export default class OrderController {
   getById = asyncHandler(async (req, res) => {
     const { orderId } = req.params;
     const userState = req.userState!;
+
+    if (userState.role === 'ADMIN') {
+      const order = await this.orderService.getOrderDetailForAdmin(orderId as string);
+      new SuccessResponse('Order retrieved successfully', { order }, 200).send(res);
+      return;
+    }
+
     const order = await this.orderService.getOrderById({
       orderId: orderId as string,
       clientUserId: userState.userId,
       workerUserId: userState.userId,
+      viewerRole: userState.role,
     });
     new SuccessResponse('Order retrieved successfully', { order }, 200).send(res);
   });
@@ -89,11 +96,12 @@ export default class OrderController {
       orderId: orderId as string,
       clientUserId: userState.userId,
       workerUserId: userState.userId,
+      viewerRole: userState.role,
     });
 
     const location = await this.locationService.getLocationById({
       userId: order.clientUserId,
-      locationId: order.locationId
+      locationId: order.locationId,
     });
     new SuccessResponse('Location of order retrieved successfully', { location }, 200).send(res);
   });
