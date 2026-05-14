@@ -350,18 +350,16 @@ export default class WorkerProfileRepository
     }
   }
 
-  async findWorkingHoursByUserId({
+  async findDaysWorkingHoursByUserId({
     userId,
   }: {
     userId: IDType;
   }): Promise<DayWorkingHours[]> {
     try {
       const workerProfile = await this.prismaClient.workerProfile.findFirst({
-        where: { userId: userId as string },
+        where: { userId },
         include: { daysWorkingHours: true },
       });
-
-      if (!workerProfile?.daysWorkingHours) return null;
 
       return workerProfile.daysWorkingHours.map(dayWorkingHours => this.toDomainDayWorkingHours(dayWorkingHours));
     } catch (error: unknown) {
@@ -1106,14 +1104,14 @@ WHERE worker_profiles.id = ${workerProfileId};
 
     return slots;
   }
-  
+
   async addDaysWorkingHours(params: {
     workerProfileId: string;
     daysWorkingHours: DayWorkingHours[];
-  }): Promise<void> {
+  }): Promise<DayWorkingHours[]> {
     try {
       const { workerProfileId, daysWorkingHours } = params;
-      await this.prismaClient.$transaction(async (tx) => {
+      return await this.prismaClient.$transaction(async (tx) => {
         // 1. Fetch current working hours
         const currentDaysWorkingHours = await tx.dayWorkingHours.findMany({
           where: { workerProfileId },
@@ -1128,6 +1126,8 @@ WHERE worker_profiles.id = ${workerProfileId};
         await tx.dayWorkingHours.createMany({
           data: newDaysWorkingHours.map((dwh) => { return { workerProfileId, ...dwh }; }),
         });
+
+        return newDaysWorkingHours;
       });
     } catch (error: unknown) {
       if (error instanceof AppError) {
@@ -1152,7 +1152,7 @@ WHERE worker_profiles.id = ${workerProfileId};
         const currentDays = currentDaysWorkingHours.map(daysWorkingHours => daysWorkingHours.day);
 
         // Identify which days are being removed from availability
-        const removedDays = currentDays.filter((day) => !days.includes(day));
+        const removedDays = currentDays.filter((day) => days.includes(day));
 
         if (removedDays.length > 0) {
           // 2. Check for conflicts BEFORE deleting

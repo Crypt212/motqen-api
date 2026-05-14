@@ -605,11 +605,10 @@ export default class WorkerService extends Service {
   async getMyWorkingHours(params: { userId: IDType }): Promise<DaysWorkingHoursDTO> {
     const { userId } = params;
     return tryCatch(async () => {
-      const workingHours = await this.workerProfileRepository.findWorkingHoursByUserId({ userId });
+      const workingHours = await this.workerProfileRepository.findDaysWorkingHoursByUserId({ userId });
 
       if (!workingHours) return [];
 
-      // Keep array response shape to support future multi-slot schedules.
       return this.mapWorkingHoursEntityToDTO(workingHours);
     });
   }
@@ -617,13 +616,16 @@ export default class WorkerService extends Service {
   async addDaysWorkingHours(params: {
     workerProfileId: IDType;
     daysWorkingHours: DayWorkingHours[]
-  }): Promise<void> {
+  }): Promise<DaysWorkingHoursDTO> {
     const { workerProfileId, daysWorkingHours } = params;
     return tryCatch(async () => {
-      await this.workerProfileRepository.addDaysWorkingHours({
+      const workingHours =  await this.workerProfileRepository.addDaysWorkingHours({
         workerProfileId: workerProfileId as string,
         daysWorkingHours
       });
+      if (!workingHours) return [];
+
+      return this.mapWorkingHoursEntityToDTO(workingHours);
     });
   }
 

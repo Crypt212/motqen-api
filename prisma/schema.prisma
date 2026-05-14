@@ -27,25 +27,25 @@ model Session {
 }
 
 model User {
-  id              String                    @id @default(uuid())
-  phoneNumber     String                    @unique
-  firstName       String
-  lastName        String
-  status          AccountStatus             @default(ACTIVE)
-  role            Role                      @default(USER)
-  createdAt       DateTime                  @default(now())
-  isOnline        Boolean                   @default(false)
-  middleName      String
-  profileImageUrl String?
-  updatedAt       DateTime                  @updatedAt
+  id                   String                    @id @default(uuid())
+  phoneNumber          String                    @unique
+  firstName            String
+  lastName             String
+  status               AccountStatus             @default(ACTIVE)
+  role                 Role                      @default(USER)
+  createdAt            DateTime                  @default(now())
+  isOnline             Boolean                   @default(false)
+  middleName           String
+  profileImageUrl      String?
+  updatedAt            DateTime                  @updatedAt
   clientProfile        ClientProfile?
   conversations        ConversationParticipant[]
   locations            Location[]
   sentMessages         Message[]
   sessions             Session[]
   workerProfile        WorkerProfile?
-  sentNegotiations     Negotiation[]  @relation("NegotiationSender")
-  acceptedNegotiations Negotiation[]  @relation("NegotiationAccepter")
+  sentNegotiations     Negotiation[]             @relation("NegotiationSender")
+  acceptedNegotiations Negotiation[]             @relation("NegotiationAccepter")
 
   @@index([status, isOnline, id])
   @@map("users")
@@ -70,7 +70,7 @@ model Location {
   address        String
   addressNotes   String?
   isMain         Boolean
-  isHidden       Boolean @default(false)
+  isHidden       Boolean                               @default(false)
   pointGeography Unsupported("geography(Point, 4326)")
   city           City                                  @relation(fields: [cityId], references: [id], onDelete: Cascade)
   government     Government                            @relation(fields: [governmentId], references: [id], onDelete: Cascade)
@@ -97,7 +97,6 @@ model WorkerProfile {
   rate               Float    @default(-1.0)
   ratingCount        Int      @default(0)
   completedJobsCount Int      @default(0)
-  workingHoursId     String?   @unique
 
   occupiedTimeSlots     WorkerOccupiedTimeSlot[]
   Order                 Order[]
@@ -107,7 +106,7 @@ model WorkerProfile {
   badges                WorkerBadge[]
   user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   workGovernments       Government[]             @relation("GovernmentToWorkerProfile")
-  daysWorkingHours          DayWorkingHours[]
+  daysWorkingHours      DayWorkingHours[]
 
   @@index([userId], map: "idx_worker_profiles_user_id")
   @@index([acceptsUrgentJobs, userId])
@@ -119,12 +118,12 @@ model WorkerProfile {
 
 model DayWorkingHours {
   id              String @id @default(uuid())
-  workerProfileId String @unique
+  workerProfileId String
 
   day            Day
   startTime      String // e.g., "09:00"
   endTime        String // e.g., "17:00"
-  workerProfiles WorkerProfile[]
+  workerProfile  WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
 
   @@unique([workerProfileId, day])
   @@map("worker_availability")
@@ -265,33 +264,33 @@ model WorkerBadge {
 }
 
 model Order {
-  id                  String        @id @default(uuid())
+  id                  String      @id @default(uuid())
   title               String
   description         String
   clientProfileId     String
   workerProfileId     String
   locationId          String
   subSpecializationId String
-  orderStatus         OrderStatus   @default(PENDING)
-  workStatus          WorkStatus    @default(PENDING)
+  orderStatus         OrderStatus @default(PENDING)
+  workStatus          WorkStatus  @default(PENDING)
   finalPrice          Float?
   startDate           DateTime
   endDate             DateTime?
-  isUrgent            Boolean       @default(false)
-  rate                Float         @default(-1.0)
+  isUrgent            Boolean     @default(false)
+  rate                Float       @default(-1.0)
   comment             String?
   workStartedAt       DateTime?
   workFinishedAt      DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
-  clientProfile       ClientProfile     @relation(fields: [clientProfileId], references: [id])
-  workerProfile       WorkerProfile?    @relation(fields: [workerProfileId], references: [id])
-  location            Location          @relation(fields: [locationId], references: [id])
-  subSpecialization   SubSpecialization  @relation(fields: [subSpecializationId], references: [id])
-  images              OrderImage[]
-  occupiedTimeSlot    WorkerOccupiedTimeSlot?
-  negotiations        Negotiation[]
+  clientProfile     ClientProfile           @relation(fields: [clientProfileId], references: [id])
+  workerProfile     WorkerProfile?          @relation(fields: [workerProfileId], references: [id])
+  location          Location                @relation(fields: [locationId], references: [id])
+  subSpecialization SubSpecialization       @relation(fields: [subSpecializationId], references: [id])
+  images            OrderImage[]
+  occupiedTimeSlot  WorkerOccupiedTimeSlot?
+  negotiations      Negotiation[]
 
   @@index([clientProfileId])
   @@index([workerProfileId])
@@ -320,7 +319,7 @@ model Negotiation {
   senderId   String
   acceptedBy String?
 
-  note      String?
+  note String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

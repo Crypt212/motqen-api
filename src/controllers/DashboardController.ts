@@ -131,14 +131,14 @@ export const getWorkerWorkingHours = asyncHandler(async (req, res) => {
 
 export const addDaysWorkerWorkingHours = asyncHandler(async (req, res) => {
   const workerProfileId = req.userState.worker.id;
-  const { daysWorkingHours } = req.body;
+  const { schedules: daysWorkingHours } = req.body;
 
-  await workerProfileService.addDaysWorkingHours({
+  const workingHours = await workerProfileService.addDaysWorkingHours({
     workerProfileId,
     daysWorkingHours
   });
 
-  new SuccessResponse('Days working hours added successfully', null, 200).send(res);
+  new SuccessResponse('Days working hours added successfully', workingHours, 200).send(res);
 });
 
 

@@ -52,7 +52,7 @@ export default interface IWorkerProfileRepository {
   /**
    * Find working hours for an authenticated worker by user ID
    */
-  findWorkingHoursByUserId(params: { userId: IDType }): Promise<DayWorkingHours[]>;
+  findDaysWorkingHoursByUserId(params: { userId: IDType }): Promise<DayWorkingHours[]>;
   /**
    * Find work governments
    */
@@ -76,7 +76,7 @@ export default interface IWorkerProfileRepository {
   addDaysWorkingHours(params: {
     workerProfileId: string;
     daysWorkingHours: DayWorkingHours[]
-  }): Promise<void>
+  }): Promise<DayWorkingHours[]>
 
   /**
    * Removes days working hours with validation for active orders

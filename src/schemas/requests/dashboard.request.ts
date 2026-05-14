@@ -28,10 +28,13 @@ const Time24HourSchema = z
   .string()
   .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Time must be in HH:mm format');
 
-export const AddDaysWorkingHoursSchema = z
-  .array(DaysWorkingHoursSchema);
-export const RemoveDaysWorkingHoursSchema = z
-  .array(DayOfWeekSchema);
+export const AddDaysWorkingHoursSchema = z.object({
+  schedules: DaysWorkingHoursSchema
+});
+export const RemoveDaysWorkingHoursSchema = z.object({
+  days: z.array(DayOfWeekSchema)
+});
+
 export type SetWorkingHoursDTO = z.infer<typeof AddDaysWorkingHoursSchema>;
 
 export const AddLocationSchema = LocationSchema;
