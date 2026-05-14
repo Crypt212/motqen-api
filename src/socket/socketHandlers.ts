@@ -88,6 +88,7 @@ export function registerSocketHandlers(
 
   // ─── send_message ───────────────────────────────────────────────────────────
   socket.on('send_message', async ({ conversationId, content, type = 'TEXT', localId }, ack) => {
+    console.log(userId);
     try {
       if (type !== 'TEXT') {
         if (typeof ack === 'function') {

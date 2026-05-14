@@ -209,7 +209,7 @@ export const logout = asyncHandler(async (req, res) => {
 
   // Unsubscribe from topics in the background
   if (session?.fcmToken && firebaseProvider.isReady()) {
-    (async () => {
+    await(async () => {
       try {
         const user = await prisma.user.findUnique({
           where: { id: userId },
@@ -320,7 +320,7 @@ export const updateFcmToken = asyncHandler(async (req, res) => {
 
   // Subscribe to topics in the background
   if (firebaseProvider.isReady()) {
-    (async () => {
+    await (async () => {
       try {
         const user = await prisma.user.findUnique({
           where: { id: userId },

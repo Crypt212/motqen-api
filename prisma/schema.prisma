@@ -171,6 +171,7 @@ model WorkerProfile {
   workingHours          WorkingHours?            @relation(fields: [workingHoursId], references: [id])
   workerBalance         WorkerBalance?
   payoutMethods         PayoutMethod[]
+  withdrawRequests      WithdrawRequest[]
 
   @@index([userId], map: "idx_worker_profiles_user_id")
   @@index([acceptsUrgentJobs, userId])
@@ -725,13 +726,14 @@ model PayoutMethod {
   accountNumber   String
   bankName        String?
   isDefault       Boolean          @default(false)
-  isVerified      Boolean          @default(false)
+  isVerified      Boolean          @default(true)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
-
+ withdrawRequests WithdrawRequest[]
   workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id])
 
   @@index([workerProfileId])
+  @@unique([workerProfileId,accountNumber])
   @@map("payout_methods")
 }
 
@@ -750,7 +752,8 @@ model WithdrawRequest {
   updatedAt            DateTime              @updatedAt
 
   payoutExecution PayoutExecution?
-
+ workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id])
+  payoutMethod PayoutMethod @relation(fields: [payoutMethodId], references: [id])
   @@index([workerProfileId, status])
   @@index([status])
   @@map("withdraw_requests")

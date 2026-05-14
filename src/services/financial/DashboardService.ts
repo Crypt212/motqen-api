@@ -131,11 +131,11 @@ export class DashboardService {
     // 4. Ratings
     const ratings = workerProfileId
       ? await this.prisma.order.aggregate({
-          where: { workerProfileId, rating: { not: null } },
-          _avg: { rating: true },
-          _count: { rating: true },
+          where: { workerProfileId, rate: { not: -1.0 } },
+          _avg: { rate: true },
+          _count: { rate: true },
         })
-      : { _avg: { rating: null }, _count: { rating: 0 } };
+      : { _avg: { rate: null }, _count: { rate: 0 } };
 
     // 5. Disputes involvement
     const disputes = await this.prisma.dispute.findMany({

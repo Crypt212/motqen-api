@@ -555,7 +555,7 @@ export default class AuthService extends Service {
       reason: 'new_login',
       message: 'You have been logged out because a new session was started on another device',
     });
-
+    
     return { session, user, unHashedRefreshToken: unHashedRefreshToken };
   }
 

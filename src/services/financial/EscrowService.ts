@@ -7,6 +7,7 @@ import { TransactionClient } from '../../repositories/interfaces/financial/Escro
 import { IWorkerDebtRepository } from '../../repositories/interfaces/financial/WorkerDebtRepository.js';
 import { logActivity } from './helpers/activityLogger.js';
 import { RefundService } from './RefundService.js';
+import { serializeBigints } from '../../utils/serializeBigints.js';
 
 export class EscrowService {
   private refundService?: RefundService;
@@ -35,12 +36,6 @@ export class EscrowService {
       orderBy: { createdAt: 'desc' },
     });
     
-    // Convert bigint
-    const serializeBigints = (obj: any): any => 
-      JSON.parse(JSON.stringify(obj, (key, value) => 
-        typeof value === 'bigint' ? value.toString() : value
-      ));
-
     return serializeBigints(data);
   }
 

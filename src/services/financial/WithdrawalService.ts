@@ -8,8 +8,15 @@ import { IWorkerDebtRepository } from '../../repositories/interfaces/financial/W
 import { WorkerBalance } from '../../domain/financial/workerBalance.entity.js';
 import { generateDeterministicKey } from './helpers/idempotencyHelper.js';
 import { logActivity } from './helpers/activityLogger.js';
+import { PayoutMethod, WithdrawRequest, PayoutMethodType } from '../../domain/financial/withdrawal.entity.js';
+import AppError from '../../errors/AppError.js';
+import { PayoutMethodInput, ListWithdrawRequestsOptions, CursorPaginatedResult } from '../../schemas/financial/withdrawal.schema.js';
+import { PayoutMethodUpdateInput } from '../../repositories/interfaces/financial/PayoutMethodRepository.js';
 
-export type WorkerBalanceView = WorkerBalance & { availableToWithdraw: bigint };
+export type WorkerBalanceView = Omit<
+  WorkerBalance,
+  'id' | 'version' | 'createdAt' | 'updatedAt' | 'workerProfileId'
+> & { availableToWithdraw: bigint };
 
 export class WithdrawalService {
   constructor(
@@ -18,55 +25,53 @@ export class WithdrawalService {
     private readonly payoutMethodRepo: IPayoutMethodRepository,
     private readonly payoutExecutionRepo: IPayoutExecutionRepository,
     private readonly transactionLogRepo: ITransactionLogRepository,
-    private readonly workerDebtRepo: IWorkerDebtRepository | null,
+    private readonly workerDebtRepo: IWorkerDebtRepository,
     private readonly prisma: PrismaClient
   ) {}
 
   public computeAvailableToWithdraw(balance: WorkerBalance): bigint {
-    return balance.totalEarned - balance.withdrawn - balance.pendingWithdraw - balance.onHoldForDispute - balance.deductedForDebts;
+    return (
+      balance.totalEarned -
+      balance.withdrawn -
+      balance.pendingWithdraw -
+      balance.onHoldForDispute -
+      balance.deductedForDebts
+    );
   }
 
   async getBalance(workerProfileId: string): Promise<WorkerBalanceView> {
     const balance = await this.workerBalanceRepo.findByWorkerProfileId(workerProfileId);
-    
-    if (!balance) {
-      return {
-        id: '',
-        workerProfileId,
-        totalEarned: 0n,
-        withdrawn: 0n,
-        pendingWithdraw: 0n,
-        onHoldForDispute: 0n,
-        deductedForDebts: 0n,
-        version: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        availableToWithdraw: 0n,
-      } as any;
-    }
-
     return {
-      ...balance,
-      availableToWithdraw: this.computeAvailableToWithdraw(balance),
+      totalEarned: balance?.totalEarned || 0n,
+      withdrawn: balance?.withdrawn || 0n,
+      pendingWithdraw: balance?.pendingWithdraw || 0n,
+      onHoldForDispute: balance?.onHoldForDispute || 0n,
+      deductedForDebts: balance?.deductedForDebts || 0n,
+      availableToWithdraw: balance ? this.computeAvailableToWithdraw(balance) : 0n,
     };
   }
 
-  async createWithdrawRequest(workerProfileId: string, amount: bigint, payoutMethodId: string, idempotencyKey: string) {
+  async createWithdrawRequest(
+    workerProfileId: string,
+    amount: bigint,
+    payoutMethodId: string,
+    idempotencyKey: string
+  ): Promise<{ request: WithdrawRequest }> {
     return this.prisma.$transaction(async (tx) => {
       // 1. Lock WorkerBalance
       const balance = await this.workerBalanceRepo.lockForUpdate(workerProfileId, tx);
-      if (!balance) throw new Error('Worker balance not found');
+      if (!balance) throw new AppError('Worker balance not found', 404);
 
       // 2. Validate available
       const available = this.computeAvailableToWithdraw(balance);
       if (available < amount) {
-        throw new Error('Insufficient balance for withdrawal');
+        throw new AppError('Insufficient balance for withdrawal', 400);
       }
 
-      // 3. Snapshot payout method
-      const payoutMethod = await this.payoutMethodRepo.findById(payoutMethodId);
+      // 3. Snapshot payout method (read inside tx)
+      const payoutMethod = await this.payoutMethodRepo.findById(payoutMethodId, tx);
       if (!payoutMethod || payoutMethod.workerProfileId !== workerProfileId) {
-        throw new Error('Payout method not found or does not belong to worker');
+        throw new AppError('Payout method not found or does not belong to worker', 404);
       }
 
       const snapshot = {
@@ -76,25 +81,28 @@ export class WithdrawalService {
         bankName: payoutMethod.bankName,
       };
 
-      // 4. Update balance (pending_withdraw += amount, version++)
-      await this.workerBalanceRepo.update(
-        balance.id,
-        { pendingWithdraw: balance.pendingWithdraw + amount },
-        balance.version,
+      // 4. Create WithdrawRequest FIRST (status: PENDING) — idempotency safe
+      const result = await this.withdrawRequestRepo.create(
+        {
+          workerProfileId,
+          workerBalanceId: balance.id,
+          payoutMethodId,
+          amount,
+          payoutMethodSnapshot: snapshot,
+          idempotencyKey,
+        },
         tx
       );
 
-      // 5. Create WithdrawRequest (status: PENDING)
-      const result = await this.withdrawRequestRepo.create({
-        workerProfileId,
-        workerBalanceId: balance.id,
-        payoutMethodId,
-        amount,
-        payoutMethodSnapshot: snapshot,
-        idempotencyKey,
-      }, tx);
-
+      // 5. Only update balance if a new request was created (not a duplicate)
       if (result.created) {
+        await this.workerBalanceRepo.update(
+          balance.id,
+          { pendingWithdraw: balance.pendingWithdraw + amount },
+          balance.version,
+          tx
+        );
+
         await logActivity(tx, {
           actorId: workerProfileId,
           actionType: 'WITHDRAW_REQUESTED',
@@ -107,29 +115,39 @@ export class WithdrawalService {
       return result;
     });
   }
-
   /**
    * Admin starts processing a withdrawal request.
    * Moves status: PENDING → IN_PROGRESS and creates a PayoutExecution.
    */
   async startProcessing(requestId: string, adminId: string) {
     return this.prisma.$transaction(async (tx) => {
-      const request = await this.withdrawRequestRepo.findById(requestId);
-      if (!request) throw new Error('Withdraw request not found');
+      const request = await this.withdrawRequestRepo.findById(requestId, tx);
+      if (!request) throw new AppError('Withdraw request not found', 404);
 
       if (request.status !== 'PENDING') {
-        throw new Error(`Cannot start processing request in status ${request.status}`);
+        throw new AppError(`Cannot start processing request in status ${request.status}`, 400);
       }
 
-      await this.withdrawRequestRepo.updateStatus(requestId, 'IN_PROGRESS', tx);
+      await this.withdrawRequestRepo.update(
+        requestId,
+        {
+          status: 'IN_PROGRESS',
+          processedBy: adminId,
+          updatedAt: new Date(),
+        },
+        tx
+      );
 
       const idempotencyKey = generateDeterministicKey('PAYOUT_EXECUTION', requestId, 'EXECUTION');
-      
-      const execResult = await this.payoutExecutionRepo.create({
-        withdrawRequestId: requestId,
-        idempotencyKey,
-        amount: request.amount,
-      }, tx);
+
+      const execResult = await this.payoutExecutionRepo.create(
+        {
+          withdrawRequestId: requestId,
+          idempotencyKey,
+          amount: request.amount,
+        },
+        tx
+      );
 
       await logActivity(tx, {
         actorId: adminId,
@@ -148,12 +166,13 @@ export class WithdrawalService {
    */
   async rejectRequest(requestId: string, adminId: string, notes?: string) {
     return this.prisma.$transaction(async (tx) => {
-      const request = await this.withdrawRequestRepo.findById(requestId);
-      if (!request) throw new Error('Withdraw request not found');
-      if (request.status !== 'PENDING') throw new Error(`Cannot reject request in status ${request.status}`);
+      const request = await this.withdrawRequestRepo.findById(requestId, tx);
+      if (!request) throw new AppError('Withdraw request not found', 404);
+      if (request.status !== 'PENDING')
+        throw new AppError(`Cannot reject request in status ${request.status}`, 400);
 
       const balance = await this.workerBalanceRepo.lockForUpdate(request.workerProfileId, tx);
-      if (!balance) throw new Error('Worker balance not found');
+      if (!balance) throw new AppError('Worker balance not found', 404);
 
       // Return reserved amount (pendingWithdraw -= amount)
       await this.workerBalanceRepo.update(
@@ -163,16 +182,27 @@ export class WithdrawalService {
         tx
       );
 
-      await this.withdrawRequestRepo.updateStatus(requestId, 'CANCELLED', tx);
+      await this.withdrawRequestRepo.update(
+        requestId,
+        {
+          status: 'CANCELLED',
+          adminNotes: notes || null,
+          updatedAt: new Date(),
+        },
+        tx
+      );
 
-      await this.transactionLogRepo.create({
-        userId: request.workerProfileId,
-        amount: request.amount,
-        type: 'CREDIT',
-        referenceId: requestId,
-        referenceType: 'WITHDRAW_REQUEST',
-        description: `Withdraw request rejected. Notes: ${notes || ''}`,
-      }, tx);
+      await this.transactionLogRepo.create(
+        {
+          userId: request.workerProfileId,
+          amount: request.amount,
+          type: 'CREDIT',
+          referenceId: requestId,
+          referenceType: 'WITHDRAW_REQUEST',
+          description: `Withdraw request rejected. Notes: ${notes || ''}`,
+        },
+        tx
+      );
 
       await logActivity(tx, {
         actorId: adminId,
@@ -188,24 +218,32 @@ export class WithdrawalService {
    * Complete payout execution. Requires proof of payment URL.
    * Only allowed when request is IN_PROGRESS, not PENDING.
    */
-  async completePayout(executionId: string, proofOfPaymentUrl: string, externalRefId: string, adminId: string) {
-    if (!proofOfPaymentUrl) throw new Error('Proof of payment URL is required');
+  async completePayout(
+    executionId: string,
+    proofOfPaymentUrl: string,
+    externalRefId: string,
+    adminId: string
+  ) {
 
     return this.prisma.$transaction(async (tx) => {
       const execution = await this.payoutExecutionRepo.lockForUpdate(executionId, tx);
-      if (!execution) throw new Error('Payout execution not found');
-      if (execution.status !== 'PENDING') throw new Error(`Cannot complete Execution in status ${execution.status}`);
+      if (!execution) throw new AppError('Payout execution not found', 404);
+      if (execution.status !== 'PENDING')
+        throw new AppError(`Cannot complete Execution in status ${execution.status}`, 400);
 
-      const request = await this.withdrawRequestRepo.findById(execution.withdrawRequestId);
-      if (!request) throw new Error('Withdraw request not found for execution');
+      const request = await this.withdrawRequestRepo.findById(execution.withdrawRequestId, tx);
+      if (!request) throw new AppError('Withdraw request not found for execution', 404);
 
       // Enforce staged flow: request must be IN_PROGRESS
       if (request.status !== 'IN_PROGRESS') {
-        throw new Error(`Cannot complete payout: withdraw request is in status ${request.status}, must be IN_PROGRESS`);
+        throw new AppError(
+          `Cannot complete payout: withdraw request is in status ${request.status}, must be IN_PROGRESS`,
+          400
+        );
       }
 
       const balance = await this.workerBalanceRepo.lockForUpdate(request.workerProfileId, tx);
-      if (!balance) throw new Error('Worker balance not found');
+      if (!balance) throw new AppError('Worker balance not found', 404);
 
       await this.workerBalanceRepo.update(
         balance.id,
@@ -217,21 +255,37 @@ export class WithdrawalService {
         tx
       );
 
-      await this.transactionLogRepo.create({
-        userId: request.workerProfileId,
-        amount: request.amount,
-        type: 'DEBIT',
-        referenceId: executionId,
-        referenceType: 'PAYOUT_EXECUTION',
-        description: `Payout completed externalRef ${externalRefId}`,
-      }, tx);
+      await this.transactionLogRepo.create(
+        {
+          userId: request.workerProfileId,
+          amount: request.amount,
+          type: 'DEBIT',
+          referenceId: executionId,
+          referenceType: 'PAYOUT_EXECUTION',
+          description: `Payout completed externalRef ${externalRefId}`,
+        },
+        tx
+      );
 
-      await this.payoutExecutionRepo.updateStatus(executionId, 'COMPLETED', {
-        externalReferenceId: externalRefId,
-        proofOfPaymentUrl,
-        executedAt: new Date(),
-      }, tx);
-      await this.withdrawRequestRepo.updateStatus(request.id, 'COMPLETED', tx);
+      await this.payoutExecutionRepo.updateStatus(
+        executionId,
+        'COMPLETED',
+        {
+          externalReferenceId: externalRefId,
+          proofOfPaymentUrl,
+          executedAt: new Date(),
+        },
+        tx
+      );
+
+      await this.withdrawRequestRepo.update(
+        request.id,
+        {
+          status: 'COMPLETED',
+          updatedAt: new Date(),
+        },
+        tx
+      );
 
       await logActivity(tx, {
         actorId: adminId,
@@ -246,14 +300,15 @@ export class WithdrawalService {
   async failPayout(executionId: string, reason: string, adminId: string) {
     return this.prisma.$transaction(async (tx) => {
       const execution = await this.payoutExecutionRepo.lockForUpdate(executionId, tx);
-      if (!execution) throw new Error('Payout execution not found');
-      if (execution.status !== 'PENDING') throw new Error(`Cannot fail Execution in status ${execution.status}`);
+      if (!execution) throw new AppError('Payout execution not found', 404);
+      if (execution.status !== 'PENDING')
+        throw new AppError(`Cannot fail Execution in status ${execution.status}`, 400);
 
-      const request = await this.withdrawRequestRepo.findById(execution.withdrawRequestId);
-      if (!request) throw new Error('Withdraw request not found');
+      const request = await this.withdrawRequestRepo.findById(execution.withdrawRequestId, tx);
+      if (!request) throw new AppError('Withdraw request not found', 404);
 
       const balance = await this.workerBalanceRepo.lockForUpdate(request.workerProfileId, tx);
-      if (!balance) throw new Error('Worker balance not found');
+      if (!balance) throw new AppError('Worker balance not found', 404);
 
       await this.workerBalanceRepo.update(
         balance.id,
@@ -262,17 +317,34 @@ export class WithdrawalService {
         tx
       );
 
-      await this.transactionLogRepo.create({
-        userId: request.workerProfileId,
-        amount: request.amount,
-        type: 'CREDIT',
-        referenceId: executionId,
-        referenceType: 'PAYOUT_EXECUTION',
-        description: `Payout failed reason: ${reason}`,
-      }, tx);
+      await this.transactionLogRepo.create(
+        {
+          userId: request.workerProfileId,
+          amount: request.amount,
+          type: 'CREDIT',
+          referenceId: executionId,
+          referenceType: 'PAYOUT_EXECUTION',
+          description: `Payout failed reason: ${reason}`,
+        },
+        tx
+      );
 
-      await this.payoutExecutionRepo.updateStatus(executionId, 'FAILED', { providerResponseMessage: reason }, tx);
-      await this.withdrawRequestRepo.updateStatus(request.id, 'FAILED', tx);
+      await this.payoutExecutionRepo.updateStatus(
+        executionId,
+        'FAILED',
+        { providerResponseMessage: reason },
+        tx
+      );
+
+      await this.withdrawRequestRepo.update(
+        request.id,
+        {
+          status: 'FAILED',
+          adminNotes: reason,
+          updatedAt: new Date(),
+        },
+        tx
+      );
 
       await logActivity(tx, {
         actorId: adminId,
@@ -284,58 +356,94 @@ export class WithdrawalService {
     });
   }
 
-  async listWithdrawRequests(workerProfileId: string, limit = 20, offset = 0) {
-    return this.withdrawRequestRepo.findByWorkerId(workerProfileId, limit, offset);
+  async listWithdrawRequests(
+    options: ListWithdrawRequestsOptions
+  ): Promise<CursorPaginatedResult<WithdrawRequest>> {
+    return this.withdrawRequestRepo.findMany(options);
   }
 
   async listPayoutMethods(workerProfileId: string) {
     return this.payoutMethodRepo.findByWorkerId(workerProfileId);
   }
 
-  async addPayoutMethod(workerProfileId: string, data: any) {
-    return this.payoutMethodRepo.create({
+  async getWithdrawRequest(requestId: string, workerProfileId: string): Promise<WithdrawRequest> {
+    const request = await this.withdrawRequestRepo.findById(requestId);
+    if (!request) throw new AppError('Withdraw request not found', 404);
+    if (request.workerProfileId !== workerProfileId)
+      throw new AppError('Withdraw request not found', 404); 
+    return request;
+  }
+
+  async updatePayoutMethod(
+    id: string,
+    workerProfileId: string,
+    data: PayoutMethodUpdateInput
+  ): Promise<PayoutMethod> {
+    const method = await this.payoutMethodRepo.findById(id);
+    if (!method || method.workerProfileId !== workerProfileId)
+      throw new AppError('Payout method not found', 404);
+    return this.payoutMethodRepo.update(id, data);
+  }
+
+  async deletePayoutMethod(id: string, workerProfileId: string): Promise<void> {
+    const method = await this.payoutMethodRepo.findById(id);
+    if (!method || method.workerProfileId !== workerProfileId)
+      throw new AppError('Payout method not found', 404);
+
+    // Guard: cannot delete if there's an active withdraw request using this method
+    const hasActive = await this.withdrawRequestRepo.hasActiveRequests(id);
+    if (hasActive)
+      throw new AppError('Cannot delete payout method with active withdraw requests', 409);
+
+    await this.payoutMethodRepo.delete(id);
+  }
+
+  async addPayoutMethod(workerProfileId: string, data: PayoutMethodInput): Promise<PayoutMethod> {
+    const result = await this.payoutMethodRepo.create({
       workerProfileId,
-      methodType: data.method_type,
-      accountName: data.account_name,
-      accountNumber: data.account_number,
-      bankName: data.bank_name,
+      methodType: data.methodType as PayoutMethodType,
+      accountName: data.accountName,
+      accountNumber: data.accountNumber,
+      bankName: data.bankName,
     });
+    if (!result.created) {
+      throw new AppError('Payout method already exists', 409);
+    }
+    return result.payoutMethod;
   }
 
   async listWorkerDebts(limit = 20, offset = 0) {
-    if (!this.workerDebtRepo) throw new Error('WorkerDebtRepo not available');
-    return (this.workerDebtRepo as any).prisma.workerDebt.findMany({
+    return this.workerDebtRepo.findMany({
       take: limit,
       skip: offset,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
   async settleDebt(debtId: string, adminId: string) {
-    if (!this.workerDebtRepo) throw new Error('WorkerDebtRepo not available');
-    
     return this.prisma.$transaction(async (tx) => {
-      const debt = await (this.workerDebtRepo as any).prisma.workerDebt.findUnique({
-        where: { id: debtId }
-      });
-      if (!debt) throw new Error('Debt not found');
-      if (debt.status === 'SETTLED') throw new Error('Debt already settled');
+      const debt = await this.workerDebtRepo.findById(debtId, tx);
+      if (!debt) throw new AppError('Debt not found', 404);
+      if (debt.status === 'SETTLED') throw new AppError('Debt already settled', 400);
 
       const balance = await this.workerBalanceRepo.lockForUpdate(debt.workerProfileId, tx);
-      if (!balance) throw new Error('Worker balance not found');
+      if (!balance) throw new AppError('Worker balance not found', 404);
 
       // 1. Mark as settled
-      await this.workerDebtRepo!.updateAmount(debtId, 0n, 'SETTLED', tx);
+      await this.workerDebtRepo.updateAmount(debtId, 0n, 'SETTLED', tx);
 
       // 2. Transaction log for manual debt recovery
-      await this.transactionLogRepo.create({
-        userId: debt.workerProfileId,
-        amount: debt.outstandingAmount,
-        type: 'CREDIT',
-        referenceId: debtId,
-        referenceType: 'WORKER_DEBT',
-        description: `Manual debt settlement by admin ${adminId}`,
-      }, tx);
+      await this.transactionLogRepo.create(
+        {
+          userId: debt.workerProfileId,
+          amount: debt.outstandingAmount,
+          type: 'CREDIT',
+          referenceId: debtId,
+          referenceType: 'WORKER_DEBT',
+          description: `Manual debt settlement by admin ${adminId}`,
+        },
+        tx
+      );
 
       await logActivity(tx, {
         actorId: adminId,

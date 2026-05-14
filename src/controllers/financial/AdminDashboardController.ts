@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { DashboardService } from '../../services/financial/DashboardService.js';
 import IActivityLogRepository from '../../repositories/interfaces/financial/ActivityLogRepository.js';
+import { serializeBigints } from '../../utils/serializeBigints.js';
 
 export class AdminDashboardController {
   constructor(
@@ -22,10 +23,7 @@ export class AdminDashboardController {
         this.dashboardService.getOutstandingDebts(),
       ]);
 
-      const serializeBigints = (obj: any): any => 
-        JSON.parse(JSON.stringify(obj, (key, value) => 
-          typeof value === 'bigint' ? value.toString() : value
-        ));
+
 
       res.status(200).json({
         status: 'success',
@@ -72,10 +70,7 @@ export class AdminDashboardController {
 
       const data = await this.dashboardService.getUserAggregation(userId);
 
-      const serializeBigints = (obj: any): any => 
-        JSON.parse(JSON.stringify(obj, (key, value) => 
-          typeof value === 'bigint' ? value.toString() : value
-        ));
+
 
       res.status(200).json({ status: 'success', data: serializeBigints(data) });
     } catch (e: any) {

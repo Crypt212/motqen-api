@@ -45,4 +45,17 @@ export class WorkerDebtRepository extends Repository implements IWorkerDebtRepos
     });
     return debt as unknown as WorkerDebt;
   }
+
+  async findById(id: string, tx?: TransactionClient): Promise<WorkerDebt | null> {
+    const client = tx || this.prismaClient;
+    const debt = await client.workerDebt.findUnique({
+      where: { id },
+    });
+    return debt as unknown as WorkerDebt | null;
+  }
+
+  async findMany(options?: any): Promise<WorkerDebt[]> {
+    const debts = await this.prismaClient.workerDebt.findMany(options);
+    return debts as unknown as WorkerDebt[];
+  }
 }

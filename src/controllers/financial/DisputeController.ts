@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { DisputeService } from '../../services/financial/DisputeService.js';
-import { IDType } from 'src/repositories/interfaces/Repository.js';
+import { IDType } from '../../repositories/interfaces/Repository.js';
+import { serializeBigints } from '../../utils/serializeBigints.js';
 
 export class DisputeController {
   constructor(private readonly disputeService: DisputeService) {}
@@ -36,10 +37,7 @@ export class DisputeController {
       const id = req.params.id as string;
       const data = await this.disputeService.getDispute(id);
 
-      const serializeBigints = (obj: any): any => 
-        JSON.parse(JSON.stringify(obj, (key, value) => 
-          typeof value === 'bigint' ? value.toString() : value
-        ));
+
 
       res.status(200).json({ status: 'success', data: serializeBigints(data) });
     } catch (e: any) {

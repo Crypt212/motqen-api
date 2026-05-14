@@ -91,7 +91,7 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
         // Do not call next() -> packet is silently dropped
       }
     }) as (event: import('socket.io').Event, next: (err?: Error) => void) => void);
-
+console.log(socket.data);
     // 1. Join user room — all devices of this user share one room
     await socket.join(`user:${userId}`);
 

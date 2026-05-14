@@ -11,17 +11,17 @@ import { IPaymentProvider } from '../../providers/interfaces/IPaymentProvider.js
 import { calculateFee } from './helpers/feeCalculator.js';
 import { generateDeterministicKey } from './helpers/idempotencyHelper.js';
 import { logActivity } from './helpers/activityLogger.js';
-import { IDType } from 'src/repositories/interfaces/Repository.js';
+import { IDType } from '../../repositories/interfaces/Repository.js';
 
-import AppError from 'src/errors/AppError.js';
-import { PaymobWebhookPayload } from 'src/schemas/financial/payment.schema.js';
-import { FeeRule } from 'src/domain/financial/feeRule.entity.js';
+import AppError from '../../errors/AppError.js';
+import { PaymobWebhookPayload } from '../../schemas/financial/payment.schema.js';
+import { FeeRule } from '../../domain/financial/feeRule.entity.js';
 import {
   AmountMismatchError,
   WebhookProcessingError,
   WebhookValidationError,
-} from 'src/errors/WebHookError.js';
-import { emitToUser } from 'src/socket/socket-emitter.js';
+} from '../../errors/WebHookError.js';
+import { emitToUser } from '../../socket/socket-emitter.js';
 
 type WebhookStep = 'VALIDATION' | 'TX_ATTEMPT' | 'TX_PAYMENT' | 'TX_ORDER_STATUS' | 'TX_EFFECTS';
 
@@ -387,7 +387,7 @@ export class PaymentService {
 
     if (order.orderStatus !== 'PRICE_AGREED') throw new AppError('order not in ordered state', 400);
 
-    const amountCents = Math.round(order.finalPrice * 100);
+    const amountCents = Math.round((order.finalPrice ) * 100);
 
     const billingData = {
       first_name: order.clientProfile.user.firstName,

@@ -23,7 +23,7 @@ const initApp = async () => {
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
 
-  app.use('/api/v1', verifyDeviceId, ipRateLimiter, v1Router);
+  app.use('/api/v1', ipRateLimiter, v1Router);
 
   // Health check
   app.get(
