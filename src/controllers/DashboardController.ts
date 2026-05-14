@@ -129,18 +129,29 @@ export const getWorkerWorkingHours = asyncHandler(async (req, res) => {
   new SuccessResponse('retrieved worker working hours successfully', workingHours, 200).send(res);
 });
 
-export const setWorkerWorkingHours = asyncHandler(async (req, res) => {
+export const addDaysWorkerWorkingHours = asyncHandler(async (req, res) => {
   const workerProfileId = req.userState.worker.id;
-  const { daysOfWeek, startTime, endTime } = req.body;
+  const { schedules: daysWorkingHours } = req.body;
 
-  await workerProfileService.setWorkingHours({
+  const workingHours = await workerProfileService.addDaysWorkingHours({
     workerProfileId,
-    daysOfWeek: daysOfWeek.map(String),
-    startTime: startTime || '',
-    endTime: endTime || '',
+    daysWorkingHours
   });
 
-  new SuccessResponse('Working hours updated successfully', null, 200).send(res);
+  new SuccessResponse('Days working hours added successfully', workingHours, 200).send(res);
+});
+
+
+export const removeWorkerWorkingHours = asyncHandler(async (req, res) => {
+  const workerProfileId = req.userState.worker.id;
+  const { days } = req.body;
+
+  await workerProfileService.removeDaysWorkingHours({
+    workerProfileId,
+    days
+  });
+
+  new SuccessResponse('Days working hours removed successfully', null, 200).send(res);
 });
 
 export const updateWorkerProfile = asyncHandler(async (req, res) => {
@@ -179,11 +190,11 @@ export const getWorkerGovernments = asyncHandler(async (req, res) => {
 });
 
 export const addWorkerGovernments = asyncHandler(async (req, res) => {
-  const { governmentIds } = req.body;
+  const { workGovernments } = req.body;
 
   const addedGovernmentsCount = await workerProfileService.insertWorkGovernments({
     filter: { id: req.userState.worker.id },
-    governmentIds,
+    governmentIds: workGovernments,
   });
 
   new SuccessResponse(
@@ -194,7 +205,7 @@ export const addWorkerGovernments = asyncHandler(async (req, res) => {
 });
 
 export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
-  const { governmentIds } = req.body;
+  const { workGovernments: governmentIds } = req.body;
   const all = req.query.all === 'true';
 
   if (all)

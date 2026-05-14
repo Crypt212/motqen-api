@@ -9,10 +9,10 @@ import {
   WorkerProfileVerification,
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
-import { WorkingHours } from '../../domain/workingHours.entity.js';
+import { DayWorkingHours } from '../../domain/workingHours.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { IDType } from '../interfaces/Repository.js';
-import { Portfolio, ProjectImage, WorkerBadge } from '../../generated/prisma/client.js';
+import { Day, Portfolio, ProjectImage, WorkerBadge } from '../../generated/prisma/client.js';
 import { Government } from 'src/domain/government.entity.js';
 
 export default interface IWorkerProfileRepository {
@@ -52,7 +52,7 @@ export default interface IWorkerProfileRepository {
   /**
    * Find working hours for an authenticated worker by user ID
    */
-  findWorkingHoursByUserId(params: { userId: IDType }): Promise<WorkingHours | null>;
+  findDaysWorkingHoursByUserId(params: { userId: IDType }): Promise<DayWorkingHours[]>;
   /**
    * Find work governments
    */
@@ -71,14 +71,20 @@ export default interface IWorkerProfileRepository {
   }): Promise<{ startDate: Date; endDate: Date }[]>;
 
   /**
-   * Replace all working hours with validation for active orders
+   * Add days working hours
    */
-  replaceWorkingHours(params: {
+  addDaysWorkingHours(params: {
     workerProfileId: string;
-    daysOfWeek: string[];
-    startTime: string;
-    endTime: string;
-  }): Promise<void>;
+    daysWorkingHours: DayWorkingHours[]
+  }): Promise<DayWorkingHours[]>
+
+  /**
+   * Removes days working hours with validation for active orders
+   */
+  removeDaysWorkingHours(params: {
+    workerProfileId: string;
+    days: Day[];
+  }): Promise<void>
 
   /**
    * Create a worker profile for a user ID
