@@ -2,7 +2,6 @@ import { WithdrawalService } from '../../services/financial/WithdrawalService.js
 import { asyncHandler } from '../../types/asyncHandler.js';
 import AppError from '../../errors/AppError.js';
 import SuccessResponse from '../../responses/successResponse.js';
-import { ListWithdrawRequestsOptions } from '../../schemas/financial/withdrawal.schema.js';
 import { WithdrawRequestStatus, PayoutMethodType } from '../../domain/financial/withdrawal.entity.js';
 import { serializeBigints } from '../../utils/serializeBigints.js';
 

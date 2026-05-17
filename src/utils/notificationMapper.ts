@@ -188,5 +188,17 @@ export function mapEventToNotification(event: NotificationEventContext): Notific
         },
       };
     }
+    case  'TEST_NOTIFICATION': {
+      return {
+        type: 'TEST_NOTIFICATION',
+        title: 'إشعار تجريبي 🧪',
+        body: 'هذا إشعار تجريبي لاختبار النظام',
+        data: {
+          screen: 'home',
+          entityId: '',
+          entityType: 'none',
+        },
+      };
+    }
   }
 }

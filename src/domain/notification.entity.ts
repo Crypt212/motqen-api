@@ -12,7 +12,7 @@ export interface NotificationData {
     | 'dispute_details'
     | 'profile'
     | 'open_orders'
-    | 'announcement';
+    | 'home'
   entityId: string;
   entityType:
     | 'order'
@@ -21,7 +21,8 @@ export interface NotificationData {
     | 'withdraw'
     | 'admin_action'
     | 'government'
-    | 'broadcast';
+    | 'broadcast'
+    |'none';
   actionType?: 'WARNING' | 'SUSPENDED' | 'BANNED';
   openOrdersCount?: string;
 }
@@ -37,20 +38,9 @@ export interface Notification {
   createdAt: Date;
 }
 
-export interface NotificationCreateInput {
-  userId: string;
-  type: NotificationType;
-  title: string;
-  body: string;
-  data: NotificationData;
-}
+export  type NotificationCreateInput = Omit<Notification, 'id' | 'createdAt'>;
 
-export interface NotificationPayload {
-  type: NotificationType;
-  title: string;
-  body: string;
-  data: NotificationData;
-}
+export type NotificationPayload = Omit<Notification, 'id' | 'createdAt' | 'userId' | 'isSent'>;
 
 export type NotificationEventContext =
   | { type: 'ORDER_ACCEPTED'; ctx: { orderId: string; orderTitle: string } }
@@ -71,4 +61,5 @@ export type NotificationEventContext =
   | { type: 'WITHDRAW_REQUESTED'; ctx: { withdrawId: string; amount: number } }
   | { type: 'WITHDRAW_APPROVED'; ctx: { withdrawId: string; amount: number } }
   | { type: 'WITHDRAW_REJECTED'; ctx: { withdrawId: string; rejectionReason?: string } }
-  | { type: 'ADMIN_ACTION'; ctx: { userId: string; actionType: 'WARNING' | 'SUSPENDED' | 'BANNED'; reason?: string } };
+  | { type: 'ADMIN_ACTION'; ctx: { userId: string; actionType: 'WARNING' | 'SUSPENDED' | 'BANNED'; reason?: string } }
+  | { type: 'TEST_NOTIFICATION'; ctx: { } };

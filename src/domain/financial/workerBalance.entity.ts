@@ -20,11 +20,3 @@ export type WorkerBalanceUpdateInput = {
   onHoldForDispute?: bigint;
   deductedForDebts?: bigint;
 };
-
-/**
- * Compute available-to-withdraw balance from a WorkerBalance record.
- * This is NOT a stored column — always derived from the four balance fields.
- */
-export function computeAvailableToWithdraw(balance: WorkerBalance): bigint {
-  return balance.totalEarned - balance.withdrawn - balance.pendingWithdraw - balance.onHoldForDispute - balance.deductedForDebts;
-}
