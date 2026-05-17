@@ -1,7 +1,7 @@
 import ReportService from '../services/ReportService.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { parseQueryParams } from '../schemas/common.js';
-import { ReportFilterSchema } from '../schemas/requests/report.request.js';
+import { CreateReportSchema, ReportFilterSchema, ReportIdParamsSchema, UpdateReportSchema, UpdateReportStatusSchema } from '../schemas/requests/report.request.js';
 import SuccessResponse from 'src/responses/successResponse.js';
 
 export default class ReportController {
@@ -14,10 +14,11 @@ export default class ReportController {
   create = asyncHandler(async (req, res) => {
     const { userId: requesterId, role: requesterRole } = req.userState;
     const files = req.files as Express.Multer.File[] | undefined;
+    const bodyData = CreateReportSchema.parse(req.body);
 
     const report = await this.reportService.createReport({
       report: {
-        ...req.body,
+        ...bodyData,
         reporterId: requesterId,
       },
       requesterRole,
@@ -44,7 +45,7 @@ export default class ReportController {
 
   getById = asyncHandler(async (req, res) => {
     const { userId: requesterId, role: requesterRole } = req.userState;
-    const reportId = req.params.reporterId as string;
+    const { reportId } = ReportIdParamsSchema.parse(req.params);
 
     const report = await this.reportService.getReportById({
       reportId,
@@ -57,14 +58,15 @@ export default class ReportController {
 
   update = asyncHandler(async (req, res) => {
     const { userId: requesterId, role: requesterRole } = req.userState;
-    const reportId = req.params.reportId as string;
+    const { reportId } = ReportIdParamsSchema.parse(req.params);
+    const bodyData = UpdateReportSchema.parse(req.body);
     const files = req.files as Express.Multer.File[] | undefined;
 
     const report = await this.reportService.updateReport({
       reportId,
       requesterId,
       requesterRole,
-      report: req.body,
+      report: bodyData,
       files,
     });
 
@@ -73,7 +75,7 @@ export default class ReportController {
 
   cancel = asyncHandler(async (req, res) => {
     const { userId: requesterId, role: requesterRole } = req.userState;
-    const reportId = req.params.reporterId as string;
+    const { reportId } = ReportIdParamsSchema.parse(req.params);
 
     await this.reportService.cancelReport({
       reportId,
@@ -86,11 +88,12 @@ export default class ReportController {
 
   updateStatus = asyncHandler(async (req, res) => {
     const { userId: requesterId } = req.userState;
-    const reportId = req.params.reportId as string;
+    const { reportId } = ReportIdParamsSchema.parse(req.params);
+    const { status } = UpdateReportStatusSchema.parse(req.body);
 
     const report = await this.reportService.updateReportStatus({
       reportId,
-      status: req.body.status,
+      status,
       resolvedBy: requesterId,
     });
 

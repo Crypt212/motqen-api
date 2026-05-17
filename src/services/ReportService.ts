@@ -8,7 +8,6 @@ import {
   ReportCreateInput,
   ReportUpdateInput,
   ReportWithImages,
-  ReportStatusUpdateInput,
 } from '../domain/report.entity.js';
 import { PaginatedResultMeta, SortOptions, PaginationOptions } from '../types/query.js';
 import { ReportStatus } from '../generated/prisma/enums.js';
