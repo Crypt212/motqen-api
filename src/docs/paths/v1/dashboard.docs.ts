@@ -230,7 +230,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     },
     responses: createResponseDoc({
       successfulResponse: {
-        description: 'Working hours set',
+        description: 'Working hours deleted',
         content: { 'application/json': { schema: WorkerWorkingHoursResponseSchema } },
       },
       unauthorizedResponse: true,

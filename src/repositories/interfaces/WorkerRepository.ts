@@ -9,7 +9,7 @@ import {
   WorkerProfileVerification,
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
-import { DayWorkingHours } from '../../domain/workingHours.entity.js';
+import { DayWorkingHours, DayWorkingHoursCreateInput, DayWorkingHoursReturn } from '../../domain/workingHours.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { IDType } from '../interfaces/Repository.js';
 import { Day, Portfolio, ProjectImage, WorkerBadge } from '../../generated/prisma/client.js';
@@ -75,8 +75,8 @@ export default interface IWorkerProfileRepository {
    */
   addDaysWorkingHours(params: {
     workerProfileId: string;
-    daysWorkingHours: DayWorkingHours[]
-  }): Promise<DayWorkingHours[]>
+    daysWorkingHours: DayWorkingHoursCreateInput[]
+  }): Promise<DayWorkingHoursReturn[]>
 
   /**
    * Removes days working hours with validation for active orders

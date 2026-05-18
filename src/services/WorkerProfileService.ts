@@ -18,7 +18,7 @@ import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import { PaginationOptions, PaginatedResultMeta } from '../types/query.js';
 import { Government, GovernmentFilter } from '../domain/government.entity.js';
 import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../domain/specialization.entity.js';
-import { Day, DayWorkingHours } from '../domain/workingHours.entity.js';
+import { Day, DayWorkingHours, DayWorkingHoursCreateInput, DayWorkingHoursReturn } from '../domain/workingHours.entity.js';
 import type { DaysWorkingHoursDTO as DaysWorkingHoursDTO } from '../schemas/requests/worker-profile.request.js';
 import IDataCache from '../cache/interfaces/DataCache.js';
 import { ExploreWorkerPublicDetail } from '../types/exploreWorker.js';
@@ -61,7 +61,7 @@ export default class WorkerService extends Service {
     this.dataCache = params.dataCache;
   }
 
-  private mapWorkingHoursEntityToDTO(daysWorkingHours: DayWorkingHours[]): DaysWorkingHoursDTO {
+  private mapWorkingHoursEntityToDTO(daysWorkingHours: DayWorkingHoursReturn[]): DaysWorkingHoursDTO {
     return daysWorkingHours.map((workingHours) => ({
       day: workingHours.day,
       startTime: workingHours.startTime,
@@ -615,12 +615,12 @@ export default class WorkerService extends Service {
 
   async addDaysWorkingHours(params: {
     workerProfileId: IDType;
-    daysWorkingHours: DayWorkingHours[]
+    daysWorkingHours: DayWorkingHoursCreateInput[]
   }): Promise<DaysWorkingHoursDTO> {
     const { workerProfileId, daysWorkingHours } = params;
     return tryCatch(async () => {
       const workingHours =  await this.workerProfileRepository.addDaysWorkingHours({
-        workerProfileId: workerProfileId as string,
+        workerProfileId,
         daysWorkingHours
       });
       if (!workingHours) return [];

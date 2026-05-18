@@ -12,13 +12,13 @@ import {
   WorkerProfileVerification,
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
-import { Day, DayWorkingHours } from '../../domain/workingHours.entity.js';
+import { Day, DayWorkingHours, DayWorkingHoursCreateInput, DayWorkingHoursReturn } from '../../domain/workingHours.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { ExploreWorkerPublicDetail, } from '../../types/exploreWorker.js';
 import { Government } from 'src/domain/government.entity.js';
-import { utcDayToDayEnum } from 'src/utils/dayNumberToEnum.js';
+import { convertDayNumberToEnum } from 'src/utils/dayNumberToEnum.js';
 
 type SpecializationsWithSubSpecializationsPrisma = Prisma.SpecializationGetPayload<{ include: { subSpecializations: true } }>;
 type DayWorkingHoursPrisma = Prisma.DayWorkingHoursGetPayload<{}>;
@@ -1107,8 +1107,8 @@ WHERE worker_profiles.id = ${workerProfileId};
 
   async addDaysWorkingHours(params: {
     workerProfileId: string;
-    daysWorkingHours: DayWorkingHours[];
-  }): Promise<DayWorkingHours[]> {
+    daysWorkingHours: DayWorkingHoursCreateInput[];
+  }): Promise<DayWorkingHoursReturn[]> {
     try {
       const { workerProfileId, daysWorkingHours } = params;
       return await this.prismaClient.$transaction(async (tx) => {
@@ -1123,11 +1123,11 @@ WHERE worker_profiles.id = ${workerProfileId};
         const newDays = requestedDays.filter((day) => !currentDays.includes(day));
         const newDaysWorkingHours = daysWorkingHours.filter((dwh) => newDays.includes(dwh.day));
 
-        await tx.dayWorkingHours.createMany({
-          data: newDaysWorkingHours.map((dwh) => { return { workerProfileId, ...dwh }; }),
-        });
 
-        return newDaysWorkingHours;
+        const creationData = newDaysWorkingHours.map((dwh) => { return { workerProfileId, ...dwh }; });
+        await tx.dayWorkingHours.createMany({ data: creationData });
+
+        return creationData;
       });
     } catch (error: unknown) {
       if (error instanceof AppError) {
@@ -1167,7 +1167,7 @@ WHERE worker_profiles.id = ${workerProfileId};
           const conflictOrderIds: string[] = [];
 
           for (const order of activeOrders) {
-            const orderDay = utcDayToDayEnum(order.startDate.getUTCDay());
+            const orderDay = convertDayNumberToEnum(order.startDate.getUTCDay());
             if (removedDays.includes(orderDay)) {
               conflictOrderIds.push(order.id);
             }

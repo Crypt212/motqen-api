@@ -42,10 +42,27 @@ export const DaysWorkingHoursSchema = z.array(
     startTime: Time24HourSchema,
     endTime: Time24HourSchema,
   })
-  .refine((data) => data.endTime > data.startTime, {
-    message: 'endTime must be after startTime',
-    path: ['endTime'],
-  }));
+    .refine((data) => data.endTime > data.startTime, {
+      message: 'endTime must be after startTime',
+      path: ['endTime'],
+    }))
+  .superRefine((schedules, ctx) => {
+    const seenDays = new Set<string>();
+
+    schedules.forEach((schedule, index) => {
+      if (seenDays.has(schedule.day)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [index, 'day'],
+          message: 'day must be unique within schedules',
+        });
+        return;
+      }
+
+      seenDays.add(schedule.day);
+    });
+  });
+
 export type DaysWorkingHoursDTO = z.infer<typeof DaysWorkingHoursSchema>;
 
 export const WorkerProfileVerificationSchema = z.object({
