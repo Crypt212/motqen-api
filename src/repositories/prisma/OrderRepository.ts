@@ -1,4 +1,4 @@
-import { Prisma } from '../../generated/prisma/client.js';
+import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import IOrderRepository from '../interfaces/OrderRepository.js';
 import {
@@ -30,6 +30,10 @@ type PrismaOrderFilter = {
 };
 
 export default class OrderRepository extends Repository implements IOrderRepository {
+  constructor(prisma: PrismaClient | Prisma.TransactionClient) {
+    super(prisma);
+  }
+
   private toDomain(record: PrismaOrderWithImagesWithLocationAndSubSpecialization): Order {
     return {
       id: record.id,
