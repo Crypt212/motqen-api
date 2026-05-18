@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { SuccessResponseSchema } from '../responses.js';
 import { UUIDSchema } from '../common.js';
 import { GovernmentObjectSchema } from './government.response.js';
+import { DayOfWeekSchema } from '../requests/worker-profile.request.js';
 
 const VerificationObjectSchema = z.object({
   id: UUIDSchema,
@@ -36,10 +37,8 @@ const BadgeObjectSchema = z.object({
   createdAt: z.date(),
 });
 
-const WorkingHoursObjectSchema = z.object({
-  id: z.string(),
-  workerProfileId: z.string(),
-  daysOfWeek: z.array(z.number().int().min(0).max(6)),
+const DayWorkingHoursObjectSchema = z.object({
+  day: DayOfWeekSchema,
   startTime: z.string(),
   endTime: z.string(),
 });
@@ -62,7 +61,7 @@ export const WorkerBadgesResponseSchema = SuccessResponseSchema(
 );
 
 export const WorkerWorkingHoursResponseSchema = SuccessResponseSchema(
-  z.object({ workingHours: WorkingHoursObjectSchema.nullable() })
+  z.object({ workingHours: z.array(DayWorkingHoursObjectSchema) })
 );
 
 export const WorkerStatsResponseSchema = SuccessResponseSchema(

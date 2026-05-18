@@ -34,31 +34,36 @@ const Time24HourSchema = z
   .string()
   .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Time must be in HH:mm format');
 
-const DaysOfWeekSchema = z.array(z.number().int().min(0).max(6)).min(1).max(7);
+export const DayOfWeekSchema = z.enum(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']);
 
-export const WorkingHoursSchema = z
-  .object({
-    daysOfWeek: DaysOfWeekSchema,
+export const DaysWorkingHoursSchema = z.array(
+  z.object({
+    day: DayOfWeekSchema,
     startTime: Time24HourSchema,
     endTime: Time24HourSchema,
   })
-  .refine((data) => data.endTime > data.startTime, {
-    message: 'endTime must be after startTime',
-    path: ['endTime'],
-  });
-export type WorkingHoursDTO = z.infer<typeof WorkingHoursSchema>;
+    .refine((data) => data.endTime > data.startTime, {
+      message: 'endTime must be after startTime',
+      path: ['endTime'],
+    }))
+  .superRefine((schedules, ctx) => {
+    const seenDays = new Set<string>();
 
-export const UpdateWorkingHoursSchema = z
-  .object({
-    daysOfWeek: DaysOfWeekSchema.optional(),
-    startTime: Time24HourSchema.optional(),
-    endTime: Time24HourSchema.optional(),
-  })
-  .refine((data) => !data.startTime || !data.endTime || data.endTime > data.startTime, {
-    message: 'endTime must be after startTime',
-    path: ['endTime'],
+    schedules.forEach((schedule, index) => {
+      if (seenDays.has(schedule.day)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [index, 'day'],
+          message: 'day must be unique within schedules',
+        });
+        return;
+      }
+
+      seenDays.add(schedule.day);
+    });
   });
-export type UpdateWorkingHoursDTO = z.infer<typeof UpdateWorkingHoursSchema>;
+
+export type DaysWorkingHoursDTO = z.infer<typeof DaysWorkingHoursSchema>;
 
 export const WorkerProfileVerificationSchema = z.object({
   idWithPersonalImageUrl: z.string().url().max(1000),

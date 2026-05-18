@@ -1,7 +1,7 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import {
   UpdateUserSchema,
-  SetWorkingHoursSchema,
+  AddDaysWorkingHoursSchema,
   AddWorkerGovernmentsSchema,
   DeleteWorkerGovernmentsSchema,
   DeleteWorkerGovernmentsQuerySchema,
@@ -12,6 +12,7 @@ import {
   UpdateClientProfileSchema,
   WorkerGovernmentQuerySchema,
   WorkerSpecializationQuerySchema,
+  RemoveDaysWorkingHoursSchema,
 } from '../../../schemas/requests/dashboard.request.js';
 import {
   CreateWorkerProfileSchema,
@@ -189,17 +190,47 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     tags: ['Dashboard'],
     summary: 'Set worker working hours',
     description:
-      'Sets (upserts) the working-hours schedule for the authenticated worker. Pass an empty `daysOfWeek` array to clear the schedule.',
+      'creates the working-hours of input days schedule for the authenticated worker. It does not replace the schedule of already set days.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
       body: {
-        content: { 'application/json': { schema: SetWorkingHoursSchema } },
+        content: { 'application/json': { schema: AddDaysWorkingHoursSchema } },
       },
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Working hours set',
+        content: { 'application/json': { schema: WorkerWorkingHoursResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // DELETE /me/worker-profile/working-hours
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'delete',
+    path: '/api/v1/me/worker-profile/working-hours',
+    tags: ['Dashboard'],
+    summary: 'Set worker working hours',
+    description:
+      'deletes the working-hours of input days schedule for the authenticated worker. It does not delete the schedule of days which periods are already used for orders.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      body: {
+        content: { 'application/json': { schema: RemoveDaysWorkingHoursSchema } },
+      },
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Working hours deleted',
         content: { 'application/json': { schema: WorkerWorkingHoursResponseSchema } },
       },
       unauthorizedResponse: true,

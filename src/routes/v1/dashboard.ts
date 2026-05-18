@@ -11,7 +11,8 @@ import {
   deleteWorkerGovernments,
   getWorkerSpecializations,
   getWorkerWorkingHours,
-  setWorkerWorkingHours,
+  addDaysWorkerWorkingHours,
+  removeWorkerWorkingHours,
   addWorkerSpecializations,
   deleteWorkerSpecializations,
   getClientProfile,
@@ -45,7 +46,8 @@ import {
   UpdateClientProfileSchema,
   WorkerGovernmentQuerySchema,
   WorkerSpecializationQuerySchema,
-  SetWorkingHoursSchema,
+  AddDaysWorkingHoursSchema,
+  RemoveDaysWorkingHoursSchema,
 } from '../../schemas/requests/dashboard.request.js';
 import {
   CreatePortfolioSchema,
@@ -147,8 +149,15 @@ usersRouter.post(
   '/worker-profile/working-hours',
   isActive,
   authorizeApprovedWorker,
-  validateBody(SetWorkingHoursSchema),
-  setWorkerWorkingHours
+  validateBody(AddDaysWorkingHoursSchema),
+  addDaysWorkerWorkingHours
+);
+usersRouter.delete(
+  '/worker-profile/working-hours',
+  isActive,
+  authorizeApprovedWorker,
+  validateBody(RemoveDaysWorkingHoursSchema),
+  removeWorkerWorkingHours
 );
 
 usersRouter.put(
