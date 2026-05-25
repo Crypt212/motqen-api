@@ -84,6 +84,14 @@ export default interface IConversationRepository {
   }): Promise<ConversationParticipant | null>;
 
   /**
+   * Find the partner's user ID in a conversation efficiently.
+   */
+  findPartnerId(params: {
+    conversationId: IDType;
+    userId: IDType;
+  }): Promise<IDType | null>;
+
+  /**
    * Create a conversation
    */
   create(params: { conversation: ConversationCreateInput }): Promise<Conversation>;

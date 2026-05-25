@@ -125,6 +125,7 @@ export const createMockConversationRepository = (): {
   findNonEmptyConversationsWithParticipantsAndMessages: vi.fn(),
   findMany: vi.fn(),
   findParticipant: vi.fn(),
+  findPartnerId: vi.fn(),
   create: vi.fn(),
   createWithParticipants: vi.fn(),
   update: vi.fn(),

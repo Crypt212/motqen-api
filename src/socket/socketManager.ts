@@ -14,9 +14,10 @@ import { createClient } from 'redis';
 import environment from '../configs/environment.js';
 import { logger } from '../libs/winston.js';
 import { socketAuth } from '../middlewares/socketMiddleware.js';
+import { createSocketRateLimiter } from '../middlewares/rateLimitMiddleware.js';
 import { registerSocketHandlers } from './socketHandlers.js';
 import { initEmitter } from './socket-emitter.js';
-import { chatService, conversationRepository, rateLimitCache } from '../state.js';
+import { chatService, rateLimitCache } from '../state.js';
 import prisma from '../libs/database.js';
 
 /** Initialize the Socket.IO server and attach it to the HTTP server. */
@@ -58,98 +59,55 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
 
     logger.info(`[socket] connected: ${userId} (${socket.id})`);
 
-    // ─── Global Rate Limiter ───────────────────────────────────────────────────
-    socket.use((async ([event, ...args], next) => {
-      if (typeof event !== 'string' || event === 'disconnect') return next();
+    // ─── Global Rate Limiter (imported from rateLimitMiddleware) ─────────────
+    socket.use(createSocketRateLimiter(rateLimitCache, userId));
 
-      let limit = 60; // Default for high-frequency (typing_indicator, ping)
-      if (event === 'send_message') limit = 30;
-      else if (['read'].includes(event)) limit = 20;
-      else if (['enter_chat', 'leave_chat', 'typing_indicator', 'ping'].includes(event))
-        return next();
-      try {
-        await rateLimitCache.consumeSocketEvent(userId, event, limit, 60);
-        next();
-      } catch (err: unknown) {
-        if (
-          !(err instanceof Error) ||
-          !('msBeforeNext' in err && typeof err.msBeforeNext === 'number')
-        ) {
-          logger.error('[socket] rate limit error', err);
-          return next(new Error('Rate limit exceeded'));
-        }
-        const retryAfter = err.msBeforeNext ? Math.round(err.msBeforeNext / 1000) : 60;
-
-        // TODO: Implement block/ban logic here for severe abusers if needed
-
-        const lastArg = args[args.length - 1];
-        if (typeof lastArg === 'function') {
-          lastArg({ ok: false, error: 'Rate limit exceeded', retryAfter });
-        } else {
-          socket.emit('rate_limit_exceeded', { event, retryAfter });
-        }
-        // Do not call next() -> packet is silently dropped
-      }
-    }) as (event: import('socket.io').Event, next: (err?: Error) => void) => void);
-console.log(socket.data);
     // 1. Join user room — all devices of this user share one room
     await socket.join(`user:${userId}`);
 
-    // 2. Register socket in Redis presence Set
-    const addSocketPromise = presence.addSocket({ userId, socketId: socket.id });
+    // 2. Register socket in Redis presence Set — returns total active sockets
+    const socketCount = await presence.addSocket({ userId, socketId: socket.id });
 
-    // 3. Mark user as available in DB
-    await addSocketPromise;
     try {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { isOnline: true },
-      });
-
-      const convs =
-        await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
-          userId,
-          filter: {},
+      // 3. Mark user as available in DB — only on first connection
+      if (socketCount === 1) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { isOnline: true },
         });
-
-      // 4. Mark all pending messages as delivered & notify senders
-      //    Coming online = all messages in every conversation are now delivered
-      for (const conv of convs.conversationParticipantsWithMessages) {
-        if (conv.messageCounter > 0) {
-          // Update this user's lastReceivedMessageNumber
-          await chatService.markAsDelivered({
-            conversationId: conv.id,
-            userId,
-            messageNumber: conv.messageCounter,
-          });
-
-          // Notify the partner that their messages were delivered
-          const partner = conv.participants.find((p) => p.userId !== userId);
-          if (partner) {
-            io.to(`user:${partner.userId}`).emit('messages_delivered', {
-              conversationId: conv.id,
-              deliveredUpTo: conv.messageCounter,
-            });
-          }
-        }
+        socket.to(`presence:${userId}`).emit('partner_online', { userId });
       }
 
-      // 5. Emit missed_messages_available for each conversation with unread messages
-      //    Client will pull missed messages via HTTP after receiving this event.
-      for (const conv of convs.conversationParticipantsWithMessages) {
-        const myParticipant = conv.participants.find((p) => p.userId === userId);
-        const unreadCount = conv.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0);
-        if (unreadCount > 0) {
-          socket.emit('missed_messages_available', {
-            conversationId: conv.id,
-            unreadCount,
-          });
-        }
+      // 4. Single query: join conversation_participants with conversations
+      //    to get unreceived/unread counts directly, avoiding N+1 loops
+      const participantRows = await prisma.$queryRaw<
+        Array<{
+          conversationId: string;
+          lastReceivedMessageNumber: number;
+          lastReadMessageNumber: number;
+          messageCounter: number;
+        }>
+      >`
+        SELECT
+  cp."conversationId",
+  cp."lastReceivedMessageNumber",
+  cp."lastReadMessageNumber",
+  c."messageCounter",
+  (c."messageCounter" - cp."lastReadMessageNumber") AS "missed"
+FROM conversation_participants cp
+JOIN conversations c ON c.id = cp."conversationId"
+WHERE cp."userId" = ${userId}
+  AND c."messageCounter" > cp."lastReadMessageNumber"
+        `;
+
+      if (participantRows.length > 0) {
+        socket.emit('missed_conversations', participantRows);
       }
     } catch (err) {
       logger.error('[socket] onConnection initialization error', err);
     }
-    // 5. Register all event handlers for this socket
+
+    // 8. Register all event handlers for this socket
     registerSocketHandlers(io, socket);
   });
 
