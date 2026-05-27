@@ -22,6 +22,15 @@ export const ClientProfileObjectSchema = z.object({
   updatedAt: z.date(),
 });
 
+export const WorkerOrdersStatisticsSchema = z.object({
+  ordersCounts: z.object({
+    cancelled: z.number(),
+    completed: z.number(),
+    pending: z.number(),
+    today: z.number(),
+  })
+});
+
 export const WorkerProfileObjectSchema = z.object({
   id: UUIDSchema,
   userId: UUIDSchema,
@@ -49,21 +58,21 @@ export const LocationObjectSchema = z.object({
 });
 
 export const DashboardUserResponseSchema = SuccessResponseSchema(z.object({
-    user: UserObjectSchema,
-  }),);
+  user: UserObjectSchema,
+}),);
 
 export const DashboardClientProfileResponseSchema = SuccessResponseSchema(z.object({
-    clientProfile: ClientProfileObjectSchema,
-  }),);
+  clientProfile: ClientProfileObjectSchema,
+}),);
 
 export const DashboardWorkerProfileResponseSchema = SuccessResponseSchema(z.object({
-    workerProfile: WorkerProfileObjectSchema,
-  }),);
+  workerProfile: WorkerProfileObjectSchema,
+}),);
 
 export const DashboardLocationsResponseSchema = SuccessResponseSchema(z.object({
-    locations: z.array(LocationObjectSchema),
-  }),);
+  locations: z.array(LocationObjectSchema),
+}),);
 
 export const DashboardLocationResponseSchema = SuccessResponseSchema(z.object({
-    location: LocationObjectSchema,
-  }),);
+  location: LocationObjectSchema,
+}),);

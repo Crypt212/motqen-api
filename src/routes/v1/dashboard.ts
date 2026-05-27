@@ -28,6 +28,7 @@ import {
   addPortfolioImages,
   deletePortfolioImage,
   getWorkerOccupiedTimeSlots,
+  getWorkerOrdersCount,
 } from '../../controllers/DashboardController.js';
 import { authorizeApprovedWorker, authorizeWorker, unAuthorizeWorker } from '../../middlewares/workerMiddleware.js';
 import { authorizeClient, unAuthorizeClient } from '../../middlewares/clientMiddleware.js';
@@ -144,6 +145,7 @@ usersRouter.get(
 );
 
 usersRouter.get('/worker-profile', isActive, authorizeApprovedWorker, getWorkerProfile);
+usersRouter.get('/worker-profile/orders-count', isActive, authorizeApprovedWorker, getWorkerOrdersCount);
 usersRouter.get('/worker-profile/working-hours', isActive, authorizeApprovedWorker, getWorkerWorkingHours);
 usersRouter.post(
   '/worker-profile/working-hours',

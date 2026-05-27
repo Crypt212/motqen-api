@@ -2,6 +2,7 @@ import type { ExploreWorkerPublicDetail } from '../../types/exploreWorker.js';
 import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../../domain/specialization.entity.js';
 import {
   PortfolioWithImages,
+  WorkerOrdersStatistics,
   WorkerProfile,
   WorkerProfileCreateInput,
   WorkerProfileFilter,
@@ -24,6 +25,12 @@ export default interface IWorkerProfileRepository {
    * Find worker profile
    */
   find(params: { workerFilter: WorkerProfileFilter }): Promise<WorkerProfile | null>;
+
+  /**
+   * Find worker's orders statistics
+   */
+  findOrdersStatistics(params: { workerProfileId: IDType }): Promise<WorkerOrdersStatistics>;
+
   /**
    * Explore: approved + active user, full public payload with user, portfolio, project images
    */

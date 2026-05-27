@@ -5,6 +5,7 @@ import { IDType } from '../interfaces/Repository.js';
 import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../../domain/specialization.entity.js';
 import { isEmptyFilter } from './utils.js';
 import {
+    WorkerOrdersStatistics,
   WorkerProfile,
   WorkerProfileCreateInput,
   WorkerProfileFilter,
@@ -111,6 +112,25 @@ export default class WorkerProfileRepository
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'find');
     }
+  }
+
+  async findOrdersStatistics(params: { workerProfileId: IDType }): Promise<WorkerOrdersStatistics> {
+    const { workerProfileId } = params;
+const [stats] = await this.prismaClient.$queryRaw<
+  Array<WorkerOrdersStatistics>
+>(Prisma.sql`SELECT
+  (COUNT(*) FILTER (WHERE "orderStatus" = 'PENDING'))::int AS pending,
+  (COUNT(*) FILTER (WHERE "orderStatus" = 'CANCELLED'))::int AS canceled,
+  (COUNT(*) FILTER (WHERE "orderStatus" = 'COMPLETED'))::int AS completed,
+  (COUNT(*) FILTER (
+    WHERE "workStartedAt" IS NOT NULL
+      AND "workFinishedAt" IS NULL
+      AND ("workStartedAt"::date = CURRENT_DATE OR CURRENT_DATE BETWEEN "workStartedAt"::date AND COALESCE("workFinishedAt"::date, CURRENT_DATE))
+  ))::int AS today
+FROM orders
+WHERE "workerProfileId" = ${workerProfileId};`);
+
+    return stats;
   }
 
   /**

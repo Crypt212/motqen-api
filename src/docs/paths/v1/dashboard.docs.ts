@@ -27,6 +27,7 @@ import {
   DashboardUserResponseSchema,
   DashboardWorkerProfileResponseSchema,
   DashboardClientProfileResponseSchema,
+  WorkerOrdersStatisticsSchema,
 } from '../../../schemas/responses/dashboard.response.js';
 import {
   WorkerVerificationResponseSchema,
@@ -150,6 +151,30 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
       successfulResponse: {
         description: 'Worker profile retrieved successfully',
         content: { 'application/json': { schema: DashboardWorkerProfileResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /me/worker-profile/ordersCount
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/me/worker-profile/orders-count',
+    tags: ['Dashboard'],
+    summary: 'Get Craftsman orders count: cancelled, completed, pending, today',
+    description:
+      'Returns the number of orders for the authenticated craftsman/worker. User must be registered as a Worker.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Worker orders count retrieved successfully',
+        content: { 'application/json': { schema: WorkerOrdersStatisticsSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,

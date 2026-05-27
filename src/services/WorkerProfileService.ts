@@ -8,6 +8,7 @@ import uploadToCloudinary, { deleteFromCloudinary } from '../providers/cloudinar
 import AppError from '../errors/AppError.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import {
+    WorkerOrdersStatistics,
   WorkerProfile,
   WorkerProfileFilter,
   WorkerProfileVerification,
@@ -18,7 +19,7 @@ import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import { PaginationOptions, PaginatedResultMeta } from '../types/query.js';
 import { Government, GovernmentFilter } from '../domain/government.entity.js';
 import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../domain/specialization.entity.js';
-import { Day, DayWorkingHours, DayWorkingHoursCreateInput, DayWorkingHoursReturn } from '../domain/workingHours.entity.js';
+import { Day, DayWorkingHoursCreateInput, DayWorkingHoursReturn } from '../domain/workingHours.entity.js';
 import type { DaysWorkingHoursDTO as DaysWorkingHoursDTO } from '../schemas/requests/worker-profile.request.js';
 import IDataCache from '../cache/interfaces/DataCache.js';
 import { ExploreWorkerPublicDetail } from '../types/exploreWorker.js';
@@ -580,6 +581,17 @@ export default class WorkerService extends Service {
       return await this.workerProfileRepository.findOccupiedTimeSlots({ workerId: userId as string, selectedDate });
     });
   }
+
+  /**
+   * Get worker's orders' counts
+   */
+  async getOrdersStatistics(params: { workerProfileId: IDType }): Promise<WorkerOrdersStatistics> {
+    const { workerProfileId } = params;
+    return tryCatch(async () => {
+      return await this.workerProfileRepository.findOrdersStatistics({ workerProfileId });
+    });
+  }
+
 
   /**
    * Get a worker's profile for a user

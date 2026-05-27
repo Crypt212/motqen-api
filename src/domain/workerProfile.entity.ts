@@ -98,3 +98,10 @@ export type WorkerBadge = {
   badgeType: string;
   createdAt: Date;
 };
+
+export type WorkerOrdersStatistics = {
+  pending: number,
+  canceled: number,
+  completed: number,
+  today: number
+};

@@ -114,6 +114,16 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
   new SuccessResponse('created worker profile successfully', { workerProfile }, 200).send(res);
 });
 
+export const getWorkerOrdersCount = asyncHandler(async (req, res) => {
+  const workerProfileId = req.userState.worker?.id;
+
+  const ordersCounts = await workerProfileService.getOrdersStatistics({ workerProfileId });
+
+  console.log(ordersCounts);
+
+  new SuccessResponse('Worker orders count retrieved successfully', { ordersCounts }, 200).send(res);
+});
+
 export const getWorkerProfile = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
 
