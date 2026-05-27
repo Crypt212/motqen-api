@@ -1,0 +1,33 @@
+import { z } from 'zod';
+
+import { SuccessResponseSchema } from "../responses.js";
+import { UUIDSchema } from '../common.js';
+
+
+export const OrderObjectSchema = z.object({
+  id: UUIDSchema,
+  clientId: UUIDSchema,
+  workerProfileId: UUIDSchema,
+  specializationId: UUIDSchema,
+  locationId: UUIDSchema,
+  orderStatus: z.enum(['PENDING', 'ACCEPTED', 'REJECTED', 'COMPLETED', 'CANCELLED']),
+  scheduledDate: z.date().optional().nullable(),
+  description: z.string().optional().nullable(),
+  price: z.number().optional().nullable(),
+  rate: z.number().optional().nullable(),
+  rateComment: z.string().optional().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const OrderListResponseSchema = SuccessResponseSchema(z.object({
+    orders: z.array(OrderObjectSchema),
+    meta: z.object({
+      page: z.number(),
+      limit: z.number(),
+      total: z.number(),
+      totalPages: z.number(),
+    }),
+  }),);
+
+export const OrderResponseSchema = SuccessResponseSchema(OrderObjectSchema,);

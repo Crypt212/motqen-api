@@ -48,6 +48,9 @@ model User {
   workerProfile   WorkerProfile?
   lastNotificationReadAt DateTime?
   notifications          Notification[]
+  sentNegotiations     Negotiation[]  @relation("NegotiationSender")
+  acceptedNegotiations Negotiation[]  @relation("NegotiationAccepter")
+  reports              Report[]       @relation("ReportsByUser")
 
   @@index([status, isOnline, id])
   @@map("users")
@@ -157,8 +160,8 @@ model WorkerProfile {
   portfolioId        String?  @unique
   updatedAt          DateTime @updatedAt
   rate               Float    @default(-1.0)
+  ratingCount        Int      @default(0)
   completedJobsCount Int      @default(0)
-  workingHoursId     String?  @unique
 
   occupiedTimeSlots     WorkerOccupiedTimeSlot[]
   Order                 Order[]
@@ -168,10 +171,11 @@ model WorkerProfile {
   badges                WorkerBadge[]
   user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   workGovernments       Government[]             @relation("GovernmentToWorkerProfile")
-  workingHours          WorkingHours?            @relation(fields: [workingHoursId], references: [id])
+
   workerBalance         WorkerBalance?
   payoutMethods         PayoutMethod[]
   withdrawRequests      WithdrawRequest[]
+  daysWorkingHours      DayWorkingHours[]
 
   @@index([userId], map: "idx_worker_profiles_user_id")
   @@index([acceptsUrgentJobs, userId])
@@ -181,15 +185,16 @@ model WorkerProfile {
   @@map("worker_profiles")
 }
 
-model WorkingHours {
+model DayWorkingHours {
   id              String @id @default(uuid())
-  workerProfileId String @unique
+  workerProfileId String
 
-  daysOfWeek     String[]
+  day            Day
   startTime      String // e.g., "09:00"
   endTime        String // e.g., "17:00"
-  workerProfiles WorkerProfile[]
+  workerProfile  WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
 
+  @@unique([workerProfileId, day])
   @@map("worker_availability")
 }
 
@@ -360,6 +365,7 @@ model Order {
   escrowHold        EscrowHold?
   disputes          Dispute[]
   paymentIntentions PaymentIntention[]
+  reports             Report[]          @relation("ReportContextOrder")
 
   @@index([clientProfileId])
   @@index([workerProfileId])
@@ -380,18 +386,24 @@ model OrderImage {
 }
 
 model Negotiation {
-  id        String               @id @default(uuid())
-  orderId   String
-  price     Float
-  direction NegotiationDirection
-  status    NegotiationStatus    @default(PENDING)
+  id         String               @id @default(uuid())
+  orderId    String
+  price      Float
+  direction  NegotiationDirection
+  status     NegotiationStatus    @default(PENDING)
+  senderId   String
+  acceptedBy String?
 
   note String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sender    User     @relation("NegotiationSender", fields: [senderId], references: [id])
+  accepter  User?    @relation("NegotiationAccepter", fields: [acceptedBy], references: [id])
 
+  @@index([orderId])
+  @@index([senderId])
   @@map("negotiations")
 }
 
@@ -414,6 +426,16 @@ enum WorkStatus {
   WAITING_FOR_WORK
   STARTED
   DONE
+}
+
+enum Day {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
 }
 
 enum NegotiationDirection {
@@ -920,4 +942,77 @@ enum RefundReasonCode {
   DUPLICATE_PAYMENT
   ADMIN_INITIATED
   DISPUTE_RESOLUTION
+model Report {
+  id              String           @id @default(uuid())
+  reporterId      String
+  targetType      ReportTargetType
+  targetId        String
+  contextOrderId  String?
+  problemCategory ProblemCategory
+  problemType     ProblemType
+  description     String
+  status          ReportStatus     @default(PENDING)
+  resolvedBy      String?
+  retainUntil     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  reporter     User          @relation("ReportsByUser", fields: [reporterId], references: [id], onDelete: Cascade)
+  contextOrder Order?        @relation("ReportContextOrder", fields: [contextOrderId], references: [id], onDelete: SetNull)
+  images       ReportImage[]
+
+  @@index([reporterId])
+  @@index([status])
+  @@index([targetType, targetId])
+  @@map("reports")
+}
+
+model ReportImage {
+  id          String    @id @default(uuid())
+  reportId    String
+  url         String
+  createdAt   DateTime  @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@map("report_images")
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+  CANCELLED
+}
+
+enum ReportTargetType {
+  ORDER
+  CHAT_MESSAGE
+  WORKER_PROFILE
+  CLIENT_PROFILE
+}
+
+enum ProblemCategory {
+  ORDER_ISSUE
+  WORKER_CONDUCT
+  CLIENT_CONDUCT
+  CHAT_MESSAGE
+  OTHER
+}
+
+enum ProblemType {
+  UNFINISHED_WORK
+  PAYMENT_DISPUTE
+  NO_SHOW
+  PROPERTY_DAMAGE
+  UNPROFESSIONAL_BEHAVIOR
+  FRAUD
+  PAYMENT_FRAUD
+  UNREASONABLE_DEMANDS
+  SPAM
+  INAPPROPRIATE_CONTENT
+  HARASSMENT
+  OTHER
 }

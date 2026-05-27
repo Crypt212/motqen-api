@@ -1,0 +1,47 @@
+import { z } from 'zod';
+
+import { SuccessResponseSchema } from "../responses.js";
+import { UUIDSchema } from '../common.js';
+
+
+export const GovernmentObjectSchema = z.object({
+  id: UUIDSchema,
+  name: z.string(),
+  nameAr: z.string(),
+  long: z.number().nullable().optional(),
+  lat: z.number().nullable().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const CityObjectSchema = z.object({
+  id: UUIDSchema,
+  name: z.string(),
+  nameAr: z.string(),
+  governmentId: UUIDSchema,
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const PaginationMetaSchema = z.object({
+  page: z.number(),
+  limit: z.number(),
+  total: z.number(),
+  totalPages: z.number(),
+});
+
+export const GovernmentListResponseSchema = SuccessResponseSchema(z.object({
+    governments: z.array(GovernmentObjectSchema),
+    meta: PaginationMetaSchema.optional(),
+  }),);
+
+export const GovernmentResponseSchema = SuccessResponseSchema(z.object({
+    government: GovernmentObjectSchema,
+  }),);
+
+export const CityListResponseSchema = SuccessResponseSchema(z.object({
+    cities: z.array(CityObjectSchema),
+    meta: PaginationMetaSchema.optional(),
+  }),);
+
+export const DeleteGovernmentResponseSchema = SuccessResponseSchema(z.null(),);

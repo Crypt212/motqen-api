@@ -17,6 +17,7 @@ export type Negotiation = {
 
 export type CreateNegotiationInput = {
   orderId: IDType;
+  senderId: IDType;
   price: number;
   direction: NegotiationDirection;
   note?: string;

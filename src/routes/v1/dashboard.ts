@@ -11,7 +11,8 @@ import {
   deleteWorkerGovernments,
   getWorkerSpecializations,
   getWorkerWorkingHours,
-  setWorkerWorkingHours,
+  addDaysWorkerWorkingHours,
+  removeWorkerWorkingHours,
   addWorkerSpecializations,
   deleteWorkerSpecializations,
   getClientProfile,
@@ -19,16 +20,23 @@ import {
   updateClientProfile,
   deleteClientProfile,
   getWorkerSpecializationsTree,
+  getVerification,
+  resubmitVerification,
+  createPortfolio,
+  getPortfolio,
+  updatePortfolio,
+  addPortfolioImages,
+  deletePortfolioImage,
+  getWorkerOccupiedTimeSlots,
+  getWorkerOrdersCount,
 } from '../../controllers/DashboardController.js';
-import { authorizeWorker, unAuthorizeWorker } from '../../middlewares/workerMiddleware.js';
+import { authorizeApprovedWorker, authorizeWorker, unAuthorizeWorker } from '../../middlewares/workerMiddleware.js';
 import { authorizeClient, unAuthorizeClient } from '../../middlewares/clientMiddleware.js';
 import upload from '../../configs/multer.js';
 
 // Import validators
 import {
   UpdateUserSchema,
-  CreateWorkerProfileSchema,
-  UpdateWorkerProfileSchema,
   DeleteWorkerGovernmentsQuerySchema,
   AddWorkerGovernmentsSchema,
   DeleteWorkerGovernmentsSchema,
@@ -39,10 +47,19 @@ import {
   UpdateClientProfileSchema,
   WorkerGovernmentQuerySchema,
   WorkerSpecializationQuerySchema,
-  SetWorkingHoursSchema,
-} from '../../schemas/dashboard.js';
+  AddDaysWorkingHoursSchema,
+  RemoveDaysWorkingHoursSchema,
+} from '../../schemas/requests/dashboard.request.js';
+import {
+  CreatePortfolioSchema,
+  UpdatePortfolioSchema,
+  PortfolioImageIdParamsSchema,
+  OccupiedTimeSlotsQuerySchema,
+  CreateWorkerProfileSchema,
+  UpdateWorkerProfileSchema,
+} from '../../schemas/requests/worker-profile.request.js';
 import { isActive } from '../../middlewares/authMiddleware.js';
-import { validateBody, validateQuery } from '../../middlewares/validateRequest.js';
+import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
 
 import locationRouter from './locations.js';
 
@@ -73,20 +90,82 @@ usersRouter.post(
   createWorkerProfile
 );
 
-usersRouter.get('/worker-profile', isActive, authorizeWorker, getWorkerProfile);
-usersRouter.get('/worker-profile/working-hours', isActive, authorizeWorker, getWorkerWorkingHours);
+usersRouter.get('/worker-profile/verification', isActive, authorizeWorker, getVerification);
+usersRouter.put(
+  '/worker-profile/verification',
+  isActive,
+  authorizeApprovedWorker,
+  upload.fields([
+    { name: 'id_image', maxCount: 1 },
+    { name: 'personal_with_id_image', maxCount: 1 },
+  ]),
+  resubmitVerification
+);
+
+usersRouter.post(
+  '/worker-profile/portfolio',
+  isActive,
+  authorizeApprovedWorker,
+  validateBody(CreatePortfolioSchema),
+  createPortfolio
+);
+
+usersRouter.get('/worker-profile/portfolio', isActive, authorizeApprovedWorker, getPortfolio);
+
+usersRouter.put(
+  '/worker-profile/portfolio',
+  isActive,
+  authorizeApprovedWorker,
+  validateBody(UpdatePortfolioSchema),
+  updatePortfolio
+);
+
+usersRouter.post(
+  '/worker-profile/portfolio/images',
+  isActive,
+  authorizeApprovedWorker,
+  upload.array('images', 10),
+  addPortfolioImages
+);
+
+usersRouter.delete(
+  '/worker-profile/portfolio/images/:imageId',
+  isActive,
+  authorizeApprovedWorker,
+  validateParams(PortfolioImageIdParamsSchema),
+  deletePortfolioImage
+);
+
+usersRouter.get(
+  '/worker-profile/occupied-time-slots',
+  isActive,
+  authorizeApprovedWorker,
+  validateQuery(OccupiedTimeSlotsQuerySchema),
+  getWorkerOccupiedTimeSlots
+);
+
+usersRouter.get('/worker-profile', isActive, authorizeApprovedWorker, getWorkerProfile);
+usersRouter.get('/worker-profile/orders-count', isActive, authorizeApprovedWorker, getWorkerOrdersCount);
+usersRouter.get('/worker-profile/working-hours', isActive, authorizeApprovedWorker, getWorkerWorkingHours);
 usersRouter.post(
   '/worker-profile/working-hours',
   isActive,
-  authorizeWorker,
-  validateBody(SetWorkingHoursSchema),
-  setWorkerWorkingHours
+  authorizeApprovedWorker,
+  validateBody(AddDaysWorkingHoursSchema),
+  addDaysWorkerWorkingHours
+);
+usersRouter.delete(
+  '/worker-profile/working-hours',
+  isActive,
+  authorizeApprovedWorker,
+  validateBody(RemoveDaysWorkingHoursSchema),
+  removeWorkerWorkingHours
 );
 
 usersRouter.put(
   '/worker-profile',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateBody(UpdateWorkerProfileSchema),
   updateWorkerProfile
 );
@@ -94,15 +173,14 @@ usersRouter.put(
 usersRouter.delete(
   '/worker-profile',
   isActive,
-  authorizeWorker,
-  authorizeClient,
+  authorizeApprovedWorker,
   deleteWorkerProfile
 );
 
 usersRouter.get(
   '/worker-profile/work-governments',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateQuery(WorkerGovernmentQuerySchema),
   getWorkerGovernments
 );
@@ -110,7 +188,7 @@ usersRouter.get(
 usersRouter.post(
   '/worker-profile/work-governments',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateBody(AddWorkerGovernmentsSchema),
   addWorkerGovernments
 );
@@ -118,7 +196,7 @@ usersRouter.post(
 usersRouter.delete(
   '/worker-profile/work-governments',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateQuery(DeleteWorkerGovernmentsQuerySchema),
   validateBody(DeleteWorkerGovernmentsSchema),
   deleteWorkerGovernments
@@ -127,7 +205,7 @@ usersRouter.delete(
 usersRouter.get(
   '/worker-profile/specializations/tree',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateQuery(WorkerSpecializationQuerySchema),
   getWorkerSpecializationsTree
 );
@@ -135,7 +213,7 @@ usersRouter.get(
 usersRouter.get(
   '/worker-profile/specializations',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateQuery(WorkerSpecializationQuerySchema),
   getWorkerSpecializations
 );
@@ -143,7 +221,7 @@ usersRouter.get(
 usersRouter.post(
   '/worker-profile/specializations',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateBody(AddWorkerSpecializationsSchema),
   addWorkerSpecializations
 );
@@ -151,7 +229,7 @@ usersRouter.post(
 usersRouter.delete(
   '/worker-profile/specializations',
   isActive,
-  authorizeWorker,
+  authorizeApprovedWorker,
   validateQuery(DeleteWorkerSpecializationsQuerySchema),
   validateBody(DeleteWorkerSpecializationsSchema),
   deleteWorkerSpecializations
@@ -178,7 +256,6 @@ usersRouter.put(
 usersRouter.delete(
   '/client-profile',
   isActive,
-  authorizeWorker,
   authorizeClient,
   deleteClientProfile
 );

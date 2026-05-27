@@ -22,6 +22,7 @@ import refundRouter from './financial/refunds.js';
 import adminDashboardRouter from './financial/admin-dashboard.js';
 import disputeRouter from './financial/disputes.js';
 import paymentsRouter from './payments.js';
+import reportsRouter from './reports.js';
 
 const mainRouter = Router();
 
@@ -42,5 +43,6 @@ mainRouter.use('/admin/disputes', disputeRouter);
 mainRouter.use('/admin', withdrawalAdminRouter);
 mainRouter.use('/workers/me/earnings', workerEarningsRouter);
 mainRouter.use('/payments', paymentsRouter);
+mainRouter.use('/reports', authenticateAccess, isActive, reportsRouter);
 
 export default mainRouter;

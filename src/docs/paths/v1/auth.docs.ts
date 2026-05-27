@@ -4,17 +4,16 @@ import {
   RegisterWorkerSchema,
   RequestOTPSchema,
   VerifyOTPSchema,
-} from '../../../schemas/auth.js';
+} from '../../../schemas/requests/auth.request.js';
 import {
   RequestOTPResponseSchema,
   VerifyOTPResponseSchema,
-  RegisterClientResponseSchema,
-  RegisterWorkerResponseSchema,
+  RegisterResponseSchema,
   LoginResponseSchema,
-  EmptySuccessResponseSchema,
   AccessTokenResponseSchema,
   ReviewStatusResponseSchema,
-} from '../../../schemas/responses.js';
+} from '../../../schemas/responses/auth.response.js';
+import { EmptySuccessResponseSchema } from '../../../schemas/responses.js';
 import { z } from '../../../libs/zod.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
@@ -111,7 +110,7 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Client registered successfully',
-        content: { 'application/json': { schema: RegisterClientResponseSchema } },
+        content: { 'application/json': { schema: RegisterResponseSchema } },
       },
       badRequestResponse: true,
       validationErrorResponse: true,
@@ -161,7 +160,7 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker registered successfully',
-        content: { 'application/json': { schema: RegisterWorkerResponseSchema } },
+        content: { 'application/json': { schema: RegisterResponseSchema } },
       },
       badRequestResponse: true,
       validationErrorResponse: true,

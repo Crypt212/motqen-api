@@ -6,13 +6,13 @@ import {
   ConversationListQuerySchema,
   UnreadConversationQuerySchema,
   MessageListQuerySchema,
-} from '../../../schemas/chat.js';
+} from '../../../schemas/requests/chat.request.js';
 import {
   ConversationResponseSchema,
   ConversationListResponseSchema,
   UnreadConversationListResponseSchema,
   MessageListResponseSchema,
-} from '../../../schemas/responses.js';
+} from '../../../schemas/responses/chat.response.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerChatDocs(registry: OpenAPIRegistry) {

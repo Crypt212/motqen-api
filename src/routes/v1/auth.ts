@@ -19,7 +19,7 @@ import {
   VerifyOTPSchema,
   RegisterClientSchema,
   RegisterWorkerSchema,
-} from '../../schemas/auth.js';
+} from '../../schemas/requests/auth.request.js';
 import { z } from 'zod';
 import {
   authenticateAccess,

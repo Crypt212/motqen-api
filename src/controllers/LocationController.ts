@@ -2,7 +2,7 @@ import LocationService from '../services/LocationService.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import SuccessResponse from '../responses/successResponse.js';
 import { parseQueryParams } from '../schemas/common.js';
-import { LocationFilterSchema } from '../schemas/location.js';
+import { LocationFilterSchema } from '../schemas/requests/location.request.js';
 
 export default class LocationController {
   private locationService: LocationService;
@@ -14,6 +14,9 @@ export default class LocationController {
   list = asyncHandler(async (req, res) => {
     const { filter, pagination, sort } = parseQueryParams(req.query, LocationFilterSchema);
     const userId = req.userState!.userId;
+
+    if (!("isHidden" in filter)) filter.isHidden = false
+
     const result = await this.locationService.getLocations({
       userId,
       filter,
@@ -42,6 +45,13 @@ export default class LocationController {
     const dto = req.body;
     const location = await this.locationService.updateLocation({ userId, locationId, data: dto });
     new SuccessResponse('Location updated successfully', { location }, 200).send(res);
+  });
+
+  setMain = asyncHandler(async (req, res) => {
+    const locationId = req.params.locationId as string;
+    const userId = req.userState!.userId;
+    const location = await this.locationService.setMainLocation({ userId, locationId });
+    new SuccessResponse('Location has been set as main successfully', { location }, 200).send(res);
   });
 
   updateMain = asyncHandler(async (req, res) => {

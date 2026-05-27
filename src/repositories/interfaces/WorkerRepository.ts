@@ -1,6 +1,8 @@
 import type { ExploreWorkerPublicDetail } from '../../types/exploreWorker.js';
 import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../../domain/specialization.entity.js';
 import {
+  PortfolioWithImages,
+  WorkerOrdersStatistics,
   WorkerProfile,
   WorkerProfileCreateInput,
   WorkerProfileFilter,
@@ -8,9 +10,11 @@ import {
   WorkerProfileVerification,
   WorkerProfileVerificationCreateInput,
 } from '../../domain/workerProfile.entity.js';
-import { WorkingHours } from '../../domain/workingHours.entity.js';
+import { DayWorkingHours, DayWorkingHoursCreateInput, DayWorkingHoursReturn } from '../../domain/workingHours.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { IDType } from '../interfaces/Repository.js';
+import { Day, Portfolio, ProjectImage, WorkerBadge } from '../../generated/prisma/client.js';
+import { Government } from 'src/domain/government.entity.js';
 
 export default interface IWorkerProfileRepository {
   /**
@@ -21,6 +25,12 @@ export default interface IWorkerProfileRepository {
    * Find worker profile
    */
   find(params: { workerFilter: WorkerProfileFilter }): Promise<WorkerProfile | null>;
+
+  /**
+   * Find worker's orders statistics
+   */
+  findOrdersStatistics(params: { workerProfileId: IDType }): Promise<WorkerOrdersStatistics>;
+
   /**
    * Explore: approved + active user, full public payload with user, portfolio, project images
    */
@@ -39,7 +49,7 @@ export default interface IWorkerProfileRepository {
   findWorkGovernments(params: {
     workerFilter: WorkerProfileFilter;
     pagination?: PaginationOptions;
-  }): Promise<PaginatedResultMeta & { governmentIds: IDType[] }>;
+  }): Promise<PaginatedResultMeta & { governments: Government[] }>;
   /**
    * Find verification of a worker profile
    */
@@ -49,7 +59,7 @@ export default interface IWorkerProfileRepository {
   /**
    * Find working hours for an authenticated worker by user ID
    */
-  findWorkingHoursByUserId(params: { userId: IDType }): Promise<WorkingHours | null>;
+  findDaysWorkingHoursByUserId(params: { userId: IDType }): Promise<DayWorkingHours[]>;
   /**
    * Find work governments
    */
@@ -68,14 +78,20 @@ export default interface IWorkerProfileRepository {
   }): Promise<{ startDate: Date; endDate: Date }[]>;
 
   /**
-   * Replace all working hours with validation for active orders
+   * Add days working hours
    */
-  replaceWorkingHours(params: {
+  addDaysWorkingHours(params: {
     workerProfileId: string;
-    daysOfWeek: string[];
-    startTime: string;
-    endTime: string;
-  }): Promise<void>;
+    daysWorkingHours: DayWorkingHoursCreateInput[]
+  }): Promise<DayWorkingHoursReturn[]>
+
+  /**
+   * Removes days working hours with validation for active orders
+   */
+  removeDaysWorkingHours(params: {
+    workerProfileId: string;
+    days: Day[];
+  }): Promise<void>
 
   /**
    * Create a worker profile for a user ID
@@ -157,4 +173,18 @@ export default interface IWorkerProfileRepository {
     workerFilter: WorkerProfileFilter;
     specializationsTree: SpecializationsTree;
   }): Promise<void>;
+
+  createPortfolio(params: { workerProfileId: IDType; description?: string }): Promise<PortfolioWithImages>;
+  findPortfolio(params: { workerProfileId: IDType }): Promise<PortfolioWithImages | null>;
+  updatePortfolio(params: { workerProfileId: IDType; description?: string }): Promise<PortfolioWithImages>;
+  addPortfolioImages(params: { portfolioId: IDType; imageUrls: string[] }): Promise<ProjectImage[]>;
+  deletePortfolioImage(params: { imageId: IDType }): Promise<void>;
+  findPortfolioImage(params: { imageId: IDType }): Promise<(ProjectImage & { portfolio: Portfolio }) | null>;
+  countPortfolioImages(params: { portfolioId: IDType }): Promise<number>;
+
+  addRating(params: { workerProfileId: IDType; rate: number }): Promise<void>;
+  increaseCompletedOrders(params: { workerProfileId: IDType }): Promise<void>;
+
+  countRatedOrders(params: { workerProfileId: IDType }): Promise<number>;
+  findWorkerBadges(params: { workerProfileId: IDType }): Promise<WorkerBadge[]>;
 }

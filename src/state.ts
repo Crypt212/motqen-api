@@ -1,5 +1,6 @@
 import UserService from './services/UserService.js';
 import OTPCache from './cache/redis/OTPCache.js';
+import DataCache from './cache/redis/DataCache.js';
 import SessionRepository from './repositories/prisma/SessionRepository.js';
 import UserRepository from './repositories/prisma/UserRepository.js';
 import WorkerProfileRepository from './repositories/prisma/WorkerRepository.js';
@@ -37,20 +38,24 @@ import NegotiationRepository from './repositories/prisma/NegotiationRepository.j
 import NotificationRepository from './repositories/prisma/NotificationRepository.js';
 import NotificationService from './services/NotificationService.js';
 import { FirebaseProvider } from './providers/FirebaseProvider.js';
+import ReportRepository from './repositories/prisma/ReportRepository.js';
+import ReportService from './services/ReportService.js';
+import ReportController from './controllers/ReportController.js';
 
 export const rateLimitCache = new RateLimitCache(redisClient);
 export const otpCache = new OTPCache(redisClient);
 export const chatPresenceCache = new ChatPresenceCache(redisClient);
 export const tokenCache = new TokenCache(redisClient);
+export const dataCache = new DataCache(redisClient);
 
 export const sessionRepository = new SessionRepository(prisma);
 export const userRepository = new UserRepository(prisma);
 export const workerProfileRepository = new WorkerProfileRepository(prisma);
 export const clientProfileRepository = new ClientProfileRepository(prisma);
 export const specializationRepository = new SpecializationRepository(prisma);
-export const specializationService = new SpecializationService({ specializationRepository });
+export const specializationService = new SpecializationService({ specializationRepository, dataCache });
 export const governmentRepository = new GovernmentRepository(prisma);
-export const governmentService = new GovernmentService({ governmentRepository });
+export const governmentService = new GovernmentService({ governmentRepository, dataCache });
 export const governmentController = new GovernmentController({
   governmentService,
 });
@@ -81,6 +86,7 @@ export const clientProfileService = new ClientProfileService({
 export const workerProfileService = new WorkerProfileService({
   userRepository,
   workerProfileRepository,
+  dataCache,
 });
 export const authService = new AuthService({
   userRepository,
@@ -120,6 +126,7 @@ export const negotiationService = new NegotiationService({
   transactionManager
 });
 
+export const orderController = new OrderController({ orderService, locationService });
 
 export const notificationRepository = new NotificationRepository(prisma);
 export const firebaseProvider = new FirebaseProvider();
@@ -243,3 +250,6 @@ export const disputeService = new DisputeService(
 );
 
 export const disputeController = new DisputeController(disputeService);
+export const reportRepository = new ReportRepository(prisma);
+export const reportService = new ReportService({ reportRepository });
+export const reportController = new ReportController({ reportService });

@@ -1,5 +1,5 @@
-import { z } from '../libs/zod.js';
-import { UUIDSchema } from './common.js';
+import { z } from '../../libs/zod.js';
+import { UUIDSchema } from '../common.js';
 
 export const ExploreSearchSchema = z.object({
   specializationId: UUIDSchema.optional(),

@@ -6,6 +6,7 @@
 import AppError from '../errors/AppError.js';
 import Service, { tryCatch } from './Service.js';
 import IGovernmentRepository from '../repositories/interfaces/GovernmentRepository.js';
+import IDataCache from '../cache/interfaces/DataCache.js';
 import {
   Government,
   GovernmentCreateInput,
@@ -18,10 +19,12 @@ import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/qu
 
 export default class GovernmentService extends Service {
   private governmentRepository: IGovernmentRepository;
+  private dataCache?: IDataCache;
 
-  constructor(params: { governmentRepository: IGovernmentRepository }) {
+  constructor(params: { governmentRepository: IGovernmentRepository, dataCache?: IDataCache }) {
     super();
     this.governmentRepository = params.governmentRepository;
+    this.dataCache = params.dataCache;
   }
 
   async getGovernments(params: {
@@ -29,15 +32,18 @@ export default class GovernmentService extends Service {
     pagination?: PaginationOptions;
     sort?: SortOptions<Government>;
   }): Promise<PaginatedResultMeta & { governments: Government[] }> {
+    const { filter, pagination, sort } = params;
     return tryCatch(async () => {
-      return await this.governmentRepository.findMany(params);
+      const result = await this.governmentRepository.findMany({ filter, pagination, sort });
+      return result;
     });
   }
 
   async getGovernmentById(params: { id: string }): Promise<Government> {
+    const { id } = params;
     return tryCatch(async () => {
       const government = await this.governmentRepository.find({
-        filter: { id: params.id },
+        filter: { id },
       });
       if (!government) {
         throw new AppError('Government not found', 404);
@@ -47,46 +53,52 @@ export default class GovernmentService extends Service {
   }
 
   async createGovernment(params: { data: GovernmentCreateInput }): Promise<Government> {
+    const { data } = params;
     return tryCatch(async () => {
       const government = await this.governmentRepository.create({
-        government: params.data,
+        government: data,
       });
       if (!government) {
         throw new AppError('Failed to create government', 500);
       }
+      if (this.dataCache) await this.dataCache.delPattern('data:govs:*');
       return government;
     });
   }
 
   async updateGovernment(params: { id: string; data: GovernmentUpdateInput }): Promise<Government> {
+    const { id, data } = params;
     return tryCatch(async () => {
       const existing = await this.governmentRepository.find({
-        filter: { id: params.id },
+        filter: { id },
       });
       if (!existing) {
         throw new AppError('Government not found', 404);
       }
 
       const government = await this.governmentRepository.update({
-        filter: { id: params.id },
-        data: params.data,
+        filter: { id },
+        data
       });
       if (!government) {
         throw new AppError('Failed to update government', 500);
       }
+      if (this.dataCache) await this.dataCache.delPattern('data:govs:*');
       return government;
     });
   }
 
   async deleteGovernment(params: { id: string }): Promise<void> {
+    const { id } = params;
     return tryCatch(async () => {
       const existing = await this.governmentRepository.find({
-        filter: { id: params.id },
+        filter: { id },
       });
       if (!existing) {
         throw new AppError('Government not found', 404);
       }
-      await this.governmentRepository.delete({ filter: { id: params.id } });
+      await this.governmentRepository.delete({ filter: { id } });
+      if (this.dataCache) await this.dataCache.delPattern('data:govs:*');
     });
   }
 
@@ -96,23 +108,25 @@ export default class GovernmentService extends Service {
     pagination?: PaginationOptions;
     sort?: SortOptions<City>;
   }): Promise<PaginatedResultMeta & { cities: City[] }> {
+    const { governmentId, filter, pagination, sort } = params;
     return tryCatch(async () => {
       const existing = await this.governmentRepository.find({
-        filter: { id: params.governmentId },
+        filter: { id: governmentId },
       });
       if (!existing) {
         throw new AppError('Government not found', 404);
       }
 
       const finalFilter = {
-        governmentId: params.governmentId,
-        ...params.filter,
+        governmentId,
+        ...filter,
       };
-      return await this.governmentRepository.findCities({
+      const result = await this.governmentRepository.findCities({
         filter: finalFilter,
-        pagination: params.pagination,
-        sort: params.sort,
+        pagination,
+        sort,
       });
+      return result;
     });
   }
 }

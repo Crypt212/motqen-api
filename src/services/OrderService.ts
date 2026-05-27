@@ -10,11 +10,12 @@ import { Order, OrderFilter } from '../domain/order.entity.js';
 import { PaginationOptions, SortOptions } from '../types/query.js';
 import { canTransitionOrderStatus, canTransitionWorkStatus } from '../utils/stateMachine.js';
 import { hasOverlap } from '../utils/overlapCheck.js';
-import { CreateOrderDTO } from '../schemas/order.js';
+import { CreateOrderDTO } from '../schemas/requests/order.request.js';
 import { OrderStatus, VerificationStatus } from 'src/generated/prisma/enums.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
 import SpecializationRepository from 'src/repositories/prisma/SpecializationRepository.js';
 import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerRepository.js';
+import { Role } from 'src/domain/user.entity.js';
 
 interface OrderServiceDeps {
   orderRepository: IOrderRepository;
@@ -97,7 +98,8 @@ export default class OrderService extends Service {
 
   async getOrders(params: {
     userId: string;
-    role: string;
+    role: Role;
+    userType: "WORKER" | "CLIENT";
     clientUserId?: string;
     workerUserId?: string;
     filter: OrderFilter;
@@ -105,15 +107,23 @@ export default class OrderService extends Service {
     sort?: SortOptions<Order>;
   }) {
     return tryCatch(async () => {
-      const roleFilter =
-        params.role === 'CLIENT'
-          ? { clientUserId: params.clientUserId }
-          : params.role === 'WORKER'
-            ? { workerUserId: params.workerUserId }
-            : {}; // For ADMIN, see all? Not specified, assume safe fallback
+      const finalFilter = {
+        ...params.filter,
+        clientUserId: params.clientUserId,
+        workerUserId: params.workerUserId,
+      };
+
+      if (params.role === "USER") {
+        if (params.userType === "WORKER") {
+          finalFilter.workerUserId = params.userId;
+        }
+        if (params.userType === "CLIENT") {
+          finalFilter.clientUserId = params.userId;
+        }
+      }
 
       return await this.orderRepository.findMany({
-        filter: { ...params.filter, ...roleFilter },
+        filter: finalFilter,
         pagination: params.pagination,
         sort: params.sort,
       });
@@ -274,8 +284,8 @@ export default class OrderService extends Service {
         throw new AppError('Cannot complete order in current status', 400);
 
       return await this.transactionManager.execute(
-        { orderRepo: OrderRepository },
-        async ({ orderRepo }) => {
+        { orderRepo: OrderRepository, workerProfileRepo: WorkerProfileRepository },
+        async ({ orderRepo, workerProfileRepo }) => {
           const updated = await orderRepo.update({
             filter: { id: params.orderId },
             order: {
@@ -283,6 +293,12 @@ export default class OrderService extends Service {
               workStatus: 'DONE',
               workFinishedAt: new Date(),
             },
+          });
+
+          const workerProfileId = (await workerProfileRepo.find({ workerFilter: { userId: order.workerUserId } })).id;
+
+          await workerProfileRepo.increaseCompletedOrders({
+            workerProfileId,
           });
 
           return updated;

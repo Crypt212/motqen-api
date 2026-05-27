@@ -12,7 +12,7 @@ import {
   GovernmentIdParamsSchema,
   GovernmentQuerySchema,
   UpdateGovernmentSchema,
-} from '../../schemas/governments.js';
+} from '../../schemas/requests/government.request.js';
 
 const governmentRouter = Router();
 

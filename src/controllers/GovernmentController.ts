@@ -3,7 +3,7 @@
  * @module controllers/GovernmentController
  */
 
-import { GovernmentFilterSchema } from '../schemas/governments.js';
+import { GovernmentFilterSchema } from '../schemas/requests/government.request.js';
 import SuccessResponse from '../responses/successResponse.js';
 import GovernmentService from '../services/GovernmentService.js';
 import { asyncHandler } from '../types/asyncHandler.js';

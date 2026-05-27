@@ -11,7 +11,7 @@ import { parseQueryParams } from '../schemas/common.js';
 import {
   WorkerGovernmentFilterSchema,
   WorkerSpecializationFilterSchema,
-} from '../schemas/dashboard.js';
+} from '../schemas/requests/dashboard.request.js';
 
 export const getUser = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
@@ -114,6 +114,16 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
   new SuccessResponse('created worker profile successfully', { workerProfile }, 200).send(res);
 });
 
+export const getWorkerOrdersCount = asyncHandler(async (req, res) => {
+  const workerProfileId = req.userState.worker?.id;
+
+  const ordersCounts = await workerProfileService.getOrdersStatistics({ workerProfileId });
+
+  console.log(ordersCounts);
+
+  new SuccessResponse('Worker orders count retrieved successfully', { ordersCounts }, 200).send(res);
+});
+
 export const getWorkerProfile = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
 
@@ -126,31 +136,43 @@ export const getWorkerWorkingHours = asyncHandler(async (req, res) => {
   const userId = req.userState?.userId || String(req.params.id);
   const workingHours = await workerProfileService.getMyWorkingHours({ userId });
 
-  new SuccessResponse('retrieved worker working hours successfully', workingHours, 200).send(res);
+  new SuccessResponse('retrieved worker working hours successfully', { workingHours }, 200).send(res);
 });
 
-export const setWorkerWorkingHours = asyncHandler(async (req, res) => {
+export const addDaysWorkerWorkingHours = asyncHandler(async (req, res) => {
   const workerProfileId = req.userState.worker.id;
-  const { daysOfWeek, startTime, endTime } = req.body;
+  const { schedules: daysWorkingHours } = req.body;
 
-  await workerProfileService.setWorkingHours({
+  const workingHours = await workerProfileService.addDaysWorkingHours({
     workerProfileId,
-    daysOfWeek: daysOfWeek.map(String),
-    startTime: startTime || '',
-    endTime: endTime || '',
+    daysWorkingHours
   });
 
-  new SuccessResponse('Working hours updated successfully', null, 200).send(res);
+  new SuccessResponse('Days working hours added successfully', { workingHours }, 200).send(res);
+});
+
+
+export const removeWorkerWorkingHours = asyncHandler(async (req, res) => {
+  const workerProfileId = req.userState.worker.id;
+  const { days } = req.body;
+
+  await workerProfileService.removeDaysWorkingHours({
+    workerProfileId,
+    days
+  });
+
+  new SuccessResponse('Days working hours removed successfully', null, 200).send(res);
 });
 
 export const updateWorkerProfile = asyncHandler(async (req, res) => {
-  const { experienceYears, isInTeam, acceptsUrgentJobs } = req.body;
+  const { experienceYears, isInTeam, acceptsUrgentJobs, bio } = req.body;
   const workerProfile = await workerProfileService.update({
     workerProfileId: req.userState.worker.id,
     data: {
       experienceYears,
       isInTeam,
       acceptsUrgentJobs,
+      bio,
     },
   });
 
@@ -178,11 +200,11 @@ export const getWorkerGovernments = asyncHandler(async (req, res) => {
 });
 
 export const addWorkerGovernments = asyncHandler(async (req, res) => {
-  const { governmentIds } = req.body;
+  const { workGovernments } = req.body;
 
   const addedGovernmentsCount = await workerProfileService.insertWorkGovernments({
     filter: { id: req.userState.worker.id },
-    governmentIds,
+    governmentIds: workGovernments,
   });
 
   new SuccessResponse(
@@ -193,7 +215,7 @@ export const addWorkerGovernments = asyncHandler(async (req, res) => {
 });
 
 export const deleteWorkerGovernments = asyncHandler(async (req, res) => {
-  const { governmentIds } = req.body;
+  const { workGovernments: governmentIds } = req.body;
   const all = req.query.all === 'true';
 
   if (all)
@@ -306,4 +328,73 @@ export const deleteUserLocation = asyncHandler(async (req, res) => {
   const locationId = req.params.locationId as string;
   await userService.deleteLocation({ filter: { id: locationId, userId } });
   new SuccessResponse('deleted location successfully', null, 200).send(res);
+});
+
+export const getVerification = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const verification = await workerProfileService.getVerification({ filter: { userId } });
+  if (!verification) throw new AppError('Verification not found', 404);
+  new SuccessResponse('Verification status retrieved', { verification }, 200).send(res);
+});
+
+export const resubmitVerification = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+  if (!files || !files.id_image || !files.personal_with_id_image) {
+    throw new AppError('Missing required files', 400);
+  }
+  const idImageBuffer = files.id_image[0].buffer;
+  const profileWithIdImageBuffer = files.personal_with_id_image[0].buffer;
+
+  const verification = await workerProfileService.resubmitVerification({
+    userId,
+    idImageBuffer,
+    profileWithIdImageBuffer,
+  });
+
+  new SuccessResponse('Verification documents resubmitted', { verification }, 200).send(res);
+});
+
+export const createPortfolio = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const { description } = req.body;
+  const portfolio = await workerProfileService.createPortfolio({ userId, description });
+  new SuccessResponse('Portfolio created', { portfolio }, 201).send(res);
+});
+
+export const getPortfolio = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const portfolio = await workerProfileService.getPortfolio({ userId });
+  new SuccessResponse('Portfolio retrieved', { portfolio }, 200).send(res);
+});
+
+export const updatePortfolio = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const { description } = req.body;
+  const portfolio = await workerProfileService.updatePortfolio({ userId, description });
+  new SuccessResponse('Portfolio updated', { portfolio }, 200).send(res);
+});
+
+export const addPortfolioImages = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const files = req.files as Express.Multer.File[];
+  if (!files || files.length === 0) {
+    throw new AppError('No images provided', 400);
+  }
+  const images = await workerProfileService.addPortfolioImages({ userId, files });
+  new SuccessResponse('Images uploaded', { images }, 201).send(res);
+});
+
+export const deletePortfolioImage = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const imageId = req.params.imageId as string;
+  await workerProfileService.deletePortfolioImage({ userId, imageId });
+  new SuccessResponse('Image deleted', null, 200).send(res);
+});
+
+export const getWorkerOccupiedTimeSlots = asyncHandler(async (req, res) => {
+  const userId = req.userState.userId;
+  const selectedDate = req.query.selectedDate as string;
+  const occupiedSlots = await workerProfileService.getWorkerOccupiedTimeSlots({ userId, selectedDate });
+  new SuccessResponse('Occupied time slots retrieved', { occupiedSlots }, 200).send(res);
 });
