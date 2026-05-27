@@ -35,6 +35,9 @@ import LocationService from './services/LocationService.js';
 import LocationController from './controllers/LocationController.js';
 import NegotiationService from './services/NegotiationService.js';
 import NegotiationRepository from './repositories/prisma/NegotiationRepository.js';
+import NotificationRepository from './repositories/prisma/NotificationRepository.js';
+import NotificationService from './services/NotificationService.js';
+import { FirebaseProvider } from './providers/FirebaseProvider.js';
 import ReportRepository from './repositories/prisma/ReportRepository.js';
 import ReportService from './services/ReportService.js';
 import ReportController from './controllers/ReportController.js';
@@ -125,6 +128,128 @@ export const negotiationService = new NegotiationService({
 
 export const orderController = new OrderController({ orderService, locationService });
 
+export const notificationRepository = new NotificationRepository(prisma);
+export const firebaseProvider = new FirebaseProvider();
+export const notificationService = new NotificationService(notificationRepository, redisClient, sessionRepository, userRepository, firebaseProvider);
+
+
+export const orderController = new OrderController({ orderService });
+
+export const webhookEventRepository = new WebhookEventRepository(prisma);
+export const paymentRepository = new PaymentRepository(prisma);
+export const paymentAttemptRepository = new PaymentAttemptRepository(prisma);
+export const escrowHoldRepository = new EscrowHoldRepository(prisma);
+export const transactionLogRepository = new TransactionLogRepository(prisma);
+export const activityLogRepository = new ActivityLogRepository(prisma);
+export const feeRuleRepository = new FeeRuleRepository(prisma);
+export const workerBalanceRepository = new WorkerBalanceRepository(prisma);
+export const refundRepository = new RefundRepository(prisma);
+export const workerDebtRepository = new WorkerDebtRepository(prisma);
+export const disputeRepository = new DisputeRepository(prisma);
+export const withdrawRequestRepository = new WithdrawRequestRepository(prisma);
+export const payoutMethodRepository = new PayoutMethodRepository(prisma);
+export const payoutExecutionRepository = new PayoutExecutionRepository(prisma);
+
+export const paymobProvider = new PaymobProvider();
+
+export const paymentService = new PaymentService(
+  webhookEventRepository,
+  paymentRepository,
+  paymentAttemptRepository,
+  escrowHoldRepository,
+  transactionLogRepository,
+  feeRuleRepository,
+  workerBalanceRepository,
+  paymobProvider,
+  prisma
+);
+
+export const webhookController = new WebhookController(
+  paymentService,
+  paymobProvider
+);
+
+import { PaymentController } from './controllers/financial/PaymentController.js';
+import { WebhookEventRepository } from './repositories/prisma/financial/WebhookEventRepository.js';
+import { PaymentRepository } from './repositories/prisma/financial/PaymentRepository.js';
+import { PaymentAttemptRepository } from './repositories/prisma/financial/PaymentAttemptRepository.js';
+import EscrowHoldRepository from './repositories/prisma/financial/EscrowHoldRepository.js';
+import TransactionLogRepository from './repositories/prisma/financial/TransactionLogRepository.js';
+import ActivityLogRepository from './repositories/prisma/financial/ActivityLogRepository.js';
+import FeeRuleRepository from './repositories/prisma/financial/FeeRuleRepository.js';
+import WorkerBalanceRepository from './repositories/prisma/financial/WorkerBalanceRepository.js';
+import { RefundRepository } from './repositories/prisma/financial/RefundRepository.js';
+import { WorkerDebtRepository } from './repositories/prisma/financial/WorkerDebtRepository.js';
+import DisputeRepository from './repositories/prisma/financial/DisputeRepository.js';
+import { WithdrawRequestRepository } from './repositories/prisma/financial/WithdrawRequestRepository.js';
+import { PayoutMethodRepository } from './repositories/prisma/financial/PayoutMethodRepository.js';
+import { PayoutExecutionRepository } from './repositories/prisma/financial/PayoutExecutionRepository.js';
+import { PaymobProvider } from './providers/PaymobProvider.js';
+import { PaymentService } from './services/financial/PaymentService.js';
+import { WebhookController } from './controllers/WebhookController.js';
+import { EscrowService } from './services/financial/EscrowService.js';
+import { EscrowController } from './controllers/financial/EscrowController.js';
+import { WithdrawalService } from './services/financial/WithdrawalService.js';
+import { WorkerEarningsController } from './controllers/financial/WorkerEarningsController.js';
+import { WithdrawalAdminController } from './controllers/financial/WithdrawalAdminController.js';
+import { RefundService } from './services/financial/RefundService.js';
+import { RefundController } from './controllers/financial/RefundController.js';
+import { DashboardService } from './services/financial/DashboardService.js';
+import { AdminDashboardController } from './controllers/financial/AdminDashboardController.js';
+import { DisputeService } from './services/financial/DisputeService.js';
+import { DisputeController } from './controllers/financial/DisputeController.js';
+export const paymentController = new PaymentController(paymentService);
+
+export const escrowService = new EscrowService(
+  escrowHoldRepository,
+  transactionLogRepository,
+  workerBalanceRepository,
+  workerDebtRepository,
+  prisma
+);
+
+export const escrowController = new EscrowController(escrowService);
+
+export const withdrawalService = new WithdrawalService(
+  workerBalanceRepository,
+  withdrawRequestRepository,
+  payoutMethodRepository,
+  payoutExecutionRepository,
+  transactionLogRepository,
+  workerDebtRepository,
+  prisma
+);
+
+export const workerEarningsController = new WorkerEarningsController(withdrawalService);
+
+export const withdrawalAdminController = new WithdrawalAdminController(withdrawalService);
+
+export const refundService = new RefundService(
+  refundRepository,
+  escrowHoldRepository,
+  transactionLogRepository,
+  workerBalanceRepository,
+  workerDebtRepository,
+  paymobProvider,
+  paymentRepository,
+  prisma
+);
+
+export const refundController = new RefundController(refundService, refundRepository);
+
+escrowService.setRefundService(refundService);
+
+export const dashboardService = new DashboardService(prisma);
+export const adminDashboardController = new AdminDashboardController(dashboardService, activityLogRepository);
+
+export const disputeService = new DisputeService(
+  disputeRepository,
+  transactionLogRepository,
+  escrowService,
+  prisma
+);
+
+export const disputeController = new DisputeController(disputeService);
 export const reportRepository = new ReportRepository(prisma);
 export const reportService = new ReportService({ reportRepository });
 export const reportController = new ReportController({ reportService });

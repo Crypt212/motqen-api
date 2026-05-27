@@ -22,6 +22,7 @@ export type User = {
 
   createdAt: Date;
   updatedAt: Date;
+  lastNotificationReadAt?: Date | null;
 };
 
 export type UserCreateInput = {
@@ -34,7 +35,7 @@ export type UserCreateInput = {
   role: Role;
 };
 
-export type UserUpdateInput = Partial<UserCreateInput>;
+export type UserUpdateInput = Partial<UserCreateInput> & { lastNotificationReadAt?: Date | null };
 
 export const UserFilterDescriptor = {
   id: { type: 'uuid' as const },

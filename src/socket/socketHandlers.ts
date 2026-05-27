@@ -18,57 +18,14 @@
  *   typing                 { conversationId, userId, isTyping } → partner room
  *   partner_entered_chat   { conversationId }                   → partner room
  *   partner_left_chat      { conversationId }                   → partner room
- *   user_offline           { userId }                           → partner rooms
- *   missed_messages_available { conversationId, unreadCount }   → reconnecting user
- *   pong                                                       → requesting socket
+ *   partner_online         { userId }                           → presence rooms
+ *   missed_conversations   { conversationId, unreadCount }      → reconnecting user
+ *   pong                                                        → requesting socket
  */
+import { chatPresenceCache } from '../state.js';
 
 import { logger } from '../libs/winston.js';
-import {
-  chatService,
-  conversationRepository,
-  contactDetectionService,
-  presenceService,
-} from '../state.js';
-import { IDType } from '../repositories/interfaces/Repository.js';
-import { ConversationWithParticipantsAndMessages } from '../domain/conversation.entity.js';
-
-/**
- * Emit an event to all partner rooms of a user across all their conversations.
- */
-async function emitToPartners(
-  io: import('socket.io').Server,
-  userId: IDType,
-  event: string,
-  payload: Object
-) {
-  try {
-    const convs = await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages(
-      { userId, filter: {} }
-    );
-    const partnersEmitted = new Set();
-    for (const conv of convs.conversationParticipantsWithMessages) {
-      const partner = conv.participants.find((p) => p.userId !== userId);
-      if (partner && !partnersEmitted.has(partner.userId)) {
-        io.to(`user:${partner.userId}`).emit(event, payload);
-        partnersEmitted.add(partner.userId);
-      }
-    }
-  } catch (err) {
-    logger.error('[socket] emitToPartners error', err);
-  }
-}
-
-/**
- * Get the partner userId inside a conversation.
- * @param {import('../generated/prisma/client.js').Conversation & { participants: import('../generated/prisma/client.js').ConversationParticipant[] }} conv
- */
-function getPartnerId(
-  conv: ConversationWithParticipantsAndMessages,
-  myUserId: IDType
-): string | undefined {
-  return conv.participants.find((p) => p.userId !== myUserId)?.userId;
-}
+import { chatService, conversationRepository, contactDetectionService } from '../state.js';
 
 /**
  * Register all event handlers for a connected socket.
@@ -88,6 +45,7 @@ export function registerSocketHandlers(
 
   // ─── send_message ───────────────────────────────────────────────────────────
   socket.on('send_message', async ({ conversationId, content, type = 'TEXT', localId }, ack) => {
+    console.log(userId);
     try {
       if (type !== 'TEXT') {
         if (typeof ack === 'function') {
@@ -99,9 +57,8 @@ export function registerSocketHandlers(
       // 1. DB-based participant validation (authoritative)
       await chatService.validateParticipant({ conversationId, userId });
 
-      // 2. Fetch conversation to know the partner
-      const conv = await conversationRepository.findWithParticipant({ conversationId, userId });
-      const partnerId = getPartnerId(conv, userId);
+      // 2. Fetch partner ID efficiently
+      const partnerId = await conversationRepository.findPartnerId({ conversationId, userId });
 
       // 3. Send the message (atomic counter increment + insert in tx)
       //    sendMessage also auto-updates sender's lastReceivedMessageNumber
@@ -179,8 +136,7 @@ export function registerSocketHandlers(
       const { readUpTo } = await chatService.markAsRead({ conversationId, userId, lastMessageId });
 
       // 3. Notify partner
-      const conv = await conversationRepository.findWithParticipant({ conversationId, userId });
-      const partnerId = getPartnerId(conv, userId);
+      const partnerId = await conversationRepository.findPartnerId({ conversationId, userId });
       if (partnerId) {
         io.to(`user:${partnerId}`).emit('messages_read', { conversationId, readUpTo });
       }
@@ -206,8 +162,7 @@ export function registerSocketHandlers(
       }
 
       // Emit to partner only
-      const conv = await conversationRepository.findWithParticipant({ conversationId, userId });
-      const partnerId = getPartnerId(conv, userId);
+      const partnerId = await conversationRepository.findPartnerId({ conversationId, userId });
       if (partnerId) {
         io.to(`user:${partnerId}`).emit('typing', { conversationId, userId, isTyping });
       }
@@ -223,25 +178,35 @@ export function registerSocketHandlers(
       await chatService.validateParticipant({ conversationId, userId });
 
       // 2. Track per-socket inChat (multi-device safe)
-      void presence.enterChat({ conversationId, userId, socketId: socket.id });
+      void presence.enterChat({ conversationId, userId });
 
       // 3. Auto-mark all messages as read (also bumps lastReceivedMessageNumber)
       await chatService.markAllAsRead({ conversationId, userId });
 
+      let isPartnerOnline = false;
+
       // 4. Notify partner — entered chat + their messages are now delivered
-      const conv = await conversationRepository.findWithParticipant({ conversationId, userId });
-      const partnerId = getPartnerId(conv, userId);
+      const partnerId = await conversationRepository.findPartnerId({ conversationId, userId });
+
       if (partnerId) {
+        isPartnerOnline = await presence.isOnline({ userId: partnerId });
+        
+        // Auto-subscribe to partner's online/offline presence updates
+        void socket.join(`presence:${partnerId}`);
+        
         io.to(`user:${partnerId}`).emit('partner_entered_chat', { conversationId });
 
-        // Tell partner their messages are delivered up to conversation's messageCounter
-        io.to(`user:${partnerId}`).emit('messages_delivered', {
-          conversationId,
-          deliveredUpTo: conv.messageCounter,
-        });
+        // Tell partner their messages are delivered (up to their own messageCounter)
+        const conv = await conversationRepository.findById({ id: conversationId });
+        if (conv) {
+          io.to(`user:${partnerId}`).emit('messages_delivered', {
+            conversationId,
+            deliveredUpTo: conv.messageCounter,
+          });
+        }
       }
 
-      if (typeof ack === 'function') ack({ ok: true });
+      if (typeof ack === 'function') ack({ ok: true, isPartnerOnline });
     } catch (err: unknown) {
       logger.error('[socket] enter_chat error', err);
       if (err instanceof Error && typeof ack === 'function') ack({ ok: false, error: err.message });
@@ -251,13 +216,15 @@ export function registerSocketHandlers(
   // ─── leave_chat ─────────────────────────────────────────────────────────────
   socket.on('leave_chat', async ({ conversationId }, ack) => {
     try {
-      // Remove only this socket from inChat set
-      void presence.leaveChat({ conversationId, userId, socketId: socket.id });
+      // Remove from inChat set
+      void presence.leaveChat({ conversationId, userId });
 
       // Notify partner
-      const conv = await conversationRepository.findWithParticipant({ conversationId, userId });
-      const partnerId = getPartnerId(conv, userId);
+      const partnerId = await conversationRepository.findPartnerId({ conversationId, userId });
       if (partnerId) {
+        // Auto-unsubscribe from partner's presence updates
+        void socket.leave(`presence:${partnerId}`);
+        
         io.to(`user:${partnerId}`).emit('partner_left_chat', { conversationId });
       }
 
@@ -268,10 +235,17 @@ export function registerSocketHandlers(
     }
   });
 
+
+
   // ─── disconnect ─────────────────────────────────────────────────────────────
   socket.on('disconnect', async () => {
     try {
-      await presenceService.handleSocketDisconnect({ userId, socketId: socket.id });
+      let numSockets = await chatPresenceCache.removeSocket({ userId, socketId: socket.id });
+      if (numSockets === 0) {
+        // Full cleanup: Remove from all active chat rooms
+        await chatPresenceCache.removeAllInChat({ userId });
+        socket.to(`presence:${userId}`).emit('partner_offline', { userId });
+      }
     } catch (err) {
       logger.error('[socket] disconnect cleanup error', err);
     }

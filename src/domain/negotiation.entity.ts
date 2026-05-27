@@ -32,4 +32,5 @@ export type OrderForNegotiation = {
   clientProfileId: IDType;
   workerProfileId: IDType;
   orderStatus: $Enums.OrderStatus;
+  title:string;
 };

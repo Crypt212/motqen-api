@@ -261,4 +261,43 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
       internalServerError: true,
     }),
   });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PATCH /auth/fcm-token
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'patch',
+    path: '/api/v1/auth/fcm-token',
+    tags: ['Auth'],
+    summary: 'Update FCM token',
+    description:
+      'Updates the Firebase Cloud Messaging token for the current user session. This token is used to send push notifications to the device.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: z.object({
+              fcmToken: z.string().min(1).openapi({
+                description: 'Firebase Cloud Messaging token for push notifications',
+                example: 'eA1B2cD3eF4gH5iJ6kL7mN8oP9qR0sT1uV2wX3yZ4',
+              }),
+            }),
+          },
+        },
+      },
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'FCM token updated successfully',
+        content: { 'application/json': { schema: EmptySuccessResponseSchema } },
+      },
+      badRequestResponse: true,
+      validationErrorResponse: true,
+      unauthorizedResponse: true,
+      internalServerError: true,
+    }),
+  });
 }

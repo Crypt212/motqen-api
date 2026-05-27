@@ -8,6 +8,7 @@ import {
   logout,
   generateAccessToken,
   reviewStatus,
+  updateFcmToken,
 } from '../../controllers/AuthController.js';
 import { checkSendOtpLimit, checkVerifyLimit } from '../../middlewares/rateLimitMiddleware.js';
 
@@ -19,6 +20,7 @@ import {
   RegisterClientSchema,
   RegisterWorkerSchema,
 } from '../../schemas/requests/auth.request.js';
+import { z } from 'zod';
 import {
   authenticateAccess,
   authenticateLogin,
@@ -62,4 +64,16 @@ authRouter.post('/logout', authenticateAccess, isActive, logout);
 authRouter.get('/access', authenticateRefresh, isActive, generateAccessToken);
 
 authRouter.get('/review-status', authenticateAccess, reviewStatus);
+
+const FcmTokenSchema = z.object({
+  fcmToken: z.string().min(1),
+});
+
+authRouter.patch(
+  '/fcm-token',
+  authenticateAccess,
+  isActive,
+  validateBody(FcmTokenSchema),
+  updateFcmToken
+);
 export default authRouter;

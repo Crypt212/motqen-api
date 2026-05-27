@@ -360,6 +360,24 @@ export default class ConversationRepository extends Repository implements IConve
     }
   }
 
+  async findPartnerId(params: {
+    conversationId: IDType;
+    userId: IDType;
+  }): Promise<IDType | null> {
+    try {
+      const partner = await this.prismaClient.conversationParticipant.findFirst({
+        where: {
+          conversationId: params.conversationId,
+          userId: { not: params.userId },
+        },
+        select: { userId: true },
+      });
+      return partner ? partner.userId : null;
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'findPartnerId');
+    }
+  }
+
   async create(params: { conversation: ConversationCreateInput }): Promise<Conversation> {
     try {
       const record = await this.prismaClient.conversation.create({

@@ -13,6 +13,7 @@ export type Session = {
   deviceId: string;
   ipAddress: string;
   userAgent: string;
+  fcmToken: string | null;
   lastUsedAt: Date;
   expiresAt: Date;
 
@@ -20,15 +21,7 @@ export type Session = {
   createdAt: Date;
 };
 
-export type SessionCreateInput = {
-  token: string;
-  isRevoked?: boolean;
-  deviceId: string;
-  ipAddress?: string;
-  userAgent?: string;
-  lastUsedAt?: Date;
-  expiresAt: Date;
-};
+export type SessionCreateInput = Omit<Session, 'id' | 'createdAt' | 'updatedAt' | 'revokedAt' | 'revokedBy'>;
 
 export type SessionUpdateInput = Partial<SessionCreateInput>;
 

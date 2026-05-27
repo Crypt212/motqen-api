@@ -6,13 +6,14 @@ export default interface IChatPresenceCache {
   /**
    * Register a socket as active for a user.
    * Refreshes TTL on every add to keep the key alive while connected.
+   * @returns The total number of active sockets for this user after adding.
    */
-  addSocket(params: { userId: IDType; socketId: IDType }): Promise<void>;
+  addSocket(params: { userId: IDType; socketId: IDType }): Promise<number>;
 
   /**
    * Remove a socket from a user's active set.
    */
-  removeSocket(params: { userId: IDType; socketId: IDType }): Promise<void>;
+  removeSocket(params: { userId: IDType; socketId: IDType }): Promise<number>;
 
   /**
    * Count remaining active sockets for a user.
@@ -37,15 +38,15 @@ export default interface IChatPresenceCache {
   // ─── inChat tracking ──────────────────────────────────────────────────────
 
   /**
-   * Mark a socket as "inside" a conversation screen.
+   * Mark a user as "inside" a conversation screen.
    * Refreshes TTL on every enter to keep the key alive.
    */
-  enterChat(params: { conversationId: IDType; userId: IDType; socketId: IDType }): Promise<void>;
+  enterChat(params: { conversationId: IDType; userId: IDType }): Promise<void>;
 
   /**
-   * Remove a socket from the inChat set (device left chat screen or disconnected).
+   * Remove a user from the inChat set (device left chat screen or disconnected).
    */
-  leaveChat(params: { conversationId: IDType; userId: IDType; socketId: IDType }): Promise<void>;
+  leaveChat(params: { conversationId: IDType; userId: IDType }): Promise<void>;
 
   /**
    * Returns true if the user has any device currently showing this conversation.
@@ -53,19 +54,15 @@ export default interface IChatPresenceCache {
   isInChat(params: { conversationId: IDType; userId: IDType }): Promise<boolean>;
 
   /**
-   * Remove a socket from ALL inChat keys.
-   * Called on disconnect when we don't know which conversations were active.
+   * Remove a user from ALL inChat keys based on active tracking.
+   * Called on disconnect.
    */
-  leaveAllChats(params: {
-    userId: IDType;
-    socketId: IDType;
-    conversationIds: IDType[];
-  }): Promise<void>;
+  leaveAllChats(params: { userId: IDType }): Promise<void>;
 
   /**
    * Remove ALL inChat keys for a user across all conversations — full cleanup.
    */
-  removeAllInChat(params: { userId: IDType; conversationIds: IDType[] }): Promise<void>;
+  removeAllInChat(params: { userId: IDType }): Promise<void>;
 
   // ─── Typing ────────────────────────────────────────────────────────────────
 

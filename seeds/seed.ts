@@ -341,6 +341,76 @@ async function assignWorkGovernments(workers: any[], governments: any[]) {
 }
 
 /* =========================
+   FINANCIAL SEEDS
+   Small, safe financial data so features depending on them work in dev
+========================= */
+
+async function createPayoutMethodsAndWithdraws(workerProfiles: any[]) {
+  // Upsert/deduplicate behavior:
+  // - Ensure a WorkerBalance exists for the worker
+  // - Create a deterministic payout method per worker if none exists
+  // - Create at most one seeded withdrawRequest per worker using a deterministic idempotency key
+  await Promise.all(
+    workerProfiles.map(async (wp) => {
+      try {
+        // Ensure a worker balance exists (create if missing)
+        let balance = await prisma.workerBalance.findUnique({ where: { workerProfileId: wp.id } });
+        if (!balance) {
+          balance = await prisma.workerBalance.create({
+            data: { workerProfileId: wp.id, totalEarned: BigInt(0), withdrawn: BigInt(0), pendingWithdraw: BigInt(0), onHoldForDispute: BigInt(0), deductedForDebts: BigInt(0) },
+          });
+        }
+
+        // Create a deterministic account number so repeated seed runs don't create duplicates
+        const acctHash = crypto.createHash('sha1').update(wp.id).digest('hex').slice(0, 12);
+        const accountNumber = `ACCT-${acctHash}`;
+
+        // Check if the worker already has any payout method — if so, skip creating another
+        let payout = await prisma.payoutMethod.findFirst({ where: { workerProfileId: wp.id } });
+        if (!payout && Math.random() < 0.35) {
+          payout = await prisma.payoutMethod.create({
+            data: {
+              id: crypto.randomUUID(),
+              workerProfileId: wp.id,
+              methodType: 'BANK_ACCOUNT',
+              accountName: `${wp.id.slice(0, 8)}-acct`,
+              accountNumber,
+              bankName: 'Local Bank',
+              isDefault: false,
+              isVerified: true,
+            },
+          });
+        }
+
+        // Deterministic idempotency key for a seeded withdraw (so re-running the seed won't duplicate)
+        const withdrawIdemp = crypto.createHash('sha1').update(wp.id + '-seed-withdraw').digest('hex').slice(0, 36);
+        const existingWithdraw = await prisma.withdrawRequest.findUnique({ where: { idempotencyKey: withdrawIdemp } });
+
+        // Create a withdraw request only if we have a payout method and no existing seeded withdraw
+        if (payout && !existingWithdraw && Math.random() < 0.45) {
+          await prisma.withdrawRequest.create({
+            data: {
+              id: crypto.randomUUID(),
+              workerProfileId: wp.id,
+              workerBalanceId: balance.id,
+              payoutMethodId: payout.id,
+              amount: BigInt(randInt(10000, 500000)), // cents
+              status: 'PENDING',
+              payoutMethodSnapshot: {},
+              idempotencyKey: withdrawIdemp,
+              notes: 'Seeded withdraw request',
+            },
+          });
+        }
+      } catch (e) {
+        // Non-fatal, continue
+        console.error('Error creating payout/withdraw for worker', wp.id, e?.message ?? e);
+      }
+    })
+  );
+}
+
+/* =========================
    CHATS + MESSAGES
 ========================= */
 
@@ -505,6 +575,11 @@ async function main() {
 
   await generateChats(users, workers);
   console.log('✅ Chats + Orders created');
+
+  // Financial seeds: payout methods and withdraw requests for some workers
+  console.log('🔁 Creating payout methods and withdraw requests for some workers...');
+  await createPayoutMethodsAndWithdraws(workers.map((w) => w.workerProfile));
+  console.log('✅ Financial seeds created');
 
   const workerCount = await prisma.workerProfile.count();
   const orderCount = await prisma.order.count();

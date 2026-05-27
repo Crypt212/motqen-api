@@ -91,3 +91,53 @@ export const sensitiveIpRateLimiter = asyncHandler(
         },
       })
 );
+
+// ─── Socket Rate Limiter (per-event, per-user) ──────────────────────────────
+
+import type { Event } from 'socket.io';
+import type IRateLimitCache from '../cache/interfaces/RateLimitCache.js';
+import { logger } from '../libs/winston.js';
+
+/**
+ * Creates a Socket.IO packet-level rate-limiter middleware.
+ * Attach with `socket.use(createSocketRateLimiter(cache, userId))`.
+ */
+export function createSocketRateLimiter(
+  rateLimitCache: IRateLimitCache,
+  userId: string,
+): (event: Event, next: (err?: Error) => void) => void {
+  return (async ([event, ...args]: Event, next: (err?: Error) => void) => {
+    if (typeof event !== 'string' || event === 'disconnect') return next();
+
+    let limit = 60; // Default for high-frequency (typing_indicator, ping)
+    if (event === 'send_message') limit = 30;
+    else if (['read'].includes(event)) limit = 20;
+    else if (['enter_chat', 'leave_chat', 'typing_indicator', 'ping'].includes(event))
+      return next();
+    try {
+      await rateLimitCache.consumeSocketEvent(userId, event, limit, 60);
+      next();
+    } catch (err: unknown) {
+      if (
+        !(err instanceof Error) ||
+        !('msBeforeNext' in err && typeof err.msBeforeNext === 'number')
+      ) {
+        logger.error('[socket] rate limit error', err);
+        return next(new Error('Rate limit exceeded'));
+      }
+      const retryAfter = err.msBeforeNext ? Math.round(err.msBeforeNext / 1000) : 60;
+
+      // TODO: Implement block/ban logic here for severe abusers if needed
+
+      const lastArg = args[args.length - 1];
+      if (typeof lastArg === 'function') {
+        lastArg({ ok: false, error: 'Rate limit exceeded', retryAfter });
+      } else {
+        // `socket` is not in scope here — caller should handle this via
+        // the Error passed to next(), or attach a listener for 'error'.
+        return next(new Error(`Rate limit exceeded|${JSON.stringify({ event, retryAfter })}`));
+      }
+      // Do not call next() -> packet is silently dropped
+    }
+  }) as (event: Event, next: (err?: Error) => void) => void;
+}

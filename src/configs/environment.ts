@@ -78,13 +78,31 @@ const twilio = {
   authToken: process.env.TWILIO_AUTH_TOKEN,
   virtualNumber: process.env.TWILIO_VIRTUAL_NUMBER,
 };
-// configs/environment.js  — add these fields
 
 const rateLimit = {
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
   sensitiveWindowMs: parseInt(process.env.RATE_LIMIT_SENSITIVE_WINDOW_MS) || 15 * 60 * 1000,
   sensitiveMax: parseInt(process.env.RATE_LIMIT_SENSITIVE_MAX) || 10,
+};
+const paymob = {
+  hmacSecret: process.env.PAYMOB_HMAC_SECRET,
+  apiKey: process.env.PAYMOB_API_KEY,
+  integrationIds: [
+    Number(process.env.PAYMOB_WALLET_INTEGRATION_ID),
+    Number(process.env.PAYMOB_CARD_INTEGRATION_ID),
+  ],
+  publicKey: process.env.PAYMOB_PUBLIC_KEY,
+  expiresIn: process.env.PAYMOB_EXPIRES_IN || 3600,
+  secretKey: process.env.PAYMOB_SECRET_KEY,
+};
+
+const cron = {
+  escrowReleaseInterval: process.env.ESCROW_RELEASE_CRON_INTERVAL || '*/5 * * * *',
+};
+
+const firebase = {
+serviceAccount: process.env.FIREBASE_SERVICE_ACCOUNT,
 };
 const environment = {
   nodeEnv,
@@ -100,6 +118,9 @@ const environment = {
   otps,
   twilio,
   rateLimit,
+  paymob,
+  cron,
+  firebase,
 };
 
 Object.freeze(environment);

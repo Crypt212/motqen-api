@@ -174,6 +174,20 @@ export default class ChatService extends Service {
         };
       });
 
+      // Background task: sync delivery state for all fetched conversations
+      setImmediate(() => {
+        for (const conv of convs.conversationParticipantsWithMessages) {
+          const myParticipant = conv.participants.find(p => p.userId === userId);
+          if (myParticipant && conv.messageCounter > myParticipant.lastReceivedMessageNumber) {
+            this.conversationRepository.updateLastReceived({
+              conversationId: conv.id,
+              userId,
+              messageNumber: conv.messageCounter
+            }).catch(err => console.error('[ChatService] Error auto-syncing delivery in getConversations:', err));
+          }
+        }
+      });
+
       return {
         conversations: conversations as unknown as GetConversations[],
         page: convs.page,
@@ -345,13 +359,12 @@ export default class ChatService extends Service {
   async getMessages(params: {
     conversationId: IDType;
     userId: IDType;
-    after: number;
-    limit: number;
+    after?: number;
+    limit?: number;
   }): Promise<Message[]> {
-    const { conversationId, userId } = params;
-    console.log(params);
-    const after = params.after ?? 0;
-    const limit = params.limit ?? 30;
+    const { conversationId, userId, after, limit } = params;
+    const pageSize = limit ?? 30;
+
     return tryCatch(async () => {
       // Validate participation (DB truth)
       const participant = await this.conversationRepository.findParticipant({
@@ -361,7 +374,32 @@ export default class ChatService extends Service {
       if (!participant)
         throw new AppError('Conversation not found or you are not participate', 404);
 
-      return this.messageRepository.findPage({ conversationId, after, limit });
+      let messages: Message[];
+      if (after == null) {
+        messages = await this.messageRepository.findLatest({ conversationId, limit: pageSize });
+      } else {
+        messages = await this.messageRepository.findPage({
+          conversationId,
+          after,
+          limit: pageSize,
+        });
+      }
+
+      // Sync delivery state
+      if (messages.length > 0) {
+        const highestReceived = Math.max(...messages.map(m => m.messageNumber));
+        if (highestReceived > participant.lastReceivedMessageNumber) {
+          setImmediate(() => {
+            this.conversationRepository.updateLastReceived({
+              conversationId,
+              userId,
+              messageNumber: highestReceived
+            }).catch(err => console.error('[ChatService] Error auto-syncing delivery in getMessages:', err));
+          });
+        }
+      }
+
+      return messages;
     });
   }
 
@@ -382,11 +420,27 @@ export default class ChatService extends Service {
       });
       if (!participant) throw new AppError('Conversation not found', 404);
 
-      return this.messageRepository.findPage({
+      const messages = await this.messageRepository.findPage({
         conversationId,
         after: afterMessageNumber,
         limit: limit ?? 100,
       });
+
+      // Sync delivery state
+      if (messages.length > 0) {
+        const highestReceived = Math.max(...messages.map(m => m.messageNumber));
+        if (highestReceived > participant.lastReceivedMessageNumber) {
+          setImmediate(() => {
+            this.conversationRepository.updateLastReceived({
+              conversationId,
+              userId,
+              messageNumber: highestReceived
+            }).catch(err => console.error('[ChatService] Error auto-syncing delivery in getMissedMessages:', err));
+          });
+        }
+      }
+
+      return messages;
     });
   }
 

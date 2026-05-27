@@ -11,7 +11,8 @@ import { TransactionManager } from '../repositories/prisma/TransactionManager.js
 import NegotiationRepository from '../repositories/prisma/NegotiationRepository.js';
 import { UserState } from '../types/asyncHandler.js';
 import { PaginatedResultMeta } from '../types/query.js';
-import { emitToUser } from '../socket/socket-emitter.js';
+import { notificationService } from '../state.js';
+import prisma from 'src/libs/database.js';
 
 type OrderParty = {
   role: 'CLIENT' | 'WORKER';
@@ -182,8 +183,26 @@ export default class NegotiationService extends Service {
         { isolationLevel: 'Serializable' }
       );
 
-      // Notify the opposing party
+      // Notify the opposing party (socket placeholder)
       this.notifyOpponent(order, party, 'negotiation_accepted', { orderId });
+
+      // Send push notification to client — ORDER_ACCEPTED
+      // Resolve the client's userId from the order's clientProfile
+      const clientUser = await prisma.clientProfile.findUnique({
+        where: { id: order.clientProfileId },
+      });
+
+      if (clientUser) {
+        notificationService.notify(clientUser.userId, {
+          type: 'ORDER_ACCEPTED',
+          ctx: {
+            orderId: order.id,
+            orderTitle: order.title,
+          },
+        }).catch((err) => {
+          // Fire-and-forget — don't break negotiation flow
+        });
+      }
 
       return {
         id: updatedOrder.id,
