@@ -27,6 +27,7 @@ export default class SpecializationRepository
     id: IDType;
     name: string;
     nameAr: string;
+    ordersCount: number;
     category: SpecializationCategory;
     updatedAt: Date;
     createdAt: Date;
@@ -36,7 +37,7 @@ export default class SpecializationRepository
       name: record.name,
       nameAr: record.nameAr,
       category: record.category,
-      ordersCount: 0, // TODO: fill with right value when database is updated
+      ordersCount: record.ordersCount,
       updatedAt: record.updatedAt,
       createdAt: record.createdAt,
     };
