@@ -91,19 +91,22 @@ export default class NegotiationService extends Service {
 
   async createNegotiation(params: {
     orderId: string;
+    proposalId: string;
     userState: UserState;
     price: number;
+    startDate?: Date;
+    estimatedDurationHours?: number;
     note?: string;
   }): Promise<Negotiation> {
-    const { orderId, userState, price, note } = params;
+    const { orderId, proposalId, userState, price, startDate, estimatedDurationHours, note } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
       const party = this.resolveOrderParty(order, userState);
 
       // Guard: only allow negotiation in these order states
-      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'TIME_SPECIFIED') {
+      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'OPEN') {
         throw new AppError(
-          'Negotiations are only allowed when order status is PENDING or TIME_SPECIFIED',
+          'Negotiations are only allowed when order status is PENDING or OPEN',
           400
         );
       }
@@ -122,7 +125,16 @@ export default class NegotiationService extends Service {
 
       const senderId = userState.userId;
       const negotiation = await this.negotiationRepository.create({
-        data: { orderId, price, senderId, direction, note },
+        data: { 
+          orderId, 
+          proposalId,
+          price, 
+          senderId, 
+          direction, 
+          startDate: startDate || new Date(), 
+          estimatedDurationHours: estimatedDurationHours || 1, 
+          note 
+        },
       });
 
       // Notify the opposing party via socket
@@ -144,9 +156,9 @@ export default class NegotiationService extends Service {
       const party = this.resolveOrderParty(order, userState);
 
       // Guard: only allow negotiation in these order states
-      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'TIME_SPECIFIED') {
+      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'OPEN') {
         throw new AppError(
-          'Negotiations are only allowed when order status is PENDING or TIME_SPECIFIED',
+          'Negotiations are only allowed when order status is PENDING or OPEN',
           400
         );
       }
@@ -213,7 +225,7 @@ export default class NegotiationService extends Service {
         orderStatus: updatedOrder.orderStatus,
         finalPrice: updatedOrder.finalPrice,
         startDate: updatedOrder.startDate,
-        endDate: updatedOrder.endDate,
+        estimatedDurationHours: updatedOrder.estimatedDurationHours,
         createdAt: updatedOrder.createdAt,
         updatedAt: updatedOrder.updatedAt,
       };
@@ -229,9 +241,9 @@ export default class NegotiationService extends Service {
       const party = this.resolveOrderParty(order, userState);
 
       // Guard: only allow negotiation in these order states
-      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'TIME_SPECIFIED') {
+      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'OPEN') {
         throw new AppError(
-          'Negotiations are only allowed when order status is PENDING or TIME_SPECIFIED',
+          'Negotiations are only allowed when order status is PENDING or OPEN',
           400
         );
       }

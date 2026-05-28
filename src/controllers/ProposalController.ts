@@ -27,9 +27,7 @@ export default class ProposalController {
 
     const proposal = await this.proposalService.submitProposal({
       orderId,
-      workerUserId,
-      price: parsedBody.price,
-      note: parsedBody.note,
+      userId: workerUserId,
     });
 
     const fullProposal = await this.proposalService.getProposalById({

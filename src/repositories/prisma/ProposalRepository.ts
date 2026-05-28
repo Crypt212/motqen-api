@@ -23,8 +23,6 @@ export default class ProposalRepository extends Repository implements IProposalR
       orderId: record.orderId,
       workerProfileId: record.workerProfileId,
       status: record.status as ProposalStatus,
-      initialPrice: record.initialPrice,
-      note: record.note,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
@@ -53,9 +51,10 @@ export default class ProposalRepository extends Repository implements IProposalR
         price: latestNegotiation.price,
         status: latestNegotiation.status,
         direction: latestNegotiation.direction,
+        startDate: latestNegotiation.startDate,
+        estimatedDurationHours: latestNegotiation.estimatedDurationHours,
         createdAt: latestNegotiation.createdAt,
       } : null,
-      latestNegotiationPrice: latestNegotiation ? latestNegotiation.price : null,
     };
   }
 
@@ -194,8 +193,6 @@ export default class ProposalRepository extends Repository implements IProposalR
         data: {
           order: { connect: { id: proposal.orderId } },
           workerProfile: { connect: { id: proposal.workerProfileId } },
-          initialPrice: proposal.initialPrice,
-          note: proposal.note,
         },
       });
       return this.toDomain(record);

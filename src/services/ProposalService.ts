@@ -34,18 +34,14 @@ export default class ProposalService extends Service {
 
   async submitProposal({
     orderId,
-    workerUserId,
-    price,
-    note,
+    userId,
   }: {
     orderId: string;
-    workerUserId: string;
-    price: number;
-    note?: string | null;
+    userId: string;
   }): Promise<Proposal> {
     return tryCatch(async () => {
       // 1. Get worker profile and verify they are approved
-      const workerProfile = await this.workerProfileRepository.find({ workerFilter: { userId: workerUserId } });
+      const workerProfile = await this.workerProfileRepository.find({ workerFilter: { userId: userId } });
       if (!workerProfile) {
         throw new AppError('Worker profile not found', 400);
       }
@@ -87,15 +83,36 @@ export default class ProposalService extends Service {
         throw new AppError('Rate limit exceeded: You can only submit up to 10 proposals per hour', 429);
       }
 
-      // 5. Create proposal
-      return await this.proposalRepository.create({
-        proposal: {
-          orderId,
-          workerProfileId: workerProfile.id,
-          initialPrice: price,
-          note,
-        },
-      });
+      // 5. Create proposal and initial negotiation atomically
+      return await this.transactionManager.execute(
+        { proposalRepo: ProposalRepository, negotiationRepo: NegotiationRepository },
+        async ({ proposalRepo, negotiationRepo }, tx) => {
+          const proposal = await proposalRepo.create({
+            proposal: {
+              orderId,
+              workerProfileId: workerProfile.id,
+            },
+          });
+
+          // Fetch the client's userId (since OrderForNegotiation doesn't have it directly, we assume order has it from orderRepo)
+          // Wait, order here is from orderRepo.find which includes clientProfile.user
+          const clientUserId = order.clientUserId;
+
+          await negotiationRepo.create({
+            data: {
+              orderId,
+              proposalId: proposal.id as string,
+              senderId: clientUserId as string,
+              direction: 'CLIENT_TO_WORKER',
+              price: order.initialPrice ?? 0,
+              startDate: order.startDate ?? new Date(),
+              estimatedDurationHours: order.estimatedDurationHours ?? 1,
+            },
+          });
+
+          return proposal;
+        }
+      );
     });
   }
 
@@ -211,9 +228,13 @@ export default class ProposalService extends Service {
             throw new AppError('Worker is no longer verified and approved', 400);
           }
 
-          // 4. Determine final price
           const latestNegotiation = await negotiationRepo.findLatestByProposalId({ proposalId });
-          const finalPrice = latestNegotiation ? latestNegotiation.price : proposal.initialPrice;
+          if (!latestNegotiation) {
+            throw new AppError('Cannot accept a proposal without negotiations', 400);
+          }
+          const finalPrice = latestNegotiation.price;
+          const startDate = latestNegotiation.startDate;
+          const estimatedDurationHours = latestNegotiation.estimatedDurationHours;
 
           // 5. Update accepted proposal status
           const updatedProposal = await proposalRepo.updateStatus({
@@ -230,8 +251,10 @@ export default class ProposalService extends Service {
             filter: { id: orderId },
             order: {
               workerUserId: workerProfile.userId,
-              orderStatus: 'WORKER_SELECTED',
+              orderStatus: 'PRICE_AGREED',
               finalPrice,
+              startDate,
+              estimatedDurationHours,
             },
           });
 

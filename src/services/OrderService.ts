@@ -89,9 +89,11 @@ export default class OrderService extends Service {
               workerUserId: isGlobal ? null : data.workerUserId,
               locationId: data.locationId,
               subSpecializationId: data.subSpecializationId,
-              startDate: isGlobal ? null : data.startDate,
+              initialPrice: data.initialPrice,
+              startDate: data.startDate,
+              estimatedDurationHours: data.estimatedDurationHours,
               isUrgent: data.isUrgent,
-              orderMode: data.orderMode as any,
+              orderMode: data.orderMode,
             },
             imageUrls,
           });
@@ -189,67 +191,6 @@ export default class OrderService extends Service {
     });
   }
 
-  async specifyTimeRange(params: {
-    orderId: string;
-    workerUserId?: string;
-    startTime: Date;
-    endTime: Date;
-  }) {
-    return tryCatch(async () => {
-      if (!params.workerUserId) throw new AppError('Worker not found', 403);
-
-      const order = await this.orderRepository.find({ filter: { id: params.orderId } });
-      if (!order) throw new AppError('Order not found', 404);
-
-      if (order.workerUserId !== params.workerUserId) {
-        throw new AppError('Access denied', 403);
-      }
-
-      const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: params.workerUserId } });
-      if (!workerVerification || workerVerification.status !== VerificationStatus.APPROVED) {
-        throw new AppError('Worker is not verified', 400);
-      }
-
-      if (!canTransitionOrderStatus(order.orderStatus, 'TIME_SPECIFIED')) {
-        throw new AppError('Cannot specify time range in current status', 400);
-      }
-
-      return await this.transactionManager.execute(
-        { orderRepo: OrderRepository, workerRepo: WorkerProfileRepository, timeSlotRepo: WorkerOccupiedTimeSlotRepository },
-        async ({ orderRepo, workerRepo, timeSlotRepo }, tx) => {
-          // Advisory lock
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${params.workerUserId}))`;
-
-          const workerProfileId = (await workerRepo.find({ workerFilter: { userId: params.workerUserId } })).id;
-
-          const existingSlots = await timeSlotRepo.findMany({
-            filter: { workerProfileId },
-          });
-
-          for (const slot of existingSlots) {
-            if (hasOverlap(params.startTime, params.endTime, slot.startDate, slot.endDate)) {
-              throw new AppError('Time slot overlaps with existing schedule', 409);
-            }
-          }
-
-          await timeSlotRepo.create({
-            slot: {
-              workerProfileId,
-              orderId: params.orderId,
-              startDate: params.startTime,
-              endDate: params.endTime,
-            },
-          });
-
-          return await orderRepo.update({
-            filter: { id: params.orderId },
-            order: { orderStatus: 'TIME_SPECIFIED', endDate: params.endTime },
-          });
-        }
-      );
-    });
-  }
-
   async startWork(params: { orderId: string; workerUserId?: string }) {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
@@ -295,8 +236,8 @@ export default class OrderService extends Service {
         throw new AppError('Cannot complete order in current status', 400);
 
       return await this.transactionManager.execute(
-        { orderRepo: OrderRepository, workerProfileRepo: WorkerProfileRepository },
-        async ({ orderRepo, workerProfileRepo }) => {
+        { orderRepo: OrderRepository, timeSlotRepo: WorkerOccupiedTimeSlotRepository, workerProfileRepo: WorkerProfileRepository },
+        async ({ orderRepo, timeSlotRepo, workerProfileRepo }) => {
           const updated = await orderRepo.update({
             filter: { id: params.orderId },
             order: {
@@ -305,6 +246,8 @@ export default class OrderService extends Service {
               workFinishedAt: new Date(),
             },
           });
+
+          await timeSlotRepo.deleteByOrderId({ orderId: params.orderId, });
 
           const workerProfileId = (await workerProfileRepo.find({ workerFilter: { userId: order.workerUserId } })).id;
 

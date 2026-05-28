@@ -102,18 +102,6 @@ export default class OrderController {
     new SuccessResponse('Order cancelled successfully', null, 200).send(res);
   });
 
-  specifyRange = asyncHandler(async (req, res) => {
-    const { orderId } = req.params;
-    const { startTime, endTime } = req.body;
-    const userState = req.userState!;
-    const order = await this.orderService.specifyTimeRange({
-      orderId: orderId as string,
-      workerUserId: userState.userId,
-      startTime,
-      endTime,
-    });
-    new SuccessResponse('Time range specified successfully', { order }, 200).send(res);
-  });
 
   startWork = asyncHandler(async (req, res) => {
     const { orderId } = req.params;

@@ -13,6 +13,8 @@
 - Proposal model in Prisma schema with relationships to Order and WorkerProfile
 - New ProposalStatus enum (PENDING, NEGOTIATING, ACCEPTED, REJECTED, WITHDRAWN, DISMISSED)
 - Unique constraint on proposal combinations (orderId, workerProfileId)
+- `initialPrice` and `estimatedDurationHours` fields to `Order` domain and Prisma model
+- Initial automatic negotiation seeding within `ProposalService` when a proposal is submitted
 
 ### Changed
 - Enhanced OrderController.create endpoint to use schema validation and structured response
@@ -34,6 +36,15 @@
 - Added worker summary types for proposal responses
 - Added proposal filter descriptors for querying
 - Added proposal create and update input types
+- Replaced `endDate` with `estimatedDurationHours` in `Order` and `Negotiation` domains
+- Unified the order lifecycle to seamlessly funnel through proposals and nested negotiations
+- Updated `NegotiationService` to require `proposalId` and inherit terms from previous counter-offers
+- Migrated negotiation routes from `/orders/:orderId/negotiations` to `/orders/:orderId/proposals/:proposalId/negotiations`
+- Cleaned up OpenAPI documentation to reflect the new proposal-centric endpoints in `proposals.docs.ts`
+
+### Removed
+- Legacy `WORKER_SELECTED` and `TIME_SPECIFIED` statuses from `OrderStatus` state machine
+- Legacy `/orders/:orderId/specify-range` endpoint, schemas, controller handlers, and documentation
 
 ### Files Modified
 - prisma/schema.prisma - Added Proposal model and relationships

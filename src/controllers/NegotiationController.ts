@@ -28,14 +28,17 @@ export const getNegotiations = asyncHandler(async (req, res) => {
  * Create a new negotiation offer for the order.
  */
 export const createNegotiation = asyncHandler(async (req, res) => {
-  const orderId = req.params.orderId as string;
-  const { price, note } = req.body;
+  const { orderId, proposalId } = req.params;
+  const { price, startDate, estimatedDurationHours, note } = req.body;
   const userState = req.userState;
 
   const negotiation = await negotiationService.createNegotiation({
-    orderId,
+    orderId: orderId as string,
+    proposalId: proposalId as string,
     userState,
     price,
+    startDate,
+    estimatedDurationHours,
     note,
   });
 

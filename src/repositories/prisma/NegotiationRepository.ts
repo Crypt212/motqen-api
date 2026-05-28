@@ -24,7 +24,9 @@ export default class NegotiationRepository extends Repository implements INegoti
     note: string | null;
     createdAt: Date;
     updatedAt: Date;
-    proposalId?: string | null;
+    proposalId: string;
+    startDate: Date;
+    estimatedDurationHours: number;
   }): Negotiation {
     return {
       id: record.id,
@@ -35,7 +37,9 @@ export default class NegotiationRepository extends Repository implements INegoti
       note: record.note,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
-      proposalId: record.proposalId ?? null,
+      proposalId: record.proposalId,
+      startDate: record.startDate,
+      estimatedDurationHours: record.estimatedDurationHours,
     };
   }
 
@@ -100,7 +104,9 @@ export default class NegotiationRepository extends Repository implements INegoti
           direction: data.direction,
           note: data.note ?? null,
           status: 'PENDING',
-          proposal: data.proposalId ? { connect: { id: data.proposalId } } : undefined,
+          proposal: { connect: { id: data.proposalId } },
+          startDate: data.startDate,
+          estimatedDurationHours: data.estimatedDurationHours,
         },
       });
       return this.toDomain(record);

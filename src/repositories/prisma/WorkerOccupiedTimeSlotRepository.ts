@@ -21,6 +21,7 @@ export default class WorkerOccupiedTimeSlotRepository
       startDate: record.startDate,
       endDate: record.endDate,
       createdAt: record.createdAt,
+      isConfirmed: record.isConfirmed,
     };
   }
 

@@ -18,9 +18,10 @@ export type Order = {
   subSpecialization: SubSpecialization;
   orderStatus: OrderStatus;
   workStatus: WorkStatus;
+  initialPrice: number | null;
   finalPrice: number | null;
   startDate: Date | null;
-  endDate: Date | null;
+  estimatedDurationHours: number | null;
   isUrgent: boolean;
   rate: number;
   comment?: string;
@@ -39,7 +40,9 @@ export type OrderCreateInput = {
   workerUserId?: IDType | null;
   locationId: IDType;
   subSpecializationId: IDType;
+  initialPrice: number;
   startDate?: Date | null;
+  estimatedDurationHours: number;
   isUrgent: boolean;
   orderMode?: OrderMode;
 };
@@ -48,7 +51,8 @@ export type OrderUpdateInput = Partial<{
   orderStatus: OrderStatus;
   workStatus: WorkStatus;
   finalPrice: number;
-  endDate: Date;
+  startDate: Date;
+  estimatedDurationHours: number;
   rate: number;
   comment: string;
   workStartedAt: Date;
@@ -63,7 +67,7 @@ export const OrderFilterDescriptor = {
   rate: { type: 'number' },
   orderStatus: {
     type: 'enum',
-    enumValues: ['PENDING', 'OPEN', 'WORKER_SELECTED', 'TIME_SPECIFIED', 'PRICE_AGREED', 'PAID', 'COMPLETED', 'CANCELLED'],
+    enumValues: ['PENDING', 'OPEN', 'PRICE_AGREED', 'PAID', 'COMPLETED', 'CANCELLED'],
   },
   orderMode: {
     type: 'enum',

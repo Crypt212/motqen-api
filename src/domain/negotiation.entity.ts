@@ -13,7 +13,9 @@ export type Negotiation = {
   note: string | null;
   createdAt: Date;
   updatedAt: Date;
-  proposalId: IDType | null;
+  proposalId: IDType;
+  startDate: Date;
+  estimatedDurationHours: number;
 };
 
 export type CreateNegotiationInput = {
@@ -22,7 +24,9 @@ export type CreateNegotiationInput = {
   price: number;
   direction: NegotiationDirection;
   note?: string;
-  proposalId?: IDType | null;
+  proposalId: IDType;
+  startDate: Date;
+  estimatedDurationHours: number;
 };
 
 /**

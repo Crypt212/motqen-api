@@ -15,8 +15,6 @@ model Session {
   revokedAt  DateTime?
   revokedBy  String?
   deviceId   String
-  ipAddress  String?
-  userAgent  String?
   fcmToken   String?
   lastUsedAt DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -203,6 +201,7 @@ model WorkerOccupiedTimeSlot {
   id              String        @id @default(uuid())
   workerProfileId String
   orderId         String        @unique
+  isConfirmed     Boolean       @default(false)
   startDate       DateTime
   endDate         DateTime
   createdAt       DateTime      @default(now())
@@ -343,9 +342,10 @@ model Order {
   subSpecializationId String
   orderStatus         OrderStatus @default(PENDING)
   workStatus          WorkStatus  @default(PENDING)
+  initialPrice        Float?
   finalPrice          Float?
   startDate           DateTime?
-  endDate             DateTime?
+  estimatedDurationHours Int?
   orderMode           OrderMode   @default(DIRECT)
   isUrgent            Boolean     @default(false)
   rate                Float       @default(-1.0)
@@ -397,8 +397,10 @@ model Negotiation {
   senderId   String
   acceptedBy String?
 
-  note String?
-  proposalId String?
+  note       String?
+  proposalId String
+  startDate  DateTime
+  estimatedDurationHours Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -420,8 +422,6 @@ enum OrderType {
 enum OrderStatus {
   PENDING
   OPEN
-  WORKER_SELECTED
-  TIME_SPECIFIED
   PRICE_AGREED
   PAID
   COMPLETED
@@ -447,7 +447,6 @@ model Proposal {
   orderId         String
   workerProfileId String
   status          ProposalStatus @default(PENDING)
-  initialPrice    Float
   note            String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt

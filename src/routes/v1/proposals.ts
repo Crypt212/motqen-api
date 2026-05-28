@@ -8,6 +8,13 @@ import {
   ProposalIdParamsSchema,
   OrderProposalParamsSchema,
 } from '../../schemas/requests/proposal.request.js';
+import {
+  getNegotiations,
+  createNegotiation,
+  acceptNegotiation,
+  rejectNegotiation,
+} from '../../controllers/NegotiationController.js';
+import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
 
 const proposalsRouter = Router({ mergeParams: true });
 
@@ -38,6 +45,35 @@ proposalsRouter.post(
   isActive,
   validateParams(OrderProposalParamsSchema),
   proposalController.accept
+);
+
+proposalsRouter.get(
+  '/:proposalId/negotiations',
+  isActive,
+  validateParams(OrderProposalParamsSchema),
+  getNegotiations
+);
+
+proposalsRouter.post(
+  '/:proposalId/negotiations',
+  isActive,
+  validateParams(OrderProposalParamsSchema),
+  validateBody(CreateNegotiationSchema),
+  createNegotiation
+);
+
+proposalsRouter.post(
+  '/:proposalId/negotiations/accept',
+  isActive,
+  validateParams(OrderProposalParamsSchema),
+  acceptNegotiation
+);
+
+proposalsRouter.post(
+  '/:proposalId/negotiations/reject',
+  isActive,
+  validateParams(OrderProposalParamsSchema),
+  rejectNegotiation
 );
 
 export default proposalsRouter;

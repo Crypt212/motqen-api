@@ -10,8 +10,6 @@ export type Proposal = {
   orderId: IDType;
   workerProfileId: IDType;
   status: ProposalStatus;
-  initialPrice: number;
-  note: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -32,6 +30,8 @@ export type LatestNegotiationSnapshot = {
   id: IDType;
   price: number;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  startDate: Date;
+  estimatedDurationHours: number;
   direction: 'WORKER_TO_CLIENT' | 'CLIENT_TO_WORKER';
   createdAt: Date;
 } | null;
@@ -45,14 +45,10 @@ export type ProposalWithWorkerSummary = Proposal & {
 export type ProposalCreateInput = {
   orderId: IDType;
   workerProfileId: IDType;
-  initialPrice: number;
-  note?: string | null;
 };
 
 export type ProposalUpdateInput = Partial<{
   status: ProposalStatus;
-  initialPrice: number;
-  note: string | null;
 }>;
 
 export const ProposalFilterDescriptor = {

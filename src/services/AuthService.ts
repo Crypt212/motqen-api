@@ -543,8 +543,6 @@ export default class AuthService extends Service {
 
         // TODO: Find usage of those and fill them or remove them
         fcmToken: "",
-        userAgent: "",
-        ipAddress: ""
       },
     });
 
