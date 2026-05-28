@@ -1,6 +1,6 @@
-import { z } from 'zod';
+import { z } from '../../libs/zod.js';
 import { SuccessResponseSchema } from '../responses.js';
-import { UUIDSchema } from '../common.js';
+import { SpecializationsTreeSchema, UUIDSchema } from '../common.js';
 
 export const ExploreWorkerCardSchema = z.object({
   workerId: UUIDSchema,
@@ -71,3 +71,52 @@ export const ExploreDetailResponseSchema = SuccessResponseSchema(
     worker: ExploreWorkerDetailSchema,
   })
 );
+
+
+const AreaInfoSchema = z.object({
+  id: UUIDSchema,
+  name: z.string(),
+  nameAr: z.string(),
+  long: z.number(),
+  lat: z.number(),
+});
+
+const ExploreWorkerSchema = z.object({
+  userInfo: z.object({
+    id: UUIDSchema,
+    isOnline: z.boolean(),
+    profileImageUrl: z.string().nullable(),
+    name: z.string(),
+  }),
+  location: z
+    .object({
+      id: UUIDSchema,
+      address: z.string(),
+      addressNotes: z.string(),
+      city: AreaInfoSchema,
+      government: AreaInfoSchema,
+    })
+    .nullable(),
+  specializationTree: SpecializationsTreeSchema,
+  workInfo: z.object({
+    experienceYears: z.number().nullable(),
+    isInTeam: z.boolean().nullable(),
+    acceptsUrgentJobs: z.boolean().nullable(),
+    bio: z.string().nullable(),
+  }),
+});
+
+export const ExploreWorkersResponseSchema = SuccessResponseSchema(
+  z.object({
+    workers: z.array(ExploreWorkerSchema),
+    total: z.number(),
+    page: z.number(),
+    limit: z.number(),
+    count: z.number(),
+    hasNext: z.boolean(),
+    hasPrev: z.boolean(),
+    totalPages: z.number(),
+  })
+);
+
+export const ExploreWorkerDetailResponseSchema = SuccessResponseSchema(ExploreWorkerSchema);

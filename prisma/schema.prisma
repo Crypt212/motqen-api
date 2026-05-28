@@ -942,6 +942,8 @@ enum RefundReasonCode {
   DUPLICATE_PAYMENT
   ADMIN_INITIATED
   DISPUTE_RESOLUTION
+}
+
 model Report {
   id              String           @id @default(uuid())
   reporterId      String

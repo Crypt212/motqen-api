@@ -2,6 +2,9 @@ import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
 import { UUIDSchema } from '../common.js';
+import { GovernmentObjectSchema } from './government.response.js';
+import { SpecializationObjectSchema } from './specialization.response.js';
+import { DaysWorkingHoursSchema } from '../requests/worker-profile.request.js';
 
 
 export const UserObjectSchema = z.object({
@@ -76,3 +79,39 @@ export const DashboardLocationsResponseSchema = SuccessResponseSchema(z.object({
 export const DashboardLocationResponseSchema = SuccessResponseSchema(z.object({
   location: LocationObjectSchema,
 }),);
+
+export const UserResponseSchema = SuccessResponseSchema(
+  z.object({
+    user: UserObjectSchema
+  })
+);
+
+export const WorkerProfileResponseSchema = SuccessResponseSchema(
+  z.object({
+    workerProfile: WorkerProfileObjectSchema,
+  })
+);
+
+export const ClientProfileResponseSchema = SuccessResponseSchema(
+  z.object({
+    clientProfile: ClientProfileObjectSchema
+  })
+);
+
+export const WorkGovernmentsResponseSchema = SuccessResponseSchema(
+  z.object({
+    workGovernments: z.array(GovernmentObjectSchema)
+  })
+);
+
+export const SpecializationsResponseSchema = SuccessResponseSchema(
+  z.object({
+    specializations: z.array(SpecializationObjectSchema)
+  })
+);
+
+export const WorkingHoursResponseSchema = SuccessResponseSchema(
+  z.object({
+    workingHours: DaysWorkingHoursSchema
+  })
+);

@@ -98,7 +98,7 @@ export class DashboardService {
       include: {
         workerProfile: {
           include: {
-            workerBalances: true,
+            workerBalance: true,
             chosenSpecializations: { include: { specialization: true, subSpecialization: true } },
           },
         },
@@ -124,7 +124,7 @@ export class DashboardService {
           where: { workerProfileId },
           orderBy: { createdAt: 'desc' },
           take: 50,
-          include: { ClientProfile: { include: { user: { select: { firstName: true, lastName: true } } } } },
+          include: { clientProfile: { include: { user: { select: { firstName: true, lastName: true } } } } },
         })
       : [];
 
@@ -169,7 +169,7 @@ export class DashboardService {
             rate: user.workerProfile.rate,
             completedJobsCount: user.workerProfile.completedJobsCount,
             experienceYears: user.workerProfile.experienceYears,
-            balance: user.workerProfile.workerBalances?.[0] || null,
+            balance: user.workerProfile.workerBalance || null,
             specializations: user.workerProfile.chosenSpecializations,
           }
         : null,
@@ -177,8 +177,8 @@ export class DashboardService {
       transactionHistory,
       workHistory,
       ratings: {
-        average: ratings._avg.rating,
-        count: ratings._count.rating,
+        average: ratings._avg.rate,
+        count: ratings._count.rate,
       },
       disputes,
     };

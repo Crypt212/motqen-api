@@ -62,7 +62,7 @@ export default class PresenceService extends Service {
 
       // Remove all presence data from Redis
       await this.presenceCache.removeAllSockets({ userId });
-      await this.presenceCache.removeAllInChat({ userId, conversationIds });
+      await this.presenceCache.removeAllInChat({ userId });//, conversationIds }); TODO: Figure out why this is failing
 
       // Update DB status to offline
       await this.prisma.user.update({
@@ -113,7 +113,7 @@ export default class PresenceService extends Service {
       const conversationIds = convs.conversationParticipantsWithMessages.map((c) => c.id);
 
       // Remove socket from all inChat sets
-      await this.presenceCache.leaveAllChats({ userId, socketId, conversationIds });
+      await this.presenceCache.leaveAllChats({ userId }); //, socketId, conversationIds }); TODO: Figure out why this is failing
 
       // Emit partner_offline to online partners for each conversation
       for (const conv of convs.conversationParticipantsWithMessages) {

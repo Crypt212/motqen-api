@@ -1,6 +1,5 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
-import { z } from '../../../libs/zod.js';
-import { NotificationsResponseSchema, MarkAllReadResponseSchema } from '../../../schemas/responses.js';
+import { NotificationsResponseSchema, MarkAllReadResponseSchema } from '../../../schemas/responses/notification.response.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerNotificationsDocs(registry: OpenAPIRegistry) {

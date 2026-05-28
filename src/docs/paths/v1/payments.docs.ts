@@ -1,8 +1,8 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from '../../../libs/zod.js';
-import { OrderIdParamsSchema } from '../../../schemas/order.js';
 import { SuccessResponseSchema } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
+import { OrderIdParamsSchema } from 'src/schemas/requests/order.request.js';
 
 export default function registerPaymentsDocs(registry: OpenAPIRegistry) {
   registry.registerPath({

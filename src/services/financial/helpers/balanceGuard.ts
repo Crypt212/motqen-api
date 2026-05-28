@@ -1,4 +1,5 @@
-import { WorkerBalance, computeAvailableToWithdraw } from '../../../domain/financial/workerBalance.entity.js';
+import { computeAvailableToWithdraw } from 'src/utils/computeAvailableToWithdraw.js';
+import { WorkerBalance } from '../../../domain/financial/workerBalance.entity.js';
 import AppError from '../../../errors/AppError.js';
 
 /**

@@ -19,23 +19,27 @@ export const UserObjectSchema = z.object({
 });
 
 export const RequestOTPResponseSchema = SuccessResponseSchema(z.object({
-    phone: z.string(),
+    phoneNumber: z.string().describe("e.g. '+201234567890'"),
+    method: z.string().describe("e.g. 'SMS'"),
+    cooldown: z.number().int().describe('Seconds before next request allowed'),
   }),);
 
 export const VerifyOTPResponseSchema = SuccessResponseSchema(z.object({
-    accessToken: z.string().optional(),
-    user: UserObjectSchema.optional(),
-    isRegistered: z.boolean(),
-    reviewStatus: z.string().optional(),
+    tokenType: z.enum(['login', 'register']),
+    token: z.string().describe("e.g. 'eyJhbGciOiJI...'"),
+    isWorker: z.boolean().optional(),
+    isWorkerSignedUp: z.boolean().optional(),
   }),);
 
 export const RegisterResponseSchema = SuccessResponseSchema(z.object({
     accessToken: z.string(),
+    refreshToken: z.string(),
     user: UserObjectSchema,
   }),);
 
 export const LoginResponseSchema = SuccessResponseSchema(z.object({
     accessToken: z.string(),
+    refreshToken: z.string(),
     user: UserObjectSchema,
   }),);
 
@@ -46,3 +50,21 @@ export const AccessTokenResponseSchema = SuccessResponseSchema(z.object({
 export const ReviewStatusResponseSchema = SuccessResponseSchema(z.object({
     reviewStatus: z.string(),
   }),);
+
+export const RegisterClientResponseSchema = SuccessResponseSchema(
+  z.object({
+    user: UserObjectSchema,
+    clientProfile: z.any().describe('ClientProfile object'),
+    accessToken: z.string(),
+    refreshToken: z.string(),
+  })
+);
+
+export const RegisterWorkerResponseSchema = SuccessResponseSchema(
+  z.object({
+    user: UserObjectSchema,
+    workerProfile: z.any().describe('WorkerProfile object'),
+    accessToken: z.string(),
+    refreshToken: z.string(),
+  })
+);

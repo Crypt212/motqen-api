@@ -35,6 +35,7 @@ export class NotificationService {
       title: payload.title,
       body: payload.body,
       data: payload.data,
+      isSent: false,
     });
 
     await this.redis.del(UNREAD_COUNT_KEY(userId));

@@ -42,11 +42,11 @@ export default class SessionRepository extends Repository implements ISessionRep
     }
   }
 
-  async create(params: { userId: IDType; session: SessionCreateInput }): Promise<Session> {
+  async create(params: { session: SessionCreateInput }): Promise<Session> {
     try {
       const record = await this.prismaClient.session.create({
         data: {
-          userId: params.userId,
+          userId: params.session.userId,
           token: params.session.token,
           isRevoked: params.session.isRevoked ?? false,
           deviceId: params.session.deviceId,

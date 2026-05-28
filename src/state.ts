@@ -131,10 +131,6 @@ export const orderController = new OrderController({ orderService, locationServi
 export const notificationRepository = new NotificationRepository(prisma);
 export const firebaseProvider = new FirebaseProvider();
 export const notificationService = new NotificationService(notificationRepository, redisClient, sessionRepository, userRepository, firebaseProvider);
-
-
-export const orderController = new OrderController({ orderService });
-
 export const webhookEventRepository = new WebhookEventRepository(prisma);
 export const paymentRepository = new PaymentRepository(prisma);
 export const paymentAttemptRepository = new PaymentAttemptRepository(prisma);

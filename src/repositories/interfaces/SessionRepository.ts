@@ -10,7 +10,7 @@ export default interface ISessionRepository {
   /**
    * Create a session
    */
-  create(params: { userId: IDType; session: SessionCreateInput }): Promise<Session>;
+  create(params: { session: SessionCreateInput }): Promise<Session>;
   /**
    * Delete a session
    */

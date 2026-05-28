@@ -533,13 +533,18 @@ export default class AuthService extends Service {
     const hashedToken = crypto.createHash('sha256').update(unHashedRefreshToken).digest('hex');
 
     const session = await this.sessionRepository.create({
-      userId: user.id,
       session: {
         isRevoked: false,
         lastUsedAt: new Date(Date.now()),
         deviceId: params.deviceId,
+        userId: user.id,
         expiresAt: params.expiresAt,
         token: hashedToken,
+
+        // TODO: Find usage of those and fill them or remove them
+        fcmToken: "",
+        userAgent: "",
+        ipAddress: ""
       },
     });
 
@@ -555,7 +560,7 @@ export default class AuthService extends Service {
       reason: 'new_login',
       message: 'You have been logged out because a new session was started on another device',
     });
-    
+
     return { session, user, unHashedRefreshToken: unHashedRefreshToken };
   }
 
