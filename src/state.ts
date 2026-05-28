@@ -41,6 +41,9 @@ import { FirebaseProvider } from './providers/FirebaseProvider.js';
 import ReportRepository from './repositories/prisma/ReportRepository.js';
 import ReportService from './services/ReportService.js';
 import ReportController from './controllers/ReportController.js';
+import ProposalRepository from './repositories/prisma/ProposalRepository.js';
+import ProposalService from './services/ProposalService.js';
+import ProposalController from './controllers/ProposalController.js';
 
 export const rateLimitCache = new RateLimitCache(redisClient);
 export const otpCache = new OTPCache(redisClient);
@@ -113,6 +116,7 @@ export const presenceService = new PresenceService({
 
 export const orderRepository = new OrderRepository(prisma);
 export const workerOccupiedTimeSlotRepository = new WorkerOccupiedTimeSlotRepository(prisma);
+export const proposalRepository = new ProposalRepository(prisma);
 
 export const orderService = new OrderService({
   orderRepository,
@@ -120,6 +124,15 @@ export const orderService = new OrderService({
   locationRepository,
   transactionManager,
 });
+
+export const proposalService = new ProposalService({
+  proposalRepository,
+  orderRepository,
+  workerProfileRepository,
+  transactionManager,
+});
+
+export const proposalController = new ProposalController({ proposalService });
 
 export const negotiationService = new NegotiationService({
   negotiationRepository,

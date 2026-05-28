@@ -13,6 +13,7 @@ export type Negotiation = {
   note: string | null;
   createdAt: Date;
   updatedAt: Date;
+  proposalId: IDType | null;
 };
 
 export type CreateNegotiationInput = {
@@ -21,6 +22,7 @@ export type CreateNegotiationInput = {
   price: number;
   direction: NegotiationDirection;
   note?: string;
+  proposalId?: IDType | null;
 };
 
 /**
@@ -30,7 +32,7 @@ export type CreateNegotiationInput = {
 export type OrderForNegotiation = {
   id: IDType;
   clientProfileId: IDType;
-  workerProfileId: IDType;
+  workerProfileId: IDType | null;
   orderStatus: $Enums.OrderStatus;
   title:string;
 };

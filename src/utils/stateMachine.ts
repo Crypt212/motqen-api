@@ -2,6 +2,8 @@ import { OrderStatus, WorkStatus } from '../generated/prisma/client.js';
 
 const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   PENDING: [OrderStatus.TIME_SPECIFIED, OrderStatus.PRICE_AGREED, OrderStatus.CANCELLED],
+  OPEN: [OrderStatus.WORKER_SELECTED, OrderStatus.CANCELLED],
+  WORKER_SELECTED: [OrderStatus.TIME_SPECIFIED, OrderStatus.CANCELLED],
   TIME_SPECIFIED: [OrderStatus.PRICE_AGREED, OrderStatus.CANCELLED],
   PRICE_AGREED: [OrderStatus.PAID, OrderStatus.CANCELLED],
   PAID: [OrderStatus.COMPLETED],

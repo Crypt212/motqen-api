@@ -11,12 +11,15 @@ export const CreateOrderSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().min(1),
   subSpecializationId: UUIDSchema,
-  workerUserId: UUIDSchema,
+  workerUserId: UUIDSchema.optional().nullable(),
   locationId: UUIDSchema,
   startDate: z.coerce
     .date()
-    .refine((d) => d > new Date(), { message: 'startDate must be in the future' }),
+    .refine((d) => d > new Date(), { message: 'startDate must be in the future' })
+    .optional()
+    .nullable(),
   isUrgent: stringToBool,
+  orderMode: z.enum(['DIRECT', 'GLOBAL']).default('DIRECT').optional(),
 });
 
 export type CreateOrderDTO = z.infer<typeof CreateOrderSchema>;

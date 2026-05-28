@@ -5,6 +5,7 @@ import {
   OrderUpdateInput,
 } from '../../domain/order.entity.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../../types/query.js';
+import { IDType } from './Repository.js';
 
 export default interface IOrderRepository {
   find({ filter }: { filter: OrderFilter }): Promise<Order | null>;
@@ -20,4 +21,5 @@ export default interface IOrderRepository {
   create({ order, imageUrls }: { order: OrderCreateInput; imageUrls: string[] }): Promise<Order>;
   update({ filter, order }: { filter: OrderFilter; order: OrderUpdateInput }): Promise<Order>;
   delete({ filter }: { filter: OrderFilter }): Promise<void>;
+  findForProposalAcceptance({ orderId }: { orderId: IDType }): Promise<Order | null>;
 }

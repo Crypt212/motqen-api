@@ -7,6 +7,7 @@ import {
   OrderFilter,
   OrderStatus,
   OrderUpdateInput,
+  OrderMode,
 } from '../../domain/order.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../../types/query.js';
@@ -26,7 +27,8 @@ type PrismaOrderFilter = {
   rate?: number,
   orderStatus?: OrderStatus,
   isUrgent?: boolean,
-  createdAt?: Date
+  createdAt?: Date,
+  orderMode?: OrderMode
 };
 
 export default class OrderRepository extends Repository implements IOrderRepository {
@@ -40,7 +42,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
       title: record.title,
       description: record.description,
       clientUserId: record.clientProfile.userId,
-      workerUserId: record.workerProfile.userId,
+      workerUserId: record.workerProfile?.userId ?? null,
       locationId: record.locationId,
       subSpecialization: record.subSpecialization,
       orderStatus: record.orderStatus,
@@ -50,7 +52,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
       endDate: record.endDate,
       isUrgent: record.isUrgent,
       rate: record.rate,
-      comment: record.comment,
+      comment: record.comment ?? undefined,
       workStartedAt: record.workStartedAt,
       workFinishedAt: record.workFinishedAt,
       createdAt: record.createdAt,
@@ -59,6 +61,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
         record.images?.map((i: { imageUrl: string } | string) =>
           typeof i === 'string' ? i : i.imageUrl
         ) ?? [],
+      orderMode: record.orderMode as any,
     };
   }
 
@@ -70,7 +73,8 @@ export default class OrderRepository extends Repository implements IOrderReposit
       rate: filter?.rate as number,
       orderStatus: filter?.orderStatus as OrderStatus,
       isUrgent: filter?.isUrgent as boolean,
-      createdAt: filter?.createdAt as Date
+      createdAt: filter?.createdAt as Date,
+      orderMode: filter?.orderMode as OrderMode
 
     };
     return preparedFilter;
@@ -152,11 +156,13 @@ export default class OrderRepository extends Repository implements IOrderReposit
           description: order.description,
           location: { connect: { id: order.locationId } },
           subSpecialization: { connect: { id: order.subSpecializationId } },
-          startDate: order.startDate,
+          startDate: order.startDate ?? undefined,
           isUrgent: order.isUrgent,
+          orderMode: (order.orderMode as any) ?? 'DIRECT',
+          orderStatus: order.orderMode === 'GLOBAL' ? 'OPEN' : 'PENDING',
 
           clientProfile: { connect: { userId: order.clientUserId } },
-          workerProfile: { connect: { userId: order.workerUserId } },
+          workerProfile: order.workerUserId ? { connect: { userId: order.workerUserId } } : undefined,
 
           images: {
             createMany: {
@@ -186,9 +192,17 @@ export default class OrderRepository extends Repository implements IOrderReposit
       const existing = await this.prismaClient.order.findFirst({ where: preparedFilter });
       if (!existing) throw new Error('Order not found for update');
 
+      const dataToUpdate: any = { ...order };
+      if (order.workerUserId !== undefined) {
+        dataToUpdate.workerProfile = order.workerUserId
+          ? { connect: { userId: order.workerUserId } }
+          : { disconnect: true };
+        delete dataToUpdate.workerUserId;
+      }
+
       const record = await this.prismaClient.order.update({
         where: { id: existing.id },
-        data: order,
+        data: dataToUpdate,
         include: { images: true, subSpecialization: true, workerProfile: { include: { user: true } }, clientProfile: { include: { user: true } } },
       });
       return this.toDomain(record);
@@ -206,6 +220,19 @@ export default class OrderRepository extends Repository implements IOrderReposit
       });
     } catch (error) {
       throw handlePrismaError(error, 'delete order');
+    }
+  }
+
+  async findForProposalAcceptance({ orderId }: { orderId: string }): Promise<Order | null> {
+    try {
+      const record = await this.prismaClient.order.findUnique({
+        where: { id: orderId },
+        include: { images: true, subSpecialization: true, clientProfile: { include: { user: true } }, workerProfile: { include: { user: true } } }
+      });
+      if (!record) return null;
+      return this.toDomain(record);
+    } catch (error) {
+      throw handlePrismaError(error, 'find order for proposal acceptance');
     }
   }
 }

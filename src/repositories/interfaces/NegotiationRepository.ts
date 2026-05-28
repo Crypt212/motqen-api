@@ -36,4 +36,17 @@ export default interface INegotiationRepository {
    * negotiation authorization and business checks.
    */
   findOrderWithProfiles(params: { orderId: IDType }): Promise<OrderForNegotiation | null>;
+
+  /**
+   * Find negotiations by proposalId.
+   */
+  findByProposalId(params: {
+    proposalId: IDType;
+    pagination?: { page?: number; limit?: number };
+  }): Promise<PaginatedResultMeta & { negotiations: Negotiation[] }>;
+
+  /**
+   * Find latest negotiation by proposalId.
+   */
+  findLatestByProposalId(params: { proposalId: IDType }): Promise<Negotiation | null>;
 }

@@ -165,6 +165,7 @@ model WorkerProfile {
 
   occupiedTimeSlots     WorkerOccupiedTimeSlot[]
   Order                 Order[]
+  proposals             Proposal[]
   portfolio             Portfolio?
   chosenSpecializations ChosenSpecialization[]
   verification          WorkerVerification?
@@ -337,14 +338,15 @@ model Order {
   title               String
   description         String
   clientProfileId     String
-  workerProfileId     String
+  workerProfileId     String?
   locationId          String
   subSpecializationId String
   orderStatus         OrderStatus @default(PENDING)
   workStatus          WorkStatus  @default(PENDING)
   finalPrice          Float?
-  startDate           DateTime
+  startDate           DateTime?
   endDate             DateTime?
+  orderMode           OrderMode   @default(DIRECT)
   isUrgent            Boolean     @default(false)
   rate                Float       @default(-1.0)
   comment             String?
@@ -360,6 +362,7 @@ model Order {
   images            OrderImage[]
   occupiedTimeSlot  WorkerOccupiedTimeSlot?
   negotiations      Negotiation[]
+  proposals         Proposal[]
   payment           Payment?
   paymentAttempts   PaymentAttempt[]
   escrowHold        EscrowHold?
@@ -395,12 +398,14 @@ model Negotiation {
   acceptedBy String?
 
   note String?
+  proposalId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   sender    User     @relation("NegotiationSender", fields: [senderId], references: [id])
   accepter  User?    @relation("NegotiationAccepter", fields: [acceptedBy], references: [id])
+  proposal  Proposal? @relation(fields: [proposalId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([senderId])
@@ -414,11 +419,48 @@ enum OrderType {
 
 enum OrderStatus {
   PENDING
+  OPEN
+  WORKER_SELECTED
   TIME_SPECIFIED
   PRICE_AGREED
   PAID
   COMPLETED
   CANCELLED
+}
+
+enum OrderMode {
+  DIRECT
+  GLOBAL
+}
+
+enum ProposalStatus {
+  PENDING
+  NEGOTIATING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  DISMISSED
+}
+
+model Proposal {
+  id              String         @id @default(uuid())
+  orderId         String
+  workerProfileId String
+  status          ProposalStatus @default(PENDING)
+  initialPrice    Float
+  note            String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  workerProfile WorkerProfile  @relation(fields: [workerProfileId], references: [id])
+  negotiations  Negotiation[]
+
+  @@unique([orderId, workerProfileId])
+  @@index([orderId])
+  @@index([workerProfileId])
+  @@index([status])
+  @@map("proposals")
 }
 
 enum WorkStatus {

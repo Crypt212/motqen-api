@@ -57,9 +57,19 @@ export default class OrderService extends Service {
         throw new AppError('Maximum 3 images allowed per order', 400);
       }
 
-      const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: data.workerUserId } });
-      if (!workerVerification || workerVerification.status !== VerificationStatus.APPROVED) {
-        throw new AppError('Worker is not verified', 400);
+      const isGlobal = data.orderMode === 'GLOBAL';
+
+      if (!isGlobal) {
+        if (!data.workerUserId) {
+          throw new AppError('Worker user ID is required for direct orders', 400);
+        }
+        if (!data.startDate) {
+          throw new AppError('Start date is required for direct orders', 400);
+        }
+        const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: data.workerUserId } });
+        if (!workerVerification || workerVerification.status !== VerificationStatus.APPROVED) {
+          throw new AppError('Worker is not verified', 400);
+        }
       }
 
       // Upload images
@@ -76,11 +86,12 @@ export default class OrderService extends Service {
               title: data.title,
               description: data.description,
               clientUserId: data.clientUserId,
-              workerUserId: data.workerUserId,
+              workerUserId: isGlobal ? null : data.workerUserId,
               locationId: data.locationId,
               subSpecializationId: data.subSpecializationId,
-              startDate: data.startDate,
+              startDate: isGlobal ? null : data.startDate,
               isUrgent: data.isUrgent,
+              orderMode: data.orderMode as any,
             },
             imageUrls,
           });
