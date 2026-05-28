@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "tsx watch src/server.js",
     "start": "node dist/server.js",
-    "build": "npm run db:generate && swc src -d dist && mv -r ./dist/src/* ./dist/ && rm -r ./dist/src && tsc-alias",
+    "transpile": "swc src -d dist && cp -r dist/src/* dist/ && rm -rf dist/src && tsc-alias",
+    "build": "npm run db:generate && npm run transpile",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
