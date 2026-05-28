@@ -53,6 +53,6 @@ export const ProposalListResponseSchema = SuccessResponseSchema(
   })
 );
 
-export const ProposalAcceptResponseSchema = SuccessResponseSchema(ProposalObjectSchema);
+
 export const ProposalRejectResponseSchema = SuccessResponseSchema(ProposalObjectSchema);
 export const ProposalWithdrawResponseSchema = SuccessResponseSchema(ProposalObjectSchema);

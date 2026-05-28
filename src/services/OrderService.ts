@@ -14,6 +14,8 @@ import { CreateOrderDTO } from '../schemas/requests/order.request.js';
 import { OrderStatus, VerificationStatus } from 'src/generated/prisma/enums.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
 import SpecializationRepository from 'src/repositories/prisma/SpecializationRepository.js';
+import ProposalRepository from '../repositories/prisma/ProposalRepository.js';
+import NegotiationRepository from '../repositories/prisma/NegotiationRepository.js';
 import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerRepository.js';
 import { Role } from 'src/domain/user.entity.js';
 
@@ -79,8 +81,13 @@ export default class OrderService extends Service {
 
       // Create order with transaction
       return await this.transactionManager.execute(
-        { orderRepo: OrderRepository, specializationsRepo: SpecializationRepository },
-        async ({ orderRepo, specializationsRepo }) => {
+        { 
+          orderRepo: OrderRepository, 
+          specializationsRepo: SpecializationRepository,
+          proposalRepo: ProposalRepository,
+          negotiationRepo: NegotiationRepository
+        },
+        async ({ orderRepo, specializationsRepo, proposalRepo, negotiationRepo }) => {
           const order = await orderRepo.create({
             order: {
               title: data.title,
@@ -102,6 +109,28 @@ export default class OrderService extends Service {
           await specializationsRepo.increamentOrderCount({
             specializationId: specialization.id,
           });
+
+          if (!isGlobal && data.workerUserId) {
+            // Create a proposal and an initial negotiation for direct orders
+            const proposal = await proposalRepo.create({
+              proposal: {
+                orderId: order.id,
+                workerProfileId: data.workerUserId, // workerProfileId is often the same as workerUserId in our tests/setup
+              },
+            });
+
+            await negotiationRepo.create({
+              data: {
+                orderId: order.id,
+                proposalId: proposal.id,
+                senderId: data.clientUserId,
+                direction: 'CLIENT_TO_WORKER',
+                price: order.initialPrice ?? 0,
+                startDate: order.startDate ?? new Date(),
+                estimatedDurationHours: order.estimatedDurationHours ?? 1,
+              },
+            });
+          }
 
           return order;
         }

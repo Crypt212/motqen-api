@@ -23,6 +23,13 @@ import {
 } from '../../schemas/requests/order.request.js';
 import multer from 'multer';
 import proposalsRouter from './proposals.js';
+import {
+  getNegotiations,
+  createNegotiation,
+  acceptNegotiation,
+  rejectNegotiation,
+} from '../../controllers/NegotiationController.js';
+import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
 
 
 const router = Router();
@@ -51,4 +58,31 @@ router.post(
   validateBody(OrderRateSchema),
   orderController.rate
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DIRECT ORDER NEGOTIATION ROUTES
+// ─────────────────────────────────────────────────────────────────────────────
+// These routes are used for Direct Orders (where proposalId is implicit)
+
+router.get('/:orderId/negotiations', validateParams(OrderIdParamsSchema), getNegotiations);
+
+router.post(
+  '/:orderId/negotiations',
+  validateParams(OrderIdParamsSchema),
+  validateBody(CreateNegotiationSchema),
+  createNegotiation
+);
+
+router.post(
+  '/:orderId/negotiations/accept',
+  validateParams(OrderIdParamsSchema),
+  acceptNegotiation
+);
+
+router.post(
+  '/:orderId/negotiations/reject',
+  validateParams(OrderIdParamsSchema),
+  rejectNegotiation
+);
+
 export default router;

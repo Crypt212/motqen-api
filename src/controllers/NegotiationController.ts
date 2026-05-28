@@ -12,11 +12,12 @@ import { negotiationService } from '../state.js';
  * Return the full negotiation history for the order, sorted by createdAt DESC.
  */
 export const getNegotiations = asyncHandler(async (req, res) => {
-  const orderId = req.params.orderId as string;
+  const { orderId, proposalId } = req.params as { orderId: string; proposalId?: string };
   const userState = req.userState;
 
   const result = await negotiationService.getNegotiations({
     orderId,
+    proposalId,
     userState,
   });
 
@@ -28,13 +29,13 @@ export const getNegotiations = asyncHandler(async (req, res) => {
  * Create a new negotiation offer for the order.
  */
 export const createNegotiation = asyncHandler(async (req, res) => {
-  const { orderId, proposalId } = req.params;
+  const { orderId, proposalId } = req.params as { orderId: string; proposalId?: string };
   const { price, startDate, estimatedDurationHours, note } = req.body;
   const userState = req.userState;
 
   const negotiation = await negotiationService.createNegotiation({
     orderId: orderId as string,
-    proposalId: proposalId as string,
+    proposalId: proposalId as string | undefined,
     userState,
     price,
     startDate,
@@ -50,11 +51,12 @@ export const createNegotiation = asyncHandler(async (req, res) => {
  * Accept the most recent pending negotiation offer.
  */
 export const acceptNegotiation = asyncHandler(async (req, res) => {
-  const orderId = req.params.orderId as string;
+  const { orderId, proposalId } = req.params as { orderId: string; proposalId?: string };
   const userState = req.userState;
 
   const order = await negotiationService.acceptNegotiation({
     orderId,
+    proposalId,
     userState,
   });
 
@@ -66,11 +68,12 @@ export const acceptNegotiation = asyncHandler(async (req, res) => {
  * Reject the most recent pending negotiation offer.
  */
 export const rejectNegotiation = asyncHandler(async (req, res) => {
-  const orderId = req.params.orderId as string;
+  const { orderId, proposalId } = req.params as { orderId: string; proposalId?: string };
   const userState = req.userState;
 
   const negotiation = await negotiationService.rejectNegotiation({
     orderId,
+    proposalId,
     userState,
   });
 

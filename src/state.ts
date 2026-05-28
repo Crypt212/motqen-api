@@ -136,6 +136,8 @@ export const proposalController = new ProposalController({ proposalService });
 
 export const negotiationService = new NegotiationService({
   negotiationRepository,
+  proposalRepository,
+  workerOccupiedTimeSlotRepository,
   transactionManager
 });
 

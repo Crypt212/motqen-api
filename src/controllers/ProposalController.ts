@@ -7,11 +7,7 @@ import {
   ProposalIdParamsSchema,
   OrderProposalParamsSchema,
 } from '../schemas/requests/proposal.request.js';
-import {
-  ProposalResponseSchema,
-  ProposalListResponseSchema,
-  ProposalAcceptResponseSchema,
-} from '../schemas/responses/proposal.response.js';
+import { ProposalResponseSchema, ProposalListResponseSchema } from '../schemas/responses/proposal.response.js';
 
 export default class ProposalController {
   private proposalService: ProposalService;
@@ -88,22 +84,5 @@ export default class ProposalController {
     new SuccessResponse(validated.message, validated.data, 200).send(res);
   });
 
-  accept = asyncHandler(async (req, res) => {
-    const { orderId, proposalId } = OrderProposalParamsSchema.parse(req.params);
-    const clientUserId = req.userState.userId;
 
-    const acceptedProposal = await this.proposalService.acceptProposal({
-      orderId,
-      proposalId,
-      clientUserId,
-    });
-
-    const responsePayload = {
-      status: 'success' as const,
-      message: 'Proposal accepted successfully',
-      data: acceptedProposal,
-    };
-    const validated = ProposalAcceptResponseSchema.parse(responsePayload);
-    new SuccessResponse(validated.message, validated.data, 200).send(res);
-  });
 }

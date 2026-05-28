@@ -40,12 +40,7 @@ proposalsRouter.get(
   proposalController.getById
 );
 
-proposalsRouter.post(
-  '/:proposalId/accept',
-  isActive,
-  validateParams(OrderProposalParamsSchema),
-  proposalController.accept
-);
+
 
 proposalsRouter.get(
   '/:proposalId/negotiations',

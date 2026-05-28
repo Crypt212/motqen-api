@@ -7,7 +7,6 @@ import { OrderIdParamsSchema } from '../../../schemas/requests/order.request.js'
 import {
   ProposalResponseSchema,
   ProposalListResponseSchema,
-  ProposalAcceptResponseSchema,
 } from '../../../schemas/responses/proposal.response.js';
 import { CreateNegotiationSchema } from '../../../schemas/requests/negotiation.request.js';
 import {
@@ -113,35 +112,6 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     }),
   });
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // POST /orders/{orderId}/proposals/{proposalId}/accept
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  registry.registerPath({
-    method: 'post',
-    path: '/api/v1/orders/{orderId}/proposals/{proposalId}/accept',
-    tags: ['Proposals'],
-    summary: 'Accept a proposal for an order',
-    description:
-      'Accepts a worker\'s proposal for an open order. This atomically assigns the worker, updates the order status to PRICE_AGREED, locks the agreed price and time, and dismisses all other active proposals for the order.',
-    security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
-    request: {
-      params: OrderProposalParamsSchema,
-    },
-    responses: createResponseDoc({
-      successfulResponse: {
-        description: 'Proposal accepted successfully',
-        content: { 'application/json': { schema: ProposalAcceptResponseSchema } },
-      },
-      badRequestResponse: true,
-      unauthorizedResponse: true,
-      forbiddenResponse: true,
-      notFoundResponse: true,
-      validationErrorResponse: true,
-      internalServerError: true,
-    }),
-  });
 
   // ─────────────────────────────────────────────────────────────────────────────
   // GET /orders/{orderId}/proposals/{proposalId}/negotiations
@@ -181,7 +151,7 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     tags: ['Negotiations'],
     summary: 'Create a new negotiation offer',
     description:
-      'Submit a new price offer and time for the proposal. Only allowed when order status is OPEN. Blocked if the previous offer is still PENDING. Direction is inferred from the requester\'s role.',
+      'Submit a new price offer and time for the proposal. Only allowed when order status is OPEN. Blocked if the previous offer is still PENDING. Direction is inferred from the requester\'s role. The response may contain a hasOverlapWarning boolean flag indicating if the proposed time overlaps with the worker\'s other occupied time slots.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
