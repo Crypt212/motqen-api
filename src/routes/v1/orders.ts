@@ -19,10 +19,10 @@ import {
   CreateOrderSchema,
   OrderQuerySchema,
   OrderIdParamsSchema,
-  SpecifyRangeSchema,
   OrderRateSchema,
 } from '../../schemas/requests/order.request.js';
 import multer from 'multer';
+import proposalsRouter from './proposals.js';
 import {
   getNegotiations,
   createNegotiation,
@@ -33,6 +33,7 @@ import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.requ
 
 
 const router = Router();
+router.use('/:orderId/proposals', proposalsRouter);
 const upload = multer({ storage: multer.memoryStorage(), limits: { files: 3 } });
 
 router.post(
@@ -45,12 +46,6 @@ router.get('/', validateQuery(OrderQuerySchema), orderController.list);
 router.get('/:orderId', validateParams(OrderIdParamsSchema), orderController.getById);
 router.delete('/:orderId', validateParams(OrderIdParamsSchema), orderController.cancel);
 router.get('/:orderId/location', validateParams(OrderIdParamsSchema), orderController.getLocation);
-router.post(
-  '/:orderId/specify-range',
-  validateParams(OrderIdParamsSchema),
-  validateBody(SpecifyRangeSchema),
-  orderController.specifyRange
-);
 router.post('/:orderId/start-work', validateParams(OrderIdParamsSchema), orderController.startWork);
 router.post(
   '/:orderId/finish-work',
@@ -63,21 +58,31 @@ router.post(
   validateBody(OrderRateSchema),
   orderController.rate
 );
-router.get('/:orderId/negotiations', [validateParams(OrderIdParamsSchema)], getNegotiations);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DIRECT ORDER NEGOTIATION ROUTES
+// ─────────────────────────────────────────────────────────────────────────────
+// These routes are used for Direct Orders (where proposalId is implicit)
+
+router.get('/:orderId/negotiations', validateParams(OrderIdParamsSchema), getNegotiations);
+
 router.post(
   '/:orderId/negotiations',
-  [validateParams(OrderIdParamsSchema), validateBody(CreateNegotiationSchema)],
+  validateParams(OrderIdParamsSchema),
+  validateBody(CreateNegotiationSchema),
   createNegotiation
 );
 
 router.post(
   '/:orderId/negotiations/accept',
-  [validateParams(OrderIdParamsSchema)],
+  validateParams(OrderIdParamsSchema),
   acceptNegotiation
 );
+
 router.post(
   '/:orderId/negotiations/reject',
-  [validateParams(OrderIdParamsSchema)],
+  validateParams(OrderIdParamsSchema),
   rejectNegotiation
 );
+
 export default router;

@@ -1179,7 +1179,7 @@ WHERE worker_profiles.id = ${workerProfileId};
           const activeOrders = await tx.order.findMany({
             where: {
               workerProfileId: params.workerProfileId,
-              orderStatus: { in: ['TIME_SPECIFIED', 'PRICE_AGREED', 'PAID'] },
+              orderStatus: { in: ['PRICE_AGREED', 'PAID'] },
             },
             select: { id: true, startDate: true },
           });

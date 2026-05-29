@@ -2,7 +2,8 @@ import { asyncHandler } from '../types/asyncHandler.js';
 import SuccessResponse from '../responses/successResponse.js';
 import OrderService from '../services/OrderService.js';
 import { FilterFromDescriptor, parseQueryParams } from '../schemas/common.js';
-import { OrderFilterSchema } from '../schemas/requests/order.request.js';
+import { OrderFilterSchema, CreateOrderSchema } from '../schemas/requests/order.request.js';
+import { OrderResponseSchema } from '../schemas/responses/order.response.js';
 import { FieldTypeDefinition, SortOptions } from 'src/types/query.js';
 import { Order } from 'src/domain/order.entity.js';
 import { Role } from 'src/generated/prisma/enums.js';
@@ -19,15 +20,7 @@ export default class OrderController {
   }
 
   create = asyncHandler(async (req, res) => {
-    const {
-      title,
-      description,
-      subSpecializationId,
-      workerUserId,
-      locationId,
-      startDate,
-      isUrgent,
-    } = req.body;
+    const parsedBody = CreateOrderSchema.parse(req.body);
     const images = (req.files as Express.Multer.File[]) || [];
     const clientUserId = req.userState.userId;
 
@@ -37,18 +30,19 @@ export default class OrderController {
 
     const order = await this.orderService.createOrder({
       data: {
-        title,
-        description,
-        subSpecializationId,
-        locationId,
-        startDate,
-        isUrgent: isUrgent === 'true',
+        ...parsedBody,
         clientUserId,
-        workerUserId,
       },
       images,
     });
-    new SuccessResponse('Order created successfully', { order }, 201).send(res);
+
+    const responsePayload = {
+      status: 'success' as const,
+      message: 'Order created successfully',
+      data: order,
+    };
+    const validatedResponse = OrderResponseSchema.parse(responsePayload);
+    new SuccessResponse(validatedResponse.message, validatedResponse.data, 201).send(res);
   });
 
   list = asyncHandler(async (req, res) => {
@@ -108,18 +102,6 @@ export default class OrderController {
     new SuccessResponse('Order cancelled successfully', null, 200).send(res);
   });
 
-  specifyRange = asyncHandler(async (req, res) => {
-    const { orderId } = req.params;
-    const { startTime, endTime } = req.body;
-    const userState = req.userState!;
-    const order = await this.orderService.specifyTimeRange({
-      orderId: orderId as string,
-      workerUserId: userState.userId,
-      startTime,
-      endTime,
-    });
-    new SuccessResponse('Time range specified successfully', { order }, 200).send(res);
-  });
 
   startWork = asyncHandler(async (req, res) => {
     const { orderId } = req.params;

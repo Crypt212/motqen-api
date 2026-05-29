@@ -9,10 +9,18 @@ import INegotiationRepository from '../repositories/interfaces/NegotiationReposi
 import { Negotiation, OrderForNegotiation } from '../domain/negotiation.entity.js';
 import { TransactionManager } from '../repositories/prisma/TransactionManager.js';
 import NegotiationRepository from '../repositories/prisma/NegotiationRepository.js';
+import OrderRepository from '../repositories/prisma/OrderRepository.js';
+import ProposalRepository from '../repositories/prisma/ProposalRepository.js';
+import WorkerOccupiedTimeSlotRepository from '../repositories/prisma/WorkerOccupiedTimeSlotRepository.js';
+
 import { UserState } from '../types/asyncHandler.js';
 import { PaginatedResultMeta } from '../types/query.js';
 import { notificationService } from '../state.js';
 import prisma from 'src/libs/database.js';
+import IProposalRepository from '../repositories/interfaces/ProposalRepository.js';
+import IWorkerOccupiedTimeSlotRepository from '../repositories/interfaces/WorkerOccupiedTimeSlotRepository.js';
+import { hasOverlap } from '../utils/overlapCheck.js';
+import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
 
 type OrderParty = {
   role: 'CLIENT' | 'WORKER';
@@ -27,14 +35,20 @@ type OrderParty = {
  */
 export default class NegotiationService extends Service {
   private negotiationRepository: INegotiationRepository;
+  private proposalRepository: IProposalRepository;
+  private workerOccupiedTimeSlotRepository: IWorkerOccupiedTimeSlotRepository;
   private transactionManager: TransactionManager;
 
   constructor(params: {
     negotiationRepository: INegotiationRepository;
+    proposalRepository: IProposalRepository;
+    workerOccupiedTimeSlotRepository: IWorkerOccupiedTimeSlotRepository;
     transactionManager: TransactionManager;
   }) {
     super();
     this.negotiationRepository = params.negotiationRepository;
+    this.proposalRepository = params.proposalRepository;
+    this.workerOccupiedTimeSlotRepository = params.workerOccupiedTimeSlotRepository;
     this.transactionManager = params.transactionManager;
   }
 
@@ -71,18 +85,35 @@ export default class NegotiationService extends Service {
     return direction === 'CLIENT_TO_WORKER' ? 'CLIENT' : 'WORKER';
   }
 
+  /**
+   * Resolves the proposal ID for the negotiation. If not provided, it fetches the single proposal for DIRECT orders.
+   */
+  private async resolveProposalId(order: OrderForNegotiation, proposalId?: string): Promise<string> {
+    if (proposalId) return proposalId;
+    if (order.orderMode === 'DIRECT') {
+      const { proposals } = await this.proposalRepository.findMany({ filter: { orderId: order.id } });
+      if (proposals.length > 0) return proposals[0].id;
+      throw new AppError('Proposal not found for direct order', 404);
+    }
+    throw new AppError('Proposal ID is required for global orders', 400);
+  }
+
   // ─── GET negotiations ─────────────────────────────────────────────────────
 
   async getNegotiations(params: {
     orderId: string;
+    proposalId?: string;
     userState: UserState;
     pagination?: { page?: number; limit?: number };
   }): Promise<PaginatedResultMeta & { negotiations: Negotiation[] }> {
-    const { orderId, userState, pagination } = params;
+    const { orderId, proposalId, userState, pagination } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
       this.resolveOrderParty(order, userState);
+      const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
+      // Note: currently findByOrderId only filters by orderId, you might want to filter by proposalId in the repository
+      // but for direct orders there's only one anyway. For now we just return negotiations for the order.
       return this.negotiationRepository.findByOrderId({ orderId, pagination });
     });
   }
@@ -91,19 +122,23 @@ export default class NegotiationService extends Service {
 
   async createNegotiation(params: {
     orderId: string;
+    proposalId?: string;
     userState: UserState;
     price: number;
+    startDate?: Date;
+    estimatedDurationHours?: number;
     note?: string;
-  }): Promise<Negotiation> {
-    const { orderId, userState, price, note } = params;
+  }): Promise<Negotiation & { hasOverlapWarning?: boolean }> {
+    const { orderId, proposalId, userState, price, startDate, estimatedDurationHours, note } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
       const party = this.resolveOrderParty(order, userState);
+      const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
-      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'TIME_SPECIFIED') {
+      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'OPEN') {
         throw new AppError(
-          'Negotiations are only allowed when order status is PENDING or TIME_SPECIFIED',
+          'Negotiations are only allowed when order status is PENDING or OPEN',
           400
         );
       }
@@ -120,15 +155,40 @@ export default class NegotiationService extends Service {
       // Determine direction from requester role
       const direction = party.role === 'CLIENT' ? 'CLIENT_TO_WORKER' : 'WORKER_TO_CLIENT';
 
+      const actualStartDate = startDate || (latest?.startDate ?? new Date());
+      const actualDuration = estimatedDurationHours || (latest?.estimatedDurationHours ?? 1);
+
+      // Overlap checking
+      let hasOverlapWarning = false;
+      if (order.workerProfileId) {
+        const targetEndDate = new Date(actualStartDate.getTime() + actualDuration * 60 * 60 * 1000);
+        const workerSlots = await this.workerOccupiedTimeSlotRepository.findMany({ filter: { workerProfileId: order.workerProfileId } });
+        for (const slot of workerSlots) {
+          if (hasOverlap(actualStartDate, targetEndDate, slot.startDate, slot.endDate)) {
+            hasOverlapWarning = true;
+            break;
+          }
+        }
+      }
+
       const senderId = userState.userId;
       const negotiation = await this.negotiationRepository.create({
-        data: { orderId, price, senderId, direction, note },
+        data: {
+          orderId,
+          proposalId: resolvedProposalId,
+          price,
+          senderId,
+          direction,
+          startDate: actualStartDate,
+          estimatedDurationHours: actualDuration,
+          note
+        },
       });
 
       // Notify the opposing party via socket
       this.notifyOpponent(order, party, 'negotiation_created', negotiation);
 
-      return negotiation;
+      return { ...negotiation, hasOverlapWarning };
     });
   }
 
@@ -136,17 +196,19 @@ export default class NegotiationService extends Service {
 
   async acceptNegotiation(params: {
     orderId: string;
+    proposalId?: string;
     userState: UserState;
   }): Promise<Record<string, unknown>> {
-    const { orderId, userState } = params;
+    const { orderId, proposalId, userState } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
       const party = this.resolveOrderParty(order, userState);
+      const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
-      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'TIME_SPECIFIED') {
+      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'OPEN') {
         throw new AppError(
-          'Negotiations are only allowed when order status is PENDING or TIME_SPECIFIED',
+          'Negotiations are only allowed when order status is PENDING or OPEN',
           400
         );
       }
@@ -162,23 +224,60 @@ export default class NegotiationService extends Service {
         throw new AppError('You cannot accept your own offer', 403);
       }
 
-      // Atomic transaction: accept negotiation + update order
-      const updatedOrder = await this.transactionManager.execute(
-        { negotiationRepo: NegotiationRepository },
-        async ({ negotiationRepo }, tx) => {
-          // 1. Set negotiation status = ACCEPTED
+      // Atomic transaction: accept negotiation + update order + dismiss other proposals
+      const result = await this.transactionManager.execute(
+        {
+          negotiationRepo: NegotiationRepository,
+          orderRepo: OrderRepository,
+          proposalRepo: ProposalRepository,
+          workerRepo: WorkerProfileRepository,
+          workerTimeSlotRepo: WorkerOccupiedTimeSlotRepository
+        },
+        async ({ negotiationRepo, orderRepo, proposalRepo,  workerRepo, workerTimeSlotRepo }) => {
+          // 1. Fetch proposal to get worker details
+          const proposal = await proposalRepo.find({ filter: { id: resolvedProposalId } });
+          if (!proposal) throw new AppError('Proposal not found', 404);
+
+          // 2. Set negotiation status = ACCEPTED
           await negotiationRepo.updateStatus({ id: latest.id, status: 'ACCEPTED' });
 
-          // 2. Set order price and status
-          const orderResult = await tx.order.update({
-            where: { id: orderId },
-            data: {
-              finalPrice: latest.price,
-              orderStatus: 'PRICE_AGREED',
+          // 3. Set Proposal status = ACCEPTED
+          await proposalRepo.updateStatus({ filter: { id: resolvedProposalId }, status: 'ACCEPTED' });
+
+          // 4. Dismiss all other proposals
+          await proposalRepo.bulkDismiss({ filter: { orderId, status: 'PENDING' } });
+          await proposalRepo.bulkDismiss({ filter: { orderId, status: 'NEGOTIATING' } });
+
+          // 5. Calculate end date for time slot
+          const targetStartDate = latest.startDate || new Date();
+          const targetEndDate = new Date(targetStartDate.getTime() + (latest.estimatedDurationHours || 1) * 60 * 60 * 1000);
+
+          // 6. Create worker occupied time slot
+          await workerTimeSlotRepo.create({
+            slot: {
+              workerProfileId: proposal.workerProfileId,
+              orderId: orderId,
+              startDate: targetStartDate,
+              endDate: targetEndDate,
+              isConfirmed: true,
             },
           });
 
-          return orderResult;
+          const workerProfile = await workerRepo.find({ workerFilter: { id: proposal.workerProfileId } });
+
+          // 7. Update order assignment and status
+          const orderResult = await orderRepo.update({
+            filter: { id: orderId },
+            order: {
+              workerUserId: workerProfile.userId,
+              orderStatus: 'PRICE_AGREED',
+              finalPrice: latest.price,
+              startDate: targetStartDate,
+              estimatedDurationHours: latest.estimatedDurationHours || 1,
+            },
+          });
+
+          return { updatedOrder: orderResult, workerProfileId: proposal.workerProfileId };
         },
         { isolationLevel: 'Serializable' }
       );
@@ -199,39 +298,33 @@ export default class NegotiationService extends Service {
             orderId: order.id,
             orderTitle: order.title,
           },
-        }).catch((err) => {
+        }).catch((err: unknown) => {
           // Fire-and-forget — don't break negotiation flow
         });
       }
 
       return {
-        id: updatedOrder.id,
-        clientProfileId: updatedOrder.clientProfileId,
-        workerProfileId: updatedOrder.workerProfileId,
-        title: updatedOrder.title,
-        description: updatedOrder.description,
-        orderStatus: updatedOrder.orderStatus,
-        finalPrice: updatedOrder.finalPrice,
-        startDate: updatedOrder.startDate,
-        endDate: updatedOrder.endDate,
-        createdAt: updatedOrder.createdAt,
-        updatedAt: updatedOrder.updatedAt,
+        id: result.updatedOrder.id,
+        clientProfileId: order.clientProfileId,
+        workerProfileId: result.workerProfileId,
+        orderStatus: result.updatedOrder.orderStatus,
       };
     });
   }
 
   // ─── REJECT negotiation ───────────────────────────────────────────────────
 
-  async rejectNegotiation(params: { orderId: string; userState: UserState }): Promise<Negotiation> {
-    const { orderId, userState } = params;
+  async rejectNegotiation(params: { orderId: string; proposalId?: string; userState: UserState }): Promise<Negotiation> {
+    const { orderId, proposalId, userState } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
       const party = this.resolveOrderParty(order, userState);
+      const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
-      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'TIME_SPECIFIED') {
+      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'OPEN') {
         throw new AppError(
-          'Negotiations are only allowed when order status is PENDING or TIME_SPECIFIED',
+          'Negotiations are only allowed when order status is PENDING or OPEN',
           400
         );
       }

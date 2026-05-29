@@ -13,6 +13,9 @@ export type Negotiation = {
   note: string | null;
   createdAt: Date;
   updatedAt: Date;
+  proposalId: IDType;
+  startDate: Date;
+  estimatedDurationHours: number;
 };
 
 export type CreateNegotiationInput = {
@@ -21,6 +24,9 @@ export type CreateNegotiationInput = {
   price: number;
   direction: NegotiationDirection;
   note?: string;
+  proposalId: IDType;
+  startDate: Date;
+  estimatedDurationHours: number;
 };
 
 /**
@@ -30,7 +36,8 @@ export type CreateNegotiationInput = {
 export type OrderForNegotiation = {
   id: IDType;
   clientProfileId: IDType;
-  workerProfileId: IDType;
+  workerProfileId: IDType | null;
   orderStatus: $Enums.OrderStatus;
-  title:string;
+  title: string;
+  orderMode: $Enums.OrderMode;
 };

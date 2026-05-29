@@ -24,6 +24,9 @@ export default class NegotiationRepository extends Repository implements INegoti
     note: string | null;
     createdAt: Date;
     updatedAt: Date;
+    proposalId: string;
+    startDate: Date;
+    estimatedDurationHours: number;
   }): Negotiation {
     return {
       id: record.id,
@@ -34,6 +37,9 @@ export default class NegotiationRepository extends Repository implements INegoti
       note: record.note,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
+      proposalId: record.proposalId,
+      startDate: record.startDate,
+      estimatedDurationHours: record.estimatedDurationHours,
     };
   }
 
@@ -98,6 +104,9 @@ export default class NegotiationRepository extends Repository implements INegoti
           direction: data.direction,
           note: data.note ?? null,
           status: 'PENDING',
+          proposal: { connect: { id: data.proposalId } },
+          startDate: data.startDate,
+          estimatedDurationHours: data.estimatedDurationHours,
         },
       });
       return this.toDomain(record);
@@ -128,6 +137,7 @@ export default class NegotiationRepository extends Repository implements INegoti
           workerProfileId: true,
           orderStatus: true,
           title:true,
+          orderMode: true,
         },
       });
       return record
@@ -137,10 +147,59 @@ export default class NegotiationRepository extends Repository implements INegoti
             workerProfileId: record.workerProfileId,
             orderStatus: record.orderStatus,
             title: record.title,
+            orderMode: record.orderMode,
           }
         : null;
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findOrderWithProfiles');
+    }
+  }
+
+  async findByProposalId(params: {
+    proposalId: IDType;
+    pagination?: { page?: number; limit?: number };
+  }): Promise<PaginatedResultMeta & { negotiations: Negotiation[] }> {
+    try {
+      const { proposalId, pagination } = params;
+      const page = pagination?.page ?? 1;
+      const limit = pagination?.limit ?? 20;
+      const skip = (page - 1) * limit;
+
+      const [records, total] = await Promise.all([
+        this.prismaClient.negotiation.findMany({
+          where: { proposalId },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        this.prismaClient.negotiation.count({ where: { proposalId } }),
+      ]);
+
+      const totalPages = Math.ceil(total / limit);
+      return {
+        negotiations: records.map((r) => this.toDomain(r)),
+        page,
+        limit,
+        count: records.length,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      };
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'findByProposalId');
+    }
+  }
+
+  async findLatestByProposalId(params: { proposalId: IDType }): Promise<Negotiation | null> {
+    try {
+      const record = await this.prismaClient.negotiation.findFirst({
+        where: { proposalId: params.proposalId },
+        orderBy: { createdAt: 'desc' },
+      });
+      return record ? this.toDomain(record) : null;
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'findLatestByProposalId');
     }
   }
 }

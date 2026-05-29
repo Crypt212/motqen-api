@@ -19,8 +19,6 @@ export default class SessionRepository extends Repository implements ISessionRep
       revokedAt: record.revokedAt ?? null,
       revokedBy: record.revokedBy ?? null,
       deviceId: record.deviceId,
-      ipAddress: record.ipAddress ?? '',
-      userAgent: record.userAgent ?? '',
       fcmToken: record.fcmToken ?? null,
       lastUsedAt: record.lastUsedAt,
       expiresAt: record.expiresAt,
@@ -50,8 +48,7 @@ export default class SessionRepository extends Repository implements ISessionRep
           token: params.session.token,
           isRevoked: params.session.isRevoked ?? false,
           deviceId: params.session.deviceId,
-         // ipAddress: params.session.ipAddress,
-         // userAgent: params.session.userAgent,
+
           lastUsedAt: params.session.lastUsedAt,
           expiresAt: params.session.expiresAt,
         },

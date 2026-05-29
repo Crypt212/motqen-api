@@ -1,0 +1,178 @@
+import Service, { tryCatch } from './Service.js';
+import IProposalRepository from '../repositories/interfaces/ProposalRepository.js';
+import IOrderRepository from '../repositories/interfaces/OrderRepository.js';
+import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
+import { TransactionManager } from '../repositories/prisma/TransactionManager.js';
+import AppError from '../errors/AppError.js';
+import { Proposal, ProposalWithWorkerSummary, ProposalStatus } from '../domain/proposal.entity.js';
+import { VerificationStatus, OrderStatus } from 'src/generated/prisma/enums.js';
+import ProposalRepository from '../repositories/prisma/ProposalRepository.js';
+import OrderRepository from '../repositories/prisma/OrderRepository.js';
+import NegotiationRepository from '../repositories/prisma/NegotiationRepository.js';
+import { IDType } from '../repositories/interfaces/Repository.js';
+
+interface ProposalServiceDeps {
+  proposalRepository: IProposalRepository;
+  orderRepository: IOrderRepository;
+  workerProfileRepository: IWorkerProfileRepository;
+  transactionManager: TransactionManager;
+}
+
+export default class ProposalService extends Service {
+  private proposalRepository: IProposalRepository;
+  private orderRepository: IOrderRepository;
+  private workerProfileRepository: IWorkerProfileRepository;
+  private transactionManager: TransactionManager;
+
+  constructor(deps: ProposalServiceDeps) {
+    super();
+    this.proposalRepository = deps.proposalRepository;
+    this.orderRepository = deps.orderRepository;
+    this.workerProfileRepository = deps.workerProfileRepository;
+    this.transactionManager = deps.transactionManager;
+  }
+
+  async submitProposal({
+    orderId,
+    userId,
+  }: {
+    orderId: string;
+    userId: string;
+  }): Promise<Proposal> {
+    return tryCatch(async () => {
+      // 1. Get worker profile and verify they are approved
+      const workerProfile = await this.workerProfileRepository.find({ workerFilter: { userId: userId } });
+      if (!workerProfile) {
+        throw new AppError('Worker profile not found', 400);
+      }
+
+      const verification = await this.workerProfileRepository.findVerification({
+        workerFilter: { id: workerProfile.id },
+      });
+      if (!verification || verification.status !== VerificationStatus.APPROVED) {
+        throw new AppError('Only verified workers can submit proposals', 403);
+      }
+
+      // 2. Find the order and check if it is open and global
+      const order = await this.orderRepository.find({ filter: { id: orderId } });
+      if (!order) {
+        throw new AppError('Order not found', 404);
+      }
+      if (order.orderMode !== 'GLOBAL') {
+        throw new AppError('Proposals can only be submitted for global orders', 400);
+      }
+      if (order.orderStatus !== 'OPEN') {
+        throw new AppError('This order is no longer open for proposals', 400);
+      }
+
+      // 3. Check for existing duplicate proposal
+      const existingProposal = await this.proposalRepository.find({
+        filter: { orderId, workerProfileId: workerProfile.id },
+      });
+      if (existingProposal) {
+        throw new AppError('You have already submitted a proposal for this order', 400);
+      }
+
+      // 4. Enforce rate limit (10 proposals per hour per worker)
+      const oneHourAgo = new Date(Date.now() - 3600000);
+      const recentCount = await this.proposalRepository.countRecentByWorker({
+        workerProfileId: workerProfile.id,
+        since: oneHourAgo,
+      });
+      if (recentCount >= 10) {
+        throw new AppError('Rate limit exceeded: You can only submit up to 10 proposals per hour', 429);
+      }
+
+      // 5. Create proposal and initial negotiation atomically
+      return await this.transactionManager.execute(
+        { proposalRepo: ProposalRepository, negotiationRepo: NegotiationRepository },
+        async ({ proposalRepo, negotiationRepo }, tx) => {
+          const proposal = await proposalRepo.create({
+            proposal: {
+              orderId,
+              workerProfileId: workerProfile.id,
+            },
+          });
+
+          // Fetch the client's userId (since OrderForNegotiation doesn't have it directly, we assume order has it from orderRepo)
+          // Wait, order here is from orderRepo.find which includes clientProfile.user
+          const clientUserId = order.clientUserId;
+
+          await negotiationRepo.create({
+            data: {
+              orderId,
+              proposalId: proposal.id as string,
+              senderId: clientUserId as string,
+              direction: 'CLIENT_TO_WORKER',
+              price: order.initialPrice ?? 0,
+              startDate: order.startDate ?? new Date(),
+              estimatedDurationHours: order.estimatedDurationHours ?? 1,
+            },
+          });
+
+          return proposal;
+        }
+      );
+    });
+  }
+
+  async getProposals({
+    orderId,
+    userId,
+  }: {
+    orderId: string;
+    userId: string;
+  }): Promise<ProposalWithWorkerSummary[]> {
+    return tryCatch(async () => {
+      const order = await this.orderRepository.find({ filter: { id: orderId } });
+      if (!order) {
+        throw new AppError('Order not found', 404);
+      }
+
+      // Access control: only the client who posted the order can view all proposals
+      if (order.clientUserId !== userId) {
+        throw new AppError('Access denied: Only the order owner can view proposals', 403);
+      }
+
+      const result = await this.proposalRepository.findManyWithWorkerSummary({
+        filter: { orderId },
+      });
+      return result.proposals;
+    });
+  }
+
+  async getProposalById({
+    proposalId,
+    userId,
+  }: {
+    proposalId: string;
+    userId: string;
+  }): Promise<ProposalWithWorkerSummary> {
+    return tryCatch(async () => {
+      const result = await this.proposalRepository.findManyWithWorkerSummary({
+        filter: { id: proposalId },
+      });
+      const proposal = result.proposals[0];
+      if (!proposal) {
+        throw new AppError('Proposal not found', 404);
+      }
+
+      const order = await this.orderRepository.find({ filter: { id: proposal.orderId } });
+      if (!order) {
+        throw new AppError('Order associated with this proposal not found', 404);
+      }
+
+      // Access control: Client who posted order OR Worker who submitted proposal
+      const isClient = order.clientUserId === userId;
+      const isWorker = proposal.workerProfile.userId === userId;
+
+      if (!isClient && !isWorker) {
+        throw new AppError('Access denied', 403);
+      }
+
+      return proposal;
+    });
+  }
+
+
+}

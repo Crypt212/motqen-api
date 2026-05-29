@@ -541,9 +541,7 @@ export default class AuthService extends Service {
         userId: user.id,
         expiresAt: params.expiresAt,
         token: hashedToken,
-        userAgent: params.userAgent,
         // TODO: Find usage of those and fill them or remove them
-        ipAddress: '',
       },
     });
 
