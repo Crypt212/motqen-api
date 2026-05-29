@@ -40,39 +40,39 @@ export default class OrderService extends Service {
   }
 
   async createOrder({
-    data,
+    data: { orderData, clientUserId },
     images,
   }: {
     data: CreateOrderDTO & { clientUserId: string };
     images: Express.Multer.File[];
   }) {
     return tryCatch(async () => {
-      const location = await this.locationRepository.find({ filter: { id: data.locationId } });
+      const location = await this.locationRepository.find({ filter: { id: orderData.locationId } });
       if (!location) {
         throw new AppError('Location not found', 400);
       }
-      if (location.userId !== data.clientUserId) {
+      if (location.userId !== clientUserId) {
         throw new AppError('Location not owned', 400);
       }
       if (images.length > 3) {
         throw new AppError('Maximum 3 images allowed per order', 400);
       }
 
-      const isGlobal = data.orderMode === 'GLOBAL';
+      const isGlobal = orderData.orderMode === 'GLOBAL';
 
       if (!isGlobal) {
-        if (!data.workerUserId) {
+        if (!orderData.workerUserId) {
           throw new AppError('Worker user ID is required for direct orders', 400);
         }
 
-        if (data.isUrgent) {
-          data.startDate = new Date();
+        if (orderData.isUrgent) {
+          orderData.startDate = new Date();
         }
 
-        if (!data.startDate) {
+        if (!orderData.startDate) {
           throw new AppError('Start date is required for direct orders', 400);
         }
-        const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: data.workerUserId } });
+        const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: orderData.workerUserId } });
         if (!workerVerification || workerVerification.status !== VerificationStatus.APPROVED) {
           throw new AppError('Worker is not verified', 400);
         }
@@ -94,17 +94,17 @@ export default class OrderService extends Service {
         async ({ orderRepo, specializationsRepo, proposalRepo, negotiationRepo }) => {
           const order = await orderRepo.create({
             order: {
-              title: data.title,
-              description: data.description,
-              clientUserId: data.clientUserId,
-              workerUserId: isGlobal ? null : data.workerUserId,
-              locationId: data.locationId,
-              subSpecializationId: data.subSpecializationId,
-              initialPrice: data.initialPrice,
-              startDate: data.startDate,
-              estimatedDurationHours: data.estimatedDurationHours,
-              isUrgent: data.isUrgent,
-              orderMode: data.orderMode,
+              title: orderData.title,
+              description: orderData.description,
+              clientUserId: clientUserId,
+              workerUserId: isGlobal ? null : orderData.workerUserId,
+              locationId: orderData.locationId,
+              subSpecializationId: orderData.subSpecializationId,
+              initialPrice: orderData.initialPrice,
+              startDate: orderData.startDate,
+              estimatedDurationHours: orderData.estimatedDurationHours,
+              isUrgent: orderData.isUrgent,
+              orderMode: orderData.orderMode,
             },
             imageUrls,
           });
@@ -114,12 +114,12 @@ export default class OrderService extends Service {
             specializationId: specialization.id,
           });
 
-          if (!isGlobal && data.workerUserId) {
+          if (!isGlobal && orderData.workerUserId) {
             // Create a proposal and an initial negotiation for direct orders
             const proposal = await proposalRepo.create({
               proposal: {
                 orderId: order.id,
-                workerProfileId: data.workerUserId, // workerProfileId is often the same as workerUserId in our tests/setup
+                workerProfileId: orderData.workerUserId, // workerProfileId is often the same as workerUserId in our tests/setup
               },
             });
 
@@ -127,7 +127,7 @@ export default class OrderService extends Service {
               data: {
                 orderId: order.id,
                 proposalId: proposal.id,
-                senderId: data.clientUserId,
+                senderId: clientUserId,
                 direction: 'CLIENT_TO_WORKER',
                 price: order.initialPrice ?? 0,
                 startDate: order.startDate ?? new Date(),
@@ -155,31 +155,48 @@ export default class OrderService extends Service {
     return tryCatch(async () => {
       const finalFilter = {
         ...params.filter,
+
         clientUserId: params.clientUserId,
         workerUserId: params.workerUserId,
       };
 
       if (params.role === "USER") {
         if (params.userType === "WORKER") {
-          finalFilter.workerUserId = params.userId;
-        }
-        if (params.userType === "CLIENT") {
-          finalFilter.clientUserId = params.userId;
-        }
-      }
 
-      return await this.orderRepository.findMany({
-        filter: finalFilter,
-        pagination: params.pagination,
-        sort: params.sort,
-      });
+          const subSpecializationsIds = (await this.workerProfileRepository.findSpecializationsWithSubSpecializations({ filter: { userId: params.userId } }))
+            .reduce((acc, { subSpecializations }) => [...acc, ...subSpecializations.map(s => s.id)], []);
+
+            const workingGovernmentIds = (await this.workerProfileRepository.findWorkGovernments({ workerFilter: { userId: params.userId } })).governments .map(g => g.id);
+
+          return await this.orderRepository.findForWorker({
+            workerUserId: params.userId,
+            workerSubSpecializationIds: subSpecializationsIds,
+            workerWorkingGovernmentIds: workingGovernmentIds,
+            filter: finalFilter,
+            pagination: params.pagination,
+            sort: params.sort,
+          });
+
+        } else if (params.userType === "CLIENT") {
+
+          return await this.orderRepository.findForClient({
+            clientUserId: params.userId,
+            filter: finalFilter,
+            pagination: params.pagination,
+            sort: params.sort,
+          });
+        } else {
+          throw new AppError('User type not supported', 400);
+        }
+      } else throw new AppError('User type not supported', 400);
+
     });
   }
 
   async getOrderById(params: {
     orderId: string;
-    clientUserId?: string;
-    workerUserId?: string;
+    userId: string;
+    userType: "WORKER" | "CLIENT";
   }) {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
@@ -187,12 +204,17 @@ export default class OrderService extends Service {
         throw new AppError('Order not found', 404);
       }
 
-      const isOwner = order.clientUserId === params.clientUserId;
-      const isAssigned = order.workerUserId && order.workerUserId === params.workerUserId;
+      if (params.userType === "WORKER") {
+        const isAssigned = order.workerUserId && order.workerUserId === params.userId;
+        if (!isAssigned && order.orderMode !== "GLOBAL") {
+          throw new AppError('Access denied', 403);
+        }
+      } else if (params.userType === "CLIENT") {
+        const isOwner = order.clientUserId === params.userId;
+        if (!isOwner)
+          throw new AppError('Access denied', 403);
+      } else throw new AppError('User type not supported', 400);
 
-      if (!isOwner && !isAssigned) {
-        throw new AppError('Access denied', 403);
-      }
 
       return order;
     });

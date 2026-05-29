@@ -68,14 +68,25 @@ export default class NegotiationService extends Service {
    * Determine whether the requester is the client or the worker of this order.
    * @throws {AppError} 403 if the user is not a party to the order
    */
-  private resolveOrderParty(order: OrderForNegotiation, userState: UserState): OrderParty {
+  private async resolveOrderParty(order: OrderForNegotiation, userState: UserState): Promise<OrderParty> {
+    console.log(userState, order);
     if (userState.client && userState.client.id === order.clientProfileId) {
       return { role: 'CLIENT', profileId: userState.client.id };
-    }
-    if (userState.worker && userState.worker.id === order.workerProfileId) {
-      return { role: 'WORKER', profileId: userState.worker.id };
-    }
-    throw new AppError('You are not a party to this order', 403);
+    } else if (userState.worker) {
+      if (order.workerProfileId && userState.worker.id !== order.workerProfileId) {
+        // Direct order but with different worker
+        throw new AppError('You are not a party to this order', 403);
+      } else if (order.workerProfileId) {
+        return { role: 'WORKER', profileId: userState.worker.id };
+      } else {
+        const proposals = await this.proposalRepository.findMany({ filter: { workerProfileId: userState.worker.id, orderId: order.id } });
+        if (proposals.proposals.length === 0) {
+          throw new AppError('You are not a party to this order', 403);
+        } else {
+        return { role: 'WORKER', profileId: userState.worker.id };
+        }
+      }
+    } else throw new AppError('You are not a party to this order', 403);
   }
 
   /**
@@ -111,10 +122,7 @@ export default class NegotiationService extends Service {
       const order = await this.getOrderOrThrow(orderId);
       this.resolveOrderParty(order, userState);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
-
-      // Note: currently findByOrderId only filters by orderId, you might want to filter by proposalId in the repository
-      // but for direct orders there's only one anyway. For now we just return negotiations for the order.
-      return this.negotiationRepository.findByOrderId({ orderId, pagination });
+      return this.negotiationRepository.findByProposalId({ proposalId: resolvedProposalId, pagination });
     });
   }
 
@@ -132,7 +140,7 @@ export default class NegotiationService extends Service {
     const { orderId, proposalId, userState, price, startDate, estimatedDurationHours, note } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      const party = this.resolveOrderParty(order, userState);
+      const party = await this.resolveOrderParty(order, userState);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
@@ -162,7 +170,7 @@ export default class NegotiationService extends Service {
       let hasOverlapWarning = false;
       if (order.workerProfileId) {
         const targetEndDate = new Date(actualStartDate.getTime() + actualDuration * 60 * 60 * 1000);
-        const workerSlots = await this.workerOccupiedTimeSlotRepository.findMany({ filter: { workerProfileId: order.workerProfileId } });
+        const workerSlots = await this.workerOccupiedTimeSlotRepository.findMany({ filter: { workerProfileId: order.workerProfileId, isConfirmed: true } });
         for (const slot of workerSlots) {
           if (hasOverlap(actualStartDate, targetEndDate, slot.startDate, slot.endDate)) {
             hasOverlapWarning = true;
@@ -202,7 +210,7 @@ export default class NegotiationService extends Service {
     const { orderId, proposalId, userState } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      const party = this.resolveOrderParty(order, userState);
+      const party = await this.resolveOrderParty(order, userState);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
@@ -233,7 +241,7 @@ export default class NegotiationService extends Service {
           workerRepo: WorkerProfileRepository,
           workerTimeSlotRepo: WorkerOccupiedTimeSlotRepository
         },
-        async ({ negotiationRepo, orderRepo, proposalRepo,  workerRepo, workerTimeSlotRepo }) => {
+        async ({ negotiationRepo, orderRepo, proposalRepo, workerRepo, workerTimeSlotRepo }) => {
           // 1. Fetch proposal to get worker details
           const proposal = await proposalRepo.find({ filter: { id: resolvedProposalId } });
           if (!proposal) throw new AppError('Proposal not found', 404);
@@ -259,7 +267,6 @@ export default class NegotiationService extends Service {
               orderId: orderId,
               startDate: targetStartDate,
               endDate: targetEndDate,
-              isConfirmed: true,
             },
           });
 
@@ -318,7 +325,7 @@ export default class NegotiationService extends Service {
     const { orderId, proposalId, userState } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      const party = this.resolveOrderParty(order, userState);
+      const party = await this.resolveOrderParty(order, userState);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
@@ -329,7 +336,7 @@ export default class NegotiationService extends Service {
         );
       }
 
-      const latest = await this.negotiationRepository.findLatestByOrderId({ orderId });
+      const latest = await this.negotiationRepository.findLatestByProposalId({ proposalId: resolvedProposalId });
       if (!latest || latest.status !== 'PENDING') {
         throw new AppError('No pending negotiation to reject', 400);
       }

@@ -4,12 +4,10 @@ import IOrderRepository from '../repositories/interfaces/OrderRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
 import { TransactionManager } from '../repositories/prisma/TransactionManager.js';
 import AppError from '../errors/AppError.js';
-import { Proposal, ProposalWithWorkerSummary, ProposalStatus } from '../domain/proposal.entity.js';
-import { VerificationStatus, OrderStatus } from 'src/generated/prisma/enums.js';
+import { Proposal, ProposalWithWorkerSummary } from '../domain/proposal.entity.js';
+import { VerificationStatus } from 'src/generated/prisma/enums.js';
 import ProposalRepository from '../repositories/prisma/ProposalRepository.js';
-import OrderRepository from '../repositories/prisma/OrderRepository.js';
 import NegotiationRepository from '../repositories/prisma/NegotiationRepository.js';
-import { IDType } from '../repositories/interfaces/Repository.js';
 
 interface ProposalServiceDeps {
   proposalRepository: IProposalRepository;
@@ -70,7 +68,7 @@ export default class ProposalService extends Service {
         filter: { orderId, workerProfileId: workerProfile.id },
       });
       if (existingProposal) {
-        throw new AppError('You have already submitted a proposal for this order', 400);
+        return existingProposal;
       }
 
       // 4. Enforce rate limit (10 proposals per hour per worker)

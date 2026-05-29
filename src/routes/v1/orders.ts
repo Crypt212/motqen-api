@@ -30,6 +30,7 @@ import {
   rejectNegotiation,
 } from '../../controllers/NegotiationController.js';
 import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
+import { parseFormDataJson } from 'src/middlewares/multiformParserMiddleware.js';
 
 
 const router = Router();
@@ -39,6 +40,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { files: 3 } })
 router.post(
   '/',
   upload.array('images', 3),
+  parseFormDataJson('orderData'),
   validateBody(CreateOrderSchema),
   orderController.create
 );

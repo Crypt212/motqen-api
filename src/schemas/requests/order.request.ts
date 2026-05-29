@@ -3,16 +3,18 @@ import { UUIDSchema, buildFilterSchema, createQuerySchema } from '../common.js';
 import { OrderFilterDescriptor } from '../../domain/order.entity.js';
 
 export const CreateOrderSchema = z.object({
-  title: z.string().trim().min(1).max(200),
-  description: z.string().trim().min(1),
-  subSpecializationId: UUIDSchema,
-  workerUserId: UUIDSchema.optional().nullable(),
-  locationId: UUIDSchema,
-  initialPrice: z.number().positive({ message: 'initialPrice must be positive' }),
-  startDate: z.coerce.date().refine((d) => d > new Date(), { message: 'startDate must be in the future' }),
-  estimatedDurationHours: z.number().int().positive({ message: 'estimatedDurationHours must be positive' }),
-  isUrgent: z.boolean(),
-  orderMode: z.enum(['DIRECT', 'GLOBAL']).default('DIRECT').optional(),
+  orderData: z.object({
+    title: z.string().trim().min(1).max(200),
+    description: z.string().trim().min(1),
+    subSpecializationId: UUIDSchema,
+    workerUserId: UUIDSchema.optional().nullable(),
+    locationId: UUIDSchema,
+    initialPrice: z.number().positive({ message: 'initialPrice must be positive' }),
+    startDate: z.coerce.date().refine((d) => d > new Date(), { message: 'startDate must be in the future' }),
+    estimatedDurationHours: z.number().int().positive({ message: 'estimatedDurationHours must be positive' }),
+    isUrgent: z.boolean(),
+    orderMode: z.enum(['DIRECT', 'GLOBAL']).default('DIRECT').optional(),
+  })
 });
 
 export type CreateOrderDTO = z.infer<typeof CreateOrderSchema>;

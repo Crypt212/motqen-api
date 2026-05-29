@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
+import { OrderMode, Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { handlePrismaError, Repository } from './Repository.js';
 import IOrderRepository from '../interfaces/OrderRepository.js';
 import {
@@ -7,12 +7,12 @@ import {
   OrderFilter,
   OrderStatus,
   OrderUpdateInput,
-  OrderMode,
 } from '../../domain/order.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../../types/query.js';
 import { ClientProfileFilter } from 'src/domain/clientProfile.entity.js';
 import { WorkerProfileFilter } from 'src/domain/workerProfile.entity.js';
+import { IDType } from '../interfaces/Repository.js';
 
 type PrismaOrderWithImagesWithLocationAndSubSpecialization = Prisma.OrderGetPayload<{
   include: { images: true; subSpecialization: true, clientProfile: { include: { user: true } }, workerProfile: { include: { user: true } } };
@@ -48,14 +48,14 @@ export default class OrderRepository extends Repository implements IOrderReposit
       orderStatus: record.orderStatus,
       workStatus: record.workStatus,
       initialPrice: record.initialPrice,
-      finalPrice: record.finalPrice,
-      startDate: record.startDate,
-      estimatedDurationHours: record.estimatedDurationHours,
+      finalPrice: record.finalPrice ?? null,
+      startDate: record.startDate ?? null,
+      estimatedDurationHours: record.estimatedDurationHours ?? null,
       isUrgent: record.isUrgent,
       rate: record.rate,
-      comment: record.comment ?? undefined,
-      workStartedAt: record.workStartedAt,
-      workFinishedAt: record.workFinishedAt,
+      comment: record.comment ?? null,
+      workStartedAt: record.workStartedAt ?? null,
+      workFinishedAt: record.workFinishedAt ?? null,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
       images:
@@ -99,7 +99,59 @@ export default class OrderRepository extends Repository implements IOrderReposit
     filter,
     pagination,
     sort,
+    includeGlobal
   }: {
+    filter: OrderFilter;
+    pagination?: PaginationOptions;
+    sort?: SortOptions<Order>;
+    includeGlobal?: boolean;
+  }): Promise<PaginatedResultMeta & { orders: Order[] }> {
+    try {
+      let paginationQuery: { skip?: number; take?: number } = {};
+      let paginationResult: PaginatedResultMeta = {
+        page: 1,
+        limit: 10,
+        count: 0,
+        total: 0,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false,
+      };
+
+      const preparedFilter = this.prepareFilter(filter);
+
+      if (pagination) {
+        const total = await this.prismaClient.order.count({ where: preparedFilter });
+        const handled = handlePagination({ total, paginationOptions: pagination });
+        paginationQuery = handled.paginationQuery;
+        paginationResult = handled.paginationResult;
+      }
+
+      const orderBy = sort ? handleSort(sort) : undefined;
+
+      const records = await this.prismaClient.order.findMany({
+        where: includeGlobal ? { OR: [preparedFilter, { orderMode: "GLOBAL" }] } : preparedFilter,
+        include: { images: true, subSpecialization: true, clientProfile: { include: { user: true } }, workerProfile: { include: { user: true } } },
+        ...paginationQuery,
+        orderBy,
+      });
+
+      return {
+        ...paginationResult,
+        orders: records.map((r) => this.toDomain(r)),
+      };
+    } catch (error) {
+      throw handlePrismaError(error, 'find many orders');
+    }
+  }
+
+  async findForClient({
+    clientUserId,
+    filter,
+    pagination,
+    sort,
+  }: {
+    clientUserId: IDType;
     filter: OrderFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Order>;
@@ -116,7 +168,88 @@ export default class OrderRepository extends Repository implements IOrderReposit
         hasPrev: false,
       };
 
-      const preparedFilter = this.prepareFilter(filter);
+      const preparedFilter = {
+        ...this.prepareFilter(filter),
+        clientProfile: { userId: clientUserId }
+      };
+
+      if (pagination) {
+        const total = await this.prismaClient.order.count({ where: preparedFilter });
+        const handled = handlePagination({ total, paginationOptions: pagination });
+        paginationQuery = handled.paginationQuery;
+        paginationResult = handled.paginationResult;
+      }
+
+      const orderBy = sort ? handleSort(sort) : undefined;
+
+      const records = await this.prismaClient.order.findMany({
+        where: preparedFilter,
+        include: { images: true, subSpecialization: true, clientProfile: { include: { user: true } }, workerProfile: { include: { user: true } } },
+        ...paginationQuery,
+        orderBy,
+      });
+
+      return {
+        ...paginationResult,
+        orders: records.map((r) => this.toDomain(r)),
+      };
+    } catch (error) {
+      throw handlePrismaError(error, 'find many orders');
+    }
+  }
+
+
+  async findForWorker({
+    workerUserId,
+    workerSubSpecializationIds,
+    workerWorkingGovernmentIds,
+    filter,
+    pagination,
+    sort,
+  }: {
+    workerUserId: IDType;
+    workerSubSpecializationIds: IDType[];
+    workerWorkingGovernmentIds: IDType[];
+    filter: OrderFilter;
+    pagination?: PaginationOptions;
+    sort?: SortOptions<Order>;
+  }): Promise<PaginatedResultMeta & { orders: Order[] }> {
+    try {
+      let paginationQuery: { skip?: number; take?: number } = {};
+      let paginationResult: PaginatedResultMeta = {
+        page: 1,
+        limit: 10,
+        count: 0,
+        total: 0,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false,
+      };
+
+
+      const preparedFilter = {
+        AND: [
+          {
+            ...this.prepareFilter(filter),
+          },
+          {
+            OR: [
+              {
+                workerProfile: { userId: workerUserId },
+              },
+              {
+                AND: [
+                  {
+                    orderMode: OrderMode.GLOBAL,
+                  },
+                  { subSpecializationId: { in: workerSubSpecializationIds } },
+                  { clientProfile: { user: { locations: { some: { governmentId: { in: workerWorkingGovernmentIds } } } } } },
+                ]
+              }
+            ]
+          }
+        ]
+      };
 
       if (pagination) {
         const total = await this.prismaClient.order.count({ where: preparedFilter });

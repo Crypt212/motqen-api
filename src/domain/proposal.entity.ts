@@ -38,8 +38,7 @@ export type LatestNegotiationSnapshot = {
 
 export type ProposalWithWorkerSummary = Proposal & {
   workerProfile: WorkerSummary;
-  latestNegotiation?: LatestNegotiationSnapshot;
-  latestNegotiationPrice?: number | null;
+  latestNegotiation: LatestNegotiationSnapshot | null;
 };
 
 export type ProposalCreateInput = {

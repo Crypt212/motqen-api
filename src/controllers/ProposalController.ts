@@ -4,7 +4,6 @@ import ProposalService from '../services/ProposalService.js';
 import { OrderIdParamsSchema } from '../schemas/requests/order.request.js';
 import {
   CreateProposalSchema,
-  ProposalIdParamsSchema,
   OrderProposalParamsSchema,
 } from '../schemas/requests/proposal.request.js';
 import { ProposalResponseSchema, ProposalListResponseSchema } from '../schemas/responses/proposal.response.js';

@@ -6,7 +6,6 @@ import { OrderFilterSchema, CreateOrderSchema } from '../schemas/requests/order.
 import { OrderResponseSchema } from '../schemas/responses/order.response.js';
 import { FieldTypeDefinition, SortOptions } from 'src/types/query.js';
 import { Order } from 'src/domain/order.entity.js';
-import { Role } from 'src/generated/prisma/enums.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
 import LocationService from 'src/services/LocationService.js';
 
@@ -20,6 +19,7 @@ export default class OrderController {
   }
 
   create = asyncHandler(async (req, res) => {
+    console.log(req.body);
     const parsedBody = CreateOrderSchema.parse(req.body);
     const images = (req.files as Express.Multer.File[]) || [];
     const clientUserId = req.userState.userId;
@@ -41,6 +41,7 @@ export default class OrderController {
       message: 'Order created successfully',
       data: order,
     };
+    console.log(responsePayload);
     const validatedResponse = OrderResponseSchema.parse(responsePayload);
     new SuccessResponse(validatedResponse.message, validatedResponse.data, 201).send(res);
   });
@@ -70,8 +71,8 @@ export default class OrderController {
     const userState = req.userState!;
     const order = await this.orderService.getOrderById({
       orderId: orderId as string,
-      clientUserId: userState.userId,
-      workerUserId: userState.userId,
+      userId: userState.userId,
+      userType: userState.worker ? "WORKER" : "CLIENT",
     });
     new SuccessResponse('Order retrieved successfully', { order }, 200).send(res);
   });
@@ -81,8 +82,8 @@ export default class OrderController {
     const userState = req.userState!;
     const order = await this.orderService.getOrderById({
       orderId: orderId as string,
-      clientUserId: userState.userId,
-      workerUserId: userState.userId,
+      userId: userState.userId,
+      userType: userState.worker ? "WORKER" : "CLIENT",
     });
 
     const location = await this.locationService.getLocationById({
