@@ -143,7 +143,7 @@ export class PaymobProvider implements IPaymentProvider {
         },
         "special_reference": orderInfo.specialReference || orderInfo.orderId || "ahshs",
         "expiration": 1800,
-        "notification_url": `${environment.api.baseUrl}/api/v1/webhooks/paymob`,
+        "notification_url": `${environment.api.baseUrl}/webhooks/paymob`,
         "redirection_url": `Motqen://payment/${orderInfo.orderId}`,
       }, {
         headers: {

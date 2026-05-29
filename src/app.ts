@@ -10,6 +10,7 @@ import swaggerUi from 'swagger-ui-express';
 import { verifyDeviceId } from './middlewares/authMiddleware.js';
 import { asyncHandler } from './types/asyncHandler.js';
 import { generateOpenAPISpec } from './libs/openapi.js';
+import webhooksRouter from './routes/v1/webhooks.js';
 
 const initApp = async () => {
   const app = express();
@@ -22,6 +23,7 @@ const initApp = async () => {
   );
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
+  app.use('/webhooks', webhooksRouter);
 
   app.use('/api/v1', verifyDeviceId, ipRateLimiter, v1Router);
 

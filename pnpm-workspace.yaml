@@ -1,0 +1,9 @@
+allowBuilds:
+  '@firebase/util': true
+  '@prisma/engines': true
+  '@scarf/scarf': true
+  '@whiskeysockets/baileys': true
+  esbuild: true
+  prisma: true
+  protobufjs: true
+  sharp: true

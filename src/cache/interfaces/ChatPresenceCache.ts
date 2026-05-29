@@ -4,65 +4,74 @@ export default interface IChatPresenceCache {
   // ─── Online / Socket tracking ──────────────────────────────────────────────
 
   /**
-   * Register a socket as active for a user.
-   * Refreshes TTL on every add to keep the key alive while connected.
-   * @returns The total number of active sockets for this user after adding.
+   * Register a socket ID for a user (single-device model).
    */
-  addSocket(params: { userId: IDType; socketId: IDType }): Promise<number>;
+  setSocket(params: { userId: IDType; socketId: string }): Promise<void>;
 
   /**
-   * Remove a socket from a user's active set.
+   * Get the current socket ID for a user.
    */
-  removeSocket(params: { userId: IDType; socketId: IDType }): Promise<number>;
+  getSocket(params: { userId: IDType }): Promise<string | null>;
 
   /**
-   * Count remaining active sockets for a user.
+   * Remove the socket mapping for a user.
    */
-  countSockets(params: { userId: IDType }): Promise<number>;
+  removeSocket(params: { userId: IDType }): Promise<void>;
 
   /**
-   * Returns true if the user has at least one active socket (is online).
+   * Returns true if the user has an active socket.
    */
   isOnline(params: { userId: IDType }): Promise<boolean>;
 
   /**
-   * Refresh the TTL on the sockets key (called periodically via ping/pong).
+   * Refresh the TTL on the sockets key.
    */
   refreshPresence(params: { userId: IDType }): Promise<void>;
 
+  // ─── Conversation Members Cache ────────────────────────────────────────────
+
   /**
-   * Remove ALL sockets for a user — full cleanup on last disconnect.
+   * Cache the participants of a conversation.
    */
-  removeAllSockets(params: { userId: IDType }): Promise<void>;
+  addChatMembers(params: { conversationId: IDType; userIds: string[] }): Promise<void>;
+
+  /**
+   * Get the cached participants of a conversation.
+   */
+  getChatMembers(params: { conversationId: IDType }): Promise<string[]>;
 
   // ─── inChat tracking ──────────────────────────────────────────────────────
 
   /**
-   * Mark a user as "inside" a conversation screen.
-   * Refreshes TTL on every enter to keep the key alive.
+   * Mark a user as "inside" a partner's chat screen.
    */
-  enterChat(params: { conversationId: IDType; userId: IDType }): Promise<void>;
+  enterChat(params: { userId: IDType; partnerId: IDType }): Promise<void>;
 
   /**
-   * Remove a user from the inChat set (device left chat screen or disconnected).
+   * Remove a user from a partner's chat screen.
    */
-  leaveChat(params: { conversationId: IDType; userId: IDType }): Promise<void>;
+  leaveChat(params: { userId: IDType; partnerId: IDType }): Promise<void>;
 
   /**
-   * Returns true if the user has any device currently showing this conversation.
+   * Get list of userIds currently viewing this user's chat screen.
    */
-  isInChat(params: { conversationId: IDType; userId: IDType }): Promise<boolean>;
+  getViewers(params: { userId: IDType }): Promise<string[]>;
 
   /**
-   * Remove a user from ALL inChat keys based on active tracking.
+   * Returns true if the viewerId is currently inside the userId's chat screen.
+   */
+  isViewingMyChat(params: { viewerId: IDType; userId: IDType }): Promise<boolean>;
+
+  /**
+   * Remove a user from whatever partner's chat screen they were viewing.
    * Called on disconnect.
    */
-  leaveAllChats(params: { userId: IDType }): Promise<void>;
+  removeFromAllEnterSets(params: { userId: IDType }): Promise<void>;
 
   /**
-   * Remove ALL inChat keys for a user across all conversations — full cleanup.
+   * Refresh the TTL on the partner's chat screen tracking.
    */
-  removeAllInChat(params: { userId: IDType }): Promise<void>;
+  refreshChatEnterTTL(params: { partnerId: IDType; ttl?: number }): Promise<void>;
 
   // ─── Typing ────────────────────────────────────────────────────────────────
 

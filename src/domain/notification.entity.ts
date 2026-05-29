@@ -1,4 +1,7 @@
-import type { NotificationType as _NotificationType, BroadcastTargetRole as _BroadcastTargetRole } from '../generated/prisma/enums.js';
+import type {
+  NotificationType as _NotificationType,
+  BroadcastTargetRole as _BroadcastTargetRole,
+} from '../generated/prisma/enums.js';
 
 export type NotificationType = _NotificationType;
 export type BroadcastTargetRole = _BroadcastTargetRole;
@@ -12,7 +15,7 @@ export interface NotificationData {
     | 'dispute_details'
     | 'profile'
     | 'open_orders'
-    | 'home'
+    | 'home';
   entityId: string;
   entityType:
     | 'order'
@@ -22,7 +25,7 @@ export interface NotificationData {
     | 'admin_action'
     | 'government'
     | 'broadcast'
-    |'none';
+    | 'none';
   actionType?: 'WARNING' | 'SUSPENDED' | 'BANNED';
   openOrdersCount?: string;
 }
@@ -38,7 +41,7 @@ export interface Notification {
   createdAt: Date;
 }
 
-export  type NotificationCreateInput = Omit<Notification, 'id' | 'createdAt'>;
+export type NotificationCreateInput = Omit<Notification, 'id' | 'createdAt' | 'isSent'>;
 
 export type NotificationPayload = Omit<Notification, 'id' | 'createdAt' | 'userId' | 'isSent'>;
 
@@ -46,7 +49,10 @@ export type NotificationEventContext =
   | { type: 'ORDER_ACCEPTED'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'ORDER_CANCELLED'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'ORDER_COMPLETED'; ctx: { orderId: string; orderTitle: string } }
-  | { type: 'NEGOTIATION_OFFER'; ctx: { orderId: string; orderTitle: string; proposedAmount: number } }
+  | {
+      type: 'NEGOTIATION_OFFER';
+      ctx: { orderId: string; orderTitle: string; proposedAmount: number };
+    }
   | { type: 'NEGOTIATION_ACCEPTED'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'NEGOTIATION_REJECTED'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'WORK_STARTED'; ctx: { orderId: string; orderTitle: string } }
@@ -61,5 +67,8 @@ export type NotificationEventContext =
   | { type: 'WITHDRAW_REQUESTED'; ctx: { withdrawId: string; amount: number } }
   | { type: 'WITHDRAW_APPROVED'; ctx: { withdrawId: string; amount: number } }
   | { type: 'WITHDRAW_REJECTED'; ctx: { withdrawId: string; rejectionReason?: string } }
-  | { type: 'ADMIN_ACTION'; ctx: { userId: string; actionType: 'WARNING' | 'SUSPENDED' | 'BANNED'; reason?: string } }
-  | { type: 'TEST_NOTIFICATION'; ctx: { } };
+  | {
+      type: 'ADMIN_ACTION';
+      ctx: { userId: string; actionType: 'WARNING' | 'SUSPENDED' | 'BANNED'; reason?: string };
+    }
+  | { type: 'TEST_NOTIFICATION'; ctx: {} };

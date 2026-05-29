@@ -517,6 +517,7 @@ export default class AuthService extends Service {
   async login(params: {
     phoneNumber: string;
     deviceId: IDType;
+    userAgent: string;
     expiresAt: Date;
   }): Promise<{ session: Session; user: User; unHashedRefreshToken: string }> {
     const user = await this.userRepository.find({ filter: { phoneNumber: params.phoneNumber } });
@@ -540,11 +541,9 @@ export default class AuthService extends Service {
         userId: user.id,
         expiresAt: params.expiresAt,
         token: hashedToken,
-
+        userAgent: params.userAgent,
         // TODO: Find usage of those and fill them or remove them
-        fcmToken: "",
-        userAgent: "",
-        ipAddress: ""
+        ipAddress: '',
       },
     });
 

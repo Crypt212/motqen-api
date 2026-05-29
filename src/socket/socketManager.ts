@@ -65,12 +65,15 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
     // 1. Join user room — all devices of this user share one room
     await socket.join(`user:${userId}`);
 
-    // 2. Register socket in Redis presence Set — returns total active sockets
-    const socketCount = await presence.addSocket({ userId, socketId: socket.id });
-
     try {
-      // 3. Mark user as available in DB — only on first connection
-      if (socketCount === 1) {
+      // 2. Check if user is already online (before setting new socket)
+      const isAlreadyOnline = await presence.isOnline({ userId });
+
+      // 3. Register socket in Redis (single-device model overwrites previous)
+      await presence.setSocket({ userId, socketId: socket.id });
+
+      // 4. Mark user as available in DB and emit to presence room — only on transition to online
+      if (!isAlreadyOnline) {
         await prisma.user.update({
           where: { id: userId },
           data: { isOnline: true },

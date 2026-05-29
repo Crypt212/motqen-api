@@ -21,7 +21,10 @@ export type Session = {
   createdAt: Date;
 };
 
-export type SessionCreateInput = Omit<Session, 'id' | 'createdAt' | 'updatedAt' | 'revokedAt' | 'revokedBy'>;
+export type SessionCreateInput = Omit<
+  Session,
+  'id' | 'createdAt' | 'updatedAt' | 'revokedAt' | 'revokedBy' | 'fcmToken'
+>;
 
 export type SessionUpdateInput = Partial<SessionCreateInput>;
 
@@ -30,6 +33,8 @@ export const SessionFilterDescriptor = {
   userId: { type: 'uuid' as const },
   deviceId: { type: 'string' as const },
   token: { type: 'string' as const },
+  isRevoked: { type: 'boolean' as const },
+  fcmToken: { type: 'string' as const },
 } satisfies Record<string, FieldTypeDefinition>;
 
 export type SessionFilter = FilterFromDescriptor<typeof SessionFilterDescriptor>;

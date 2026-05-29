@@ -12,6 +12,8 @@ import type {
   Notification,
 } from '../domain/notification.entity.js';
 import { mapEventToNotification } from '../utils/notificationMapper.js';
+import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerRepository.js';
+import { UserState } from 'src/types/asyncHandler.js';
 
 const UNREAD_COUNT_TTL = 300;
 const UNREAD_COUNT_KEY = (userId: string): string => `unread_notif:${userId}`;
@@ -24,25 +26,54 @@ export class NotificationService {
     private sessionRepo: ISessionRepository,
     private userRepo: IUserRepository,
     private firebaseProvider: IFirebaseProvider,
+    private workerProfileRepository: IWorkerProfileRepository
   ) {}
 
-  async notify(userId: string, event: NotificationEventContext): Promise<void> {
+  async buildUserTopics(state: UserState): Promise<string[]> {
+    const topics = ['all'];
+
+    if (state.role === 'ADMIN') topics.push('admins');
+
+    if (state.accountStatus === 'ACTIVE') {
+      if (state.worker) {
+        topics.push('workers');
+        const result = await this.workerProfileRepository.findWorkGovernments({
+          workerFilter: { userId: state.userId },
+          pagination: { page: 1, limit: 27 },
+        });
+        topics.push(...result.governments.map((id) => `gov_${id}`));
+      }
+      if (state.client) topics.push('clients');
+    }
+
+    return [...new Set(topics)];
+  }
+
+  async notify(
+    userId: string,
+    event: NotificationEventContext,
+    saveNotification: boolean = true
+  ): Promise<void> {
     const payload = mapEventToNotification(event);
+    if (saveNotification) {
+      const created = await this.repo.create({
+        userId,
+        type: payload.type,
+        title: payload.title,
+        body: payload.body,
+        data: payload.data,
+      });
 
-    const created = await this.repo.create({
-      userId,
-      type: payload.type,
-      title: payload.title,
-      body: payload.body,
-      data: payload.data,
-      isSent: false,
-    });
+      await this.redis.del(UNREAD_COUNT_KEY(userId));
 
-    await this.redis.del(UNREAD_COUNT_KEY(userId));
-
-    this.sendFCMToUser(userId, payload, created.id).catch((err) => {
-      logger.error('FCM send failed (fire-and-forget)', { userId, error: err });
-    });
+      this.sendFCMToUser(userId, payload, created.id).catch((err) => {
+        logger.error('FCM send failed (fire-and-forget)', { userId, error: err });
+      });
+    } else {
+      this.sendFCMToUser(userId, payload, null).catch((err) => {
+        logger.error('FCM send failed (fire-and-forget)', { userId, error: err });
+      });
+    }
   }
 
   async broadcast(options: {
@@ -80,7 +111,11 @@ export class NotificationService {
     await this.redis.del(UNREAD_COUNT_KEY(userId));
   }
 
-  async getNotifications(userId: string, cursor?: string, limit: number = 20): Promise<{ notifications: Notification[]; nextCursor: string | null; unreadCount: number }> {
+  async getNotifications(
+    userId: string,
+    cursor?: string,
+    limit: number = 20
+  ): Promise<{ notifications: Notification[]; nextCursor: string | null; unreadCount: number }> {
     const result = await this.repo.findByUserId(userId, limit, cursor);
     const unreadCount = await this.getUnreadCount(userId);
     return { ...result, unreadCount };
@@ -103,21 +138,76 @@ export class NotificationService {
     return cappedCount;
   }
 
+  async subscribeToTopic(
+    userId: string,
+    deviceId: string,
+    topic: string,
+    fcm?: string
+  ): Promise<void> {
+    const fcmToken =
+      fcm ??
+      (await this.sessionRepo
+        .find({
+          filter: { userId, deviceId, isRevoked: false },
+        })
+        .then((session) => session?.fcmToken));
+
+    if (!fcmToken) {
+      logger.warn('No active session with FCM token found for unsubscription', {
+        userId,
+        deviceId,
+      });
+      return;
+    }
+
+    this.firebaseProvider.subscribeToTopic([fcmToken], topic).catch((err) => {
+      logger.error('Failed to subscribe to topic', { userId, deviceId, topic, error: err });
+    });
+  }
+
+  async unsubscribeFromTopic(
+    userId: string,
+    deviceId: string,
+    topic: string,
+    fcm?: string
+  ): Promise<void> {
+    const fcmToken =
+      fcm ??
+      (await this.sessionRepo
+        .find({
+          filter: { userId, deviceId, isRevoked: false },
+        })
+        .then((session) => session?.fcmToken));
+
+    if (!fcmToken) {
+      logger.warn('No active session with FCM token found for unsubscription', {
+        userId,
+        deviceId,
+      });
+      return;
+    }
+
+    this.firebaseProvider.unsubscribeFromTopic([fcmToken], topic).catch((err) => {
+      logger.error('Failed to unsubscribe from topic', { userId, deviceId, topic, error: err });
+    });
+  }
   // ─── Private methods ──────────────────────────────────────────────────
 
   private async sendFCMToUser(
     userId: string,
     payload: NotificationPayload,
-    notificationId: string,
+    notificationId: string
   ): Promise<void> {
     if (!this.firebaseProvider.isReady()) {
       logger.warn('Firebase not initialized — skipping FCM send', { userId });
       return;
     }
 
-    const sessions = await this.sessionRepo.findMany({ filter: { userId, isRevoked: false } } as never);
-    const tokens = sessions.map((s: { fcmToken?: string | null }) => s.fcmToken).filter(Boolean) as string[];
-    if (tokens.length === 0) return;
+    const sessions = await this.sessionRepo.findMany({
+      filter: { userId, isRevoked: false, fcmToken: { not: null } as any },
+    });
+    if (sessions.length === 0) return;
+    const tokens = sessions.map((s) => s.fcmToken as string);
 
     const serializedData = this.serializeData(payload.data);
 
@@ -128,7 +218,7 @@ export class NotificationService {
       data: serializedData,
     });
 
-    if (response.successCount > 0) {
+    if (notificationId&&response.successCount > 0) {
       await this.repo.markSent(notificationId);
     }
 
@@ -143,7 +233,10 @@ export class NotificationService {
         const session = sessions[i] as { id: string };
         if (session) {
           await this.sessionRepo.updateFcmToken(session.id, null).catch((err: unknown) => {
-            logger.error('Failed to clear invalid FCM token', { sessionId: session.id, error: err });
+            logger.error('Failed to clear invalid FCM token', {
+              sessionId: session.id,
+              error: err,
+            });
           });
         }
       }

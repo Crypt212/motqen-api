@@ -466,6 +466,55 @@ export default class ChatService extends Service {
     });
   }
 
+  /**
+   * Optimized participant validation and partner ID lookup using Redis.
+   * Caches participants in Redis to avoid DB hits on subsequent calls.
+   * Replaces the 2-step validateParticipant + findPartnerId flow.
+   */
+  async getPartnerIdCached(params: {
+    conversationId: IDType;
+    userId: IDType;
+  }): Promise<IDType> {
+    const { conversationId, userId } = params;
+    return tryCatch(async () => {
+      // 1. Check Redis cache
+      const members = await this.presence.getChatMembers({ conversationId });
+      
+      // 2. Cache Hit
+      if (members && members.length > 0) {
+        const userIdStr = String(userId);
+        if (!members.includes(userIdStr)) {
+          throw new AppError('Not a participant in this conversation', 403);
+        }
+        const partnerStr = members.find(m => m !== userIdStr);
+        if (!partnerStr) throw new AppError('Conversation has no partner', 400);
+        return partnerStr as IDType;
+      }
+
+      // 3. Cache Miss - Hit DB
+      const participant = await this.conversationRepository.findParticipant({
+        conversationId,
+        userId,
+      });
+      if (!participant) throw new AppError('Not a participant in this conversation', 403);
+
+      const partnerId = await this.conversationRepository.findPartnerId({
+        conversationId,
+        userId,
+      });
+      
+      if (!partnerId) throw new AppError('Conversation has no partner', 400);
+
+      // 4. Update Cache
+      await this.presence.addChatMembers({
+        conversationId,
+        userIds: [String(userId), String(partnerId)]
+      });
+
+      return partnerId;
+    });
+  }
+
   // ─── Delivery tracking ─────────────────────────────────────────────────────
 
   /**

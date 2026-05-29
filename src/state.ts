@@ -53,7 +53,10 @@ export const userRepository = new UserRepository(prisma);
 export const workerProfileRepository = new WorkerProfileRepository(prisma);
 export const clientProfileRepository = new ClientProfileRepository(prisma);
 export const specializationRepository = new SpecializationRepository(prisma);
-export const specializationService = new SpecializationService({ specializationRepository, dataCache });
+export const specializationService = new SpecializationService({
+  specializationRepository,
+  dataCache,
+});
 export const governmentRepository = new GovernmentRepository(prisma);
 export const governmentService = new GovernmentService({ governmentRepository, dataCache });
 export const governmentController = new GovernmentController({
@@ -123,14 +126,21 @@ export const orderService = new OrderService({
 
 export const negotiationService = new NegotiationService({
   negotiationRepository,
-  transactionManager
+  transactionManager,
 });
 
 export const orderController = new OrderController({ orderService, locationService });
 
 export const notificationRepository = new NotificationRepository(prisma);
 export const firebaseProvider = new FirebaseProvider();
-export const notificationService = new NotificationService(notificationRepository, redisClient, sessionRepository, userRepository, firebaseProvider);
+export const notificationService = new NotificationService(
+  notificationRepository,
+  redisClient,
+  sessionRepository,
+  userRepository,
+  firebaseProvider,
+  workerProfileRepository
+);
 export const webhookEventRepository = new WebhookEventRepository(prisma);
 export const paymentRepository = new PaymentRepository(prisma);
 export const paymentAttemptRepository = new PaymentAttemptRepository(prisma);
@@ -160,10 +170,7 @@ export const paymentService = new PaymentService(
   prisma
 );
 
-export const webhookController = new WebhookController(
-  paymentService,
-  paymobProvider
-);
+export const webhookController = new WebhookController(paymentService, paymobProvider);
 
 import { PaymentController } from './controllers/financial/PaymentController.js';
 import { WebhookEventRepository } from './repositories/prisma/financial/WebhookEventRepository.js';
@@ -236,7 +243,10 @@ export const refundController = new RefundController(refundService, refundReposi
 escrowService.setRefundService(refundService);
 
 export const dashboardService = new DashboardService(prisma);
-export const adminDashboardController = new AdminDashboardController(dashboardService, activityLogRepository);
+export const adminDashboardController = new AdminDashboardController(
+  dashboardService,
+  activityLogRepository
+);
 
 export const disputeService = new DisputeService(
   disputeRepository,

@@ -21,7 +21,7 @@ export default class SessionRepository extends Repository implements ISessionRep
       deviceId: record.deviceId,
       ipAddress: record.ipAddress ?? '',
       userAgent: record.userAgent ?? '',
-      fcmToken: (record as any).fcmToken ?? null,
+      fcmToken: record.fcmToken ?? null,
       lastUsedAt: record.lastUsedAt,
       expiresAt: record.expiresAt,
       updatedAt: record.updatedAt,
@@ -50,9 +50,8 @@ export default class SessionRepository extends Repository implements ISessionRep
           token: params.session.token,
           isRevoked: params.session.isRevoked ?? false,
           deviceId: params.session.deviceId,
-          ipAddress: params.session.ipAddress,
-          userAgent: params.session.userAgent,
-          fcmToken: params.session.fcmToken ?? null,
+         // ipAddress: params.session.ipAddress,
+         // userAgent: params.session.userAgent,
           lastUsedAt: params.session.lastUsedAt,
           expiresAt: params.session.expiresAt,
         },
@@ -107,7 +106,10 @@ export default class SessionRepository extends Repository implements ISessionRep
 
   async updateFcmToken(sessionId: string, token: string | null): Promise<void> {
     try {
-      await this.prismaClient.session.update({ where: { id: sessionId }, data: { fcmToken: token } });
+      await this.prismaClient.session.update({
+        where: { id: sessionId },
+        data: { fcmToken: token },
+      });
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'updateFcmToken');
     }

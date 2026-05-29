@@ -5,9 +5,16 @@
 
 import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
-import { authService, rateLimitService, presenceService, firebaseProvider } from '../state.js';
+import {
+  authService,
+  rateLimitService,
+  presenceService,
+  firebaseProvider,
+  notificationService,
+} from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import prisma from '../libs/database.js';
+import { logger } from 'src/libs/winston.js';
 
 /**
  * Request OTP for phone number verification
@@ -79,6 +86,7 @@ export const registerClient = asyncHandler(async (req, res) => {
     phoneNumber,
     deviceId,
     expiresAt,
+    userAgent: req.headers['user-agent'] ?? 'unknown',
   });
 
   const accessToken = await authService.generateAccessToken({
@@ -144,6 +152,7 @@ export const registerWorker = asyncHandler(async (req, res) => {
     phoneNumber,
     deviceId,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    userAgent: req.headers['user-agent'] ?? 'unknown',
   });
 
   const accessToken = await authService.generateAccessToken({
@@ -175,6 +184,7 @@ export const login = asyncHandler(async (req, res) => {
     phoneNumber,
     deviceId,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    userAgent: req.headers['user-agent'] ?? 'unknown',
   });
 
   const accessToken = await authService.generateAccessToken({
@@ -197,6 +207,7 @@ export const login = asyncHandler(async (req, res) => {
  */
 export const logout = asyncHandler(async (req, res) => {
   const deviceId = req.deviceId;
+  const state = req.userState;
   const userId = req.userState.userId;
 
   // Get the FCM token before revoking the session to unsubscribe from topics
@@ -206,42 +217,19 @@ export const logout = asyncHandler(async (req, res) => {
   });
 
   await authService.logout({ userId, deviceId });
+  setImmediate(() => {
+    void (async (): Promise<void> => {
+      if (!session?.fcmToken || !firebaseProvider.isReady()) return;
 
-  // Unsubscribe from topics in the background
-  if (session?.fcmToken && firebaseProvider.isReady()) {
-    await(async () => {
-      try {
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          include: {
-            workerProfile: { include: { workGovernments: { select: { id: true } } } },
-            clientProfile: true,
-            locations: { where: { isMain: true }, select: { governmentId: true }, take: 1 },
-          },
-        });
+      const topics = await notificationService.buildUserTopics(state);
 
-        if (!user) return;
-
-        const topics = ['all', 'admins', 'workers', 'clients'];
-        
-        // Add all possible government topics the user might have been in
-        if (user.workerProfile) {
-          user.workerProfile.workGovernments.forEach((gov) => topics.push(`gov_${gov.id}`));
-        }
-        if (user.locations.length > 0) {
-          topics.push(`gov_${user.locations[0].governmentId}`);
-        }
-
-        const uniqueTopics = [...new Set(topics)];
-        for (const topic of uniqueTopics) {
-          await firebaseProvider.unsubscribeFromTopic([session.fcmToken!], topic).catch(() => {});
-        }
-      } catch (err) {
-        console.error('Failed to unsubscribe FCM token from topics:', err);
+      for (const topic of topics) {
+        await firebaseProvider.unsubscribeFromTopic([session.fcmToken!], topic).catch(() => {});
       }
-    })();
-  }
-
+    })().catch((err) =>
+      logger.error('Failed to unsubscribe FCM token from topics', { userId, err })
+    );
+  });
   // Check if user has active sockets and handle offline cleanup
   const isUserOnline = await presenceService.isOnline(userId);
   if (isUserOnline) {
@@ -299,6 +287,7 @@ export const reviewStatus = asyncHandler(async (req, res) => {
  * Update FCM token for the current session
  */
 export const updateFcmToken = asyncHandler(async (req, res) => {
+  const state = req.userState;
   const userId = req.userState.userId;
   const deviceId = req.deviceId;
   const { fcmToken } = req.body;
@@ -318,54 +307,16 @@ export const updateFcmToken = asyncHandler(async (req, res) => {
     data: { fcmToken },
   });
 
-  // Subscribe to topics in the background
-  if (firebaseProvider.isReady()) {
-    await (async () => {
-      try {
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          include: {
-            workerProfile: { include: { workGovernments: { select: { id: true } } } },
-            clientProfile: true,
-            locations: { where: { isMain: true }, select: { governmentId: true }, take: 1 },
-          },
-        });
+  setImmediate(() => {
+    void (async (): Promise<void> => {
+      if (!fcmToken || !firebaseProvider.isReady()) return;
 
-        if (!user) return;
+      const topics = await notificationService.buildUserTopics(state);
 
-        const topics = ['all'];
-
-        // Role-based topics
-        if (user.role === 'ADMIN') {
-          topics.push('admins');
-        }
-        if (user.workerProfile) {
-          topics.push('workers');
-          // Government-based topics for workers
-          user.workerProfile.workGovernments.forEach((gov) => {
-            topics.push(`gov_${gov.id}`);
-          });
-        }
-        if (user.clientProfile) {
-          topics.push('clients');
-        }
-
-        // Location-based topics (main location)
-        if (user.locations.length > 0) {
-          topics.push(`gov_${user.locations[0].governmentId}`);
-        }
-
-        // Filter unique topics
-        const uniqueTopics = [...new Set(topics)];
-
-        for (const topic of uniqueTopics) {
-          await firebaseProvider.subscribeToTopic([fcmToken], topic);
-        }
-      } catch (err) {
-        console.error('Failed to subscribe FCM token to topics:', err);
+      for (const topic of topics) {
+        await firebaseProvider.subscribeToTopic([fcmToken], topic).catch(() => {});
       }
-    })();
-  }
-
+    })().catch((err) => logger.error('Failed to subscribe FCM token to topics', { userId, err }));
+  });
   new SuccessResponse('FCM token updated successfully', { success: true }, 200).send(res);
 });

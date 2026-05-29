@@ -8,7 +8,7 @@ package-lock.json
 **/logs
 
 src/generated
-
+pnpm-lock.yaml
 .github
 .agent
 .opencode

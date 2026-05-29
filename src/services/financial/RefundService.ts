@@ -6,8 +6,9 @@ import IWorkerBalanceRepository from '../../repositories/interfaces/financial/Wo
 import { IWorkerDebtRepository } from '../../repositories/interfaces/financial/WorkerDebtRepository.js';
 import { IPaymentRepository } from '../../repositories/interfaces/financial/PaymentRepository.js';
 import { IPaymentProvider } from '../../providers/interfaces/IPaymentProvider.js';
-import { generateDeterministicKey } from './helpers/idempotencyHelper.js';
+
 import { logActivity } from './helpers/activityLogger.js';
+import AppError from 'src/errors/AppError.js';
 
 export class RefundService {
   constructor(
@@ -31,27 +32,27 @@ export class RefundService {
     return this.prisma.$transaction(async (tx) => {
       // Get EscrowHold
       const escrow = await this.escrowHoldRepo.findByOrderId(orderId);
-      if (!escrow) throw new Error('Escrow hold not found');
+      if (!escrow) throw new AppError('Escrow hold not found');
 
       if (escrow.status === 'REFUNDED') {
-        const error = new Error('ALREADY_REFUNDED');
+        const error = new AppError('ALREADY_REFUNDED');
         error.name = 'ConflictError';
         throw error;
       }
 
       const payment = await this.paymentRepo.findByOrderId(orderId);
-      if (!payment) throw new Error('Payment not found');
+      if (!payment) throw new AppError('Payment not found');
 
       if (escrow.status === 'HELD') {
         // Pre-release
         const lockedEscrow = await this.escrowHoldRepo.lockForUpdate(escrow.id, tx);
-        if (!lockedEscrow) throw new Error('Could not lock escrow hold');
+        if (!lockedEscrow) throw new AppError('Could not lock escrow hold');
 
         const refundAmountCents = Number(escrow.totalAmount);
         
         const extRefund = await this.paymentProvider.initiateRefund(payment.externalReferenceId, refundAmountCents);
         if (!extRefund.success) {
-          throw new Error(`External refund failed: ${extRefund.error}`);
+          throw new AppError(`External refund failed: ${extRefund.error}`);
         }
 
         const refund = await this.refundRepo.create({
@@ -98,12 +99,12 @@ export class RefundService {
       } else if (escrow.status === 'RELEASED') {
         // Post-release
         const order = await tx.order.findUnique({ where: { id: orderId }, select: { workerProfileId: true } });
-        if (!order || !order.workerProfileId) throw new Error('Order/worker profile not found');
+        if (!order || !order.workerProfileId) throw new AppError('Order/worker profile not found');
 
         const workerProfileId = order.workerProfileId;
 
         const balance = await this.workerBalanceRepo.lockForUpdate(workerProfileId, tx);
-        if (!balance) throw new Error('Worker balance not found');
+        if (!balance) throw new AppError('Worker balance not found');
 
         const refundResult = await this.refundRepo.create({
             orderId,
