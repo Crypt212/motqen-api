@@ -63,34 +63,7 @@ export const getMessages = asyncHandler(async (req, res) => {
     after,
     limit,
   });
-
   new SuccessResponse('Messages retrieved', { messages }, 200).send(res);
-});
-
-/**
- * GET /api/chat/conversations/unread
- * App-open snapshot: all conversations with unread counts.
- * Query params: offset, limit
- */
-export const getUnreadSummary = asyncHandler(async (req, res) => {
-  const userId = req.userState.userId;
-  const { page, limit, sortBy, sortOrder } = matchedData(req, { includeOptionals: true });
-
-  const conversations =
-    await conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
-      userId,
-      filter: {},
-      pagination: { page, limit },
-      sort: [{ sortBy, sortOrder }],
-    });
-
-  const unread = conversations.conversationParticipantsWithMessages.filter((c) => {
-    const myParticipant = c.participants.find((p) => p.userId === userId);
-    const unreadCount = c.messageCounter - (myParticipant?.lastReadMessageNumber ?? 0);
-    return unreadCount > 0;
-  });
-
-  new SuccessResponse('Unread summary', { unread }, 200).send(res);
 });
 
 /**

@@ -24,7 +24,7 @@
  */
 
 import { logger } from '../libs/winston.js';
-import { chatService, conversationRepository, contactDetectionService } from '../state.js';
+import { chatService, contactDetectionService } from '../state.js';
 
 /**
  * Register all event handlers for a connected socket.
@@ -49,7 +49,7 @@ export function registerSocketHandlers(
   });
 
   // ─── send_message ───────────────────────────────────────────────────────────
-  socket.on('send_message', async ({ conversationId, content, type = 'TEXT', localId }, ack) => {
+  socket.on('send_message', async ({ conversationId, content, type = 'TEXT' }, ack) => {
     try {
       if (type !== 'TEXT') {
         if (typeof ack === 'function') {
@@ -93,17 +93,6 @@ export function registerSocketHandlers(
           userId: partnerId,
           messageNumber: message.messageNumber,
         });
-
-        // Notify sender that their message was delivered
-        socket.emit('messages_delivered', {
-          conversationId,
-          deliveredUpTo: message.messageNumber,
-        });
-      }
-
-      // 5. If recipient is inside this chat → auto-mark as read immediately
-      if (recipientInChat) {
-        await chatService.markAllAsRead({ conversationId, userId: partnerId });
       }
 
       // 6. Emit new_message to recipient
@@ -118,7 +107,6 @@ export function registerSocketHandlers(
           message,
           delivered,
           read: recipientInChat,
-          localId,
         });
       }
     } catch (err: unknown) {
@@ -176,6 +164,7 @@ export function registerSocketHandlers(
   // ─── enter_chat ─────────────────────────────────────────────────────────────
   socket.on('enter_chat', async ({ conversationId }, ack) => {
     try {
+      // he will send  last message number he have {nullable}
       // 1. Cached participant validation + partner ID lookup
       const partnerId = await chatService.getPartnerIdCached({ conversationId, userId });
 
@@ -183,7 +172,7 @@ export function registerSocketHandlers(
       void presence.enterChat({ userId, partnerId });
 
       // 3. Auto-mark all messages as read (also bumps lastReceivedMessageNumber)
-      await chatService.markAllAsRead({ conversationId, userId });
+     await chatService.markAllAsRead({ conversationId, userId });
 
       let isPartnerOnline = false;
 
@@ -196,13 +185,13 @@ export function registerSocketHandlers(
         io.to(`user:${partnerId}`).emit('partner_entered_chat', { conversationId });
 
         // Tell partner their messages are delivered (up to the current messageCounter)
-        const conv = await conversationRepository.findById({ id: conversationId });
-        if (conv) {
-          io.to(`user:${partnerId}`).emit('messages_delivered', {
-            conversationId,
-            deliveredUpTo: conv.messageCounter,
-          });
-        }
+      //  const conv = await conversationRepository.findById({ id: conversationId });
+        // if (conv) {
+          // io.to(`user:${partnerId}`).emit('messages_delivered', {
+          //   conversationId,
+          //   deliveredUpTo: conv.messageCounter,
+           //});
+       // }
       }
 
       if (typeof ack === 'function') ack({ ok: true, isPartnerOnline });
@@ -234,8 +223,6 @@ export function registerSocketHandlers(
       if (err instanceof Error && typeof ack === 'function') ack({ ok: false, error: err.message });
     }
   });
-
-
 
   // ─── disconnect ─────────────────────────────────────────────────────────────
   socket.on('disconnect', async () => {

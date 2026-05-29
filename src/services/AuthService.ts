@@ -619,6 +619,7 @@ export default class AuthService extends Service {
         },
         revokedBy: params.userId,
       });
+      
     } catch (err) {
       logger.error('Failed to revoke session:', err);
       throw err;

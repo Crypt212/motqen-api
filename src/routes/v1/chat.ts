@@ -17,7 +17,6 @@ import {
   getOrCreateConversation,
   getConversations,
   getMessages,
-  getUnreadSummary,
   getMissedMessages,
   sendImageMessage,
 } from '../../controllers/ChatController.js';
@@ -26,7 +25,7 @@ import { validateBody, validateParams, validateQuery } from '../../middlewares/v
 import { buildFilterSchema, createQuerySchema } from '../../schemas/common.js';
 import upload from '../../configs/multer.js';
 
-const chatRouter = Router();
+const chatRouter:Router = Router();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /chat/conversations
@@ -59,27 +58,6 @@ chatRouter.get(
   getConversations
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /chat/conversations/unread
-// (Must be registered BEFORE /:conversationId routes to avoid param capture)
-// ─────────────────────────────────────────────────────────────────────────────
-
-chatRouter.get(
-  '/conversations/unread',
-  [
-    validateQuery(
-      createQuerySchema(
-        buildFilterSchema({
-          page: { type: 'number' as const, min: 0 },
-          limit: { type: 'number' as const, min: 1, max: 30 },
-          sortBy: { type: 'string' as const, enum: ['updatedAt', 'messageCounter', 'unreadCount'] },
-          sortOrder: { type: 'string' as const, enum: ['asc', 'desc'] },
-        })
-      )
-    ),
-  ],
-  getUnreadSummary
-);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /chat/conversations/:conversationId/messages

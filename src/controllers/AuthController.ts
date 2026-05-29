@@ -217,6 +217,7 @@ export const logout = asyncHandler(async (req, res) => {
   });
 
   await authService.logout({ userId, deviceId });
+  
   setImmediate(() => {
     void (async (): Promise<void> => {
       if (!session?.fcmToken || !firebaseProvider.isReady()) return;

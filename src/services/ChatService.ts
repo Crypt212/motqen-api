@@ -22,6 +22,7 @@ import {
 } from '../domain/conversation.entity.js';
 import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../types/query.js';
+import { emitToUser } from 'src/socket/socket-emitter.js';
 
 export type ConversationWithMeta = {
   id: string;
@@ -177,13 +178,17 @@ export default class ChatService extends Service {
       // Background task: sync delivery state for all fetched conversations
       setImmediate(() => {
         for (const conv of convs.conversationParticipantsWithMessages) {
-          const myParticipant = conv.participants.find(p => p.userId === userId);
+          const myParticipant = conv.participants.find((p) => p.userId === userId);
           if (myParticipant && conv.messageCounter > myParticipant.lastReceivedMessageNumber) {
-            this.conversationRepository.updateLastReceived({
-              conversationId: conv.id,
-              userId,
-              messageNumber: conv.messageCounter
-            }).catch(err => console.error('[ChatService] Error auto-syncing delivery in getConversations:', err));
+            this.conversationRepository
+              .updateLastReceived({
+                conversationId: conv.id,
+                userId,
+                messageNumber: conv.messageCounter,
+              })
+              .catch((err) =>
+                console.error('[ChatService] Error auto-syncing delivery in getConversations:', err)
+              );
           }
         }
       });
@@ -234,6 +239,11 @@ export default class ChatService extends Service {
 
       // Sender always "receives" their own message
       await this.conversationRepository.updateLastReceived({
+        conversationId,
+        userId: senderId,
+        messageNumber: message.messageNumber,
+      });
+      await this.conversationRepository.updateLastRead({
         conversationId,
         userId: senderId,
         messageNumber: message.messageNumber,
@@ -387,14 +397,29 @@ export default class ChatService extends Service {
 
       // Sync delivery state
       if (messages.length > 0) {
-        const highestReceived = Math.max(...messages.map(m => m.messageNumber));
+        const highestReceived = Math.max(...messages.map((m) => m.messageNumber));
         if (highestReceived > participant.lastReceivedMessageNumber) {
           setImmediate(() => {
-            this.conversationRepository.updateLastReceived({
-              conversationId,
-              userId,
-              messageNumber: highestReceived
-            }).catch(err => console.error('[ChatService] Error auto-syncing delivery in getMessages:', err));
+            this.conversationRepository
+              .updateLastReceived({
+                conversationId,
+                userId,
+                messageNumber: highestReceived,
+              })
+              .then(async (obj) => {
+                console.log(
+                  `[ChatService] Auto-syncing delivery in getMessages:  messageNumber=${highestReceived} , obj.lastReceivedMessageNumber=${obj.lastReceivedMessageNumber}`
+                );
+                const partnerId = await this.getPartnerIdCached({ conversationId, userId });
+                if (obj.lastReceivedMessageNumber === highestReceived)
+                  emitToUser(`user:${partnerId}`, 'messages_delivered', {
+                    conversationId,
+                    deliveredUpTo: obj.lastReceivedMessageNumber,
+                  });
+              })
+              .catch((err) =>
+                console.error('[ChatService] Error auto-syncing delivery in getMessages:', err)
+              );
           });
         }
       }
@@ -428,14 +453,21 @@ export default class ChatService extends Service {
 
       // Sync delivery state
       if (messages.length > 0) {
-        const highestReceived = Math.max(...messages.map(m => m.messageNumber));
+        const highestReceived = Math.max(...messages.map((m) => m.messageNumber));
         if (highestReceived > participant.lastReceivedMessageNumber) {
           setImmediate(() => {
-            this.conversationRepository.updateLastReceived({
-              conversationId,
-              userId,
-              messageNumber: highestReceived
-            }).catch(err => console.error('[ChatService] Error auto-syncing delivery in getMissedMessages:', err));
+            this.conversationRepository
+              .updateLastReceived({
+                conversationId,
+                userId,
+                messageNumber: highestReceived,
+              })
+              .catch((err) =>
+                console.error(
+                  '[ChatService] Error auto-syncing delivery in getMissedMessages:',
+                  err
+                )
+              );
           });
         }
       }
@@ -471,22 +503,19 @@ export default class ChatService extends Service {
    * Caches participants in Redis to avoid DB hits on subsequent calls.
    * Replaces the 2-step validateParticipant + findPartnerId flow.
    */
-  async getPartnerIdCached(params: {
-    conversationId: IDType;
-    userId: IDType;
-  }): Promise<IDType> {
+  async getPartnerIdCached(params: { conversationId: IDType; userId: IDType }): Promise<IDType> {
     const { conversationId, userId } = params;
     return tryCatch(async () => {
       // 1. Check Redis cache
       const members = await this.presence.getChatMembers({ conversationId });
-      
+
       // 2. Cache Hit
       if (members && members.length > 0) {
         const userIdStr = String(userId);
         if (!members.includes(userIdStr)) {
           throw new AppError('Not a participant in this conversation', 403);
         }
-        const partnerStr = members.find(m => m !== userIdStr);
+        const partnerStr = members.find((m) => m !== userIdStr);
         if (!partnerStr) throw new AppError('Conversation has no partner', 400);
         return partnerStr as IDType;
       }
@@ -502,13 +531,13 @@ export default class ChatService extends Service {
         conversationId,
         userId,
       });
-      
+
       if (!partnerId) throw new AppError('Conversation has no partner', 400);
 
       // 4. Update Cache
       await this.presence.addChatMembers({
         conversationId,
-        userIds: [String(userId), String(partnerId)]
+        userIds: [String(userId), String(partnerId)],
       });
 
       return partnerId;

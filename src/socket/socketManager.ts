@@ -100,11 +100,11 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
 FROM conversation_participants cp
 JOIN conversations c ON c.id = cp."conversationId"
 WHERE cp."userId" = ${userId}
-  AND c."messageCounter" > cp."lastReadMessageNumber"
+  AND c."messageCounter" > cp."lastReceivedMessageNumber"
         `;
 
       if (participantRows.length > 0) {
-        socket.emit('missed_conversations', participantRows);
+        socket.emit('missed_messages_available', participantRows);
       }
     } catch (err) {
       logger.error('[socket] onConnection initialization error', err);
