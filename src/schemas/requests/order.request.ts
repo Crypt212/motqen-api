@@ -2,11 +2,6 @@ import { z } from '../../libs/zod.js';
 import { UUIDSchema, buildFilterSchema, createQuerySchema } from '../common.js';
 import { OrderFilterDescriptor } from '../../domain/order.entity.js';
 
-const stringToBool = z
-  .string()
-  .refine((s) => s === 'true' || s === 'false', { message: 'isUrgent must be boolean' })
-  .transform((s) => s === 'true');
-
 export const CreateOrderSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().min(1),
@@ -16,7 +11,7 @@ export const CreateOrderSchema = z.object({
   initialPrice: z.number().positive({ message: 'initialPrice must be positive' }),
   startDate: z.coerce.date().refine((d) => d > new Date(), { message: 'startDate must be in the future' }),
   estimatedDurationHours: z.number().int().positive({ message: 'estimatedDurationHours must be positive' }),
-  isUrgent: stringToBool,
+  isUrgent: z.boolean(),
   orderMode: z.enum(['DIRECT', 'GLOBAL']).default('DIRECT').optional(),
 });
 

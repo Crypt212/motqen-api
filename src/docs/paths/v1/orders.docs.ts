@@ -9,10 +9,10 @@ import {
 import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
 import { OrderResponseSchema, OrderListResponseSchema } from '../../../schemas/responses/order.response.js';
 import { CreateNegotiationSchema } from '../../../schemas/requests/negotiation.request.js';
-import { 
-  NegotiationResponseSchema, 
-  NegotiationListResponseSchema, 
-  NegotiationOrderResponseSchema 
+import {
+  NegotiationResponseSchema,
+  NegotiationListResponseSchema,
+  NegotiationOrderResponseSchema
 } from '../../../schemas/responses/negotiation.response.js';
 
 import { createResponseDoc } from '../../../docs/common.js';
@@ -269,7 +269,7 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
   registry.registerPath({
     method: 'get',
     path: '/api/v1/orders/{orderId}/negotiations',
-    tags: ['Orders', 'Negotiations'],
+    tags: ['Orders'],
     summary: 'List negotiations for a direct order',
     description: 'Retrieves the negotiation thread for a direct order (where proposalId is implicitly resolved).',
     security: [{ BearerAuth: [] }],
@@ -297,7 +297,7 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
   registry.registerPath({
     method: 'post',
     path: '/api/v1/orders/{orderId}/negotiations',
-    tags: ['Orders', 'Negotiations'],
+    tags: ['Orders'],
     summary: 'Create a negotiation offer for a direct order',
     description: 'Creates a new negotiation offer (counter-offer) for a direct order. If omitted, startDate and estimatedDurationHours are inherited from the previous offer. The response includes a hasOverlapWarning boolean flag indicating if the proposed time overlaps with the worker\'s other occupied time slots.',
     security: [{ BearerAuth: [] }],
@@ -327,7 +327,7 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
   registry.registerPath({
     method: 'post',
     path: '/api/v1/orders/{orderId}/negotiations/accept',
-    tags: ['Orders', 'Negotiations'],
+    tags: ['Orders'],
     summary: 'Accept the latest pending negotiation on a direct order',
     description: 'Accepts the latest pending counter-offer on a direct order. This finalizes the price, start date, and duration, transitioning the order to PRICE_AGREED.',
     security: [{ BearerAuth: [] }],
@@ -356,7 +356,7 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
   registry.registerPath({
     method: 'post',
     path: '/api/v1/orders/{orderId}/negotiations/reject',
-    tags: ['Orders', 'Negotiations'],
+    tags: ['Orders'],
     summary: 'Reject the latest pending negotiation on a direct order',
     description: 'Rejects the latest pending counter-offer on a direct order without proposing a new one.',
     security: [{ BearerAuth: [] }],

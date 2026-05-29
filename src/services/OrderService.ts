@@ -9,7 +9,6 @@ import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 import { Order, OrderFilter } from '../domain/order.entity.js';
 import { PaginationOptions, SortOptions } from '../types/query.js';
 import { canTransitionOrderStatus, canTransitionWorkStatus } from '../utils/stateMachine.js';
-import { hasOverlap } from '../utils/overlapCheck.js';
 import { CreateOrderDTO } from '../schemas/requests/order.request.js';
 import { OrderStatus, VerificationStatus } from 'src/generated/prisma/enums.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
@@ -65,6 +64,11 @@ export default class OrderService extends Service {
         if (!data.workerUserId) {
           throw new AppError('Worker user ID is required for direct orders', 400);
         }
+
+        if (data.isUrgent) {
+          data.startDate = new Date();
+        }
+
         if (!data.startDate) {
           throw new AppError('Start date is required for direct orders', 400);
         }
@@ -81,8 +85,8 @@ export default class OrderService extends Service {
 
       // Create order with transaction
       return await this.transactionManager.execute(
-        { 
-          orderRepo: OrderRepository, 
+        {
+          orderRepo: OrderRepository,
           specializationsRepo: SpecializationRepository,
           proposalRepo: ProposalRepository,
           negotiationRepo: NegotiationRepository

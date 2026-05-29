@@ -21,15 +21,15 @@ registerChatDocs(registryV1);
 registerDashboardDocs(registryV1);
 registerGovernmentsDocs(registryV1);
 registerSpecializationsDocs(registryV1);
-registerWorkersDocs(registryV1);
 registerLocationsDocs(registryV1);
+registerWorkersDocs(registryV1);
 registerOrdersDocs(registryV1);
+registerProposalsDocs(registryV1);
+registerReportsDocs(registryV1);
 registerPaymentsDocs(registryV1);
 registerWebhooksDocs(registryV1);
 registerFinancialDocs(registryV1);
 registerNotificationsDocs(registryV1);
-registerReportsDocs(registryV1);
-registerProposalsDocs(registryV1);
 
 registryV1.registerComponent('securitySchemes', 'BearerAuth', {
   type: 'http',

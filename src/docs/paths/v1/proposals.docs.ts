@@ -120,7 +120,7 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
   registry.registerPath({
     method: 'get',
     path: '/api/v1/orders/{orderId}/proposals/{proposalId}/negotiations',
-    tags: ['Negotiations'],
+    tags: ['Proposals'],
     summary: 'Get negotiation history for a proposal',
     description:
       'Returns the full negotiation history for the specified proposal, sorted by createdAt DESC. Only the client of the order or the assigned worker can access it.',
@@ -148,7 +148,7 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
   registry.registerPath({
     method: 'post',
     path: '/api/v1/orders/{orderId}/proposals/{proposalId}/negotiations',
-    tags: ['Negotiations'],
+    tags: ['Proposals'],
     summary: 'Create a new negotiation offer',
     description:
       'Submit a new price offer and time for the proposal. Only allowed when order status is OPEN. Blocked if the previous offer is still PENDING. Direction is inferred from the requester\'s role. The response may contain a hasOverlapWarning boolean flag indicating if the proposed time overlaps with the worker\'s other occupied time slots.',
@@ -179,7 +179,7 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
   registry.registerPath({
     method: 'post',
     path: '/api/v1/orders/{orderId}/proposals/{proposalId}/negotiations/accept',
-    tags: ['Negotiations'],
+    tags: ['Proposals'],
     summary: 'Accept the latest pending negotiation',
     description:
       'Accepts the most recent PENDING negotiation. Only the opponent of the offer creator can accept. Atomically sets negotiation.status = ACCEPTED, order.finalPrice = negotiation.price, order.orderStatus = PRICE_AGREED.',
@@ -209,7 +209,7 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
   registry.registerPath({
     method: 'post',
     path: '/api/v1/orders/{orderId}/proposals/{proposalId}/negotiations/reject',
-    tags: ['Negotiations'],
+    tags: ['Proposals'],
     summary: 'Reject the latest pending negotiation',
     description:
       'Rejects the most recent PENDING negotiation. Only the opponent of the offer creator can reject. Sets negotiation.status = REJECTED, unlocking new offers.',
