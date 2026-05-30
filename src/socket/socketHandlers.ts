@@ -80,34 +80,14 @@ export function registerSocketHandlers(
           });
       });
 
-      // 3. Check recipient presence
-      const [delivered, recipientInChat] = await Promise.all([
-        presence.isOnline({ userId: partnerId }),
-        presence.isViewingMyChat({ viewerId: partnerId, userId }),
-      ]);
-
-      // 4. If recipient is online → mark as delivered in DB
-      if (delivered && partnerId) {
-        await chatService.markAsDelivered({
-          conversationId,
-          userId: partnerId,
-          messageNumber: message.messageNumber,
-        });
-      }
-
-      // 6. Emit new_message to recipient
+      // 3. Emit new_message to recipient
       if (partnerId) {
         io.to(`user:${partnerId}`).emit('new_message', { message, conversationId });
       }
 
-      // 7. ACK sender with delivery + read status
+      // 4. ACK sender
       if (typeof ack === 'function') {
-        ack({
-          ok: true,
-          message,
-          delivered,
-          read: recipientInChat,
-        });
+        ack({ ok: true, message });
       }
     } catch (err: unknown) {
       logger.error('[socket] send_message error', err);
@@ -132,6 +112,31 @@ export function registerSocketHandlers(
       if (typeof ack === 'function') ack({ ok: true, readUpTo });
     } catch (err: unknown) {
       logger.error('[socket] read error', err);
+      if (err instanceof Error && typeof ack === 'function') ack({ ok: false, error: err.message });
+    }
+  });
+
+  // ─── delivered ──────────────────────────────────────────────────────────────
+  socket.on('delivered', async ({ conversationId, lastMessageId }, ack) => {
+    try {
+      // 1. Cached participant validation + partner ID lookup
+      const partnerId = await chatService.getPartnerIdCached({ conversationId, userId });
+
+      // 2. Mark as delivered (validates message belongs to this conversation)
+      const { deliveredUpTo } = await chatService.markAsDelivered({
+        conversationId,
+        userId,
+        lastMessageId,
+      });
+
+      // 3. Notify partner
+      if (partnerId) {
+        io.to(`user:${partnerId}`).emit('messages_delivered', { conversationId, deliveredUpTo });
+      }
+
+      if (typeof ack === 'function') ack({ ok: true, deliveredUpTo });
+    } catch (err: unknown) {
+      logger.error('[socket] delivered error', err);
       if (err instanceof Error && typeof ack === 'function') ack({ ok: false, error: err.message });
     }
   });
@@ -171,9 +176,6 @@ export function registerSocketHandlers(
       // 2. Track user as viewing partner's chat screen
       void presence.enterChat({ userId, partnerId });
 
-      // 3. Auto-mark all messages as read (also bumps lastReceivedMessageNumber)
-     await chatService.markAllAsRead({ conversationId, userId });
-
       let isPartnerOnline = false;
 
       if (partnerId) {
@@ -183,18 +185,11 @@ export function registerSocketHandlers(
         void socket.join(`presence:${partnerId}`);
 
         io.to(`user:${partnerId}`).emit('partner_entered_chat', { conversationId });
-
-        // Tell partner their messages are delivered (up to the current messageCounter)
-      //  const conv = await conversationRepository.findById({ id: conversationId });
-        // if (conv) {
-          // io.to(`user:${partnerId}`).emit('messages_delivered', {
-          //   conversationId,
-          //   deliveredUpTo: conv.messageCounter,
-           //});
-       // }
       }
 
-      if (typeof ack === 'function') ack({ ok: true, isPartnerOnline });
+      const snapshot = await chatService.getChatSnapshot({ conversationId, userId });
+
+      if (typeof ack === 'function') ack({ ok: true, isPartnerOnline, ...snapshot });
     } catch (err: unknown) {
       logger.error('[socket] enter_chat error', err);
       if (err instanceof Error && typeof ack === 'function') ack({ ok: false, error: err.message });

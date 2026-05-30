@@ -30,7 +30,13 @@ export default class ChatPresenceCache implements IChatPresenceCache {
 
   // ─── Online / Socket tracking ──────────────────────────────────────────────
 
-  async setSocket({ userId, socketId }: { userId: string | number; socketId: string }): Promise<void> {
+  async setSocket({
+    userId,
+    socketId,
+  }: {
+    userId: string | number;
+    socketId: string;
+  }): Promise<void> {
     const key = `sockets:${userId}`;
     await this.client.set(key, socketId, { EX: PRESENCE_TTL });
   }
@@ -54,7 +60,13 @@ export default class ChatPresenceCache implements IChatPresenceCache {
 
   // ─── Conversation Members Cache ────────────────────────────────────────────
 
-  async addChatMembers({ conversationId, userIds }: { conversationId: string | number; userIds: string[] }): Promise<void> {
+  async addChatMembers({
+    conversationId,
+    userIds,
+  }: {
+    conversationId: string | number;
+    userIds: string[];
+  }): Promise<void> {
     if (!userIds || userIds.length === 0) return;
     const key = `chat:members:${conversationId}`;
     await this.client.sAdd(key, userIds);
@@ -68,7 +80,13 @@ export default class ChatPresenceCache implements IChatPresenceCache {
 
   // ─── inChat tracking ──────────────────────────────────────────────────────
 
-  async enterChat({ userId, partnerId }: { userId: string | number; partnerId: string | number }): Promise<void> {
+  async enterChat({
+    userId,
+    partnerId,
+  }: {
+    userId: string | number;
+    partnerId: string | number;
+  }): Promise<void> {
     const roomKey = `chat:enter:${partnerId}`;
     await this.client.sAdd(roomKey, String(userId));
     await this.client.expire(roomKey, PRESENCE_TTL);
@@ -77,7 +95,13 @@ export default class ChatPresenceCache implements IChatPresenceCache {
     await this.client.set(viewerKey, String(partnerId), { EX: PRESENCE_TTL });
   }
 
-  async leaveChat({ userId, partnerId }: { userId: string | number; partnerId: string | number }): Promise<void> {
+  async leaveChat({
+    userId,
+    partnerId,
+  }: {
+    userId: string | number;
+    partnerId: string | number;
+  }): Promise<void> {
     await this.client.sRem(`chat:enter:${partnerId}`, String(userId));
     await this.client.del(`chat:viewing:${userId}`);
   }
@@ -87,7 +111,13 @@ export default class ChatPresenceCache implements IChatPresenceCache {
     return (Array.isArray(viewers) ? viewers : Array.from(viewers)).map(String);
   }
 
-  async isViewingMyChat({ viewerId, userId }: { viewerId: string | number; userId: string | number }): Promise<boolean> {
+  async isViewingMyChat({
+    viewerId,
+    userId,
+  }: {
+    viewerId: string | number;
+    userId: string | number;
+  }): Promise<boolean> {
     const member = await this.client.sIsMember(`chat:enter:${userId}`, String(viewerId));
     return Boolean(member && member !== '0' && member !== 0);
   }
@@ -95,7 +125,7 @@ export default class ChatPresenceCache implements IChatPresenceCache {
   async removeFromAllEnterSets({ userId }: { userId: string | number }): Promise<void> {
     const viewerKey = `chat:viewing:${userId}`;
     const partnerId = await this.client.get(viewerKey);
-    
+
     if (partnerId) {
       const pipeline = this.client.multi();
       pipeline.sRem(`chat:enter:${partnerId}`, String(userId));
@@ -104,8 +134,71 @@ export default class ChatPresenceCache implements IChatPresenceCache {
     }
   }
 
-  async refreshChatEnterTTL({ partnerId, ttl = 600 }: { partnerId: string | number; ttl?: number }): Promise<void> {
+  async refreshChatEnterTTL({
+    partnerId,
+    ttl = 600,
+  }: {
+    partnerId: string | number;
+    ttl?: number;
+  }): Promise<void> {
     await this.client.expire(`chat:enter:${partnerId}`, ttl);
+  }
+
+  // ─── Participant Counters Cache ────────────────────────────────────────────
+
+  async setParticipantCounters({
+    conversationId,
+    userId,
+    lastReceived,
+    lastRead,
+  }: {
+    conversationId: string | number;
+    userId: string | number;
+    lastReceived: number;
+    lastRead: number;
+  }): Promise<void> {
+    const key = `chat:counters:${conversationId}:${userId}`;
+    await this.client.hSet(key, { lastReceived: String(lastReceived), lastRead: String(lastRead) });
+    await this.client.expire(key, 3600); // 1 hour TTL
+  }
+
+  async getParticipantCounters({
+    conversationId,
+    userId,
+  }: {
+    conversationId: string | number;
+    userId: string | number;
+  }): Promise<{ lastReceived: number; lastRead: number } | null> {
+    const key = `chat:counters:${conversationId}:${userId}`;
+    const result = await this.client.hGetAll(key);
+    if (!result) return null;
+
+    let lastReceived: string | undefined;
+    let lastRead: string | undefined;
+
+    if (result instanceof Map) {
+      const received = result.get('lastReceived');
+      const read = result.get('lastRead');
+      lastReceived = received != null ? String(received) : undefined;
+      lastRead = read != null ? String(read) : undefined;
+    } else if (Array.isArray(result)) {
+      for (let i = 0; i < result.length; i += 2) {
+        const field = result[i];
+        const value = result[i + 1];
+        if (String(field) === 'lastReceived') {
+          lastReceived = value != null ? String(value) : undefined;
+        } else if (String(field) === 'lastRead') {
+          lastRead = value != null ? String(value) : undefined;
+        }
+      }
+    }
+
+    if (!lastReceived || !lastRead) return null;
+
+    return {
+      lastReceived: parseInt(lastReceived, 10),
+      lastRead: parseInt(lastRead, 10),
+    };
   }
 
   // ─── Typing ────────────────────────────────────────────────────────────────

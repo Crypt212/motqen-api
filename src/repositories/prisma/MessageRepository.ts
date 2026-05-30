@@ -271,6 +271,14 @@ export default class MessageRepository extends Repository implements IMessageRep
         });
         const messageNumber = updated.messageCounter;
 
+        // Sender has always received and read their own message (atomic invariant)
+        await tx.$queryRaw`
+          UPDATE conversation_participants
+          SET "lastReceivedMessageNumber" = GREATEST("lastReceivedMessageNumber", ${messageNumber}),
+              "lastReadMessageNumber"    = GREATEST("lastReadMessageNumber", ${messageNumber})
+          WHERE "conversationId" = ${params.conversationId} AND "userId" = ${params.senderId}
+        `;
+
         // Insert the message with that number
         return tx.message.create({
           data: {

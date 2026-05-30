@@ -73,7 +73,28 @@ export default interface IChatPresenceCache {
    */
   refreshChatEnterTTL(params: { partnerId: IDType; ttl?: number }): Promise<void>;
 
+  // ─── Participant Counters Cache ────────────────────────────────────────────
+
+  /**
+   * Cache participant's lastReceived and lastRead message numbers.
+   */
+  setParticipantCounters(params: {
+    conversationId: IDType;
+    userId: IDType;
+    lastReceived: number;
+    lastRead: number;
+  }): Promise<void>;
+
+  /**
+   * Get cached participant counters.
+   */
+  getParticipantCounters(params: {
+    conversationId: IDType;
+    userId: IDType;
+  }): Promise<{ lastReceived: number; lastRead: number } | null>;
+
   // ─── Typing ────────────────────────────────────────────────────────────────
+
 
   /**
    * Set the typing indicator for a user in a conversation. Auto-expires in 5s.

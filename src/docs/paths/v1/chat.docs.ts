@@ -103,9 +103,9 @@ export default function registerChatDocs(registry: OpenAPIRegistry) {
     method: 'get',
     path: '/api/v1/chat/conversations/{conversationId}/messages',
     tags: ['Chat'],
-    summary: 'Paginated message history (cursor-based by messageNumber)',
+    summary: 'Paginated message history with snapshot (cursor-based by messageNumber)',
     description:
-      'Returns a page of messages in ascending order (oldest first). Uses messageNumber as the cursor for stable pagination. Only accessible by participants of the conversation.',
+      'Returns a page of messages in ascending order (oldest first) alongside a `snapshot` of the conversation state (partner counters). Uses messageNumber as the cursor for stable pagination. Only accessible by participants of the conversation.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
@@ -132,9 +132,9 @@ export default function registerChatDocs(registry: OpenAPIRegistry) {
     method: 'get',
     path: '/api/v1/chat/conversations/{conversationId}/messages/missed',
     tags: ['Chat'],
-    summary: 'Fetch missed messages after socket reconnect',
+    summary: 'Fetch missed messages with snapshot after socket reconnect',
     description:
-      'Called by the client after receiving a `missed_messages_available` socket event on reconnect. Returns all messages with messageNumber > after (up to 100).',
+      'Called by the client after receiving a `missed_messages_available` socket event on reconnect. Returns all messages with messageNumber > after (up to 100) alongside a `snapshot` of the conversation state.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {

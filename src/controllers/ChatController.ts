@@ -6,7 +6,7 @@
 import SuccessResponse from '../responses/successResponse.js';
 import AppError from '../errors/AppError.js';
 import { asyncHandler } from '../types/asyncHandler.js';
-import { chatService, conversationRepository } from '../state.js';
+import { chatService } from '../state.js';
 import { matchedData } from 'express-validator';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
 import { emitToUser } from '../socket/socket-emitter.js';
@@ -57,13 +57,13 @@ export const getMessages = asyncHandler(async (req, res) => {
   const { limit, after } = matchedData(req, { includeOptionals: true });
   const conversationId = req.params.conversationId as string;
 
-  const messages = await chatService.getMessages({
+  const result = await chatService.getMessages({
     conversationId,
     userId,
     after,
     limit,
   });
-  new SuccessResponse('Messages retrieved', { messages }, 200).send(res);
+  new SuccessResponse('Messages retrieved', result, 200).send(res);
 });
 
 /**
@@ -85,14 +85,14 @@ export const getMissedMessages = asyncHandler(async (req, res) => {
     ' with limit ',
     limit
   );
-  const messages = await chatService.getMissedMessages({
+  const result = await chatService.getMissedMessages({
     conversationId,
     userId,
     afterMessageNumber: parseInt(after, 10),
     limit: limit ? Math.max(parseInt(limit, 10), 50) : 50,
   });
 
-  new SuccessResponse('Missed messages', { messages }, 200).send(res);
+  new SuccessResponse('Missed messages', result, 200).send(res);
 });
 
 /**
@@ -115,11 +115,10 @@ export const sendImageMessage = asyncHandler(async (req, res) => {
     imageBuffer: file.buffer,
   });
 
-  // Emit socket event to partner (like regular text messages)
-  const conv = await conversationRepository.findWithParticipant({ conversationId, userId });
-  const partner = conv.participants.find((p) => p.userId !== userId);
-  if (partner) {
-    emitToUser(partner.userId, 'new_message', { message, conversationId });
+  // Emit socket event to partner
+  const partnerId = await chatService.getPartnerIdCached({ conversationId, userId });
+  if (partnerId) {
+    emitToUser(partnerId, 'new_message', { message, conversationId });
   }
 
   new SuccessResponse('Image message sent', message, 201).send(res);

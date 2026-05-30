@@ -47,9 +47,16 @@ export const ConversationListResponseSchema = BaseSuccessResponse.extend({
   }),
 });
 
+export const ChatSnapshotSchema = z.object({
+  partnerLastReceivedMessageNumber: z.number(),
+  partnerLastReadMessageNumber: z.number(),
+  messageCounter: z.number(),
+});
+
 export const MessageListResponseSchema = BaseSuccessResponse.extend({
   data: z.object({
     messages: z.array(MessageObjectSchema),
+    snapshot: ChatSnapshotSchema,
   }),
 });
 
