@@ -17,6 +17,7 @@ import ProposalRepository from '../repositories/prisma/ProposalRepository.js';
 import NegotiationRepository from '../repositories/prisma/NegotiationRepository.js';
 import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerRepository.js';
 import { Role } from 'src/domain/user.entity.js';
+import { IDType } from 'src/repositories/interfaces/Repository.js';
 
 interface OrderServiceDeps {
   orderRepository: IOrderRepository;
@@ -60,9 +61,20 @@ export default class OrderService extends Service {
 
       const isGlobal = orderData.orderMode === 'GLOBAL';
 
+      let workerProfileId: IDType | null = null;
+
       if (!isGlobal) {
         if (!orderData.workerUserId) {
           throw new AppError('Worker user ID is required for direct orders', 400);
+        }
+        const worker = await this.workerProfileRepository.find({ workerFilter: { userId: orderData.workerUserId } });
+        if (!worker) {
+          throw new AppError('Worker not found', 400);
+        }
+        workerProfileId = worker.id;
+
+        if (orderData.workerUserId === clientUserId) {
+          throw new AppError('You cannot order yourself', 400);
         }
 
         if (orderData.isUrgent) {
@@ -89,7 +101,7 @@ export default class OrderService extends Service {
           orderRepo: OrderRepository,
           specializationsRepo: SpecializationRepository,
           proposalRepo: ProposalRepository,
-          negotiationRepo: NegotiationRepository
+          negotiationRepo: NegotiationRepository,
         },
         async ({ orderRepo, specializationsRepo, proposalRepo, negotiationRepo }) => {
           const order = await orderRepo.create({
@@ -119,7 +131,7 @@ export default class OrderService extends Service {
             const proposal = await proposalRepo.create({
               proposal: {
                 orderId: order.id,
-                workerProfileId: orderData.workerUserId, // workerProfileId is often the same as workerUserId in our tests/setup
+                workerProfileId
               },
             });
 

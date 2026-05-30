@@ -27,6 +27,7 @@ export default class ProposalController {
 
     const fullProposal = await this.proposalService.getProposalById({
       proposalId: proposal.id,
+      orderId,
       userId: workerUserId,
     });
 
@@ -65,12 +66,33 @@ export default class ProposalController {
     new SuccessResponse(validated.message, validated.data, 200).send(res);
   });
 
+  getMine = asyncHandler(async (req, res) => {
+    const { orderId } = OrderProposalParamsSchema.parse(req.params);
+    const workerUserId = req.userState.userId;
+    const workerProfileId = req.userState.worker?.id;
+
+    const proposal = await this.proposalService.getMyProposal({
+      orderId,
+      workerUserId,
+      workerProfileId
+    });
+
+    const responsePayload = {
+      status: 'success' as const,
+      message: 'Proposal retrieved successfully',
+      data: proposal,
+    };
+    const validated = ProposalResponseSchema.parse(responsePayload);
+    new SuccessResponse(validated.message, validated.data, 200).send(res);
+  });
+
   getById = asyncHandler(async (req, res) => {
     const { orderId, proposalId } = OrderProposalParamsSchema.parse(req.params);
     const userId = req.userState.userId;
 
     const proposal = await this.proposalService.getProposalById({
       proposalId,
+      orderId,
       userId,
     });
 

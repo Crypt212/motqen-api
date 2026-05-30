@@ -5,7 +5,7 @@
 
 import { Router } from 'express';
 import { governmentController } from '../../state.js';
-import { isActive, authorizeAdmin } from '../../middlewares/authMiddleware.js';
+import { isActive } from '../../middlewares/authMiddleware.js';
 import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
 import {
   CreateGovernmentSchema,
@@ -13,6 +13,7 @@ import {
   GovernmentQuerySchema,
   UpdateGovernmentSchema,
 } from '../../schemas/requests/government.request.js';
+import { authorizeAdmin } from 'src/middlewares/adminMiddleware.js';
 
 const governmentRouter = Router();
 

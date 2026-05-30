@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { withdrawalAdminController, workerEarningsController } from '../../../state.js';
-import { authenticateAccess, authorizeAdmin, isActive } from '../../../middlewares/authMiddleware.js';
+import { authenticateAccess, isActive } from '../../../middlewares/authMiddleware.js';
 import { validateBody, validateParams } from '../../../middlewares/validateRequest.js';
+import { authorizeAdmin } from '../../../middlewares/adminMiddleware.js';
 import { z } from 'zod';
 
 

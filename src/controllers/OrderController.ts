@@ -2,7 +2,7 @@ import { asyncHandler } from '../types/asyncHandler.js';
 import SuccessResponse from '../responses/successResponse.js';
 import OrderService from '../services/OrderService.js';
 import { FilterFromDescriptor, parseQueryParams } from '../schemas/common.js';
-import { OrderFilterSchema, CreateOrderSchema } from '../schemas/requests/order.request.js';
+import { OrderFilterSchema, CreateOrderSchema, OrderIdParamsSchema } from '../schemas/requests/order.request.js';
 import { OrderResponseSchema } from '../schemas/responses/order.response.js';
 import { FieldTypeDefinition, SortOptions } from 'src/types/query.js';
 import { Order } from 'src/domain/order.entity.js';
@@ -19,7 +19,6 @@ export default class OrderController {
   }
 
   create = asyncHandler(async (req, res) => {
-    console.log(req.body);
     const parsedBody = CreateOrderSchema.parse(req.body);
     const images = (req.files as Express.Multer.File[]) || [];
     const clientUserId = req.userState.userId;
@@ -41,7 +40,6 @@ export default class OrderController {
       message: 'Order created successfully',
       data: order,
     };
-    console.log(responsePayload);
     const validatedResponse = OrderResponseSchema.parse(responsePayload);
     new SuccessResponse(validatedResponse.message, validatedResponse.data, 201).send(res);
   });
@@ -67,7 +65,7 @@ export default class OrderController {
   });
 
   getById = asyncHandler(async (req, res) => {
-    const { orderId } = req.params;
+    const { orderId } = OrderIdParamsSchema.parse(req.params);
     const userState = req.userState!;
     const order = await this.orderService.getOrderById({
       orderId: orderId as string,
@@ -78,7 +76,7 @@ export default class OrderController {
   });
 
   getLocation = asyncHandler(async (req, res) => {
-    const { orderId } = req.params;
+    const { orderId } = OrderIdParamsSchema.parse(req.params);
     const userState = req.userState!;
     const order = await this.orderService.getOrderById({
       orderId: orderId as string,
@@ -94,7 +92,7 @@ export default class OrderController {
   });
 
   cancel = asyncHandler(async (req, res) => {
-    const { orderId } = req.params;
+    const { orderId } = OrderIdParamsSchema.parse(req.params);
     const userState = req.userState!;
     await this.orderService.cancelOrder({
       orderId: orderId as string,
@@ -105,7 +103,7 @@ export default class OrderController {
 
 
   startWork = asyncHandler(async (req, res) => {
-    const { orderId } = req.params;
+    const { orderId } = OrderIdParamsSchema.parse(req.params);
     const userState = req.userState!;
     const order = await this.orderService.startWork({
       orderId: orderId as string,
@@ -115,21 +113,21 @@ export default class OrderController {
   });
 
   finishWork = asyncHandler(async (req, res) => {
-    const { orderId } = req.params;
+    const { orderId } = OrderIdParamsSchema.parse(req.params);
     const userState = req.userState!;
     const order = await this.orderService.finishWork({
-      orderId: orderId as string,
+      orderId: orderId,
       workerUserId: userState.userId,
     });
     new SuccessResponse('Work finished successfully', { order }, 200).send(res);
   });
 
   rate = asyncHandler(async (req, res) => {
-    const { orderId } = req.params;
+    const { orderId } = OrderIdParamsSchema.parse(req.params);
     const { rate, comment } = req.body;
     const userState = req.userState!;
     await this.orderService.rateOrder({
-      orderId: orderId as string,
+      orderId: orderId,
       clientUserId: userState.userId,
       rate,
       comment,
