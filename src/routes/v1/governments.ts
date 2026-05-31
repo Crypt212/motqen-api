@@ -13,7 +13,7 @@ import {
   GovernmentQuerySchema,
   UpdateGovernmentSchema,
 } from '../../schemas/requests/government.request.js';
-import { authorizeAdmin } from 'src/middlewares/adminMiddleware.js';
+import { authorizeAdmin } from 'src/middlewares/accessMiddleware.js';
 
 const governmentRouter = Router();
 

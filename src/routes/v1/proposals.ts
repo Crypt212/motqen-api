@@ -14,8 +14,7 @@ import {
   rejectNegotiation,
 } from '../../controllers/NegotiationController.js';
 import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
-import { authorizeApprovedWorker, authorizeWorker } from 'src/middlewares/workerMiddleware.js';
-import { authorizeClient } from 'src/middlewares/clientMiddleware.js';
+import { authorizeApprovedWorker, authorizeWorker, authorizeClient } from 'src/middlewares/accessMiddleware.js';
 
 const proposalsRouter = Router({ mergeParams: true });
 
@@ -47,8 +46,6 @@ proposalsRouter.get(
 proposalsRouter.get(
   '/:proposalId',
   isActive,
-  authorizeClient,
-  authorizeWorker,
   validateParams(OrderProposalParamsSchema),
   proposalController.getById
 );
@@ -56,8 +53,6 @@ proposalsRouter.get(
 proposalsRouter.get(
   '/:proposalId/negotiations',
   isActive,
-  authorizeClient,
-  authorizeWorker,
   validateParams(OrderProposalParamsSchema),
   getNegotiations
 );
@@ -65,8 +60,6 @@ proposalsRouter.get(
 proposalsRouter.post(
   '/:proposalId/negotiations',
   isActive,
-  authorizeClient,
-  authorizeWorker,
   validateParams(OrderProposalParamsSchema),
   validateBody(CreateNegotiationSchema),
   createNegotiation
@@ -75,8 +68,6 @@ proposalsRouter.post(
 proposalsRouter.post(
   '/:proposalId/negotiations/accept',
   isActive,
-  authorizeClient,
-  authorizeWorker,
   validateParams(OrderProposalParamsSchema),
   acceptNegotiation
 );
@@ -84,8 +75,6 @@ proposalsRouter.post(
 proposalsRouter.post(
   '/:proposalId/negotiations/reject',
   isActive,
-  authorizeClient,
-  authorizeWorker,
   validateParams(OrderProposalParamsSchema),
   rejectNegotiation
 );

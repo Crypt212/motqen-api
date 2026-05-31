@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { authorizeAdmin } from '../../middlewares/adminMiddleware.js';
+import { authorizeAdmin } from '../../middlewares/accessMiddleware.js';
 import {
   CreateReportSchema,
   UpdateReportSchema,

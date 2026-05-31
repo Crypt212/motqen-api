@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased] - 2026-05-31
+
+### Added
+- Consolidated all access control logic (`authorizeClient`, `authorizeWorker`, `authorizeAdmin`, etc.) into a single `accessMiddleware.ts` file.
+
+### Changed
+- Removed deprecated `clientMiddleware.ts`, `workerMiddleware.ts`, and `adminMiddleware.ts` in favor of the unified `accessMiddleware.ts`.
+- Updated imports across all route files (`chat`, `dashboard`, `orders`, `proposals`, `reports`, `specializations`, `financial`, etc.) to use the unified `accessMiddleware.ts`.
+- Added specific role-based access control (`authorizeClient`, `authorizeWorker`) to the `orders` endpoints, ensuring only authorized actors can create, cancel, start, finish, or rate orders.
+- Removed conflicting simultaneous `authorizeClient` and `authorizeWorker` middleware definitions from the `proposals` endpoints.
+
 ## [Unreleased] - 2026-05-30
 
 ### Added

@@ -15,7 +15,7 @@ import {
   deleteSubSpecialization,
 } from '../../controllers/SpecializationController.js';
 import { isActive } from '../../middlewares/authMiddleware.js';
-import { authorizeAdmin } from '../../middlewares/adminMiddleware.js';
+import { authorizeAdmin } from '../../middlewares/accessMiddleware.js';
 import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
 import {
   CreateSpecializationSchema,
