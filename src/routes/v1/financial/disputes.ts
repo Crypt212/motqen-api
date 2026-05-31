@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { disputeController } from '../../../state.js';
 import { authenticateAccess } from '../../../middlewares/authMiddleware.js';
-import { authorizeAdmin } from '../../../middlewares/adminMiddleware.js';
+import { authorizeAdmin } from '../../../middlewares/accessMiddleware.js';
 
 const router = Router();
 
