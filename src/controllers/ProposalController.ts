@@ -67,7 +67,7 @@ export default class ProposalController {
   });
 
   getMine = asyncHandler(async (req, res) => {
-    const { orderId } = OrderProposalParamsSchema.parse(req.params);
+    const { orderId } = OrderIdParamsSchema.parse(req.params);
     const workerUserId = req.userState.userId;
     const workerProfileId = req.userState.worker?.id;
 

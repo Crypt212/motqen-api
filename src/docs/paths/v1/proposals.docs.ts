@@ -97,7 +97,7 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: OrderProposalParamsSchema,
+      params: OrderIdParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {

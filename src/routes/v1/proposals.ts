@@ -40,7 +40,7 @@ proposalsRouter.get(
   '/mine',
   isActive,
   authorizeWorker,
-  validateParams(OrderProposalParamsSchema),
+  validateParams(OrderIdParamsSchema),
   proposalController.getMine
 );
 
