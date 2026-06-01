@@ -57,9 +57,13 @@ export default class WorkerProfileRepository
       idDocumentUrl: record.idDocumentUrl,
       reason: record.reason,
       status: record.status,
+      assignedDepartment: record.assignedDepartment,
+      assignedAdminId: record.assignedAdminId,
+      rejectionReasons: record.rejectionReasons,
+      rejectionNote: record.rejectionNote,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
-    };
+    } as any;
   }
 
   private toDomainDayWorkingHours(record: DayWorkingHoursPrisma): DayWorkingHours {
@@ -364,10 +368,21 @@ WHERE "workerProfileId" = ${workerProfileId};`);
         where: { workerProfileId: workerProfile.id },
       });
 
-      return verification ? this.toDomainVerification(verification) : null;
+      return verification ? this.toDomainVerification(verification as any) : null;
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'findVerification');
     }
+  }
+
+  async findVerificationById(id: string) {
+    return this.prismaClient.workerVerification.findUnique({ where: { id } });
+  }
+
+  async updateVerificationStatus(id: string, data: any) {
+    return this.prismaClient.workerVerification.update({
+      where: { id },
+      data,
+    });
   }
 
   async findDaysWorkingHoursByUserId({

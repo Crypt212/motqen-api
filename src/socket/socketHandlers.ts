@@ -60,6 +60,7 @@ export function registerSocketHandlers(
 
       // 1. Cached participant validation + partner ID lookup (Redis → DB fallback)
       const partnerId = await chatService.getPartnerIdCached({ conversationId, userId });
+      console.log('Emitting new_message to partnerId:', partnerId);
 
       // 2. Send the message (atomic counter increment + insert in tx)
       //    sendMessage also auto-updates sender's lastReceivedMessageNumber

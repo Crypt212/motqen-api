@@ -1,7 +1,7 @@
 import { PrismaClient } from '../../generated/prisma/client.js';
 
 export class DashboardService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(public readonly prisma: PrismaClient) {}
 
   async getPlatformEarnings(startDate?: Date, endDate?: Date) {
     const whereClause: any = {

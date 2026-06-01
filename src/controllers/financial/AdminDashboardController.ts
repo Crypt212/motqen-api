@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { Request } from '../../types/asyncHandler.js';
 import { DashboardService } from '../../services/financial/DashboardService.js';
 import IActivityLogRepository from '../../repositories/interfaces/financial/ActivityLogRepository.js';
 import { serializeBigints } from '../../utils/serializeBigints.js';
@@ -66,6 +67,26 @@ export class AdminDashboardController {
       if (!userId) {
         res.status(400).json({ error: 'userId parameter is required' });
         return;
+      }
+
+      if (req.adminState?.role !== 'SUPER_ADMIN') {
+        const adminId = req.adminState!.adminId;
+        const [hasReport, hasDispute, hasVerification] = await Promise.all([
+          this.dashboardService.prisma.report.findFirst({
+            where: { assignedAdminId: adminId, OR: [{ targetId: userId }, { reporterId: userId }] }
+          }),
+          this.dashboardService.prisma.dispute.findFirst({
+            where: { assignedAdminId: adminId, order: { workerProfile: { userId } } }
+          }),
+          this.dashboardService.prisma.workerVerification.findFirst({
+            where: { assignedAdminId: adminId, workerProfile: { userId } }
+          }),
+        ]);
+
+        if (!hasReport && !hasDispute && !hasVerification) {
+          res.status(403).json({ error: 'Cannot access private user data without an assigned issue for this user' });
+          return;
+        }
       }
 
       const data = await this.dashboardService.getUserAggregation(userId);

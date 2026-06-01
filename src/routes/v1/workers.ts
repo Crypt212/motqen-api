@@ -18,7 +18,7 @@ import { validateParams, validateQuery } from '../../middlewares/validateRequest
 import { getWorkerSpecializationsTree, getWorkerWorkingHours } from '../../controllers/DashboardController.js';
 import { z } from '../../libs/zod.js';
 
-const workersRouter = Router();
+const workersRouter: Router = Router();
 
 workersRouter.get('/', validateQuery(ExploreSearchSchema), searchWorkers);
 

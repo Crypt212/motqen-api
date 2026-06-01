@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { refundController } from '../../../state.js';
-import { authenticateAccess, authorizeAdmin } from '../../../middlewares/authMiddleware.js';
+import { authenticateAdminAccess, requireAdminPermission } from '../../../middlewares/adminAuthMiddleware.js';
+import { validateCsrf } from '../../../middlewares/csrfMiddleware.js';
 
-const router = Router();
+const router: Router = Router();
 
-router.use(authenticateAccess, authorizeAdmin);
+router.use(authenticateAdminAccess, requireAdminPermission(['FINANCIAL_MONITOR']));
+router.use(validateCsrf);
 
 /**
  * @swagger

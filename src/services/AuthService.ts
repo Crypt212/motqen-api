@@ -4,7 +4,7 @@
  */
 
 import { generateOTP, hashOTP } from '../utils/OTP.js';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import AppError from '../errors/AppError.js';
 import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 import Service, { tryCatch } from './Service.js';
@@ -503,6 +503,7 @@ export default class AuthService extends Service {
 
     const accessToken = generateToken({
       type: 'access',
+      domain: 'user',
       userId: params.userId,
       role: params.role,
       phoneNumber: user.phoneNumber,
@@ -524,6 +525,7 @@ export default class AuthService extends Service {
 
     const unHashedRefreshToken = generateToken({
       type: 'refresh',
+      domain: 'user',
       userId: user.id,
       phoneNumber: user.phoneNumber,
       role: user.role,
@@ -619,7 +621,6 @@ export default class AuthService extends Service {
         },
         revokedBy: params.userId,
       });
-      
     } catch (err) {
       logger.error('Failed to revoke session:', err);
       throw err;

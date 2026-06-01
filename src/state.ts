@@ -2,6 +2,9 @@ import UserService from './services/UserService.js';
 import OTPCache from './cache/redis/OTPCache.js';
 import DataCache from './cache/redis/DataCache.js';
 import SessionRepository from './repositories/prisma/SessionRepository.js';
+import AdminRepository from './repositories/prisma/AdminRepository.js';
+import AdminSessionRepository from './repositories/prisma/AdminSessionRepository.js';
+import AdminAuditLogRepository from './repositories/prisma/AdminAuditLogRepository.js';
 import UserRepository from './repositories/prisma/UserRepository.js';
 import WorkerProfileRepository from './repositories/prisma/WorkerRepository.js';
 import ClientProfileRepository from './repositories/prisma/ClientRepository.js';
@@ -17,6 +20,13 @@ import SpecializationService from './services/SpecializationService.js';
 import ClientProfileService from './services/ClientProfileService.js';
 import WorkerProfileService from './services/WorkerProfileService.js';
 import ConversationRepository from './repositories/prisma/ConversationRepository.js';
+import AdminAuthService from './services/AdminAuthService.js';
+import AdminAuditLogService from './services/AdminAuditLogService.js';
+import AdminUsersService from './services/AdminUsersService.js';
+import AdminIssuesService from './services/AdminIssuesService.js';
+import AdminIssuesController from './controllers/AdminIssuesController.js';
+import AdminVerificationsController from './controllers/AdminVerificationsController.js';
+import AdminReportsController from './controllers/AdminReportsController.js';
 import MessageRepository from './repositories/prisma/MessageRepository.js';
 import FlaggedMessageRepository from './repositories/prisma/FlaggedMessageRepository.js';
 import ChatPresenceCache from './cache/redis/ChatPresenceCache.js';
@@ -103,6 +113,16 @@ export const authService = new AuthService({
   tokenCache,
   transactionManager,
 });
+export const adminRepository = new AdminRepository(prisma);
+export const adminSessionRepository = new AdminSessionRepository(prisma);
+export const adminAuditLogRepository = new AdminAuditLogRepository(prisma);
+export const adminAuthService = new AdminAuthService(adminRepository, adminSessionRepository);
+export const adminAuditLogService = new AdminAuditLogService(adminAuditLogRepository);
+export const adminUsersService = new AdminUsersService(adminRepository);
+export const adminIssuesService = new AdminIssuesService();
+export const adminIssuesController = new AdminIssuesController();
+export const adminVerificationsController = new AdminVerificationsController();
+export const adminReportsController = new AdminReportsController();
 export const chatService = new ChatService({
   conversationRepository,
   messageRepository,

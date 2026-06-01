@@ -16,7 +16,7 @@ import {
 } from '../../controllers/NegotiationController.js';
 import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
 
-const proposalsRouter = Router({ mergeParams: true });
+const proposalsRouter: Router = Router({ mergeParams: true });
 
 proposalsRouter.post(
   '/',

@@ -30,7 +30,11 @@ import {
   getWorkerOccupiedTimeSlots,
   getWorkerOrdersCount,
 } from '../../controllers/DashboardController.js';
-import { authorizeApprovedWorker, authorizeWorker, unAuthorizeWorker } from '../../middlewares/workerMiddleware.js';
+import {
+  authorizeApprovedWorker,
+  authorizeWorker,
+  unAuthorizeWorker,
+} from '../../middlewares/workerMiddleware.js';
 import { authorizeClient, unAuthorizeClient } from '../../middlewares/clientMiddleware.js';
 import upload from '../../configs/multer.js';
 
@@ -63,7 +67,7 @@ import { validateBody, validateParams, validateQuery } from '../../middlewares/v
 
 import locationRouter from './locations.js';
 
-const usersRouter = Router();
+const usersRouter: Router = Router();
 
 usersRouter.use('/locations', locationRouter);
 
@@ -145,8 +149,18 @@ usersRouter.get(
 );
 
 usersRouter.get('/worker-profile', isActive, authorizeApprovedWorker, getWorkerProfile);
-usersRouter.get('/worker-profile/orders-count', isActive, authorizeApprovedWorker, getWorkerOrdersCount);
-usersRouter.get('/worker-profile/working-hours', isActive, authorizeApprovedWorker, getWorkerWorkingHours);
+usersRouter.get(
+  '/worker-profile/orders-count',
+  isActive,
+  authorizeApprovedWorker,
+  getWorkerOrdersCount
+);
+usersRouter.get(
+  '/worker-profile/working-hours',
+  isActive,
+  authorizeApprovedWorker,
+  getWorkerWorkingHours
+);
 usersRouter.post(
   '/worker-profile/working-hours',
   isActive,
@@ -170,12 +184,7 @@ usersRouter.put(
   updateWorkerProfile
 );
 
-usersRouter.delete(
-  '/worker-profile',
-  isActive,
-  authorizeApprovedWorker,
-  deleteWorkerProfile
-);
+usersRouter.delete('/worker-profile', isActive, authorizeApprovedWorker, deleteWorkerProfile);
 
 usersRouter.get(
   '/worker-profile/work-governments',
@@ -253,11 +262,6 @@ usersRouter.put(
   updateClientProfile
 );
 
-usersRouter.delete(
-  '/client-profile',
-  isActive,
-  authorizeClient,
-  deleteClientProfile
-);
+usersRouter.delete('/client-profile', isActive, authorizeClient, deleteClientProfile);
 
 export default usersRouter;

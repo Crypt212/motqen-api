@@ -31,8 +31,7 @@ import {
 } from '../../controllers/NegotiationController.js';
 import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
 
-
-const router = Router();
+const router: Router = Router();
 router.use('/:orderId/proposals', proposalsRouter);
 const upload = multer({ storage: multer.memoryStorage(), limits: { files: 3 } });
 

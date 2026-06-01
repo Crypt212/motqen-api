@@ -30,7 +30,17 @@ export type UserState = {
   };
 };
 
-export type Request = ExpressRequest & { deviceId?: DeviceID } & { userState?: UserState };
+export type AdminState = {
+  adminId: IDType;
+  username: string;
+  role: string;
+  domain: string;
+  type: string;
+};
+
+export type Request = ExpressRequest & { deviceId?: DeviceID } & { userState?: UserState } & {
+  adminState?: AdminState;
+};
 
 export type RequestHandler = (
   req: Request,

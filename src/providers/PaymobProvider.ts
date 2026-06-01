@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import environment from '../configs/environment.js';
 import { IPaymentProvider } from './interfaces/IPaymentProvider.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
@@ -7,7 +7,7 @@ import { PaymobIntentionResponse } from './interfaces/IpaymobResponses.js';
 export class PaymobProvider implements IPaymentProvider {
   private cachedAuthToken: string | null = null;
   private authTokenExpiresAt: number = 0;
-  private api = createAxiosInstance("https://accept.paymob.com");
+  private api = createAxiosInstance('https://accept.paymob.com');
   private integrationIds = environment.paymob.integrationIds;
 
   private apiKey = environment.paymob.apiKey;
@@ -16,8 +16,8 @@ export class PaymobProvider implements IPaymentProvider {
   private async setAuth(): Promise<string> {
     const apiKey = environment.paymob.apiKey;
 
-    const response = await this.api.post("/api/auth/tokens", {
-      api_key: apiKey
+    const response = await this.api.post('/api/auth/tokens', {
+      api_key: apiKey,
     });
 
     this.cachedAuthToken = response.data.token;
@@ -39,7 +39,8 @@ export class PaymobProvider implements IPaymentProvider {
       if (!/^[a-fA-F0-9]+$/.test(hmacHeader)) return false;
 
       const obj = parsed.obj;
-      const safe = (val: String|undefined|null): string => (val === null || val === undefined ? '' : String(val));
+      const safe = (val: String | undefined | null): string =>
+        val === null || val === undefined ? '' : String(val);
 
       // Build concatenated string based on Paymob spec
       const concatenatedFields = [
@@ -62,15 +63,13 @@ export class PaymobProvider implements IPaymentProvider {
         safe(obj.source_data?.pan),
         safe(obj.source_data?.sub_type),
         safe(obj.source_data?.type),
-        safe(obj.success)
+        safe(obj.success),
       ].join('');
 
       const computedHmac = crypto
         .createHmac('sha512', secret)
         .update(concatenatedFields)
         .digest('hex');
-
-
 
       const computedBuf = Buffer.from(computedHmac, 'hex');
       const receivedBuf = Buffer.from(hmacHeader, 'hex');
@@ -83,7 +82,10 @@ export class PaymobProvider implements IPaymentProvider {
       return false;
     }
   }
-  async initiateRefund(transactionId: string, amountInCents: number): Promise<{ success: boolean; refundId?: string; error?: string }> {
+  async initiateRefund(
+    transactionId: string,
+    amountInCents: number
+  ): Promise<{ success: boolean; refundId?: string; error?: string }> {
     try {
       let authToken = this.cachedAuthToken;
       if (!authToken || Date.now() > this.authTokenExpiresAt) {
@@ -93,7 +95,7 @@ export class PaymobProvider implements IPaymentProvider {
       const response = await this.api.post('/api/acceptance/void_refund/refund', {
         auth_token: authToken,
         transaction_id: transactionId,
-        amount_cents: amountInCents
+        amount_cents: amountInCents,
       });
 
       return { success: true, refundId: String(response.data.id) };
@@ -103,60 +105,74 @@ export class PaymobProvider implements IPaymentProvider {
     }
   }
 
-  async createPaymentIntention(orderInfo: { amountCents: number, orderId: string, specialReference?: string, description?: string, firstName?: string, lastName?: string, phone?: string, email?: string }, billingData: Record<string, any>, userId: IDType): Promise<string> {
-
+  async createPaymentIntention(
+    orderInfo: {
+      amountCents: number;
+      orderId: string;
+      specialReference?: string;
+      description?: string;
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      email?: string;
+    },
+    billingData: Record<string, any>,
+    userId: IDType
+  ): Promise<string> {
     if (!this.apiKey || !this.integrationIds || !this.publicKey) {
       throw new Error('Paymob API Key, Integration ID, or Iframe ID is missing in configuration');
     }
 
     try {
-    //   let authToken = this.cachedAuthToken;
-    //   if (!authToken || Date.now() > this.authTokenExpiresAt) {
-    //     authToken = await this.setAuth();
-    //   }
-      let order = await this.api.post<PaymobIntentionResponse>('/v1/intention/', {
-        "amount": orderInfo.amountCents,// placeholder for test only i will delete it 
-        "currency": "EGP",
-        "payment_methods": [
-          ...this.integrationIds
-        ],
-        "items": [
-          {
-            "name": orderInfo.description || "طلب خدمه",
-            "amount": orderInfo.amountCents,
-            "description": orderInfo.description || "طلب خدمه",
-            "quantity": 1
-          }
-        ],
-        "billing_data": {
-          "apartment": "dumy",
-          "first_name": orderInfo.firstName || "ala",
-          "last_name": orderInfo.lastName || "zain",
-          "street": "dumy",
-          "building": "dumy",
-          "phone_number": orderInfo.phone || "+201112385149",
-          "city": "dumy",
-          "country": "EG",
-          "email": orderInfo.email || "test@example.com",
-          "floor": "dumy",
-          "state": "dumy"
+      //   let authToken = this.cachedAuthToken;
+      //   if (!authToken || Date.now() > this.authTokenExpiresAt) {
+      //     authToken = await this.setAuth();
+      //   }
+      let order = await this.api.post<PaymobIntentionResponse>(
+        '/v1/intention/',
+        {
+          amount: orderInfo.amountCents, // placeholder for test only i will delete it
+          currency: 'EGP',
+          payment_methods: [...this.integrationIds],
+          items: [
+            {
+              name: orderInfo.description || 'طلب خدمه',
+              amount: orderInfo.amountCents,
+              description: orderInfo.description || 'طلب خدمه',
+              quantity: 1,
+            },
+          ],
+          billing_data: {
+            apartment: 'dumy',
+            first_name: orderInfo.firstName || 'ala',
+            last_name: orderInfo.lastName || 'zain',
+            street: 'dumy',
+            building: 'dumy',
+            phone_number: orderInfo.phone || '+201112385149',
+            city: 'dumy',
+            country: 'EG',
+            email: orderInfo.email || 'test@example.com',
+            floor: 'dumy',
+            state: 'dumy',
+          },
+          special_reference: orderInfo.specialReference || orderInfo.orderId || 'ahshs',
+          expiration: 1800,
+          notification_url: `${environment.api.baseUrl}/webhooks/paymob`,
+          redirection_url: `Motqen://payment/${orderInfo.orderId}`,
         },
-        "special_reference": orderInfo.specialReference || orderInfo.orderId || "ahshs",
-        "expiration": 1800,
-        "notification_url": `${environment.api.baseUrl}/webhooks/paymob`,
-        "redirection_url": `Motqen://payment/${orderInfo.orderId}`,
-      }, {
-        headers: {
-          'Authorization': `Token ${this.secretKey}`,
-          'Content-Type': 'application/json'
+        {
+          headers: {
+            Authorization: `Token ${this.secretKey}`,
+            'Content-Type': 'application/json',
+          },
         }
-      })
+      );
       const paymentToken = order.data.client_secret;
       return `https://accept.paymob.com/unifiedcheckout/?publicKey=${this.publicKey}&clientSecret=${paymentToken}`;
     } catch (err: any) {
-      throw new Error(`Failed to create Paymob payment iframe: ${JSON.stringify(err.response.data)}`);
+      throw new Error(
+        `Failed to create Paymob payment iframe: ${JSON.stringify(err.response.data)}`
+      );
     }
   }
 }
-
-

@@ -1,7 +1,7 @@
 import { z } from '../libs/zod.js';
 import { ResponseConfig } from '@asteasolutions/zod-to-openapi';
 
-type HTTPCode = 200 | '201' | '400' | '401' | '403' | '404' | '422' | '429' | '500';
+type HTTPCode = 200 | '201' | '400' | '401' | '403' | '404' | '409' | '422' | '429' | '500';
 export type ResponsesDocObject = { [P in HTTPCode]?: ResponseConfig };
 
 export const imageFileZodSchema = (description: string) => {
@@ -19,6 +19,7 @@ export function createResponseDoc(params: {
   unauthorizedResponse?: ResponseConfig | true;
   forbiddenResponse?: ResponseConfig | true;
   notFoundResponse?: ResponseConfig | true;
+  conflictResponse?: ResponseConfig | true;
   validationErrorResponse?: ResponseConfig | true;
   tooManyRequestsResponse?: ResponseConfig | true;
   internalServerError?: ResponseConfig | true;
@@ -55,6 +56,10 @@ export function createResponseDoc(params: {
   if (params.notFoundResponse) {
     doc[404] =
       params.notFoundResponse === true ? { description: 'Not Found' } : params.notFoundResponse;
+  }
+  if (params.conflictResponse) {
+    doc['409'] =
+      params.conflictResponse === true ? { description: 'Conflict' } : params.conflictResponse;
   }
   if (params.validationErrorResponse) {
     doc[422] =

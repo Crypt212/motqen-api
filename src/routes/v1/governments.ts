@@ -5,16 +5,13 @@
 
 import { Router } from 'express';
 import { governmentController } from '../../state.js';
-import { isActive, authorizeAdmin } from '../../middlewares/authMiddleware.js';
-import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
+import { validateParams, validateQuery } from '../../middlewares/validateRequest.js';
 import {
-  CreateGovernmentSchema,
   GovernmentIdParamsSchema,
   GovernmentQuerySchema,
-  UpdateGovernmentSchema,
 } from '../../schemas/requests/government.request.js';
 
-const governmentRouter = Router();
+const governmentRouter: Router = Router();
 
 governmentRouter.get(
   '/',
@@ -28,30 +25,6 @@ governmentRouter.get(
   governmentController.getGovernmentById
 );
 
-governmentRouter.post(
-  '/',
-  isActive,
-  authorizeAdmin,
-  validateBody(CreateGovernmentSchema),
-  governmentController.createGovernment
-);
-
-governmentRouter.put(
-  '/:governmentId',
-  isActive,
-  authorizeAdmin,
-  validateParams(GovernmentIdParamsSchema),
-  validateBody(UpdateGovernmentSchema),
-  governmentController.updateGovernment
-);
-
-governmentRouter.delete(
-  '/:governmentId',
-  isActive,
-  authorizeAdmin,
-  validateParams(GovernmentIdParamsSchema),
-  governmentController.deleteGovernment
-);
 
 governmentRouter.get(
   '/:governmentId/cities',

@@ -8,25 +8,16 @@ import {
   getSpecializations,
   getSpecializationById,
   getSubSpecializations,
-  createSpecialization,
-  updateSpecialization,
-  deleteSpecialization,
-  createSubSpecialization,
-  deleteSubSpecialization,
 } from '../../controllers/SpecializationController.js';
-import { isActive, authorizeAdmin } from '../../middlewares/authMiddleware.js';
-import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
+import { validateParams, validateQuery } from '../../middlewares/validateRequest.js';
 import {
-  CreateSpecializationSchema,
-  CreateSubSpecializationSchema,
   SpecializationIdParamsSchema,
   SpecializationQuerySchema,
   SubSpecializationIdParamsSchema,
   SubSpecializationQuerySchema,
-  UpdateSpecializationSchema,
 } from '../../schemas/requests/specialization.request.js';
 
-const specializationRouter = Router();
+const specializationRouter: Router = Router();
 
 specializationRouter.get('/', validateQuery(SpecializationQuerySchema), getSpecializations);
 
@@ -43,48 +34,6 @@ specializationRouter.get(
   getSubSpecializations
 );
 
-specializationRouter.post(
-  '/',
-  isActive,
-  authorizeAdmin,
-  validateBody(CreateSpecializationSchema),
-  createSpecialization
-);
 
-specializationRouter.put(
-  '/:specializationId',
-  isActive,
-  authorizeAdmin,
-  validateParams(SpecializationIdParamsSchema),
-  validateBody(UpdateSpecializationSchema),
-  updateSpecialization
-);
-
-specializationRouter.delete(
-  '/:specializationId',
-  isActive,
-  authorizeAdmin,
-  validateParams(SpecializationIdParamsSchema),
-  deleteSpecialization
-);
-
-specializationRouter.post(
-  '/:specializationId/sub-specializations',
-  isActive,
-  authorizeAdmin,
-  validateParams(SpecializationIdParamsSchema),
-  validateBody(CreateSubSpecializationSchema),
-  createSubSpecialization
-);
-
-specializationRouter.delete(
-  '/:specializationId/sub-specializations/:subSpecializationId',
-  isActive,
-  authorizeAdmin,
-  validateParams(SpecializationIdParamsSchema),
-  validateParams(SubSpecializationIdParamsSchema),
-
-  deleteSubSpecialization
-);
 
 export default specializationRouter;

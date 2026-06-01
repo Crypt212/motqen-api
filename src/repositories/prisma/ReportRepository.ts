@@ -41,6 +41,8 @@ export default class ReportRepository extends Repository implements IReportRepos
       retainUntil: record.retainUntil,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
+      assignedDepartment: record.assignedDepartment,
+      assignedAdminId: record.assignedAdminId,
       images: record.images.map((image) => image.url),
     };
   }
@@ -69,10 +71,7 @@ export default class ReportRepository extends Repository implements IReportRepos
     }
   }
 
-  async countRecentReports(params: {
-    reporterId: string;
-    since: Date;
-  }): Promise<number> {
+  async countRecentReports(params: { reporterId: string; since: Date }): Promise<number> {
     try {
       const count = await this.prismaClient.report.count({
         where: {
@@ -110,7 +109,10 @@ export default class ReportRepository extends Repository implements IReportRepos
       const total = await this.prismaClient.report.count({ where: filter });
 
       const sortQuery = handleSort(sort);
-      const { paginationQuery, paginationResult } = handlePagination({ total, paginationOptions: pagination });
+      const { paginationQuery, paginationResult } = handlePagination({
+        total,
+        paginationOptions: pagination,
+      });
 
       const [records] = await Promise.all([
         this.prismaClient.report.findMany({
@@ -147,8 +149,8 @@ export default class ReportRepository extends Repository implements IReportRepos
           description: params.report.description,
           images: params.report.imageUrls
             ? {
-              create: params.report.imageUrls.map((url) => ({ url })),
-            }
+                create: params.report.imageUrls.map((url) => ({ url })),
+              }
             : undefined,
         },
         include: REPORT_INCLUDE,
@@ -184,10 +186,10 @@ export default class ReportRepository extends Repository implements IReportRepos
             description: params.report.description,
             ...(params.report.imageUrls !== undefined
               ? {
-                images: {
-                  create: params.report.imageUrls.map((url) => ({ url })),
-                },
-              }
+                  images: {
+                    create: params.report.imageUrls.map((url) => ({ url })),
+                  },
+                }
               : {}),
           },
           include: REPORT_INCLUDE,
@@ -200,7 +202,10 @@ export default class ReportRepository extends Repository implements IReportRepos
     }
   }
 
-  async updateStatusById(params: { id: string; status: ReportStatusUpdateInput }): Promise<ReportWithImages> {
+  async updateStatusById(params: {
+    id: string;
+    status: ReportStatusUpdateInput;
+  }): Promise<ReportWithImages> {
     try {
       const existing = await this.prismaClient.report.findUnique({
         where: { id: params.id },

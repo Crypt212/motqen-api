@@ -141,32 +141,5 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     }),
   });
 
-  registry.registerPath({
-    method: 'patch',
-    path: '/api/v1/reports/{reportId}/status',
-    tags: [TAG],
-    summary: 'Update report status (Admin only)',
-    security: [{ bearerAuth: [] }],
-    request: {
-      params: ReportIdParamsSchema,
-      body: {
-        content: {
-          'application/json': {
-            schema: UpdateReportStatusSchema,
-          },
-        },
-        required: true,
-      },
-    },
-    responses: createResponseDoc({
-      successfulResponse: {
-        description: 'Report status updated successfully',
-        content: { 'application/json': { schema: ReportResponseSchema } },
-      },
-      badRequestResponse: true,
-      unauthorizedResponse: true,
-      forbiddenResponse: true,
-      notFoundResponse: true,
-    }),
-  });
+
 }

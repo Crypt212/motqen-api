@@ -11,7 +11,7 @@ import { redisRetreiveOrCache } from '../utils/redis.js';
 import { userService } from '../state.js';
 import AppError from '../errors/AppError.js';
 import { ExtendedError, Socket } from 'socket.io';
-import { AccessTokenPayload } from '../types/tokens.js';
+import { UserAccessTokenPayload } from '../types/tokens.js';
 
 /**
  * Socket.IO middleware that authenticates the connection via JWT access token.
@@ -27,9 +27,13 @@ export const socketAuth = async (socket: Socket, next: (err?: ExtendedError) => 
     return next(new AppError('Unauthorized, handshake token is not found', 401));
   }
   // Reuse the same verifyAndDecodeToken utility used by HTTP middleware
-  let payload: AccessTokenPayload;
+  let payload: UserAccessTokenPayload;
   try {
-    payload = verifyAndDecodeToken(token, 'access');
+    const decoded = verifyAndDecodeToken(token, 'access');
+    if (decoded.domain !== 'user') {
+      return next(new AppError('Invalid or expired token', 401));
+    }
+    payload = decoded;
   } catch {
     return next(new AppError('Invalid or expired token', 401));
   }

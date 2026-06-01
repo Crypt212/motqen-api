@@ -1,4 +1,4 @@
-import crypto from 'node:crypto';
+import crypto from 'crypto';
 import { Prisma } from '../../../generated/prisma/client.js';
 
 /**
@@ -11,7 +11,7 @@ export function generateIdempotencyKey(): string {
 
 /**
  * Generate a deterministic idempotency key (SHA-256 hash) from the given inputs.
- * Used for TransactionLog entries and other operations so that re-executing 
+ * Used for TransactionLog entries and other operations so that re-executing
  * a transaction after a rollback produces the exact same key.
  *
  * @param referenceType - Entity type name (e.g., "EscrowHold")
@@ -21,7 +21,7 @@ export function generateIdempotencyKey(): string {
 export function generateDeterministicKey(
   referenceType: string,
   referenceId: string,
-  entryType: string,
+  entryType: string
 ): string {
   const input = `${referenceType}:${referenceId}:${entryType}`;
   return crypto.createHash('sha256').update(input).digest('hex');

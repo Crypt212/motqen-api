@@ -1,7 +1,9 @@
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import v1Router from './routes/v1/api.js';
+import adminRouter from './routes/v1/admin/index.js';
 import errorHandler from './middlewares/errorMiddleware.js';
 import { ipRateLimiter } from './middlewares/rateLimitMiddleware.js';
 import redisClient from './libs/redis.js';
@@ -9,22 +11,26 @@ import prismaClient from './libs/database.js';
 import swaggerUi from 'swagger-ui-express';
 import { verifyDeviceId } from './middlewares/authMiddleware.js';
 import { asyncHandler } from './types/asyncHandler.js';
-import { generateOpenAPISpec } from './libs/openapi.js';
+import { generateOpenAPISpec, generateAdminOpenAPISpec } from './libs/openapi.js';
 import webhooksRouter from './routes/v1/webhooks.js';
+import environment from './configs/environment.js';
 
-const initApp = async () => {
+const initApp: () => Promise<express.Application> = async () => {
   const app = express();
 
   app.use(helmet());
   app.use(
     cors({
       origin: '*',
+      credentials: true,
     })
   );
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
+  app.use(cookieParser());
   app.use('/webhooks', webhooksRouter);
 
+  app.use('/api/v1/admin', adminRouter);
   app.use('/api/v1', verifyDeviceId, ipRateLimiter, v1Router);
 
   // Health check
@@ -40,7 +46,22 @@ const initApp = async () => {
     })
   );
 
-  app.use('/docs', swaggerUi.serve, swaggerUi.setup(generateOpenAPISpec()));
+  app.get('/docs/v1/swagger.json', (_, res) => res.json(generateOpenAPISpec()));
+  app.get('/docs/admin/swagger.json', (_, res) => res.json(generateAdminOpenAPISpec()));
+
+  app.use(
+    '/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(undefined, {
+      explorer: true,
+      swaggerOptions: {
+        urls: [
+          { url: '/docs/v1/swagger.json', name: 'App API V1' },
+          { url: '/docs/admin/swagger.json', name: 'Admin API' },
+        ],
+      },
+    })
+  );
 
   app.use(errorHandler);
 

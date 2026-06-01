@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { paymentController } from '../../state.js';
 import { authenticateAccess, isActive } from '../../middlewares/authMiddleware.js';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @swagger

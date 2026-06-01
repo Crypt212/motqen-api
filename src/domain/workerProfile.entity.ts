@@ -49,6 +49,11 @@ export type WorkerProfileVerification = {
   reason: string;
   status: VerificationStatus;
 
+  assignedDepartment: string | null;
+  assignedAdminId: string | null;
+  rejectionReasons: string[];
+  rejectionNote: string | null;
+
   createdAt: Date;
   updatedAt: Date;
 };

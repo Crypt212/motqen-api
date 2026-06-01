@@ -1,4 +1,4 @@
-import { $Enums } from '../generated/prisma/client.js';
+import { $Enums, AdminRole } from '../generated/prisma/client.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { FilterFromDescriptor } from '../schemas/common.js';
 import { FieldTypeDefinition } from '../types/query.js';
@@ -22,6 +22,8 @@ export type Report = {
   retainUntil: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  assignedDepartment?: AdminRole | null;
+  assignedAdminId?: IDType | null;
 };
 
 export type ReportWithImages = Report & {
@@ -63,7 +65,13 @@ export const ReportFilterDescriptor = {
   },
   problemCategory: {
     type: 'enum',
-    enumValues: ['ORDER_ISSUE', 'WORKER_CONDUCT', 'CLIENT_CONDUCT', 'CHAT_MESSAGE', 'OTHER'] as const,
+    enumValues: [
+      'ORDER_ISSUE',
+      'WORKER_CONDUCT',
+      'CLIENT_CONDUCT',
+      'CHAT_MESSAGE',
+      'OTHER',
+    ] as const,
   },
   createdAt: { type: 'date', sortable: true },
 } satisfies Record<string, FieldTypeDefinition>;

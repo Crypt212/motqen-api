@@ -3,7 +3,7 @@ import { getNotifications, markAllRead } from '../../controllers/NotificationCon
 import { validateQuery } from '../../middlewares/validateRequest.js';
 import { z } from 'zod';
 
-const notificationRouter = Router();
+const notificationRouter: Router = Router();
 
 const GetNotificationsQuerySchema = z.object({
   cursor: z.string().optional(),

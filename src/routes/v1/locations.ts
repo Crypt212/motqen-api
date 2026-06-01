@@ -8,7 +8,7 @@ import {
   UpdateLocationSchema,
 } from '../../schemas/requests/location.request.js';
 
-const router = Router();
+const router: Router = Router();
 
 router.get('/', validateQuery(LocationQuerySchema), locationController.list);
 router.post('/', validateBody(CreateLocationSchema), locationController.create);

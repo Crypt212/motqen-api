@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { webhookController } from '../../state.js';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @swagger

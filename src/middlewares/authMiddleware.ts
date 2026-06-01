@@ -6,6 +6,7 @@
 import AppError from '../errors/AppError.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { verifyHeaderToken } from '../utils/tokens.js';
+import { UserAccessTokenPayload, UserRefreshTokenPayload } from '../types/tokens.js';
 import { getHeaderValue } from '../utils/HTTTHeaders.js';
 import { userService } from '../state.js';
 import { redisClearCache, redisRetreiveOrCache } from '../utils/redis.js';
@@ -13,14 +14,18 @@ import { redisClearCache, redisRetreiveOrCache } from '../utils/redis.js';
 /**
  */
 export const verifyDeviceId = asyncHandler(async (req, _, next) => {
-  req.deviceId = getHeaderValue(req.headers['x-device-fingerprint']);
-  if (!req.deviceId) {
+  const deviceId = getHeaderValue(req.headers['x-device-fingerprint'])?.trim();
+  if (!deviceId) {
     next(new AppError('Device ID is required', 401));
     return;
   }
 
-  // TODO: DeviceID needs to be verified here
+  if (deviceId.length > 255 || !/^[A-Za-z0-9._:-]+$/.test(deviceId)) {
+    next(new AppError('Invalid Device ID', 401));
+    return;
+  }
 
+  req.deviceId = deviceId;
   next();
 });
 
@@ -56,8 +61,12 @@ export const authenticateAccess = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
   try {
     const payload = verifyHeaderToken(authHeader, 'access');
-    req.userState = await redisRetreiveOrCache('access:' + payload.userId, async () => {
-      return await userService.getStatus({ filter: { id: payload.userId } });
+    if ((payload as UserAccessTokenPayload).domain !== 'user') {
+      throw new AppError('Unauthorized access', 401);
+    }
+    const userPayload = payload as UserAccessTokenPayload;
+    req.userState = await redisRetreiveOrCache('access:' + userPayload.userId, async () => {
+      return await userService.getStatus({ filter: { id: userPayload.userId } });
     });
   } catch (err: unknown) {
     return next(err);
@@ -72,8 +81,12 @@ export const authenticateRefresh = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
   try {
     const payload = verifyHeaderToken(authHeader, 'refresh');
-    req.userState = await redisRetreiveOrCache('access:' + payload.userId, async () => {
-      return await userService.getStatus({ filter: { id: payload.userId } });
+    if ((payload as UserRefreshTokenPayload).domain !== 'user') {
+      throw new AppError('Unauthorized refresh access', 401);
+    }
+    const userPayload = payload as UserRefreshTokenPayload;
+    req.userState = await redisRetreiveOrCache('access:' + userPayload.userId, async () => {
+      return await userService.getStatus({ filter: { id: userPayload.userId } });
     });
   } catch (err: unknown) {
     return next(err);

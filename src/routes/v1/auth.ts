@@ -31,7 +31,7 @@ import {
 // import { validateBody } from 'twilio/lib/webhooks/webhooks.js';
 import { validateBody } from '../../middlewares/validateRequest.js';
 
-const authRouter = Router();
+const authRouter: Router = Router();
 
 authRouter.post('/otp/request', validateBody(RequestOTPSchema), checkSendOtpLimit, requestOTP);
 
