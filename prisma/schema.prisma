@@ -15,43 +15,158 @@ model Session {
   revokedAt  DateTime?
   revokedBy  String?
   deviceId   String
+  fcmToken   String?
   lastUsedAt DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   createdAt  DateTime  @default(now())
   expiresAt  DateTime
-  fcmToken   String?
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRevoked])
   @@map("sessions")
 }
 
+enum AdminRole {
+  SUPER_ADMIN
+  USER_MANAGEMENT
+  FINANCIAL_MONITOR
+  ISSUES_MANAGEMENT
+}
+
+enum AdminStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum AdminAuditSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum AdminAuditCategory {
+  AUTH
+  ADMIN_MANAGEMENT
+  USER_MANAGEMENT
+  FINANCIAL
+  ISSUES
+  SUPPORT_CHAT
+  REPORT_MODERATION
+}
+
+model Admin {
+  id              String       @id @default(uuid())
+  username        String       @unique
+  passwordHash    String
+  firstName       String
+  lastName        String
+  profileImageUrl String?
+  role            AdminRole    @default(SUPER_ADMIN)
+  status          AdminStatus  @default(ACTIVE)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  sessions        AdminSession[]
+
+  @@map("admins")
+}
+
+model AdminSession {
+  id         String    @id @default(uuid())
+  adminId    String
+  token      String    @unique
+  isRevoked  Boolean   @default(false)
+  revokedAt  DateTime?
+  revokedBy  String?
+  deviceId   String
+  fcmToken   String?
+  lastUsedAt DateTime  @default(now())
+  expiresAt  DateTime
+  updatedAt  DateTime  @updatedAt
+  createdAt  DateTime  @default(now())
+  admin      Admin     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, isRevoked])
+  @@map("admin_sessions")
+}
+
+model AdminAuditLog {
+  id             String             @id @default(uuid())
+  actorAdminId   String?
+  actorUsername  String?
+  actorRole      AdminRole?
+  action         String
+  category       AdminAuditCategory
+  severity       AdminAuditSeverity
+  targetType     String?
+  targetId       String?
+  metadata       Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime           @default(now())
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([severity])
+  @@index([actorAdminId])
+  @@index([targetType, targetId])
+  @@index([category, createdAt])
+  @@map("admin_audit_logs")
+}
+
 model User {
-  id                     String                    @id @default(uuid())
-  phoneNumber            String                    @unique
-  firstName              String
-  lastName               String
-  status                 AccountStatus             @default(ACTIVE)
-  role                   Role                      @default(USER)
-  createdAt              DateTime                  @default(now())
-  isOnline               Boolean                   @default(false)
-  middleName             String
-  profileImageUrl        String?
-  updatedAt              DateTime                  @updatedAt
+  id              String                    @id @default(uuid())
+  phoneNumber     String                    @unique
+  firstName       String
+  lastName        String
+  status          AccountStatus             @default(ACTIVE)
+  role            Role                      @default(USER)
+  createdAt       DateTime                  @default(now())
+  isOnline        Boolean                   @default(false)
+  middleName      String
+  profileImageUrl String?
+  updatedAt       DateTime                  @updatedAt
+  clientProfile   ClientProfile?
+  conversations   ConversationParticipant[]
+  locations       Location[]
+  sentMessages    Message[]
+  sessions        Session[]
+  workerProfile   WorkerProfile?
   lastNotificationReadAt DateTime?
-  clientProfile          ClientProfile?
-  conversations          ConversationParticipant[]
-  locations              Location[]
-  sentMessages           Message[]
-  acceptedNegotiations   Negotiation[]             @relation("NegotiationAccepter")
-  sentNegotiations       Negotiation[]             @relation("NegotiationSender")
   notifications          Notification[]
-  reports                Report[]                  @relation("ReportsByUser")
-  sessions               Session[]
-  workerProfile          WorkerProfile?
+  sentNegotiations     Negotiation[]  @relation("NegotiationSender")
+  acceptedNegotiations Negotiation[]  @relation("NegotiationAccepter")
+  reports              Report[]       @relation("ReportsByUser")
 
   @@index([status, isOnline, id])
   @@map("users")
+}
+
+enum NotificationType {
+  ORDER_ACCEPTED
+  ORDER_CANCELLED
+  ORDER_COMPLETED
+  NEGOTIATION_OFFER
+  NEGOTIATION_ACCEPTED
+  NEGOTIATION_REJECTED
+  WORK_STARTED
+  WORK_DONE
+  PAYMENT_REQUIRED
+  PAYMENT_RECEIVED
+  PAYOUT_COMPLETED
+  DISPUTE_OPENED
+  DISPUTE_UPDATED
+  DISPUTE_RESOLVED
+  REFUND_PROCESSED
+  WITHDRAW_REQUESTED
+  WITHDRAW_APPROVED
+  WITHDRAW_REJECTED
+  ADMIN_ACTION
+}
+
+enum BroadcastTargetRole {
+  WORKER
+  CLIENT
+  ALL
 }
 
 model Notification {
@@ -63,7 +178,8 @@ model Notification {
   data      Json
   isSent    Boolean          @default(false)
   createdAt DateTime         @default(now())
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([isSent, createdAt])
@@ -90,28 +206,28 @@ model ClientProfile {
   userId    String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   Order     Order[]
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("client_profiles")
 }
 
 model Location {
-  id             String                   @id @default(uuid())
+  id             String                                @id @default(uuid())
   userId         String
   governmentId   String
   cityId         String
   address        String
   addressNotes   String?
   isMain         Boolean
-  isHidden       Boolean                  @default(false)
-  pointGeography Unsupported("geography")
-  createdAt      DateTime                 @default(now())
-  updatedAt      DateTime                 @updatedAt
-  city           City                     @relation(fields: [cityId], references: [id], onDelete: Cascade)
-  government     Government               @relation(fields: [governmentId], references: [id], onDelete: Cascade)
-  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isHidden       Boolean                               @default(false)
+  pointGeography Unsupported("geography(Point, 4326)")
+  city           City                                  @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  government     Government                            @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  user           User                                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders         Order[]
+  createdAt      DateTime                              @default(now())
+  updatedAt      DateTime                              @updatedAt
 
   @@index([pointGeography], map: "idx_locations_point", type: Gist)
   @@index([userId, isMain])
@@ -119,47 +235,50 @@ model Location {
 }
 
 model WorkerProfile {
-  id                    String                   @id @default(uuid())
-  userId                String                   @unique
-  experienceYears       Int                      @default(0)
-  isInTeam              Boolean                  @default(false)
-  acceptsUrgentJobs     Boolean                  @default(false)
-  bio                   String?
-  createdAt             DateTime                 @default(now())
-  portfolioId           String?                  @unique
-  updatedAt             DateTime                 @updatedAt
-  rate                  Float                    @default(-1.0)
-  completedJobsCount    Int                      @default(0)
-  ratingCount           Int                      @default(0)
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  experienceYears    Int      @default(0)
+  isInTeam           Boolean  @default(false)
+  acceptsUrgentJobs  Boolean  @default(false)
+  bio                String?
+  createdAt          DateTime @default(now())
+  portfolioId        String?  @unique
+  updatedAt          DateTime @updatedAt
+  rate               Float    @default(-1.0)
+  ratingCount        Int      @default(0)
+  completedJobsCount Int      @default(0)
+
+  occupiedTimeSlots     WorkerOccupiedTimeSlot[]
+  Order                 Order[]
+  proposals             Proposal[]
   portfolio             Portfolio?
   chosenSpecializations ChosenSpecialization[]
-  Order                 Order[]
-  payoutMethods         PayoutMethod[]
-  proposals             Proposal[]
   verification          WorkerVerification?
-  withdrawRequests      WithdrawRequest[]
-  daysWorkingHours      DayWorkingHours[]
   badges                WorkerBadge[]
-  workerBalance         WorkerBalance?
-  occupiedTimeSlots     WorkerOccupiedTimeSlot[]
   user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   workGovernments       Government[]             @relation("GovernmentToWorkerProfile")
 
+  workerBalance         WorkerBalance?
+  payoutMethods         PayoutMethod[]
+  withdrawRequests      WithdrawRequest[]
+  daysWorkingHours      DayWorkingHours[]
+
   @@index([userId], map: "idx_worker_profiles_user_id")
   @@index([acceptsUrgentJobs, userId])
-  @@index([rate(sort: Desc), completedJobsCount(sort: Desc)])
+  @@index([rate(sort: Desc), completedJobsCount(sort: Desc)]) // NEW: covers ORDER BY for highestRated sort
   @@index([rate])
   @@index([completedJobsCount])
   @@map("worker_profiles")
 }
 
 model DayWorkingHours {
-  id              String        @id @default(uuid())
+  id              String @id @default(uuid())
   workerProfileId String
-  startTime       String
-  endTime         String
-  day             Day
-  workerProfile   WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+
+  day            Day
+  startTime      String // e.g., "09:00"
+  endTime        String // e.g., "17:00"
+  workerProfile  WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
 
   @@unique([workerProfileId, day])
   @@map("worker_availability")
@@ -169,12 +288,12 @@ model WorkerOccupiedTimeSlot {
   id              String        @id @default(uuid())
   workerProfileId String
   orderId         String        @unique
+  isConfirmed     Boolean       @default(false)
   startDate       DateTime
   endDate         DateTime
   createdAt       DateTime      @default(now())
-  isConfirmed     Boolean       @default(false)
-  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
   workerProfile   WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([workerProfileId])
   @@map("worker_occupied_time_slots")
@@ -187,10 +306,16 @@ model WorkerVerification {
   idDocumentUrl          String
   reason                 String?
   status                 VerificationStatus @default(PENDING)
+  assignedDepartment     AdminRole?
+  assignedAdminId        String?
+  rejectionReasons       VerificationRejectionReason[]
+  rejectionNote          String?
   updatedAt              DateTime           @updatedAt
   createdAt              DateTime           @default(now())
   workerProfile          WorkerProfile      @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
 
+  @@index([assignedDepartment, status])
+  @@index([assignedAdminId])
   @@map("verifications")
 }
 
@@ -251,11 +376,11 @@ model SubSpecialization {
   nameAr               String
   updatedAt            DateTime               @updatedAt
   choosingWorkers      ChosenSpecialization[]
-  orders               Order[]
   mainSpecialization   Specialization         @relation(fields: [mainSpecializationId], references: [id], onDelete: Cascade)
+  orders               Order[]
 
   @@index([name])
-  @@index([mainSpecializationId])
+  @@index([mainSpecializationId]) // NEW: covers the ss.mainSpecializationId lookup in spec fallback filter
   @@map("sub_specializations")
 }
 
@@ -301,41 +426,42 @@ model WorkerBadge {
 }
 
 model Order {
-  id                     String                  @id @default(uuid())
-  title                  String
-  description            String
-  clientProfileId        String
-  workerProfileId        String?
-  locationId             String
-  subSpecializationId    String
-  orderStatus            OrderStatus             @default(PENDING)
-  workStatus             WorkStatus              @default(PENDING)
-  finalPrice             Float?
-  startDate              DateTime?
-  isUrgent               Boolean                 @default(false)
-  rate                   Float                   @default(-1.0)
-  comment                String?
-  workStartedAt          DateTime?
-  workFinishedAt         DateTime?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  orderMode              OrderMode               @default(DIRECT)
+  id                  String      @id @default(uuid())
+  title               String
+  description         String
+  clientProfileId     String
+  workerProfileId     String?
+  locationId          String
+  subSpecializationId String
+  orderStatus         OrderStatus @default(PENDING)
+  workStatus          WorkStatus  @default(PENDING)
+  initialPrice        Float?
+  finalPrice          Float?
+  startDate           DateTime?
   estimatedDurationHours Int?
-  initialPrice           Float?
-  disputes               Dispute[]
-  escrowHold             EscrowHold?
-  negotiations           Negotiation[]
-  images                 OrderImage[]
-  clientProfile          ClientProfile           @relation(fields: [clientProfileId], references: [id])
-  location               Location                @relation(fields: [locationId], references: [id])
-  subSpecialization      SubSpecialization       @relation(fields: [subSpecializationId], references: [id])
-  workerProfile          WorkerProfile?          @relation(fields: [workerProfileId], references: [id])
-  paymentAttempts        PaymentAttempt[]
-  paymentIntentions      PaymentIntention[]
-  payment                Payment?
-  proposals              Proposal[]
-  reports                Report[]                @relation("ReportContextOrder")
-  occupiedTimeSlot       WorkerOccupiedTimeSlot?
+  orderMode           OrderMode   @default(DIRECT)
+  isUrgent            Boolean     @default(false)
+  rate                Float       @default(-1.0)
+  comment             String?
+  workStartedAt       DateTime?
+  workFinishedAt      DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  clientProfile     ClientProfile           @relation(fields: [clientProfileId], references: [id])
+  workerProfile     WorkerProfile?          @relation(fields: [workerProfileId], references: [id])
+  location          Location                @relation(fields: [locationId], references: [id])
+  subSpecialization SubSpecialization       @relation(fields: [subSpecializationId], references: [id])
+  images            OrderImage[]
+  occupiedTimeSlot  WorkerOccupiedTimeSlot?
+  negotiations      Negotiation[]
+  proposals         Proposal[]
+  payment           Payment?
+  paymentAttempts   PaymentAttempt[]
+  escrowHold        EscrowHold?
+  disputes          Dispute[]
+  paymentIntentions PaymentIntention[]
+  reports             Report[]          @relation("ReportContextOrder")
 
   @@index([clientProfileId])
   @@index([workerProfileId])
@@ -356,466 +482,34 @@ model OrderImage {
 }
 
 model Negotiation {
-  id                     String               @id @default(uuid())
-  orderId                String
-  price                  Float
-  direction              NegotiationDirection
-  status                 NegotiationStatus    @default(PENDING)
-  note                   String?
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
-  acceptedBy             String?
-  senderId               String
-  proposalId             String
-  startDate              DateTime
+  id         String               @id @default(uuid())
+  orderId    String
+  price      Float
+  direction  NegotiationDirection
+  status     NegotiationStatus    @default(PENDING)
+  senderId   String
+  acceptedBy String?
+
+  note       String?
+  proposalId String
+  startDate  DateTime
   estimatedDurationHours Int
-  accepter               User?                @relation("NegotiationAccepter", fields: [acceptedBy], references: [id])
-  order                  Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  proposal               Proposal             @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  sender                 User                 @relation("NegotiationSender", fields: [senderId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sender    User     @relation("NegotiationSender", fields: [senderId], references: [id])
+  accepter  User?    @relation("NegotiationAccepter", fields: [acceptedBy], references: [id])
+  proposal  Proposal? @relation(fields: [proposalId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([senderId])
   @@map("negotiations")
 }
 
-model Proposal {
-  id              String         @id @default(uuid())
-  orderId         String
-  workerProfileId String
-  status          ProposalStatus @default(PENDING)
-  note            String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  negotiations    Negotiation[]
-  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  workerProfile   WorkerProfile  @relation(fields: [workerProfileId], references: [id])
-
-  @@unique([orderId, workerProfileId])
-  @@index([orderId])
-  @@index([workerProfileId])
-  @@index([status])
-  @@map("proposals")
-}
-
-model Conversation {
-  id             String                    @id @default(uuid())
-  messageCounter Int                       @default(0)
-  createdAt      DateTime                  @default(now())
-  updatedAt      DateTime                  @updatedAt
-  participants   ConversationParticipant[]
-  messages       Message[]
-
-  @@map("conversations")
-}
-
-model ConversationParticipant {
-  id                        String           @id @default(uuid())
-  conversationId            String
-  userId                    String
-  role                      ConversationRole
-  lastReadMessageNumber     Int              @default(0)
-  lastReceivedMessageNumber Int              @default(0)
-  createdAt                 DateTime         @default(now())
-  updatedAt                 DateTime         @updatedAt
-  conversation              Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user                      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([conversationId, userId])
-  @@unique([conversationId, role])
-  @@index([userId])
-  @@map("conversation_participants")
-}
-
-model Message {
-  id             String          @id @default(uuid())
-  conversationId String
-  senderId       String
-  messageNumber  Int
-  content        String
-  type           MessageType     @default(TEXT)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  flagged        FlaggedMessage?
-  conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User            @relation(fields: [senderId], references: [id])
-
-  @@unique([conversationId, messageNumber])
-  @@index([conversationId, createdAt])
-  @@index([senderId])
-  @@map("messages")
-}
-
-model FlaggedMessage {
-  id        String           @id @default(uuid())
-  messageId String           @unique
-  reasons   FlagReasonType[]
-  matches   String[]
-  state     FlagState        @default(PENDING)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  message   Message          @relation(fields: [messageId], references: [id], onDelete: Cascade)
-
-  @@index([state])
-  @@index([createdAt])
-  @@map("flagged_messages")
-}
-
-model FeeRule {
-  id            String   @id @default(uuid())
-  percentage    Float
-  effectiveFrom DateTime @default(now())
-  isActive      Boolean  @default(true)
-  description   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([isActive, effectiveFrom])
-  @@map("fee_rules")
-}
-
-model WebhookEvent {
-  id              String             @id @default(uuid())
-  providerEventId String             @unique
-  provider        String             @default("PAYMOB")
-  eventType       String
-  status          WebhookEventStatus @default(RECEIVED)
-  rawPayload      Json
-  processedAt     DateTime?
-  createdAt       DateTime           @default(now())
-  failureReason   String?
-  paymentAttempts PaymentAttempt[]
-  payment         Payment?
-
-  @@map("webhook_events")
-}
-
-model Payment {
-  id                  String           @id @default(uuid())
-  orderId             String           @unique
-  webhookEventId      String           @unique
-  idempotencyKey      String           @unique
-  externalReferenceId String
-  amount              BigInt
-  currency            String           @default("EGP")
-  createdAt           DateTime         @default(now())
-  escrowHold          EscrowHold?
-  paymentAttempts     PaymentAttempt[]
-  order               Order            @relation(fields: [orderId], references: [id])
-  webhookEvent        WebhookEvent     @relation(fields: [webhookEventId], references: [id])
-
-  @@index([orderId])
-  @@map("payments")
-}
-
-model PaymentAttempt {
-  id                      String               @id @default(uuid())
-  orderId                 String
-  paymentId               String?
-  webhookEventId          String
-  status                  PaymentAttemptStatus
-  providerResponseCode    String?
-  providerResponseMessage String?
-  amount                  BigInt
-  createdAt               DateTime             @default(now())
-  order                   Order                @relation(fields: [orderId], references: [id])
-  payment                 Payment?             @relation(fields: [paymentId], references: [id])
-  webhookEvent            WebhookEvent         @relation(fields: [webhookEventId], references: [id])
-
-  @@index([orderId])
-  @@index([paymentId])
-  @@map("payment_attempts")
-}
-
-model EscrowHold {
-  id                      String           @id @default(uuid())
-  orderId                 String           @unique
-  paymentId               String           @unique
-  totalAmount             BigInt
-  workerAmount            BigInt
-  platformFee             BigInt
-  feeRuleSnapshot         Json
-  status                  EscrowHoldStatus @default(HELD)
-  escrowReleaseEligibleAt DateTime?
-  releasedAt              DateTime?
-  idempotencyKey          String           @unique
-  createdAt               DateTime         @default(now())
-  updatedAt               DateTime         @updatedAt
-  order                   Order            @relation(fields: [orderId], references: [id])
-  payment                 Payment          @relation(fields: [paymentId], references: [id])
-
-  @@index([status, escrowReleaseEligibleAt])
-  @@map("escrow_holds")
-}
-
-model TransactionLog {
-  id            String          @id @default(uuid())
-  userId        String
-  amount        BigInt
-  type          TransactionType
-  referenceId   String
-  referenceType String
-  description   String?
-  createdAt     DateTime        @default(now())
-
-  @@index([userId])
-  @@index([referenceId, referenceType])
-  @@index([type])
-  @@index([createdAt])
-  @@map("transaction_logs")
-}
-
-model ActivityLog {
-  id         String   @id @default(uuid())
-  actorId    String
-  actionType String
-  entityType String
-  entityId   String
-  metadata   Json?
-  createdAt  DateTime @default(now())
-
-  @@index([actorId])
-  @@index([actionType])
-  @@index([entityType, entityId])
-  @@index([createdAt])
-  @@map("activity_logs")
-}
-
-model WorkerBalance {
-  id               String        @id @default(uuid())
-  workerProfileId  String        @unique
-  totalEarned      BigInt        @default(0)
-  withdrawn        BigInt        @default(0)
-  pendingWithdraw  BigInt        @default(0)
-  onHoldForDispute BigInt        @default(0)
-  deductedForDebts BigInt        @default(0)
-  version          Int           @default(0)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  workerProfile    WorkerProfile @relation(fields: [workerProfileId], references: [id])
-
-  @@map("worker_balances")
-}
-
-model PayoutMethod {
-  id               String            @id @default(uuid())
-  workerProfileId  String
-  methodType       PayoutMethodType
-  accountName      String
-  accountNumber    String
-  bankName         String?
-  isDefault        Boolean           @default(false)
-  isVerified       Boolean           @default(true)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  workerProfile    WorkerProfile     @relation(fields: [workerProfileId], references: [id])
-  withdrawRequests WithdrawRequest[]
-
-  @@unique([workerProfileId, accountNumber])
-  @@index([workerProfileId])
-  @@map("payout_methods")
-}
-
-model WithdrawRequest {
-  id                   String                @id @default(uuid())
-  workerProfileId      String
-  workerBalanceId      String
-  amount               BigInt
-  status               WithdrawRequestStatus @default(PENDING)
-  payoutMethodId       String
-  payoutMethodSnapshot Json
-  idempotencyKey       String                @unique
-  adminNotes           String?
-  processedBy          String?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  payoutExecution      PayoutExecution?
-  payoutMethod         PayoutMethod          @relation(fields: [payoutMethodId], references: [id])
-  workerProfile        WorkerProfile         @relation(fields: [workerProfileId], references: [id])
-
-  @@index([workerProfileId, status])
-  @@index([status])
-  @@map("withdraw_requests")
-}
-
-model PayoutExecution {
-  id                  String                @id @default(uuid())
-  withdrawRequestId   String                @unique
-  amount              BigInt
-  status              PayoutExecutionStatus @default(PENDING)
-  idempotencyKey      String                @unique
-  externalReferenceId String?
-  proofOfPaymentUrl   String?
-  failureReason       String?
-  executedBy          String?
-  executedAt          DateTime?
-  completedAt         DateTime?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  withdrawRequest     WithdrawRequest       @relation(fields: [withdrawRequestId], references: [id])
-
-  @@index([status])
-  @@map("payout_executions")
-}
-
-model Refund {
-  id                       String           @id @default(uuid())
-  orderId                  String
-  escrowHoldId             String
-  amount                   BigInt
-  reasonCode               RefundReasonCode
-  refundType               String
-  originalPaymentReference String
-  externalRefundReference  String?
-  initiatedBy              String
-  idempotencyKey           String           @unique
-  notes                    String?
-  createdAt                DateTime         @default(now())
-
-  @@index([orderId])
-  @@index([escrowHoldId])
-  @@map("refunds")
-}
-
-model WorkerDebt {
-  id                String           @id @default(uuid())
-  workerProfileId   String
-  refundId          String           @unique
-  originalAmount    BigInt
-  outstandingAmount BigInt
-  status            WorkerDebtStatus @default(OUTSTANDING)
-  settledAt         DateTime?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-
-  @@index([workerProfileId, status])
-  @@map("worker_debts")
-}
-
-model Dispute {
-  id                      String             @id @default(uuid())
-  orderId                 String
-  openedBy                String
-  status                  DisputeStatus      @default(OPEN)
-  resolution              DisputeResolution?
-  resolutionNote          String?
-  resolvedBy              String?
-  resolvedAt              DateTime?
-  evidence                Json               @default("[]")
-  flaggedMessageIds       String[]
-  eventTimeline           Json               @default("[]")
-  linkedTransactionLogIds String[]
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
-  messages                DisputeMessage[]
-  order                   Order              @relation(fields: [orderId], references: [id])
-
-  @@index([orderId])
-  @@index([status])
-  @@index([openedBy])
-  @@map("disputes")
-}
-
-model DisputeMessage {
-  id        String   @id @default(uuid())
-  disputeId String
-  senderId  String
-  content   String
-  createdAt DateTime @default(now())
-  dispute   Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
-
-  @@index([disputeId])
-  @@map("dispute_messages")
-}
-
-model PaymentIntention {
-  id               String   @id @default(uuid())
-  orderId          String
-  specialReference String   @unique
-  amount           BigInt?
-  createdAt        DateTime @default(now())
-  isPaid           Boolean  @default(false)
-  order            Order    @relation(fields: [orderId], references: [id])
-
-  @@index([orderId])
-  @@map("payment_intentions")
-}
-
-model Report {
-  id              String           @id @default(uuid())
-  reporterId      String
-  targetType      ReportTargetType
-  targetId        String
-  contextOrderId  String?
-  problemCategory ProblemCategory
-  problemType     ProblemType
-  description     String
-  status          ReportStatus     @default(PENDING)
-  resolvedBy      String?
-  retainUntil     DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  images          ReportImage[]
-  contextOrder    Order?           @relation("ReportContextOrder", fields: [contextOrderId], references: [id])
-  reporter        User             @relation("ReportsByUser", fields: [reporterId], references: [id], onDelete: Cascade)
-
-  @@index([reporterId])
-  @@index([status])
-  @@index([targetType, targetId])
-  @@map("reports")
-}
-
-model ReportImage {
-  id        String   @id @default(uuid())
-  reportId  String
-  url       String
-  createdAt DateTime @default(now())
-  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
-
-  @@index([reportId])
-  @@map("report_images")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model spatial_ref_sys {
-  srid      Int     @id
-  auth_name String? @db.VarChar(256)
-  auth_srid Int?
-  srtext    String? @db.VarChar(2048)
-  proj4text String? @db.VarChar(2048)
-}
-
-enum NotificationType {
-  ORDER_ACCEPTED
-  ORDER_CANCELLED
-  ORDER_COMPLETED
-  NEGOTIATION_OFFER
-  NEGOTIATION_ACCEPTED
-  NEGOTIATION_REJECTED
-  WORK_STARTED
-  WORK_DONE
-  PAYMENT_REQUIRED
-  PAYMENT_RECEIVED
-  PAYOUT_COMPLETED
-  DISPUTE_OPENED
-  DISPUTE_UPDATED
-  DISPUTE_RESOLVED
-  REFUND_PROCESSED
-  WITHDRAW_REQUESTED
-  WITHDRAW_APPROVED
-  WITHDRAW_REJECTED
-  ADMIN_ACTION
-}
-
-enum BroadcastTargetRole {
-  WORKER
-  CLIENT
-  ALL
-}
-
 enum OrderType {
-  PREVIEW
-  SERVICE
+  PREVIEW // For a diagnostic visit
+  SERVICE // For the actual work
 }
 
 enum OrderStatus {
@@ -839,6 +533,26 @@ enum ProposalStatus {
   REJECTED
   WITHDRAWN
   DISMISSED
+}
+
+model Proposal {
+  id              String         @id @default(uuid())
+  orderId         String
+  workerProfileId String
+  status          ProposalStatus @default(PENDING)
+  note            String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  workerProfile WorkerProfile  @relation(fields: [workerProfileId], references: [id])
+  negotiations  Negotiation[]
+
+  @@unique([orderId, workerProfileId])
+  @@index([orderId])
+  @@index([workerProfileId])
+  @@index([status])
+  @@map("proposals")
 }
 
 enum WorkStatus {
@@ -891,6 +605,15 @@ enum VerificationStatus {
   REJECTED
 }
 
+enum VerificationRejectionReason {
+  BLURRY_IMAGE
+  EXPIRED_ID
+  MISMATCHED_PERSON
+  MISSING_DOCUMENT
+  INVALID_DOCUMENT
+  OTHER
+}
+
 enum SpecializationCategory {
   ELECTRICITY
   PLUMBING
@@ -930,6 +653,200 @@ enum FlagReasonType {
   SOCIAL_HANDLE
 }
 
+model Conversation {
+  id             String   @id @default(uuid())
+  messageCounter Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id                        String           @id @default(uuid())
+  conversationId            String
+  userId                    String
+  role                      ConversationRole
+  lastReadMessageNumber     Int              @default(0)
+  lastReceivedMessageNumber Int              @default(0)
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@unique([conversationId, role])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String
+  senderId       String
+  messageNumber  Int
+  content        String
+  type           MessageType @default(TEXT)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  conversation Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User            @relation(fields: [senderId], references: [id])
+  flagged      FlaggedMessage?
+
+  @@unique([conversationId, messageNumber])
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model FlaggedMessage {
+  id        String           @id @default(uuid())
+  messageId String           @unique
+  reasons   FlagReasonType[]
+  matches   String[]
+  state     FlagState        @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([state])
+  @@index([createdAt])
+  @@map("flagged_messages")
+}
+
+model FeeRule {
+  id            String   @id @default(uuid())
+  percentage    Float
+  effectiveFrom DateTime @default(now())
+  isActive      Boolean  @default(true)
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive, effectiveFrom])
+  @@map("fee_rules")
+}
+
+model WebhookEvent {
+  id              String             @id @default(uuid())
+  providerEventId String             @unique
+  provider        String             @default("PAYMOB")
+  eventType       String
+  status          WebhookEventStatus @default(RECEIVED)
+  rawPayload      Json
+  processedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  failureReason   String?
+  payment         Payment?
+  paymentAttempts PaymentAttempt[]
+
+  @@map("webhook_events")
+}
+
+model Payment {
+  id                  String   @id @default(uuid())
+  orderId             String   @unique
+  webhookEventId      String   @unique
+  idempotencyKey      String   @unique
+  externalReferenceId String
+  amount              BigInt
+  currency            String   @default("EGP")
+  createdAt           DateTime @default(now())
+
+  order           Order            @relation(fields: [orderId], references: [id])
+  webhookEvent    WebhookEvent     @relation(fields: [webhookEventId], references: [id])
+  escrowHold      EscrowHold?
+  paymentAttempts PaymentAttempt[]
+
+  @@index([orderId])
+  @@map("payments")
+}
+
+model PaymentAttempt {
+  id                      String               @id @default(uuid())
+  orderId                 String
+  paymentId               String?
+  webhookEventId          String
+  status                  PaymentAttemptStatus
+  providerResponseCode    String?
+  providerResponseMessage String?
+  amount                  BigInt
+  createdAt               DateTime             @default(now())
+
+  order        Order        @relation(fields: [orderId], references: [id])
+  payment      Payment?     @relation(fields: [paymentId], references: [id])
+  webhookEvent WebhookEvent @relation(fields: [webhookEventId], references: [id])
+
+  @@index([orderId])
+  @@index([paymentId])
+  @@map("payment_attempts")
+}
+
+model EscrowHold {
+  id                      String           @id @default(uuid())
+  orderId                 String           @unique
+  paymentId               String           @unique
+  totalAmount             BigInt
+  workerAmount            BigInt
+  platformFee             BigInt
+  feeRuleSnapshot         Json
+  status                  EscrowHoldStatus @default(HELD)
+  escrowReleaseEligibleAt DateTime?
+  releasedAt              DateTime?
+  idempotencyKey          String           @unique
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@index([status, escrowReleaseEligibleAt])
+  @@map("escrow_holds")
+}
+
+// ─── Simplified Transaction Log (replaces double-entry LedgerEntry) ─────
+
+model TransactionLog {
+  id            String          @id @default(uuid())
+  userId        String
+  amount        BigInt
+  type          TransactionType
+  referenceId   String
+  referenceType String
+  description   String?
+  createdAt     DateTime        @default(now())
+
+  @@index([userId])
+  @@index([referenceId, referenceType])
+  @@index([type])
+  @@index([createdAt])
+  @@map("transaction_logs")
+}
+
+// ─── Simple Activity Log (replaces complex FinancialAuditLog) ───────────
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actionType String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([actionType])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
 enum TransactionType {
   CREDIT
   DEBIT
@@ -948,6 +865,176 @@ enum DisputeResolution {
   PARTIAL_REFUND
   NO_ACTION
 }
+
+model WorkerBalance {
+  id               String   @id @default(uuid())
+  workerProfileId  String   @unique
+  totalEarned      BigInt   @default(0)
+  withdrawn        BigInt   @default(0)
+  pendingWithdraw  BigInt   @default(0)
+  onHoldForDispute BigInt   @default(0)
+  deductedForDebts BigInt   @default(0)
+  version          Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id])
+
+  @@map("worker_balances")
+}
+
+model PayoutMethod {
+  id              String           @id @default(uuid())
+  workerProfileId String
+  methodType      PayoutMethodType
+  accountName     String
+  accountNumber   String
+  bankName        String?
+  isDefault       Boolean          @default(false)
+  isVerified      Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+ withdrawRequests WithdrawRequest[]
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id])
+
+  @@index([workerProfileId])
+  @@unique([workerProfileId,accountNumber])
+  @@map("payout_methods")
+}
+
+model WithdrawRequest {
+  id                   String                @id @default(uuid())
+  workerProfileId      String
+  workerBalanceId      String
+  amount               BigInt
+  status               WithdrawRequestStatus @default(PENDING)
+  payoutMethodId       String
+  payoutMethodSnapshot Json
+  idempotencyKey       String                @unique
+  adminNotes           String?
+  processedBy          String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  payoutExecution PayoutExecution?
+ workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id])
+  payoutMethod PayoutMethod @relation(fields: [payoutMethodId], references: [id])
+  @@index([workerProfileId, status])
+  @@index([status])
+  @@map("withdraw_requests")
+}
+
+model PayoutExecution {
+  id                  String                @id @default(uuid())
+  withdrawRequestId   String                @unique
+  amount              BigInt
+  status              PayoutExecutionStatus @default(PENDING)
+  idempotencyKey      String                @unique
+  externalReferenceId String?
+  proofOfPaymentUrl   String?
+  failureReason       String?
+  executedBy          String?
+  executedAt          DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  withdrawRequest WithdrawRequest @relation(fields: [withdrawRequestId], references: [id])
+
+  @@index([status])
+  @@map("payout_executions")
+}
+
+model Refund {
+  id                       String           @id @default(uuid())
+  orderId                  String
+  escrowHoldId             String
+  amount                   BigInt
+  reasonCode               RefundReasonCode
+  refundType               String
+  originalPaymentReference String
+  externalRefundReference  String?
+  initiatedBy              String
+  idempotencyKey           String           @unique
+  notes                    String?
+  createdAt                DateTime         @default(now())
+
+  @@index([orderId])
+  @@index([escrowHoldId])
+  @@map("refunds")
+}
+
+model WorkerDebt {
+  id                String           @id @default(uuid())
+  workerProfileId   String
+  refundId          String           @unique
+  originalAmount    BigInt
+  outstandingAmount BigInt
+  status            WorkerDebtStatus @default(OUTSTANDING)
+  settledAt         DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([workerProfileId, status])
+  @@map("worker_debts")
+}
+
+// ─── Dispute System ─────────────────────────────────────────────────────
+
+model Dispute {
+  id                      String             @id @default(uuid())
+  orderId                 String
+  openedBy                String
+  status                  DisputeStatus      @default(OPEN)
+  assignedDepartment      AdminRole?
+  assignedAdminId         String?
+  resolution              DisputeResolution?
+  resolutionNote          String?
+  resolvedBy              String?
+  resolvedAt              DateTime?
+  evidence                Json               @default("[]")
+  flaggedMessageIds       String[]
+  eventTimeline           Json               @default("[]")
+  linkedTransactionLogIds String[]
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  order    Order            @relation(fields: [orderId], references: [id])
+  messages DisputeMessage[]
+
+  @@index([orderId])
+  @@index([status])
+  @@index([openedBy])
+  @@map("disputes")
+}
+
+model DisputeMessage {
+  id        String   @id @default(uuid())
+  disputeId String
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId])
+  @@map("dispute_messages")
+}
+
+model PaymentIntention {
+  id               String   @id @default(uuid())
+  orderId          String
+  specialReference String   @unique
+  amount           BigInt?
+  createdAt        DateTime @default(now())
+  isPaid           Boolean  @default(false)
+  order            Order    @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@map("payment_intentions")
+}
+
+// ─── Financial Module Enums ──────────────────────────────────────────────
 
 enum EscrowHoldStatus {
   HELD
@@ -1002,6 +1089,45 @@ enum RefundReasonCode {
   DISPUTE_RESOLUTION
 }
 
+model Report {
+  id              String           @id @default(uuid())
+  reporterId      String
+  targetType      ReportTargetType
+  targetId        String
+  contextOrderId  String?
+  problemCategory ProblemCategory
+  problemType     ProblemType
+  description     String
+  status          ReportStatus     @default(PENDING)
+  assignedDepartment AdminRole?
+  assignedAdminId    String?
+  resolvedBy      String?
+  retainUntil     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  reporter     User          @relation("ReportsByUser", fields: [reporterId], references: [id], onDelete: Cascade)
+  contextOrder Order?        @relation("ReportContextOrder", fields: [contextOrderId], references: [id], onDelete: SetNull)
+  images       ReportImage[]
+
+  @@index([reporterId])
+  @@index([status])
+  @@index([targetType, targetId])
+  @@map("reports")
+}
+
+model ReportImage {
+  id          String    @id @default(uuid())
+  reportId    String
+  url         String
+  createdAt   DateTime  @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@map("report_images")
+}
+
 enum ReportStatus {
   PENDING
   UNDER_REVIEW
@@ -1038,4 +1164,33 @@ enum ProblemType {
   INAPPROPRIATE_CONTENT
   HARASSMENT
   OTHER
+}
+
+model IssueNote {
+  id             String    @id @default(uuid())
+  targetType     String
+  targetId       String
+  authorAdminId  String
+  content        String
+  createdAt      DateTime  @default(now())
+
+  @@index([targetType, targetId])
+  @@map("issue_notes")
+}
+
+model IssueAssignmentHistory {
+  id                 String    @id @default(uuid())
+  targetType         String
+  targetId           String
+  previousAdminId    String?
+  newAdminId         String?
+  previousDepartment AdminRole?
+  newDepartment      AdminRole?
+  event              String
+  note               String?
+  actorAdminId       String
+  createdAt          DateTime  @default(now())
+
+  @@index([targetType, targetId])
+  @@map("issue_assignment_history")
 }
