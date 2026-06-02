@@ -12,6 +12,7 @@ import adminVerificationsRouter from './verifications.js';
 import adminReportsRouter from './reports.js';
 import adminGovernmentsRouter from './governments.js';
 import adminSpecializationsRouter from './specializations.js';
+import adminAdminsRouter from './admins.js';
 
 const adminRouter: Router = Router();
 
@@ -23,6 +24,7 @@ adminRouter.use('/verifications', adminVerificationsRouter);
 adminRouter.use('/reports', adminReportsRouter);
 adminRouter.use('/governments', adminGovernmentsRouter);
 adminRouter.use('/specializations', adminSpecializationsRouter);
+adminRouter.use('/admins', adminAdminsRouter);
 adminRouter.use('/escrow-holds', escrowRouter);
 adminRouter.use('/orders/:orderId/refunds', refundRouter);
 adminRouter.use('/financial', adminDashboardRouter);

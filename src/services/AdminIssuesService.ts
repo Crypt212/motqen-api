@@ -8,6 +8,7 @@ export type ClaimIssueParams = {
   targetId: string;
   adminId: string;
   adminRole: AdminRole;
+  adminUsername: string;
   note?: string;
 };
 
@@ -23,21 +24,32 @@ export type IssueData = {
   assignedDepartment: AdminRole | null;
 };
 
-export type TransferIssueParams = {
+export type TransferToAdminParams = {
   targetType: 'REPORT' | 'DISPUTE' | 'VERIFICATION';
   targetId: string;
   adminId: string;
   adminRole: AdminRole;
-  newDepartment?: AdminRole;
-  newAdminId?: string;
+  adminUsername: string;
+  newAdminId: string;
   note?: string;
 };
 
-export type ReturnIssueParams = {
+export type TransferToDepartmentParams = {
   targetType: 'REPORT' | 'DISPUTE' | 'VERIFICATION';
   targetId: string;
   adminId: string;
   adminRole: AdminRole;
+  adminUsername: string;
+  newDepartment: AdminRole;
+  note?: string;
+};
+
+export type UnassignIssueParams = {
+  targetType: 'REPORT' | 'DISPUTE' | 'VERIFICATION';
+  targetId: string;
+  adminId: string;
+  adminRole: AdminRole;
+  adminUsername: string;
   note?: string;
 };
 
@@ -137,12 +149,13 @@ export default class AdminIssuesService {
       throw new AppError('Issue is already claimed', 409);
     }
 
+    const assignedDept = params.adminRole !== 'SUPER_ADMIN'
+      ? params.adminRole
+      : issue.assignedDepartment || 'SUPER_ADMIN';
+
     await this.updateIssue(params.targetType, params.targetId, {
       assignedAdminId: params.adminId,
-      assignedDepartment:
-        params.adminRole !== 'SUPER_ADMIN'
-          ? params.adminRole
-          : issue.assignedDepartment || 'SUPER_ADMIN',
+      assignedDepartment: assignedDept,
     });
 
     await prisma.issueAssignmentHistory.create({
@@ -150,19 +163,31 @@ export default class AdminIssuesService {
         targetType: params.targetType,
         targetId: params.targetId,
         newAdminId: params.adminId,
-        newDepartment:
-          params.adminRole !== 'SUPER_ADMIN'
-            ? params.adminRole
-            : issue.assignedDepartment || 'SUPER_ADMIN',
+        newDepartment: assignedDept,
         event: 'CLAIMED',
         actorAdminId: params.adminId,
+        note: params.note,
       },
+    });
+
+    await adminAuditLogService.record({
+      actor: {
+        adminId: params.adminId,
+        username: params.adminUsername,
+        role: params.adminRole,
+      },
+      action: 'ISSUE_CLAIMED',
+      category: 'ISSUES',
+      severity: 'INFO',
+      targetType: params.targetType,
+      targetId: params.targetId,
+      metadata: { note: params.note },
     });
 
     return { success: true };
   }
 
-  async transferIssue(params: TransferIssueParams): Promise<{ success: boolean }> {
+  async transferToAdmin(params: TransferToAdminParams): Promise<{ success: boolean }> {
     const issue = await this.getIssue(params.targetType, params.targetId);
     if (!issue) throw new AppError('Issue not found', 404);
 
@@ -170,23 +195,21 @@ export default class AdminIssuesService {
       throw new AppError('Cannot transfer an issue you do not own', 403);
     }
 
-    if (!params.newDepartment && !params.newAdminId) {
-      throw new AppError('Must specify either a new department or a new admin', 400);
-    }
+    const targetAdmin = await adminRepository.find({ filter: { id: params.newAdminId } });
+    if (!targetAdmin) throw new AppError('Target admin not found', 404);
 
-    let finalAdminId = null;
-    let finalDepartment = params.newDepartment || issue.assignedDepartment;
-
-    if (params.newAdminId) {
-      const targetAdmin = await adminRepository.find({ filter: { id: params.newAdminId } });
-      if (!targetAdmin) throw new AppError('Target admin not found', 404);
-      finalAdminId = params.newAdminId;
-      finalDepartment = targetAdmin.role;
+    // Enforce same-department constraint on admin-to-admin transfers
+    if (
+      targetAdmin.role !== 'SUPER_ADMIN' &&
+      issue.assignedDepartment &&
+      targetAdmin.role !== issue.assignedDepartment
+    ) {
+      throw new AppError('Target admin must belong to the same department', 400);
     }
 
     await this.updateIssue(params.targetType, params.targetId, {
-      assignedAdminId: finalAdminId,
-      assignedDepartment: finalDepartment,
+      assignedAdminId: params.newAdminId,
+      assignedDepartment: targetAdmin.role,
     });
 
     await prisma.issueAssignmentHistory.create({
@@ -195,23 +218,89 @@ export default class AdminIssuesService {
         targetId: params.targetId,
         previousAdminId: issue.assignedAdminId,
         previousDepartment: issue.assignedDepartment,
-        newAdminId: finalAdminId,
-        newDepartment: finalDepartment,
-        event: 'TRANSFERRED',
+        newAdminId: params.newAdminId,
+        newDepartment: targetAdmin.role,
+        event: 'TRANSFERRED_ADMIN',
         note: params.note,
         actorAdminId: params.adminId,
+      },
+    });
+
+    await adminAuditLogService.record({
+      actor: {
+        adminId: params.adminId,
+        username: params.adminUsername,
+        role: params.adminRole,
+      },
+      action: 'ISSUE_TRANSFERRED_ADMIN',
+      category: 'ISSUES',
+      severity: 'INFO',
+      targetType: params.targetType,
+      targetId: params.targetId,
+      metadata: {
+        previousAdminId: issue.assignedAdminId,
+        newAdminId: params.newAdminId,
+        note: params.note,
       },
     });
 
     return { success: true };
   }
 
-  async returnIssue(params: ReturnIssueParams): Promise<{ success: boolean }> {
+  async transferToDepartment(params: TransferToDepartmentParams): Promise<{ success: boolean }> {
     const issue = await this.getIssue(params.targetType, params.targetId);
     if (!issue) throw new AppError('Issue not found', 404);
 
     if (params.adminRole !== 'SUPER_ADMIN' && issue.assignedAdminId !== params.adminId) {
-      throw new AppError('Cannot return an issue you do not own', 403);
+      throw new AppError('Cannot transfer an issue you do not own', 403);
+    }
+
+    await this.updateIssue(params.targetType, params.targetId, {
+      assignedAdminId: null,
+      assignedDepartment: params.newDepartment,
+    });
+
+    await prisma.issueAssignmentHistory.create({
+      data: {
+        targetType: params.targetType,
+        targetId: params.targetId,
+        previousAdminId: issue.assignedAdminId,
+        previousDepartment: issue.assignedDepartment,
+        newAdminId: null,
+        newDepartment: params.newDepartment,
+        event: 'TRANSFERRED_DEPARTMENT',
+        note: params.note,
+        actorAdminId: params.adminId,
+      },
+    });
+
+    await adminAuditLogService.record({
+      actor: {
+        adminId: params.adminId,
+        username: params.adminUsername,
+        role: params.adminRole,
+      },
+      action: 'ISSUE_TRANSFERRED_DEPARTMENT',
+      category: 'ISSUES',
+      severity: 'INFO',
+      targetType: params.targetType,
+      targetId: params.targetId,
+      metadata: {
+        previousDepartment: issue.assignedDepartment,
+        newDepartment: params.newDepartment,
+        note: params.note,
+      },
+    });
+
+    return { success: true };
+  }
+
+  async unassignIssue(params: UnassignIssueParams): Promise<{ success: boolean }> {
+    const issue = await this.getIssue(params.targetType, params.targetId);
+    if (!issue) throw new AppError('Issue not found', 404);
+
+    if (params.adminRole !== 'SUPER_ADMIN' && issue.assignedAdminId !== params.adminId) {
+      throw new AppError('Cannot unassign an issue you do not own', 403);
     }
 
     await this.updateIssue(params.targetType, params.targetId, {
@@ -226,10 +315,24 @@ export default class AdminIssuesService {
         previousDepartment: issue.assignedDepartment,
         newAdminId: null,
         newDepartment: issue.assignedDepartment,
-        event: 'RETURNED_TO_QUEUE',
+        event: 'UNASSIGNED',
         note: params.note,
         actorAdminId: params.adminId,
       },
+    });
+
+    await adminAuditLogService.record({
+      actor: {
+        adminId: params.adminId,
+        username: params.adminUsername,
+        role: params.adminRole,
+      },
+      action: 'ISSUE_UNASSIGNED',
+      category: 'ISSUES',
+      severity: 'INFO',
+      targetType: params.targetType,
+      targetId: params.targetId,
+      metadata: { note: params.note },
     });
 
     return { success: true };

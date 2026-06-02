@@ -65,4 +65,39 @@ export default class AdminVerificationsController {
 
     new SuccessResponse('Verification rejected successfully', { updated }, 200).send(res);
   });
+
+  approveVerification = asyncHandler(async (req, res): Promise<void> => {
+    const { id } = req.params as { id: string };
+
+    let verification = await this.enforceOwnership(req, id);
+    if (!verification) {
+      verification = await workerProfileRepository.findVerificationById(id);
+      if (!verification) throw new AppError('Verification not found', 404);
+    }
+
+    if (verification.status !== 'PENDING') {
+      throw new AppError('Only pending verifications can be approved', 400);
+    }
+
+    const updated = await workerProfileRepository.updateVerificationStatus(id, {
+      status: 'APPROVED',
+    });
+
+    const adminRole = req.adminState.role as AdminRole;
+    await adminAuditLogService.record({
+      actor: {
+        adminId: req.adminState.adminId,
+        username: req.adminState.username,
+        role: adminRole,
+      },
+      action: 'VERIFICATION_APPROVED',
+      category: 'USER_MANAGEMENT' as AdminAuditCategory,
+      severity: 'INFO',
+      targetType: 'VERIFICATION',
+      targetId: id,
+      metadata: null,
+    });
+
+    new SuccessResponse('Verification approved successfully', { updated }, 200).send(res);
+  });
 }

@@ -111,4 +111,12 @@ export default class AdminUsersService {
 
     return updated;
   }
+
+  async listAvailableAdmins(filter?: { department?: AdminRole }): Promise<Admin[]> {
+    const queryFilter: any = { status: 'ACTIVE' as AdminStatus };
+    if (filter?.department) {
+      queryFilter.role = filter.department;
+    }
+    return this.adminRepository.findMany({ filter: queryFilter });
+  }
 }

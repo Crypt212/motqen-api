@@ -38,9 +38,9 @@ router.post('/claim', adminIssuesController.claimIssue);
 
 /**
  * @swagger
- * /admin/issues/transfer:
+ * /admin/issues/transfer-admin:
  *   post:
- *     summary: Transfer an issue to another admin or department
+ *     summary: Transfer an issue to another admin
  *     tags: [Admin Issues]
  *     security:
  *       - bearerAuth: []
@@ -48,11 +48,25 @@ router.post('/claim', adminIssuesController.claimIssue);
  *       200:
  *         description: Issue transferred successfully
  */
-router.post('/transfer', adminIssuesController.transferIssue);
+router.post('/transfer-admin', adminIssuesController.transferToAdmin);
 
 /**
  * @swagger
- * /admin/issues/return:
+ * /admin/issues/transfer-department:
+ *   post:
+ *     summary: Transfer an issue to another department
+ *     tags: [Admin Issues]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Issue transferred successfully
+ */
+router.post('/transfer-department', adminIssuesController.transferToDepartment);
+
+/**
+ * @swagger
+ * /admin/issues/unassign:
  *   post:
  *     summary: Return an issue to the unassigned queue
  *     tags: [Admin Issues]
@@ -60,9 +74,9 @@ router.post('/transfer', adminIssuesController.transferIssue);
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Issue returned successfully
+ *         description: Issue unassigned successfully
  */
-router.post('/return', adminIssuesController.returnIssue);
+router.post('/unassign', adminIssuesController.unassignIssue);
 
 /**
  * @swagger

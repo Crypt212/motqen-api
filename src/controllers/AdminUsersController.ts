@@ -15,7 +15,7 @@ export default class AdminUsersController {
       actorId: req.adminState.adminId,
       actorUsername: req.adminState.username,
     });
-    
+
     // Omit passwordHash from response
     const { passwordHash, ...adminSafe } = admin as any;
     new SuccessResponse('Admin created successfully', adminSafe, 201).send(res);
@@ -49,5 +49,12 @@ export default class AdminUsersController {
     const adminId = req.params.adminId as string;
     await adminAuthService.revokeSessionsForAdmin(adminId, req.adminState.adminId);
     new SuccessResponse('Admin sessions revoked successfully', null, 200).send(res);
+  });
+
+  getAvailableAdmins = asyncHandler(async (req, res): Promise<void> => {
+    const department = req.query.department as AdminRole | undefined;
+    const admins = await adminUsersService.l istAvailableAdmins({ department });
+    const adminsSafe = admins.map(({ passwordHash, ...adminSafe }) => adminSafe);
+    new SuccessResponse('Available admins retrieved successfully', adminsSafe, 200).send(res);
   });
 }

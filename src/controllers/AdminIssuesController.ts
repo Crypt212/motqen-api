@@ -1,5 +1,6 @@
 import { asyncHandler } from '../types/asyncHandler.js';
 import SuccessResponse from '../responses/successResponse.js';
+import AppError from '../errors/AppError.js';
 import { adminIssuesService } from '../state.js';
 import { AdminRole } from '../domain/admin.entity.js';
 
@@ -16,40 +17,63 @@ export default class AdminIssuesController {
   });
 
   claimIssue = asyncHandler(async (req, res): Promise<void> => {
-    const { targetType, targetId } = req.body;
+    const { targetType, targetId, note } = req.body;
     await adminIssuesService.claimIssue({
       targetType,
       targetId,
       adminId: req.adminState.adminId,
       adminRole: req.adminState.role as AdminRole,
+      adminUsername: req.adminState.username,
+      note,
     });
     new SuccessResponse('Issue claimed successfully', null, 200).send(res);
   });
 
-  transferIssue = asyncHandler(async (req, res): Promise<void> => {
-    const { targetType, targetId, newDepartment, newAdminId, note } = req.body;
-    await adminIssuesService.transferIssue({
+  transferToAdmin = asyncHandler(async (req, res): Promise<void> => {
+    const { targetType, targetId, newAdminId, note } = req.body;
+    if (!newAdminId) {
+      throw new AppError('newAdminId is required', 400);
+    }
+    await adminIssuesService.transferToAdmin({
       targetType,
       targetId,
       adminId: req.adminState.adminId,
       adminRole: req.adminState.role as AdminRole,
-      newDepartment,
+      adminUsername: req.adminState.username,
       newAdminId,
       note,
     });
-    new SuccessResponse('Issue transferred successfully', null, 200).send(res);
+    new SuccessResponse('Issue transferred to admin successfully', null, 200).send(res);
   });
 
-  returnIssue = asyncHandler(async (req, res): Promise<void> => {
-    const { targetType, targetId, note } = req.body;
-    await adminIssuesService.returnIssue({
+  transferToDepartment = asyncHandler(async (req, res): Promise<void> => {
+    const { targetType, targetId, newDepartment, note } = req.body;
+    if (!newDepartment) {
+      throw new AppError('newDepartment is required', 400);
+    }
+    await adminIssuesService.transferToDepartment({
       targetType,
       targetId,
       adminId: req.adminState.adminId,
       adminRole: req.adminState.role as AdminRole,
+      adminUsername: req.adminState.username,
+      newDepartment: newDepartment as AdminRole,
       note,
     });
-    new SuccessResponse('Issue returned to queue successfully', null, 200).send(res);
+    new SuccessResponse('Issue transferred to department successfully', null, 200).send(res);
+  });
+
+  unassignIssue = asyncHandler(async (req, res): Promise<void> => {
+    const { targetType, targetId, note } = req.body;
+    await adminIssuesService.unassignIssue({
+      targetType,
+      targetId,
+      adminId: req.adminState.adminId,
+      adminRole: req.adminState.role as AdminRole,
+      adminUsername: req.adminState.username,
+      note,
+    });
+    new SuccessResponse('Issue unassigned successfully', null, 200).send(res);
   });
 
   addNote = asyncHandler(async (req, res): Promise<void> => {
