@@ -149,24 +149,15 @@ export default class ProposalService extends Service {
 
   async getMyProposal({
     orderId,
-    workerUserId,
     workerProfileId
   }: {
     orderId: IDType;
-    workerUserId: IDType;
     workerProfileId: IDType;
   }): Promise<ProposalWithWorkerSummary> {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: orderId } });
       if (!order) {
         throw new AppError('Order not found', 404);
-      }
-
-      // Access control: Worker who proposed can view
-      const isWorker = order.workerUserId === workerUserId;
-
-      if (!isWorker) {
-        throw new AppError('Access denied', 403);
       }
 
       const result = await this.proposalRepository.findManyWithWorkerSummary({
@@ -196,14 +187,6 @@ export default class ProposalService extends Service {
         throw new AppError('Order not found', 404);
       }
 
-      // Access control: Client who posted order or worker who proposed can view
-      const isClient = order.clientUserId === userId;
-      const isWorker = order.workerUserId === userId;
-
-      if (!isClient && !isWorker) {
-        throw new AppError('Access denied', 403);
-      }
-
       const result = await this.proposalRepository.findManyWithWorkerSummary({
         filter: { id: proposalId, orderId },
       });
@@ -211,6 +194,14 @@ export default class ProposalService extends Service {
       const proposal = result.proposals[0];
       if (!proposal) {
         throw new AppError('Proposal not found', 404);
+      }
+
+      // Access control: Client who posted order or worker who proposed can view
+      const isClient = order.clientUserId === userId;
+      const isWorker = proposal.workerProfile.userId === userId;
+
+      if (!isClient && !isWorker) {
+        throw new AppError('Access denied', 403);
       }
 
       return proposal;
