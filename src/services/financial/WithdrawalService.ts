@@ -12,6 +12,7 @@ import { PayoutMethod, WithdrawRequest, PayoutMethodType } from '../../domain/fi
 import AppError from '../../errors/AppError.js';
 import { PayoutMethodInput, ListWithdrawRequestsOptions, CursorPaginatedResult } from '../../schemas/financial/withdrawal.schema.js';
 import { PayoutMethodUpdateInput } from '../../repositories/interfaces/financial/PayoutMethodRepository.js';
+import { computeAvailableToWithdraw } from '../../utils/computeAvailableToWithdraw.js';
 
 export type WorkerBalanceView = Omit<
   WorkerBalance,
@@ -29,16 +30,6 @@ export class WithdrawalService {
     private readonly prisma: PrismaClient
   ) {}
 
-  public computeAvailableToWithdraw(balance: WorkerBalance): bigint {
-    return (
-      balance.totalEarned -
-      balance.withdrawn -
-      balance.pendingWithdraw -
-      balance.onHoldForDispute -
-      balance.deductedForDebts
-    );
-  }
-
   async getBalance(workerProfileId: string): Promise<WorkerBalanceView> {
     const balance = await this.workerBalanceRepo.findByWorkerProfileId(workerProfileId);
     return {
@@ -47,7 +38,7 @@ export class WithdrawalService {
       pendingWithdraw: balance?.pendingWithdraw || 0n,
       onHoldForDispute: balance?.onHoldForDispute || 0n,
       deductedForDebts: balance?.deductedForDebts || 0n,
-      availableToWithdraw: balance ? this.computeAvailableToWithdraw(balance) : 0n,
+      availableToWithdraw: balance ? computeAvailableToWithdraw(balance) : 0n,
     };
   }
 
@@ -63,7 +54,7 @@ export class WithdrawalService {
       if (!balance) throw new AppError('Worker balance not found', 404);
 
       // 2. Validate available
-      const available = this.computeAvailableToWithdraw(balance);
+      const available = computeAvailableToWithdraw(balance);
       if (available < amount) {
         throw new AppError('Insufficient balance for withdrawal', 400);
       }
@@ -425,6 +416,9 @@ export class WithdrawalService {
       const debt = await this.workerDebtRepo.findById(debtId, tx);
       if (!debt) throw new AppError('Debt not found', 404);
       if (debt.status === 'SETTLED') throw new AppError('Debt already settled', 400);
+      if (debt.outstandingAmount <= 0n) {
+        throw new AppError('Debt has no outstanding amount to settle', 400);
+      }
 
       const balance = await this.workerBalanceRepo.lockForUpdate(debt.workerProfileId, tx);
       if (!balance) throw new AppError('Worker balance not found', 404);

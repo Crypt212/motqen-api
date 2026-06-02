@@ -1,4 +1,3 @@
-import { PrismaClient } from '../../generated/prisma/client.js';
 import IEscrowHoldRepository from '../../repositories/interfaces/financial/EscrowHoldRepository.js';
 import ITransactionLogRepository from '../../repositories/interfaces/financial/TransactionLogRepository.js';
 import IWorkerBalanceRepository from '../../repositories/interfaces/financial/WorkerBalanceRepository.js';
@@ -8,6 +7,8 @@ import { IWorkerDebtRepository } from '../../repositories/interfaces/financial/W
 import { logActivity } from './helpers/activityLogger.js';
 import { RefundService } from './RefundService.js';
 import { serializeBigints } from '../../utils/serializeBigints.js';
+import AppError from '../../errors/AppError.js';
+import { PrismaClient } from '../../generated/prisma/client.js';
 
 export class EscrowService {
   private refundService?: RefundService;
@@ -24,161 +25,143 @@ export class EscrowService {
     this.refundService = refundService;
   }
 
-  async listHolds(filters: { status?: string, orderId?: string }, limit = 20, offset = 0) {
-    const where: any = {};
-    if (filters.status) where.status = filters.status;
-    if (filters.orderId) where.orderId = filters.orderId;
-
-    const data = await this.prisma.escrowHold.findMany({
-      where,
-      take: limit,
-      skip: offset,
-      orderBy: { createdAt: 'desc' },
-    });
-    
+  async listHolds(filters: { status?: string; orderId?: string }, limit = 20, offset = 0) {
+    const data = await this.escrowHoldRepo.findMany(filters, limit, offset);
     return serializeBigints(data);
   }
 
   async onOrderCompleted(orderId: string, completedAt: Date, tx?: TransactionClient): Promise<void> {
     const hold = await this.escrowHoldRepo.findByOrderId(orderId);
     if (!hold) {
-      throw new Error(`EscrowHold not found for order ${orderId}`);
+      throw new AppError(`EscrowHold not found for order ${orderId}`, 404);
     }
     if (hold.status !== 'HELD') {
-      throw new Error(`EscrowHold is not HELD for order ${orderId}, current status is ${hold.status}`);
+      throw new AppError(
+        `EscrowHold is not HELD for order ${orderId}, current status is ${hold.status}`,
+        400
+      );
     }
 
-    const eligibleAt = new Date(completedAt.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 days
+    const eligibleAt = new Date(completedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    if (tx) {
-      await tx.escrowHold.update({
-        where: { id: hold.id },
-        data: { escrowReleaseEligibleAt: eligibleAt }
-      });
-
-      await logActivity(tx, {
+    const schedule = async (client: TransactionClient) => {
+      await this.escrowHoldRepo.updateReleaseEligibleAt(hold.id, eligibleAt, client);
+      await logActivity(client, {
         actorId: 'SYSTEM',
         actionType: 'ESCROW_RELEASE_SCHEDULED',
         entityType: 'EscrowHold',
         entityId: hold.id,
         metadata: { eligibleAt: eligibleAt.toISOString() },
       });
+    };
+
+    if (tx) {
+      await schedule(tx);
     } else {
       await this.prisma.$transaction(async (innerTx) => {
-        await innerTx.escrowHold.update({
-          where: { id: hold.id },
-          data: { escrowReleaseEligibleAt: eligibleAt }
-        });
-
-        await logActivity(innerTx, {
-          actorId: 'SYSTEM',
-          actionType: 'ESCROW_RELEASE_SCHEDULED',
-          entityType: 'EscrowHold',
-          entityId: hold.id,
-          metadata: { eligibleAt: eligibleAt.toISOString() },
-        });
+        await schedule(innerTx);
       });
     }
   }
 
   async releaseHold(holdId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      // 1. Lock escrow hold FOR UPDATE
       const hold = await this.escrowHoldRepo.lockForUpdate(holdId, tx);
       if (!hold) {
-        throw new Error('EscrowHold not found');
+        throw new AppError('EscrowHold not found', 404);
       }
 
-      // 2. Guard status=HELD
       if (hold.status === 'RELEASED') {
-        return; // Idempotent
+        return;
       }
       if (hold.status !== 'HELD') {
-        throw new Error(`Cannot release escrow hold with status ${hold.status}`);
+        throw new AppError(`Cannot release escrow hold with status ${hold.status}`, 400);
       }
 
-      // 3. Verify eligible_at <= now
       if (!hold.escrowReleaseEligibleAt || hold.escrowReleaseEligibleAt > new Date()) {
-        throw new Error('EscrowHold is not yet eligible for release');
+        throw new AppError('EscrowHold is not yet eligible for release', 422);
       }
 
       const order = await tx.order.findUnique({
         where: { id: hold.orderId },
-        select: { workerProfileId: true }
+        select: { workerProfileId: true },
       });
-      if (!order || !order.workerProfileId) {
-        throw new Error('Order or worker profile not found for escrow release');
+      if (!order?.workerProfileId) {
+        throw new AppError('Order or worker profile not found for escrow release', 404);
       }
 
       const workerProfileId = order.workerProfileId;
 
-      // Ensure WorkerBalance exists
       let workerBalance = await this.workerBalanceRepo.findByWorkerProfileId(workerProfileId);
       if (!workerBalance) {
         workerBalance = await this.workerBalanceRepo.create(workerProfileId, tx);
       }
 
-      // 4. Lock WorkerBalance FOR UPDATE
       workerBalance = await this.workerBalanceRepo.lockForUpdate(workerProfileId, tx);
       if (!workerBalance) {
-        throw new Error('Worker balance lock failed');
+        throw new AppError('Worker balance lock failed', 500);
       }
 
-      // 5. Check for outstanding WorkerDebt
       let totalDeduction = 0n;
       if (this.workerDebtRepo) {
         const debts = await this.workerDebtRepo.findOutstandingByWorkerId(workerProfileId, tx);
         let amountToCredit = hold.workerAmount;
         for (const debt of debts) {
           if (amountToCredit <= 0n) break;
-          const deduction = amountToCredit < debt.outstandingAmount ? amountToCredit : debt.outstandingAmount;
-          
+          const deduction =
+            amountToCredit < debt.outstandingAmount ? amountToCredit : debt.outstandingAmount;
+
           amountToCredit -= deduction;
           totalDeduction += deduction;
-          
+
           const newOutstanding = debt.outstandingAmount - deduction;
           const newStatus = newOutstanding === 0n ? 'SETTLED' : 'SETTLING';
-          
+
           await this.workerDebtRepo.updateAmount(debt.id, newOutstanding, newStatus, tx);
 
-          // Transaction log for debt recovery
-          await this.transactionLogRepo.create({
-            userId: workerProfileId,
-            amount: deduction,
-            type: 'DEBIT',
-            referenceId: debt.id,
-            referenceType: 'WORKER_DEBT',
-            description: `Auto-recovery from order ${hold.orderId}`,
-          }, tx);
+          await this.transactionLogRepo.create(
+            {
+              userId: workerProfileId,
+              amount: deduction,
+              type: 'DEBIT',
+              referenceId: debt.id,
+              referenceType: 'WORKER_DEBT',
+              description: `Auto-recovery from order ${hold.orderId}`,
+            },
+            tx
+          );
         }
       }
 
-      // 6. Transaction log: escrow release to worker
-      await this.transactionLogRepo.create({
-        userId: workerProfileId,
-        amount: hold.workerAmount,
-        type: 'CREDIT',
-        referenceId: hold.id,
-        referenceType: 'ESCROW_HOLD',
-        description: `Escrow release ${hold.workerAmount} for order ${hold.orderId}`,
-      }, tx);
-
-      // 7. Transaction log: platform fee (if > 0)
-      if (hold.platformFee > 0n) {
-        await this.transactionLogRepo.create({
-          userId: 'PLATFORM',
-          amount: hold.platformFee,
+      await this.transactionLogRepo.create(
+        {
+          userId: workerProfileId,
+          amount: hold.workerAmount,
           type: 'CREDIT',
           referenceId: hold.id,
           referenceType: 'ESCROW_HOLD',
-          description: `Platform fee ${hold.platformFee} for order ${hold.orderId}`,
-        }, tx);
+          description: `Escrow release ${hold.workerAmount} for order ${hold.orderId}`,
+        },
+        tx
+      );
+
+      if (hold.platformFee > 0n) {
+        await this.transactionLogRepo.create(
+          {
+            userId: 'PLATFORM',
+            amount: hold.platformFee,
+            type: 'CREDIT',
+            referenceId: hold.id,
+            referenceType: 'ESCROW_HOLD',
+            description: `Platform fee ${hold.platformFee} for order ${hold.orderId}`,
+          },
+          tx
+        );
       }
 
-      // 8. Update WorkerBalance
       await this.workerBalanceRepo.update(
         workerBalance.id,
-        { 
+        {
           totalEarned: workerBalance.totalEarned + hold.workerAmount,
           deductedForDebts: workerBalance.deductedForDebts + totalDeduction,
         },
@@ -186,13 +169,12 @@ export class EscrowService {
         tx
       );
 
-      // 9. Update EscrowHold status=RELEASED
       await tx.escrowHold.update({
         where: { id: hold.id },
         data: {
           status: 'RELEASED',
-          releasedAt: new Date()
-        }
+          releasedAt: new Date(),
+        },
       });
 
       await logActivity(tx, {
@@ -200,29 +182,37 @@ export class EscrowService {
         actionType: 'ESCROW_RELEASED',
         entityType: 'EscrowHold',
         entityId: hold.id,
-        metadata: { workerAmount: hold.workerAmount.toString(), platformFee: hold.platformFee.toString() },
+        metadata: {
+          workerAmount: hold.workerAmount.toString(),
+          platformFee: hold.platformFee.toString(),
+        },
       });
     });
   }
 
-  /**
-   * Called by DisputeService when a dispute is opened.
-   * Moves worker funds to on_hold_for_dispute.
-   */
   async holdForDispute(orderId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const hold = await this.escrowHoldRepo.findByOrderId(orderId);
-      if (!hold) throw new Error('EscrowHold not found');
-      if (hold.status !== 'RELEASED') throw new Error('Cannot put unreleased funds on dispute hold');
+      if (!hold) throw new AppError('EscrowHold not found', 404);
+      if (hold.status !== 'RELEASED') {
+        throw new AppError('Cannot put unreleased funds on dispute hold', 400);
+      }
 
-      const order = await tx.order.findUnique({ where: { id: orderId }, select: { workerProfileId: true } });
-      if (!order || !order.workerProfileId) throw new Error('Worker profile not found for order');
-      
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { workerProfileId: true },
+      });
+      if (!order?.workerProfileId) throw new AppError('Worker profile not found for order', 404);
+
       const balance = await this.workerBalanceRepo.lockForUpdate(order.workerProfileId, tx);
-      if (!balance) throw new Error('Worker balance lock failed');
+      if (!balance) throw new AppError('Worker balance lock failed', 500);
 
-      // Add to on_hold_for_dispute
-      const available = balance.totalEarned - balance.withdrawn - balance.pendingWithdraw - balance.onHoldForDispute - balance.deductedForDebts;
+      const available =
+        balance.totalEarned -
+        balance.withdrawn -
+        balance.pendingWithdraw -
+        balance.onHoldForDispute -
+        balance.deductedForDebts;
       const holdAmount = available < hold.workerAmount ? available : hold.workerAmount;
 
       if (holdAmount > 0n) {
@@ -233,14 +223,17 @@ export class EscrowService {
           tx
         );
 
-        await this.transactionLogRepo.create({
-          userId: order.workerProfileId,
-          amount: holdAmount,
-          type: 'DEBIT',
-          referenceId: hold.id,
-          referenceType: 'DISPUTE_HOLD',
-          description: `Dispute hold for order ${orderId}`,
-        }, tx);
+        await this.transactionLogRepo.create(
+          {
+            userId: order.workerProfileId,
+            amount: holdAmount,
+            type: 'DEBIT',
+            referenceId: hold.id,
+            referenceType: 'DISPUTE_HOLD',
+            description: `Dispute hold for order ${orderId}`,
+          },
+          tx
+        );
 
         await logActivity(tx, {
           actorId: 'SYSTEM',
@@ -249,28 +242,26 @@ export class EscrowService {
           entityId: hold.id,
           metadata: { holdAmount: holdAmount.toString() },
         });
-      } else {
-        console.warn(`Could not apply dispute hold for order ${orderId}: worker available balance is zero or less`);
       }
     });
   }
 
-  /**
-   * Called by DisputeService when a dispute is resolved in favor of the worker 
-   * or dismissed without refund.
-   */
   async releaseDisputeHold(orderId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const hold = await this.escrowHoldRepo.findByOrderId(orderId);
-      if (!hold) throw new Error('EscrowHold not found');
+      if (!hold) throw new AppError('EscrowHold not found', 404);
 
-      const order = await tx.order.findUnique({ where: { id: orderId }, select: { workerProfileId: true } });
-      if (!order || !order.workerProfileId) throw new Error('Worker profile not found');
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { workerProfileId: true },
+      });
+      if (!order?.workerProfileId) throw new AppError('Worker profile not found', 404);
 
       const balance = await this.workerBalanceRepo.lockForUpdate(order.workerProfileId, tx);
-      if (!balance) throw new Error('Worker balance lock failed');
+      if (!balance) throw new AppError('Worker balance lock failed', 500);
 
-      const releaseAmount = balance.onHoldForDispute < hold.workerAmount ? balance.onHoldForDispute : hold.workerAmount;
+      const releaseAmount =
+        balance.onHoldForDispute < hold.workerAmount ? balance.onHoldForDispute : hold.workerAmount;
 
       if (releaseAmount > 0n) {
         await this.workerBalanceRepo.update(
@@ -280,14 +271,17 @@ export class EscrowService {
           tx
         );
 
-        await this.transactionLogRepo.create({
-          userId: order.workerProfileId,
-          amount: releaseAmount,
-          type: 'CREDIT',
-          referenceId: hold.id,
-          referenceType: 'DISPUTE_RELEASE',
-          description: `Dispute release for order ${orderId}`,
-        }, tx);
+        await this.transactionLogRepo.create(
+          {
+            userId: order.workerProfileId,
+            amount: releaseAmount,
+            type: 'CREDIT',
+            referenceId: hold.id,
+            referenceType: 'DISPUTE_RELEASE',
+            description: `Dispute release for order ${orderId}`,
+          },
+          tx
+        );
 
         await logActivity(tx, {
           actorId: 'SYSTEM',
@@ -300,12 +294,9 @@ export class EscrowService {
     });
   }
 
-  /**
-   * Called by DisputeService when a dispute is resolved against the worker.
-   */
   async resolveDisputeAgainstWorker(orderId: string, adminId: string): Promise<void> {
-    if (!this.refundService) throw new Error('RefundService not wired');
-    
+    if (!this.refundService) throw new AppError('RefundService not wired', 500);
+
     const idempotencyKey = generateDeterministicKey('DISPUTE_RESOLUTION', orderId, 'REFUND');
     await this.refundService.initiateRefund(
       orderId,
@@ -315,7 +306,6 @@ export class EscrowService {
       'Refund due to dispute resolution'
     );
 
-    // Clear the hold
     await this.releaseDisputeHold(orderId);
   }
 }

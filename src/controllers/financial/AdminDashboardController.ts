@@ -1,8 +1,9 @@
-import { Response } from 'express';
-import { Request } from '../../types/asyncHandler.js';
+import { asyncHandler } from '../../types/asyncHandler.js';
 import { DashboardService } from '../../services/financial/DashboardService.js';
 import IActivityLogRepository from '../../repositories/interfaces/financial/ActivityLogRepository.js';
 import { serializeBigints } from '../../utils/serializeBigints.js';
+import SuccessResponse from '../../responses/successResponse.js';
+import AppError from '../../errors/AppError.js';
 
 export class AdminDashboardController {
   constructor(
@@ -10,13 +11,12 @@ export class AdminDashboardController {
     private readonly activityLogRepo: IActivityLogRepository
   ) {}
 
-  public getSummary = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { startDate, endDate } = req.query;
-      const start = startDate ? new Date(startDate as string) : undefined;
-      const end = endDate ? new Date(endDate as string) : undefined;
+  public getSummary = asyncHandler(async (req, res) => {
+    const start = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+    const end = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
-      const [platformEarnings, escrowSummary, refundSummary, withdrawalSummary, debts] = await Promise.all([
+    const [platformEarnings, escrowSummary, refundSummary, withdrawalSummary, debts] =
+      await Promise.all([
         this.dashboardService.getPlatformEarnings(start, end),
         this.dashboardService.getEscrowSummary(),
         this.dashboardService.getRefundSummary(start, end),
@@ -24,83 +24,51 @@ export class AdminDashboardController {
         this.dashboardService.getOutstandingDebts(),
       ]);
 
+    new SuccessResponse(
+      'Financial summary retrieved successfully',
+      serializeBigints({
+        platformEarnings,
+        escrowSummary,
+        refundSummary,
+        withdrawalSummary,
+        debts,
+      })
+    ).send(res);
+  });
 
+  public getActivityLog = asyncHandler(async (req, res) => {
+    const parsedLimit = Number(req.query.limit);
+    const { entityType, entityId, actorId } = req.query;
 
-      res.status(200).json({
-        status: 'success',
-        data: serializeBigints({
-          platformEarnings,
-          escrowSummary,
-          refundSummary,
-          withdrawalSummary,
-          debts,
-        }),
-      });
-    } catch (e: any) {
-      res.status(500).json({ error: 'Internal server error fetching summary' });
+    let logs;
+    if (entityType && entityId) {
+      logs = await this.activityLogRepo.findByEntity(
+        entityType as string,
+        entityId as string,
+        parsedLimit
+      );
+    } else if (actorId) {
+      logs = await this.activityLogRepo.findByActor(actorId as string, parsedLimit);
+    } else {
+      logs = await this.activityLogRepo.findRecent(parsedLimit);
     }
-  };
 
-  public getActivityLog = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { entityType, entityId, actorId, limit } = req.query;
-      const parsedLimit = limit ? parseInt(limit as string, 10) : 50;
-      
-      let logs;
-      if (entityType && entityId) {
-        logs = await this.activityLogRepo.findByEntity(entityType as string, entityId as string, parsedLimit);
-      } else if (actorId) {
-        logs = await this.activityLogRepo.findByActor(actorId as string, parsedLimit);
-      } else {
-        logs = await this.activityLogRepo.findRecent(parsedLimit);
-      }
+    new SuccessResponse('Activity log retrieved successfully', logs).send(res);
+  });
 
-      res.status(200).json({ status: 'success', data: logs });
-    } catch (e: any) {
-      res.status(500).json({ error: 'Internal server error fetching activity log' });
+  public getUserAggregation = asyncHandler(async (req, res) => {
+    const userId = req.params.userId as string;
+
+    if (req.adminState?.role !== 'SUPER_ADMIN') {
+      const adminId = req.adminState?.adminId;
+      if (!adminId) throw new AppError('Unauthorized', 401);
+      await this.dashboardService.assertAdminCanAccessUser(adminId, userId);
     }
-  };
 
-  public getUserAggregation = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = req.params.userId as string;
-      if (!userId) {
-        res.status(400).json({ error: 'userId parameter is required' });
-        return;
-      }
+    const data = await this.dashboardService.getUserAggregation(userId);
 
-      if (req.adminState?.role !== 'SUPER_ADMIN') {
-        const adminId = req.adminState!.adminId;
-        const [hasReport, hasDispute, hasVerification] = await Promise.all([
-          this.dashboardService.prisma.report.findFirst({
-            where: { assignedAdminId: adminId, OR: [{ targetId: userId }, { reporterId: userId }] }
-          }),
-          this.dashboardService.prisma.dispute.findFirst({
-            where: { assignedAdminId: adminId, order: { workerProfile: { userId } } }
-          }),
-          this.dashboardService.prisma.workerVerification.findFirst({
-            where: { assignedAdminId: adminId, workerProfile: { userId } }
-          }),
-        ]);
-
-        if (!hasReport && !hasDispute && !hasVerification) {
-          res.status(403).json({ error: 'Cannot access private user data without an assigned issue for this user' });
-          return;
-        }
-      }
-
-      const data = await this.dashboardService.getUserAggregation(userId);
-
-
-
-      res.status(200).json({ status: 'success', data: serializeBigints(data) });
-    } catch (e: any) {
-      if (e.message === 'User not found') {
-        res.status(404).json({ error: e.message });
-      } else {
-        console.error(e);
-        res.status(500).json({ error: 'Internal server error fetching user aggregation' });
-      }
-    }
-  };
+    new SuccessResponse('User aggregation retrieved successfully', serializeBigints(data)).send(
+      res
+    );
+  });
 }

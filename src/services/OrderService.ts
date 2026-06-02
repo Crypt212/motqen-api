@@ -17,6 +17,7 @@ import ProposalRepository from '../repositories/prisma/ProposalRepository.js';
 import NegotiationRepository from '../repositories/prisma/NegotiationRepository.js';
 import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerRepository.js';
 import { Role } from 'src/domain/user.entity.js';
+import { EscrowService } from './financial/EscrowService.js';
 
 interface OrderServiceDeps {
   orderRepository: IOrderRepository;
@@ -30,6 +31,7 @@ export default class OrderService extends Service {
   private workerProfileRepository: IWorkerProfileRepository;
   private locationRepository: ILocationRepository;
   private transactionManager: TransactionManager;
+  private escrowService?: EscrowService;
 
   constructor(deps: OrderServiceDeps) {
     super();
@@ -37,6 +39,10 @@ export default class OrderService extends Service {
     this.workerProfileRepository = deps.workerProfileRepository;
     this.locationRepository = deps.locationRepository;
     this.transactionManager = deps.transactionManager;
+  }
+
+  setEscrowService(escrowService: EscrowService) {
+    this.escrowService = escrowService;
   }
 
   async createOrder({
@@ -270,13 +276,14 @@ export default class OrderService extends Service {
 
       return await this.transactionManager.execute(
         { orderRepo: OrderRepository, timeSlotRepo: WorkerOccupiedTimeSlotRepository, workerProfileRepo: WorkerProfileRepository },
-        async ({ orderRepo, timeSlotRepo, workerProfileRepo }) => {
+        async ({ orderRepo, timeSlotRepo, workerProfileRepo }, tx) => {
+          const workFinishedAt = new Date();
           const updated = await orderRepo.update({
             filter: { id: params.orderId },
             order: {
               orderStatus: OrderStatus.COMPLETED,
               workStatus: 'DONE',
-              workFinishedAt: new Date(),
+              workFinishedAt,
             },
           });
 
@@ -287,6 +294,10 @@ export default class OrderService extends Service {
           await workerProfileRepo.increaseCompletedOrders({
             workerProfileId,
           });
+
+          if (this.escrowService) {
+            await this.escrowService.onOrderCompleted(params.orderId, workFinishedAt, tx);
+          }
 
           return updated;
         }

@@ -25,7 +25,16 @@ import {
   listDebtsQuerySchema,
   listWithdrawRequestsQuerySchema,
 } from '../../../schemas/financial/withdrawal.schema.js';
-import { initiateRefundSchema } from '../../../schemas/financial/refund.schema.js';
+import { initiateRefundSchema, orderIdParamsSchema } from '../../../schemas/financial/refund.schema.js';
+import {
+  listEscrowHoldsQuerySchema,
+  escrowHoldIdParamsSchema,
+} from '../../../schemas/financial/escrow.schema.js';
+import {
+  financialSummaryQuerySchema,
+  activityLogQuerySchema,
+  userAggregationParamsSchema,
+} from '../../../schemas/financial/dashboard.schema.js';
 import { CreateAdminSchema, UpdateAdminSchema } from '../../../schemas/requests/admin-users.request.js';
 
 export default function registerAdminDocs(registry: OpenAPIRegistry): void {
@@ -363,6 +372,7 @@ export default function registerAdminDocs(registry: OpenAPIRegistry): void {
     tags: ['Escrow (Admin)'],
     summary: 'List escrow holds',
     security: [{ BearerAuth: [] }],
+    request: { query: listEscrowHoldsQuerySchema },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'List of escrow holds',
@@ -378,7 +388,7 @@ export default function registerAdminDocs(registry: OpenAPIRegistry): void {
     tags: ['Escrow (Admin)'],
     summary: 'Manual release escrow hold',
     security: [{ BearerAuth: [] }],
-    request: { params: idParamsSchema },
+    request: { params: escrowHoldIdParamsSchema },
     responses: createResponseDoc({
       successfulResponse: { description: 'Escrow hold released successfully' },
       unauthorizedResponse: true,
@@ -392,7 +402,7 @@ export default function registerAdminDocs(registry: OpenAPIRegistry): void {
     summary: 'Initiate refund (admin)',
     security: [{ BearerAuth: [] }],
     request: {
-      params: z.object({ orderId: UUIDSchema }),
+      params: orderIdParamsSchema,
       body: { content: { 'application/json': { schema: initiateRefundSchema } } },
     },
     responses: createResponseDoc({
@@ -410,7 +420,7 @@ export default function registerAdminDocs(registry: OpenAPIRegistry): void {
     tags: ['Refunds (Admin)'],
     summary: 'List refunds for an order',
     security: [{ BearerAuth: [] }],
-    request: { params: z.object({ orderId: UUIDSchema }) },
+    request: { params: orderIdParamsSchema },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'List of refunds',
@@ -683,10 +693,7 @@ export default function registerAdminDocs(registry: OpenAPIRegistry): void {
     tags: ['Admin Dashboard'],
     security: [{ BearerAuth: [] }],
     request: {
-      query: z.object({
-        startDate: z.string().datetime().optional(),
-        endDate: z.string().datetime().optional(),
-      }),
+      query: financialSummaryQuerySchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
@@ -704,12 +711,7 @@ export default function registerAdminDocs(registry: OpenAPIRegistry): void {
     tags: ['Admin Dashboard'],
     security: [{ BearerAuth: [] }],
     request: {
-      query: z.object({
-        entityType: z.string().optional(),
-        entityId: z.string().optional(),
-        actorId: z.string().optional(),
-        limit: z.coerce.number().optional().default(50),
-      }),
+      query: activityLogQuerySchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
@@ -727,7 +729,7 @@ export default function registerAdminDocs(registry: OpenAPIRegistry): void {
     tags: ['Admin Dashboard'],
     security: [{ BearerAuth: [] }],
     request: {
-      params: z.object({ userId: UUIDSchema }),
+      params: userAggregationParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {

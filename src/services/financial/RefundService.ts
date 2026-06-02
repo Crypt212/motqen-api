@@ -6,9 +6,9 @@ import IWorkerBalanceRepository from '../../repositories/interfaces/financial/Wo
 import { IWorkerDebtRepository } from '../../repositories/interfaces/financial/WorkerDebtRepository.js';
 import { IPaymentRepository } from '../../repositories/interfaces/financial/PaymentRepository.js';
 import { IPaymentProvider } from '../../providers/interfaces/IPaymentProvider.js';
-
 import { logActivity } from './helpers/activityLogger.js';
 import AppError from 'src/errors/AppError.js';
+import { Refund } from '../../domain/financial/refund.entity.js';
 
 export class RefundService {
   constructor(
@@ -22,69 +22,87 @@ export class RefundService {
     private readonly prisma: PrismaClient
   ) {}
 
+  async listByOrderId(orderId: string): Promise<Refund[]> {
+    return this.refundRepo.findByOrderId(orderId);
+  }
+
   async initiateRefund(
-    orderId: string, 
-    reasonCode: RefundReasonCode, 
-    initiatedBy: string, 
-    idempotencyKey: string, 
+    orderId: string,
+    reasonCode: RefundReasonCode,
+    initiatedBy: string,
+    idempotencyKey: string,
     notes?: string
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      // Get EscrowHold
-      const escrow = await this.escrowHoldRepo.findByOrderId(orderId);
-      if (!escrow) throw new AppError('Escrow hold not found');
+    const existing = await this.refundRepo.findByIdempotencyKey(idempotencyKey);
+    if (existing) return existing;
 
-      if (escrow.status === 'REFUNDED') {
-        const error = new AppError('ALREADY_REFUNDED');
-        error.name = 'ConflictError';
-        throw error;
+    const escrow = await this.escrowHoldRepo.findByOrderId(orderId);
+    if (!escrow) throw new AppError('Escrow hold not found', 404);
+
+    if (escrow.status === 'REFUNDED') {
+      const error = new AppError('ALREADY_REFUNDED', 409);
+      error.name = 'ConflictError';
+      throw error;
+    }
+
+    const payment = await this.paymentRepo.findByOrderId(orderId);
+    if (!payment) throw new AppError('Payment not found', 404);
+
+    if (escrow.status === 'HELD') {
+      const refundAmountCents = Number(escrow.totalAmount);
+      const extRefund = await this.paymentProvider.initiateRefund(
+        payment.externalReferenceId,
+        refundAmountCents
+      );
+      if (!extRefund.success) {
+        throw new AppError(`External refund failed: ${extRefund.error}`, 502);
       }
 
-      const payment = await this.paymentRepo.findByOrderId(orderId);
-      if (!payment) throw new AppError('Payment not found');
-
-      if (escrow.status === 'HELD') {
-        // Pre-release
+      return this.prisma.$transaction(async (tx) => {
         const lockedEscrow = await this.escrowHoldRepo.lockForUpdate(escrow.id, tx);
-        if (!lockedEscrow) throw new AppError('Could not lock escrow hold');
+        if (!lockedEscrow) throw new AppError('Could not lock escrow hold', 500);
 
-        const refundAmountCents = Number(escrow.totalAmount);
-        
-        const extRefund = await this.paymentProvider.initiateRefund(payment.externalReferenceId, refundAmountCents);
-        if (!extRefund.success) {
-          throw new AppError(`External refund failed: ${extRefund.error}`);
+        if (lockedEscrow.status === 'REFUNDED') {
+          const error = new AppError('ALREADY_REFUNDED', 409);
+          error.name = 'ConflictError';
+          throw error;
         }
 
-        const refund = await this.refundRepo.create({
-          orderId,
-          escrowHoldId: escrow.id,
-          amount: escrow.totalAmount,
-          reasonCode,
-          refundType: 'PRE_RELEASE',
-          originalPaymentReference: payment.externalReferenceId,
-          externalRefundReference: extRefund.refundId || null,
-          initiatedBy,
-          idempotencyKey,
-          notes: notes || null,
-        }, tx);
+        const refund = await this.refundRepo.create(
+          {
+            orderId,
+            escrowHoldId: escrow.id,
+            amount: escrow.totalAmount,
+            reasonCode,
+            refundType: 'PRE_RELEASE',
+            originalPaymentReference: payment.externalReferenceId,
+            externalRefundReference: extRefund.refundId || null,
+            initiatedBy,
+            idempotencyKey,
+            notes: notes || null,
+          },
+          tx
+        );
 
         if (!refund.created) {
           return refund.refund;
         }
 
-        // Transaction log: refund from escrow to client
-        await this.transactionLogRepo.create({
-          userId: initiatedBy,
-          amount: escrow.totalAmount,
-          type: 'CREDIT',
-          referenceId: refund.refund.id,
-          referenceType: 'REFUND',
-          description: `Pre-release refund for order ${orderId}`,
-        }, tx);
+        await this.transactionLogRepo.create(
+          {
+            userId: initiatedBy,
+            amount: escrow.totalAmount,
+            type: 'CREDIT',
+            referenceId: refund.refund.id,
+            referenceType: 'REFUND',
+            description: `Pre-release refund for order ${orderId}`,
+          },
+          tx
+        );
 
         await tx.escrowHold.update({
           where: { id: escrow.id },
-          data: { status: 'REFUNDED' }
+          data: { status: 'REFUNDED' },
         });
 
         await logActivity(tx, {
@@ -96,83 +114,113 @@ export class RefundService {
         });
 
         return refund.refund;
-      } else if (escrow.status === 'RELEASED') {
-        // Post-release
-        const order = await tx.order.findUnique({ where: { id: orderId }, select: { workerProfileId: true } });
-        if (!order || !order.workerProfileId) throw new AppError('Order/worker profile not found');
+      });
+    }
+
+    if (escrow.status === 'RELEASED') {
+      const refundAmountCents = Number(escrow.totalAmount);
+      const extRefund = await this.paymentProvider.initiateRefund(
+        payment.externalReferenceId,
+        refundAmountCents
+      );
+      if (!extRefund.success) {
+        throw new AppError(`External refund failed: ${extRefund.error}`, 502);
+      }
+
+      return this.prisma.$transaction(async (tx) => {
+        const order = await tx.order.findUnique({
+          where: { id: orderId },
+          select: { workerProfileId: true },
+        });
+        if (!order?.workerProfileId) throw new AppError('Order/worker profile not found', 404);
 
         const workerProfileId = order.workerProfileId;
 
         const balance = await this.workerBalanceRepo.lockForUpdate(workerProfileId, tx);
-        if (!balance) throw new AppError('Worker balance not found');
+        if (!balance) throw new AppError('Worker balance not found', 404);
 
-        const refundResult = await this.refundRepo.create({
+        const refundResult = await this.refundRepo.create(
+          {
             orderId,
             escrowHoldId: escrow.id,
             amount: escrow.workerAmount,
             reasonCode,
             refundType: 'POST_RELEASE',
             originalPaymentReference: payment.externalReferenceId,
-            externalRefundReference: null,
+            externalRefundReference: extRefund.refundId || null,
             initiatedBy,
             idempotencyKey,
             notes: notes || null,
-          }, tx);
+          },
+          tx
+        );
 
         if (!refundResult.created) return refundResult.refund;
 
         const refundObj = refundResult.refund;
-        
-        let available = balance.totalEarned - balance.withdrawn - balance.pendingWithdraw - balance.onHoldForDispute;
-        let amountToDeduct = escrow.workerAmount;
+
+        const available =
+          balance.totalEarned -
+          balance.withdrawn -
+          balance.pendingWithdraw -
+          balance.onHoldForDispute;
+        const amountToDeduct = escrow.workerAmount;
 
         if (available >= amountToDeduct) {
-          // Can fully deduct
-          await tx.workerBalance.update(
-            { 
-              where: { id: balance.id, version: balance.version }, 
-              data: { totalEarned: BigInt(balance.totalEarned) - amountToDeduct, version: balance.version + 1 } 
-            }
-          );
+          await tx.workerBalance.update({
+            where: { id: balance.id, version: balance.version },
+            data: {
+              totalEarned: BigInt(balance.totalEarned) - amountToDeduct,
+              version: balance.version + 1,
+            },
+          });
 
-          await this.transactionLogRepo.create({
-            userId: workerProfileId,
-            amount: amountToDeduct,
-            type: 'DEBIT',
-            referenceId: refundObj.id,
-            referenceType: 'REFUND',
-            description: `Post-release refund for order ${orderId}`,
-          }, tx);
+          await this.transactionLogRepo.create(
+            {
+              userId: workerProfileId,
+              amount: amountToDeduct,
+              type: 'DEBIT',
+              referenceId: refundObj.id,
+              referenceType: 'REFUND',
+              description: `Post-release refund for order ${orderId}`,
+            },
+            tx
+          );
         } else {
-          // Cannot fully deduct. Create WorkerDebt for the remainder.
           const deductNow = available > 0n ? available : 0n;
           const debtAmount = amountToDeduct - deductNow;
 
           if (deductNow > 0n) {
-            await tx.workerBalance.update(
-              { 
-                where: { id: balance.id, version: balance.version }, 
-                data: { totalEarned: BigInt(balance.totalEarned) - deductNow, version: balance.version + 1 } 
-              }
-            );
+            await tx.workerBalance.update({
+              where: { id: balance.id, version: balance.version },
+              data: {
+                totalEarned: BigInt(balance.totalEarned) - deductNow,
+                version: balance.version + 1,
+              },
+            });
 
-            await this.transactionLogRepo.create({
-              userId: workerProfileId,
-              amount: deductNow,
-              type: 'DEBIT',
-              referenceId: refundObj.id,
-              referenceType: 'REFUND',
-              description: `Partial post-release refund for order ${orderId}`,
-            }, tx);
+            await this.transactionLogRepo.create(
+              {
+                userId: workerProfileId,
+                amount: deductNow,
+                type: 'DEBIT',
+                referenceId: refundObj.id,
+                referenceType: 'REFUND',
+                description: `Partial post-release refund for order ${orderId}`,
+              },
+              tx
+            );
           }
 
-          // Create WorkerDebt
-          const debtObj = await this.workerDebtRepo.create({
-            workerProfileId,
-            refundId: refundObj.id,
-            originalAmount: amountToDeduct,
-            outstandingAmount: debtAmount,
-          }, tx);
+          const debtObj = await this.workerDebtRepo.create(
+            {
+              workerProfileId,
+              refundId: refundObj.id,
+              originalAmount: amountToDeduct,
+              outstandingAmount: debtAmount,
+            },
+            tx
+          );
 
           await logActivity(tx, {
             actorId: initiatedBy,
@@ -192,8 +240,9 @@ export class RefundService {
         });
 
         return refundObj;
-      }
-      return null;
-    });
+      });
+    }
+
+    throw new AppError(`Cannot refund escrow hold with status ${escrow.status}`, 400);
   }
 }

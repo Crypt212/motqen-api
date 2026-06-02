@@ -142,4 +142,40 @@ export default class EscrowHoldRepository extends Repository implements IEscrowH
       throw handlePrismaError(error as Error, 'lockForUpdate EscrowHold');
     }
   }
+
+  async findMany(
+    filters: { status?: string; orderId?: string },
+    limit: number,
+    offset: number,
+    tx?: TransactionClient
+  ): Promise<EscrowHold[]> {
+    const client = tx || this.prismaClient;
+    const where: Prisma.EscrowHoldWhereInput = {};
+    if (filters.status) where.status = filters.status as EscrowHold['status'];
+    if (filters.orderId) where.orderId = filters.orderId;
+
+    try {
+      const records = await client.escrowHold.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { createdAt: 'desc' },
+      });
+      return records.map((r) => this.toDomain(r));
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'findMany EscrowHold');
+    }
+  }
+
+  async updateReleaseEligibleAt(id: string, eligibleAt: Date, tx?: TransactionClient): Promise<void> {
+    const client = tx || this.prismaClient;
+    try {
+      await client.escrowHold.update({
+        where: { id },
+        data: { escrowReleaseEligibleAt: eligibleAt },
+      });
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'updateReleaseEligibleAt');
+    }
+  }
 }

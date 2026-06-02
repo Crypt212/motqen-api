@@ -53,7 +53,7 @@ export default class AdminUsersController {
 
   getAvailableAdmins = asyncHandler(async (req, res): Promise<void> => {
     const department = req.query.department as AdminRole | undefined;
-    const admins = await adminUsersService.l istAvailableAdmins({ department });
+    const admins = await adminUsersService.listAvailableAdmins({ department });
     const adminsSafe = admins.map(({ passwordHash, ...adminSafe }) => adminSafe);
     new SuccessResponse('Available admins retrieved successfully', adminsSafe, 200).send(res);
   });

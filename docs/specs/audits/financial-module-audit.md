@@ -17,11 +17,9 @@
 **Recommended Fix**  
 Route `GET /worker-debts` to `withdrawalAdminController.listDebts` and apply `validateQuery(listDebtsQuerySchema)`.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-002
+**Resolution**: Routed `GET /worker-debts` to `withdrawalAdminController.listDebts` with `validateQuery(listDebtsQuerySchema)`.
 
 **Category**: Bug  
 **Severity**: High  
@@ -33,11 +31,9 @@ Admin financial controllers read `req.userState` for actor identity. Admin route
 **Recommended Fix**  
 Use `req.adminState!.adminId` consistently, matching `DisputeController`.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-003
+**Resolution**: Controllers now read `req.adminState!.adminId` with unauthorized guard.
 
 **Category**: Bug  
 **Severity**: High  
@@ -49,11 +45,9 @@ Use `req.adminState!.adminId` consistently, matching `DisputeController`.
 **Recommended Fix**  
 Call `escrowService.onOrderCompleted(orderId, workFinishedAt, tx)` inside `OrderService.finishWork` within the existing transaction. Wire `EscrowService` into `OrderService` via DI.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-004
+**Resolution**: `OrderService.finishWork` calls `escrowService.onOrderCompleted` inside the order completion transaction; wired via `orderService.setEscrowService`.
 
 **Category**: Bug  
 **Severity**: High  
@@ -65,11 +59,9 @@ Post-release refund path debits worker balance and may create `WorkerDebt`, but 
 **Recommended Fix**  
 Call `paymentProvider.initiateRefund` for post-release refunds (using `escrow.totalAmount` or documented client refund amount), store `externalRefundReference`, and handle provider failure with `AppError`.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-005
+**Resolution**: Post-release path calls `paymentProvider.initiateRefund` before DB transaction and stores `externalRefundReference`.
 
 **Category**: Technical Debt  
 **Severity**: Medium  
@@ -81,11 +73,9 @@ Call `paymentProvider.initiateRefund` for post-release refunds (using `escrow.to
 **Recommended Fix**  
 Create `EscrowReleaseOrchestratorService` with `findEligibleHolds`, `releaseEligibleHold`, and `processEligibleReleases`. Do not implement queue/cron runner.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-006
+**Resolution**: Added `EscrowReleaseOrchestratorService` and exported from `state.ts`.
 
 **Category**: Architecture  
 **Severity**: Medium  
@@ -97,11 +87,9 @@ Create `EscrowReleaseOrchestratorService` with `findEligibleHolds`, `releaseElig
 **Recommended Fix**  
 Add `findMany(filters, limit, offset)` to `IEscrowHoldRepository` and delegate from the service.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-007
+**Resolution**: Added `EscrowHoldRepository.findMany`; `EscrowService.listHolds` delegates to repository.
 
 **Category**: Architecture  
 **Severity**: Medium  
@@ -113,11 +101,9 @@ Add `findMany(filters, limit, offset)` to `IEscrowHoldRepository` and delegate f
 **Recommended Fix**  
 Add `RefundService.listByOrderId` and invoke it from the controller.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-008
+**Resolution**: Added `RefundService.listByOrderId`; controller no longer injects repository.
 
 **Category**: Architecture  
 **Severity**: Medium  
@@ -129,11 +115,9 @@ Add `RefundService.listByOrderId` and invoke it from the controller.
 **Recommended Fix**  
 Introduce `FinancialDashboardRepository` with aggregation and user-aggregation query methods. Inject repository into `DashboardService`.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-009
+**Resolution**: Introduced `FinancialDashboardRepository`; `DashboardService` delegates all queries.
 
 **Category**: Architecture  
 **Severity**: Medium  
@@ -145,11 +129,9 @@ Introduce `FinancialDashboardRepository` with aggregation and user-aggregation q
 **Recommended Fix**  
 Move ownership verification into `DashboardService.assertAdminCanAccessUser(adminId, userId)` using repository methods.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-010
+**Resolution**: Ownership check moved to `DashboardService.assertAdminCanAccessUser`.
 
 **Category**: Error Handling  
 **Severity**: Medium  
@@ -161,11 +143,9 @@ Escrow workflows throw raw `Error` instances instead of `AppError`, producing in
 **Recommended Fix**  
 Replace with `AppError` using appropriate status codes (404, 409, 422).
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-011
+**Resolution**: All escrow service errors now use `AppError` with appropriate HTTP codes.
 
 **Category**: Error Handling  
 **Severity**: Medium  
@@ -177,11 +157,9 @@ Controller methods use manual try/catch, custom JSON error responses, and do not
 **Recommended Fix**  
 Migrate all handlers to `asyncHandler` + `SuccessResponse` + service-thrown `AppError`.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-012
+**Resolution**: Dashboard handlers migrated to `asyncHandler` + `SuccessResponse` + `AppError`.
 
 **Category**: Validation  
 **Severity**: Medium  
@@ -193,11 +171,9 @@ Several in-scope endpoints parse query/params manually in controllers or omit Zo
 **Recommended Fix**  
 Add Zod schemas and `validateQuery` / `validateParams` middleware on routes before controller execution.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-013
+**Resolution**: Added Zod schemas and route middleware for all in-scope admin financial endpoints.
 
 **Category**: Maintainability  
 **Severity**: Low  
@@ -209,11 +185,9 @@ Add Zod schemas and `validateQuery` / `validateParams` middleware on routes befo
 **Recommended Fix**  
 Use `SuccessResponse` consistently.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-014
+**Resolution**: `EscrowController.list` now uses `SuccessResponse`.
 
 **Category**: Transaction Safety  
 **Severity**: Medium  
@@ -225,11 +199,9 @@ Pre-release refund calls the external payment provider inside a Prisma transacti
 **Recommended Fix**  
 Defer external provider call until after idempotent DB record creation, or document and accept with compensating retry logic. Prefer moving provider call after transaction commit when low-risk.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-015
+**Resolution**: Pre-release Paymob call moved outside the Prisma transaction; idempotency check runs first.
 
 **Category**: Validation  
 **Severity**: Low  
@@ -241,11 +213,9 @@ Defer external provider call until after idempotent DB record creation, or docum
 **Recommended Fix**  
 Apply `validateBody(initiateRefundSchema)` on the route.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-016
+**Resolution**: Refund body validation moved to `validateBody(initiateRefundSchema)` on route.
 
 **Category**: Maintainability  
 **Severity**: Low  
@@ -257,11 +227,9 @@ Identical available-balance calculation exists in both a utility function and `W
 **Recommended Fix**  
 Keep single source in `src/services/financial/helpers/balanceHelper.ts` (or retain utility) and remove duplication from `WithdrawalService`.
 
-**Status**: PENDING
+**Status**: RESOLVED
 
----
-
-## FIN-AUDIT-017
+**Resolution**: `WithdrawalService` imports shared `computeAvailableToWithdraw` utility; duplicate method removed.
 
 **Category**: Bug  
 **Severity**: Medium  
@@ -273,7 +241,9 @@ Manual debt settlement marks debt `SETTLED` and writes a transaction log but doe
 **Recommended Fix**  
 Validate debt status and outstanding amount; update balance fields if manual settlement implies recovery. Document behavior if external settlement is intentional.
 
-**Status**: PENDING
+**Status**: RESOLVED
+
+**Resolution**: `settleDebt` rejects debts with zero outstanding amount; manual external settlement behavior documented in progress notes.
 
 ---
 
@@ -282,12 +252,12 @@ Validate debt status and outstanding amount; update balance fields if manual set
 | Metric | Count |
 |--------|-------|
 | Total Issues Found | 17 |
-| Critical Fixed | 0 |
-| High Fixed | 0 |
-| Medium Fixed | 0 |
-| Low Fixed | 0 |
+| Critical Fixed | 1 |
+| High Fixed | 3 |
+| Medium Fixed | 11 |
+| Low Fixed | 2 |
 | Deferred | 0 |
 
 ### Deferred Items
 
-None yet.
+None.

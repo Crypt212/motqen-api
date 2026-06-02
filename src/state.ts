@@ -229,6 +229,7 @@ import { PaymentService } from './services/financial/PaymentService.js';
 import { WebhookController } from './controllers/WebhookController.js';
 import { EscrowService } from './services/financial/EscrowService.js';
 import { EscrowController } from './controllers/financial/EscrowController.js';
+import { EscrowReleaseOrchestratorService } from './services/financial/EscrowReleaseOrchestratorService.js';
 import { WithdrawalService } from './services/financial/WithdrawalService.js';
 import { WorkerEarningsController } from './controllers/financial/WorkerEarningsController.js';
 import { WithdrawalAdminController } from './controllers/financial/WithdrawalAdminController.js';
@@ -238,6 +239,7 @@ import { DashboardService } from './services/financial/DashboardService.js';
 import { AdminDashboardController } from './controllers/financial/AdminDashboardController.js';
 import { DisputeService } from './services/financial/DisputeService.js';
 import { DisputeController } from './controllers/financial/DisputeController.js';
+import { FinancialDashboardRepository } from './repositories/prisma/financial/FinancialDashboardRepository.js';
 export const paymentController = new PaymentController(paymentService);
 
 export const escrowService = new EscrowService(
@@ -246,6 +248,13 @@ export const escrowService = new EscrowService(
   workerBalanceRepository,
   workerDebtRepository,
   prisma
+);
+
+orderService.setEscrowService(escrowService);
+
+export const escrowReleaseOrchestratorService = new EscrowReleaseOrchestratorService(
+  escrowHoldRepository,
+  escrowService
 );
 
 export const escrowController = new EscrowController(escrowService);
@@ -275,11 +284,12 @@ export const refundService = new RefundService(
   prisma
 );
 
-export const refundController = new RefundController(refundService, refundRepository);
+export const refundController = new RefundController(refundService);
 
 escrowService.setRefundService(refundService);
 
-export const dashboardService = new DashboardService(prisma);
+export const financialDashboardRepository = new FinancialDashboardRepository(prisma);
+export const dashboardService = new DashboardService(financialDashboardRepository);
 export const adminDashboardController = new AdminDashboardController(
   dashboardService,
   activityLogRepository

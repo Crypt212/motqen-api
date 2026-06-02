@@ -18,4 +18,15 @@ export default interface IEscrowHoldRepository {
   updateStatus(id: string, status: EscrowHold['status'], tx?: TransactionClient): Promise<EscrowHold>;
   findEligibleForRelease(limit: number): Promise<EscrowHold[]>;
   lockForUpdate(id: string, tx: TransactionClient): Promise<EscrowHold | null>;
+  findMany(
+    filters: { status?: string; orderId?: string },
+    limit: number,
+    offset: number,
+    tx?: TransactionClient
+  ): Promise<EscrowHold[]>;
+  updateReleaseEligibleAt(
+    id: string,
+    eligibleAt: Date,
+    tx?: TransactionClient
+  ): Promise<void>;
 }

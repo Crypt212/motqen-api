@@ -7,10 +7,6 @@ export class EscrowController {
 
   public manualRelease = asyncHandler(async (req, res): Promise<void> => {
     const holdId = req.params.id as string;
-    if (!holdId) {
-      res.status(400).json({ error: 'holdId required' });
-      return;
-    }
 
     await this.escrowService.releaseHold(holdId);
 
@@ -18,19 +14,15 @@ export class EscrowController {
   });
 
   public list = asyncHandler(async (req, res): Promise<void> => {
-    const { status, orderId, limit, offset } = req.query;
-    const parsedLimit = limit ? parseInt(limit as string, 10) : 20;
-    const parsedOffset = offset ? parseInt(offset as string, 10) : 0;
-
     const holds = await this.escrowService.listHolds(
       {
-        status: status as string,
-        orderId: orderId as string,
+        status: req.query.status as string | undefined,
+        orderId: req.query.orderId as string | undefined,
       },
-      parsedLimit,
-      parsedOffset
+      Number(req.query.limit),
+      Number(req.query.offset)
     );
 
-    res.status(200).json({ status: 'success', data: holds });
+    new SuccessResponse('Escrow holds retrieved successfully', holds, 200).send(res);
   });
 }

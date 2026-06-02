@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { RefundReasonCode } from '../../generated/prisma/client.js';
 
+export const orderIdParamsSchema = z.object({
+  orderId: z.string().uuid(),
+});
+
 export const initiateRefundSchema = z.object({
   reason_code: z.nativeEnum(RefundReasonCode),
   idempotency_key: z.string().uuid(),

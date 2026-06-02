@@ -1,185 +1,77 @@
-import { PrismaClient } from '../../generated/prisma/client.js';
+import IFinancialDashboardRepository from '../../repositories/interfaces/financial/FinancialDashboardRepository.js';
+import AppError from '../../errors/AppError.js';
 
 export class DashboardService {
-  constructor(public readonly prisma: PrismaClient) {}
+  constructor(private readonly dashboardRepo: IFinancialDashboardRepository) {}
 
   async getPlatformEarnings(startDate?: Date, endDate?: Date) {
-    const whereClause: any = {
-      userId: 'PLATFORM',
-      type: 'CREDIT',
-    };
-
-    if (startDate || endDate) {
-      whereClause.createdAt = {};
-      if (startDate) whereClause.createdAt.gte = startDate;
-      if (endDate) whereClause.createdAt.lte = endDate;
-    }
-
-    const result = await this.prisma.transactionLog.aggregate({
-      _sum: { amount: true },
-      where: whereClause,
-    });
-
-    return result._sum.amount || 0n;
+    return this.dashboardRepo.aggregatePlatformEarnings(startDate, endDate);
   }
 
   async getEscrowSummary() {
-    const holds = await this.prisma.escrowHold.groupBy({
-      by: ['status'],
-      _count: { id: true },
-      _sum: { totalAmount: true },
-    });
-
-    const summary = holds.reduce((acc: any, row) => {
-      acc[row.status] = { count: row._count.id, amount: row._sum.totalAmount || 0n };
-      return acc;
-    }, {});
-
-    return summary;
+    return this.dashboardRepo.groupEscrowByStatus();
   }
 
   async getRefundSummary(startDate?: Date, endDate?: Date) {
-    const whereClause: any = {};
-    if (startDate || endDate) {
-      whereClause.createdAt = {};
-      if (startDate) whereClause.createdAt.gte = startDate;
-      if (endDate) whereClause.createdAt.lte = endDate;
-    }
-
-    const refunds = await this.prisma.refund.groupBy({
-      by: ['refundType'],
-      where: whereClause,
-      _count: { id: true },
-      _sum: { amount: true },
-    });
-
-    return refunds.reduce((acc: any, row) => {
-      acc[row.refundType] = { count: row._count.id, amount: row._sum.amount || 0n };
-      return acc;
-    }, {});
+    return this.dashboardRepo.groupRefundsByType(startDate, endDate);
   }
 
   async getWithdrawalSummary() {
-    const requests = await this.prisma.withdrawRequest.groupBy({
-      by: ['status'],
-      _count: { id: true },
-      _sum: { amount: true },
-    });
-
-    return requests.reduce((acc: any, row) => {
-      acc[row.status] = { count: row._count.id, amount: row._sum.amount || 0n };
-      return acc;
-    }, {});
+    return this.dashboardRepo.groupWithdrawRequestsByStatus();
   }
 
   async getOutstandingDebts() {
-    const result = await this.prisma.workerDebt.aggregate({
-      _count: { id: true },
-      _sum: { outstandingAmount: true },
-      where: {
-        status: { in: ['OUTSTANDING', 'SETTLING'] },
-      },
-    });
-
-    return {
-      count: result._count.id,
-      amount: result._sum.outstandingAmount || 0n,
-    };
+    return this.dashboardRepo.aggregateOutstandingDebts();
   }
 
-  /**
-   * Full user profile aggregation for admin dashboard.
-   * Returns user info, transaction history, work history, ratings, disputes.
-   */
+  async assertAdminCanAccessUser(adminId: string, userId: string): Promise<void> {
+    const allowed = await this.dashboardRepo.adminHasAssignedIssueForUser(adminId, userId);
+    if (!allowed) {
+      throw new AppError(
+        'Cannot access private user data without an assigned issue for this user',
+        403
+      );
+    }
+  }
+
   async getUserAggregation(userId: string) {
-    // 1. User info
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        workerProfile: {
-          include: {
-            workerBalance: true,
-            chosenSpecializations: { include: { specialization: true, subSpecialization: true } },
-          },
-        },
-        clientProfile: true,
-      },
-    });
+    const userRecord = await this.dashboardRepo.findUserForAggregation(userId);
+    if (!userRecord) throw new AppError('User not found', 404);
 
-    if (!user) throw new Error('User not found');
+    const workerProfileId = userRecord.workerProfileId as string | undefined;
 
-    // 2. Transaction history
-    const workerProfileId = user.workerProfile?.id;
-    const transactionHistory = workerProfileId
-      ? await this.prisma.transactionLog.findMany({
-          where: { userId: workerProfileId },
-          orderBy: { createdAt: 'desc' },
-          take: 50,
-        })
-      : [];
+    const [transactionHistory, workHistory, ratings, disputes] = await Promise.all([
+      workerProfileId
+        ? this.dashboardRepo.findTransactionHistory(workerProfileId, 50)
+        : Promise.resolve([]),
+      workerProfileId
+        ? this.dashboardRepo.findWorkHistory(workerProfileId, 50)
+        : Promise.resolve([]),
+      workerProfileId
+        ? this.dashboardRepo.aggregateWorkerRatings(workerProfileId)
+        : Promise.resolve({ average: null, count: 0 }),
+      this.dashboardRepo.findUserDisputes(userId, workerProfileId, 20),
+    ]);
 
-    // 3. Work history (orders)
-    const workHistory = workerProfileId
-      ? await this.prisma.order.findMany({
-          where: { workerProfileId },
-          orderBy: { createdAt: 'desc' },
-          take: 50,
-          include: { clientProfile: { include: { user: { select: { firstName: true, lastName: true } } } } },
-        })
-      : [];
-
-    // 4. Ratings
-    const ratings = workerProfileId
-      ? await this.prisma.order.aggregate({
-          where: { workerProfileId, rate: { not: -1.0 } },
-          _avg: { rate: true },
-          _count: { rate: true },
-        })
-      : { _avg: { rate: null }, _count: { rate: 0 } };
-
-    // 5. Disputes involvement
-    const disputes = await this.prisma.dispute.findMany({
-      where: {
-        OR: [
-          { openedBy: userId },
-          ...(workerProfileId
-            ? [{ order: { workerProfileId } }]
-            : []),
-        ],
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-    });
+    const { workerProfileId: _wpId, ...userFields } = userRecord;
 
     return {
       user: {
-        id: user.id,
-        phoneNumber: user.phoneNumber,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        middleName: user.middleName,
-        status: user.status,
-        role: user.role,
-        createdAt: user.createdAt,
-        profileImageUrl: user.profileImageUrl,
+        id: userFields.id,
+        phoneNumber: userFields.phoneNumber,
+        firstName: userFields.firstName,
+        lastName: userFields.lastName,
+        middleName: userFields.middleName,
+        status: userFields.status,
+        role: userFields.role,
+        createdAt: userFields.createdAt,
+        profileImageUrl: userFields.profileImageUrl,
       },
-      workerProfile: user.workerProfile
-        ? {
-            id: user.workerProfile.id,
-            rate: user.workerProfile.rate,
-            completedJobsCount: user.workerProfile.completedJobsCount,
-            experienceYears: user.workerProfile.experienceYears,
-            balance: user.workerProfile.workerBalance || null,
-            specializations: user.workerProfile.chosenSpecializations,
-          }
-        : null,
-      clientProfile: user.clientProfile,
+      workerProfile: userFields.workerProfile,
+      clientProfile: userFields.clientProfile,
       transactionHistory,
       workHistory,
-      ratings: {
-        average: ratings._avg.rate,
-        count: ratings._count.rate,
-      },
+      ratings,
       disputes,
     };
   }
