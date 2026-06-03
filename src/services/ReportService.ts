@@ -30,6 +30,10 @@ export default class ReportService extends Service {
         throw new AppError('Only workers can report client profiles', 403);
       }
 
+      if (params.report.targetType === "WORKER_PROFILE" && params.requesterRole !== 'CLIENT') {
+        throw new AppError('Only clients can report worker profiles', 403);
+      }
+
       if (params.files && params.files.length > 5) {
         throw new AppError('Maximum of 5 images allowed per report', 400);
       }

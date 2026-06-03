@@ -33,6 +33,7 @@ export default class ReportRepository extends Repository implements IReportRepos
       targetType: record.targetType,
       targetId: record.targetId,
       contextOrderId: record.contextOrderId,
+      conversationId: record.conversationId,
       problemCategory: record.problemCategory,
       problemType: record.problemType,
       description: record.description,
@@ -48,7 +49,7 @@ export default class ReportRepository extends Repository implements IReportRepos
   async isPendingOrUnderReview(params: {
     reporterId: string;
     targetType: ReportTargetType;
-    targetId: string;
+    targetId?: string;
     problemCategory: ProblemCategory;
   }): Promise<boolean> {
     try {
@@ -142,6 +143,7 @@ export default class ReportRepository extends Repository implements IReportRepos
           targetType: params.report.targetType,
           targetId: params.report.targetId,
           contextOrderId: params.report.contextOrderId,
+          conversationId: params.report.conversationId,
           problemCategory: params.report.problemCategory,
           problemType: params.report.problemType,
           description: params.report.description,
