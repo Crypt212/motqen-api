@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { workerEarningsController } from '../../../state.js';
 import { authenticateAccess, isActive } from '../../../middlewares/authMiddleware.js';
-import { authorizeWorker } from '../../../middlewares/workerMiddleware.js';
+import { authorizeWorker } from '../../../middlewares/accessMiddleware.js';
 import { validateBody, validateParams } from '../../../middlewares/validateRequest.js';
 import { withdrawRequestSchema, payoutMethodSchema, updatePayoutMethodSchema } from '../../../schemas/financial/withdrawal.schema.js';
 import { sensitiveIpRateLimiter } from '../../../middlewares/rateLimitMiddleware.js';

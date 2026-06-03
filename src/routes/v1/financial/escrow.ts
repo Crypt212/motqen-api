@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { escrowController } from '../../../state.js';
-import { authenticateAccess, authorizeAdmin } from '../../../middlewares/authMiddleware.js';
+import { authenticateAccess } from '../../../middlewares/authMiddleware.js';
+import { authorizeAdmin } from '../../../middlewares/accessMiddleware.js';
 
 const router = Router();
 

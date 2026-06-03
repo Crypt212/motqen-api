@@ -24,6 +24,26 @@ export const VerifyOTPSchema = z.object({
 });
 export type VerifyOTPDTO = z.infer<typeof VerifyOTPSchema>;
 
+export const StringifiedJsonSchema = <T extends z.ZodSchema>(schema: T) => {
+  return z.string().transform((str, ctx): z.infer<T> => {
+    try {
+      const parsed = JSON.parse(str);
+      return schema.parse(parsed);
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Invalid JSON format',
+          path: ['json'],
+        });
+      } else if (error instanceof z.ZodError) {
+        // error.issues.forEach((err) => ctx.addIssue(err));
+      }
+      return z.NEVER;
+    }
+  });
+};
+
 export function parseJSON() {
   return z
     .string()

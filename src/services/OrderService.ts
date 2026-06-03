@@ -9,13 +9,15 @@ import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 import { Order, OrderFilter } from '../domain/order.entity.js';
 import { PaginationOptions, SortOptions } from '../types/query.js';
 import { canTransitionOrderStatus, canTransitionWorkStatus } from '../utils/stateMachine.js';
-import { hasOverlap } from '../utils/overlapCheck.js';
 import { CreateOrderDTO } from '../schemas/requests/order.request.js';
 import { OrderStatus, VerificationStatus } from 'src/generated/prisma/enums.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
 import SpecializationRepository from 'src/repositories/prisma/SpecializationRepository.js';
+import ProposalRepository from '../repositories/prisma/ProposalRepository.js';
+import NegotiationRepository from '../repositories/prisma/NegotiationRepository.js';
 import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerRepository.js';
 import { Role } from 'src/domain/user.entity.js';
+import { IDType } from 'src/repositories/interfaces/Repository.js';
 
 interface OrderServiceDeps {
   orderRepository: IOrderRepository;
@@ -39,27 +41,53 @@ export default class OrderService extends Service {
   }
 
   async createOrder({
-    data,
+    data: { orderData, clientUserId },
     images,
   }: {
     data: CreateOrderDTO & { clientUserId: string };
     images: Express.Multer.File[];
   }) {
     return tryCatch(async () => {
-      const location = await this.locationRepository.find({ filter: { id: data.locationId } });
+      const location = await this.locationRepository.find({ filter: { id: orderData.locationId } });
       if (!location) {
         throw new AppError('Location not found', 400);
       }
-      if (location.userId !== data.clientUserId) {
+      if (location.userId !== clientUserId) {
         throw new AppError('Location not owned', 400);
       }
       if (images.length > 3) {
         throw new AppError('Maximum 3 images allowed per order', 400);
       }
 
-      const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: data.workerUserId } });
-      if (!workerVerification || workerVerification.status !== VerificationStatus.APPROVED) {
-        throw new AppError('Worker is not verified', 400);
+      const isGlobal = orderData.orderMode === 'GLOBAL';
+
+      let workerProfileId: IDType | null = null;
+
+      if (!isGlobal) {
+        if (!orderData.workerUserId) {
+          throw new AppError('Worker user ID is required for direct orders', 400);
+        }
+        const worker = await this.workerProfileRepository.find({ workerFilter: { userId: orderData.workerUserId } });
+        if (!worker) {
+          throw new AppError('Worker not found', 400);
+        }
+        workerProfileId = worker.id;
+
+        if (orderData.workerUserId === clientUserId) {
+          throw new AppError('You cannot order yourself', 400);
+        }
+
+        if (orderData.isUrgent) {
+          orderData.startDate = new Date();
+        }
+
+        if (!orderData.startDate) {
+          throw new AppError('Start date is required for direct orders', 400);
+        }
+        const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: orderData.workerUserId } });
+        if (!workerVerification || workerVerification.status !== VerificationStatus.APPROVED) {
+          throw new AppError('Worker is not verified', 400);
+        }
       }
 
       // Upload images
@@ -69,18 +97,26 @@ export default class OrderService extends Service {
 
       // Create order with transaction
       return await this.transactionManager.execute(
-        { orderRepo: OrderRepository, specializationsRepo: SpecializationRepository },
-        async ({ orderRepo, specializationsRepo }) => {
+        {
+          orderRepo: OrderRepository,
+          specializationsRepo: SpecializationRepository,
+          proposalRepo: ProposalRepository,
+          negotiationRepo: NegotiationRepository,
+        },
+        async ({ orderRepo, specializationsRepo, proposalRepo, negotiationRepo }) => {
           const order = await orderRepo.create({
             order: {
-              title: data.title,
-              description: data.description,
-              clientUserId: data.clientUserId,
-              workerUserId: data.workerUserId,
-              locationId: data.locationId,
-              subSpecializationId: data.subSpecializationId,
-              startDate: data.startDate,
-              isUrgent: data.isUrgent,
+              title: orderData.title,
+              description: orderData.description,
+              clientUserId: clientUserId,
+              workerUserId: isGlobal ? null : orderData.workerUserId,
+              locationId: orderData.locationId,
+              subSpecializationId: orderData.subSpecializationId,
+              initialPrice: orderData.initialPrice,
+              startDate: orderData.startDate,
+              estimatedDurationHours: orderData.estimatedDurationHours,
+              isUrgent: orderData.isUrgent,
+              orderMode: orderData.orderMode,
             },
             imageUrls,
           });
@@ -89,6 +125,28 @@ export default class OrderService extends Service {
           await specializationsRepo.increamentOrderCount({
             specializationId: specialization.id,
           });
+
+          if (!isGlobal && orderData.workerUserId) {
+            // Create a proposal and an initial negotiation for direct orders
+            const proposal = await proposalRepo.create({
+              proposal: {
+                orderId: order.id,
+                workerProfileId
+              },
+            });
+
+            await negotiationRepo.create({
+              data: {
+                orderId: order.id,
+                proposalId: proposal.id,
+                senderId: clientUserId,
+                direction: 'CLIENT_TO_WORKER',
+                price: order.initialPrice ?? 0,
+                startDate: order.startDate ?? new Date(),
+                estimatedDurationHours: order.estimatedDurationHours ?? 1,
+              },
+            });
+          }
 
           return order;
         }
@@ -109,31 +167,48 @@ export default class OrderService extends Service {
     return tryCatch(async () => {
       const finalFilter = {
         ...params.filter,
+
         clientUserId: params.clientUserId,
         workerUserId: params.workerUserId,
       };
 
       if (params.role === "USER") {
         if (params.userType === "WORKER") {
-          finalFilter.workerUserId = params.userId;
-        }
-        if (params.userType === "CLIENT") {
-          finalFilter.clientUserId = params.userId;
-        }
-      }
 
-      return await this.orderRepository.findMany({
-        filter: finalFilter,
-        pagination: params.pagination,
-        sort: params.sort,
-      });
+          const subSpecializationsIds = (await this.workerProfileRepository.findSpecializationsWithSubSpecializations({ filter: { userId: params.userId } }))
+            .reduce((acc, { subSpecializations }) => [...acc, ...subSpecializations.map(s => s.id)], []);
+
+            const workingGovernmentIds = (await this.workerProfileRepository.findWorkGovernments({ workerProfileFilter: { userId: params.userId } })).governments .map(g => g.id);
+
+          return await this.orderRepository.findForWorker({
+            workerUserId: params.userId,
+            workerSubSpecializationIds: subSpecializationsIds,
+            workerWorkingGovernmentIds: workingGovernmentIds,
+            filter: finalFilter,
+            pagination: params.pagination,
+            sort: params.sort,
+          });
+
+        } else if (params.userType === "CLIENT") {
+
+          return await this.orderRepository.findForClient({
+            clientUserId: params.userId,
+            filter: finalFilter,
+            pagination: params.pagination,
+            sort: params.sort,
+          });
+        } else {
+          throw new AppError('User type not supported', 400);
+        }
+      } else throw new AppError('User type not supported', 400);
+
     });
   }
 
   async getOrderById(params: {
     orderId: string;
-    clientUserId?: string;
-    workerUserId?: string;
+    userId: string;
+    userType: "WORKER" | "CLIENT";
   }) {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
@@ -141,12 +216,17 @@ export default class OrderService extends Service {
         throw new AppError('Order not found', 404);
       }
 
-      const isOwner = order.clientUserId === params.clientUserId;
-      const isAssigned = order.workerUserId && order.workerUserId === params.workerUserId;
+      if (params.userType === "WORKER") {
+        const isAssigned = order.workerUserId && order.workerUserId === params.userId;
+        if (!isAssigned && order.orderMode !== "GLOBAL") {
+          throw new AppError('Access denied', 403);
+        }
+      } else if (params.userType === "CLIENT") {
+        const isOwner = order.clientUserId === params.userId;
+        if (!isOwner)
+          throw new AppError('Access denied', 403);
+      } else throw new AppError('User type not supported', 400);
 
-      if (!isOwner && !isAssigned) {
-        throw new AppError('Access denied', 403);
-      }
 
       return order;
     });
@@ -173,67 +253,6 @@ export default class OrderService extends Service {
             order: { orderStatus: 'CANCELLED' },
           });
           await timeSlotRepo.deleteByOrderId({ orderId: params.orderId });
-        }
-      );
-    });
-  }
-
-  async specifyTimeRange(params: {
-    orderId: string;
-    workerUserId?: string;
-    startTime: Date;
-    endTime: Date;
-  }) {
-    return tryCatch(async () => {
-      if (!params.workerUserId) throw new AppError('Worker not found', 403);
-
-      const order = await this.orderRepository.find({ filter: { id: params.orderId } });
-      if (!order) throw new AppError('Order not found', 404);
-
-      if (order.workerUserId !== params.workerUserId) {
-        throw new AppError('Access denied', 403);
-      }
-
-      const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: params.workerUserId } });
-      if (!workerVerification || workerVerification.status !== VerificationStatus.APPROVED) {
-        throw new AppError('Worker is not verified', 400);
-      }
-
-      if (!canTransitionOrderStatus(order.orderStatus, 'TIME_SPECIFIED')) {
-        throw new AppError('Cannot specify time range in current status', 400);
-      }
-
-      return await this.transactionManager.execute(
-        { orderRepo: OrderRepository, workerRepo: WorkerProfileRepository, timeSlotRepo: WorkerOccupiedTimeSlotRepository },
-        async ({ orderRepo, workerRepo, timeSlotRepo }, tx) => {
-          // Advisory lock
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${params.workerUserId}))`;
-
-          const workerProfileId = (await workerRepo.find({ workerFilter: { userId: params.workerUserId } })).id;
-
-          const existingSlots = await timeSlotRepo.findMany({
-            filter: { workerProfileId },
-          });
-
-          for (const slot of existingSlots) {
-            if (hasOverlap(params.startTime, params.endTime, slot.startDate, slot.endDate)) {
-              throw new AppError('Time slot overlaps with existing schedule', 409);
-            }
-          }
-
-          await timeSlotRepo.create({
-            slot: {
-              workerProfileId,
-              orderId: params.orderId,
-              startDate: params.startTime,
-              endDate: params.endTime,
-            },
-          });
-
-          return await orderRepo.update({
-            filter: { id: params.orderId },
-            order: { orderStatus: 'TIME_SPECIFIED', endDate: params.endTime },
-          });
         }
       );
     });
@@ -284,8 +303,8 @@ export default class OrderService extends Service {
         throw new AppError('Cannot complete order in current status', 400);
 
       return await this.transactionManager.execute(
-        { orderRepo: OrderRepository, workerProfileRepo: WorkerProfileRepository },
-        async ({ orderRepo, workerProfileRepo }) => {
+        { orderRepo: OrderRepository, timeSlotRepo: WorkerOccupiedTimeSlotRepository, workerProfileRepo: WorkerProfileRepository },
+        async ({ orderRepo, timeSlotRepo, workerProfileRepo }) => {
           const updated = await orderRepo.update({
             filter: { id: params.orderId },
             order: {
@@ -294,6 +313,8 @@ export default class OrderService extends Service {
               workFinishedAt: new Date(),
             },
           });
+
+          await timeSlotRepo.deleteByOrderId({ orderId: params.orderId, });
 
           const workerProfileId = (await workerProfileRepo.find({ workerFilter: { userId: order.workerUserId } })).id;
 

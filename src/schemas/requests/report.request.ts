@@ -12,8 +12,9 @@ import { ReportFilterDescriptor } from '../../domain/report.entity.js';
 export const CreateReportSchema = z
   .object({
     targetType: z.nativeEnum(ReportTargetType),
-    targetId: z.string(),
+    targetId: z.string().optional(),
     contextOrderId: UUIDSchema.optional(),
+    conversationId:  UUIDSchema.optional(),
     problemCategory: z.nativeEnum(ProblemCategory),
     problemType: z.nativeEnum(ProblemType),
     description: z.string().trim().min(10).max(2000),

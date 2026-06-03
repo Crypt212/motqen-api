@@ -12,8 +12,9 @@ export type Report = {
   id: IDType;
   reporterId: IDType;
   targetType: ReportTargetType;
-  targetId: IDType;
+  targetId: IDType | null;
   contextOrderId: IDType | null;
+  conversationId: IDType | null;
   problemCategory: ProblemCategory;
   problemType: ProblemType;
   description: string;
@@ -31,8 +32,9 @@ export type ReportWithImages = Report & {
 export type ReportCreateInput = {
   reporterId: IDType;
   targetType: ReportTargetType;
-  targetId: IDType;
+  targetId?: IDType;
   contextOrderId?: IDType;
+  conversationId?: IDType;
   problemCategory: ProblemCategory;
   problemType: ProblemType;
   description: string;
@@ -52,6 +54,8 @@ export type ReportStatusUpdateInput = {
 export const ReportFilterDescriptor = {
   id: { type: 'uuid' },
   reporterId: { type: 'uuid' },
+  contextOrderId: { type: 'uuid' },
+  conversationId: { type: 'uuid' },
   targetType: {
     type: 'enum',
     enumValues: ['ORDER', 'CHAT_MESSAGE', 'WORKER_PROFILE', 'CLIENT_PROFILE'] as const,

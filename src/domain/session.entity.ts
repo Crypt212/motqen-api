@@ -11,8 +11,6 @@ export type Session = {
   revokedAt: Date | null;
   revokedBy: string | null;
   deviceId: string;
-  ipAddress: string;
-  userAgent: string;
   fcmToken: string | null;
   lastUsedAt: Date;
   expiresAt: Date;

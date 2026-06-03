@@ -12,6 +12,7 @@ import registerWebhooksDocs from './webhooks.docs.js';
 import registerFinancialDocs from './financial.docs.js';
 import registerNotificationsDocs from './notifications.docs.js';
 import registerReportsDocs from './reports.docs.js';
+import registerProposalsDocs from './proposals.docs.js';
 
 export const registryV1 = new OpenAPIRegistry();
 
@@ -20,14 +21,15 @@ registerChatDocs(registryV1);
 registerDashboardDocs(registryV1);
 registerGovernmentsDocs(registryV1);
 registerSpecializationsDocs(registryV1);
-registerWorkersDocs(registryV1);
 registerLocationsDocs(registryV1);
+registerWorkersDocs(registryV1);
 registerOrdersDocs(registryV1);
+registerProposalsDocs(registryV1);
+registerReportsDocs(registryV1);
 registerPaymentsDocs(registryV1);
 registerWebhooksDocs(registryV1);
 registerFinancialDocs(registryV1);
 registerNotificationsDocs(registryV1);
-registerReportsDocs(registryV1);
 
 registryV1.registerComponent('securitySchemes', 'BearerAuth', {
   type: 'http',

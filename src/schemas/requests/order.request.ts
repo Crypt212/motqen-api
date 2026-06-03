@@ -2,33 +2,22 @@ import { z } from '../../libs/zod.js';
 import { UUIDSchema, buildFilterSchema, createQuerySchema } from '../common.js';
 import { OrderFilterDescriptor } from '../../domain/order.entity.js';
 
-const stringToBool = z
-  .string()
-  .refine((s) => s === 'true' || s === 'false', { message: 'isUrgent must be boolean' })
-  .transform((s) => s === 'true');
-
 export const CreateOrderSchema = z.object({
-  title: z.string().trim().min(1).max(200),
-  description: z.string().trim().min(1),
-  subSpecializationId: UUIDSchema,
-  workerUserId: UUIDSchema,
-  locationId: UUIDSchema,
-  startDate: z.coerce
-    .date()
-    .refine((d) => d > new Date(), { message: 'startDate must be in the future' }),
-  isUrgent: stringToBool,
+  orderData: z.object({
+    title: z.string().trim().min(1).max(200),
+    description: z.string().trim().min(1),
+    subSpecializationId: UUIDSchema,
+    workerUserId: UUIDSchema.optional().nullable(),
+    locationId: UUIDSchema,
+    initialPrice: z.number().positive({ message: 'initialPrice must be positive' }),
+    startDate: z.coerce.date().refine((d) => d > new Date(), { message: 'startDate must be in the future' }),
+    estimatedDurationHours: z.number().int().positive({ message: 'estimatedDurationHours must be positive' }),
+    isUrgent: z.boolean(),
+    orderMode: z.enum(['DIRECT', 'GLOBAL']).default('DIRECT').optional(),
+  })
 });
 
 export type CreateOrderDTO = z.infer<typeof CreateOrderSchema>;
-
-export const SpecifyRangeSchema = z
-  .object({
-    startTime: z.coerce.date(),
-    endTime: z.coerce.date(),
-  })
-  .refine((data) => data.endTime > data.startTime, { message: 'endTime must be after startTime' });
-
-export type SpecifyRangeDTO = z.infer<typeof SpecifyRangeSchema>;
 
 export const OrderIdParamsSchema = z.object({
   orderId: UUIDSchema,

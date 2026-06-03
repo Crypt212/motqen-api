@@ -30,8 +30,7 @@ import {
   getWorkerOccupiedTimeSlots,
   getWorkerOrdersCount,
 } from '../../controllers/DashboardController.js';
-import { authorizeApprovedWorker, authorizeWorker, unAuthorizeWorker } from '../../middlewares/workerMiddleware.js';
-import { authorizeClient, unAuthorizeClient } from '../../middlewares/clientMiddleware.js';
+import { authorizeClient, unAuthorizeClient, authorizeApprovedWorker, authorizeWorker, unAuthorizeWorker } from '../../middlewares/accessMiddleware.js';
 import upload from '../../configs/multer.js';
 
 // Import validators

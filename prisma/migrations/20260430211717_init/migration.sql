@@ -1,3 +1,5 @@
+ CREATE EXTENSION postgis;
+
 -- CreateEnum
 CREATE TYPE "OrderType" AS ENUM ('PREVIEW', 'SERVICE');
 
@@ -82,8 +84,6 @@ CREATE TABLE "sessions" (
     "revokedAt" TIMESTAMP(3),
     "revokedBy" TEXT,
     "deviceId" TEXT NOT NULL,
-    "ipAddress" TEXT,
-    "userAgent" TEXT,
     "lastUsedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
