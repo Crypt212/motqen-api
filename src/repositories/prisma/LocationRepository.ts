@@ -198,8 +198,8 @@ export default class LocationRepository extends Repository implements ILocationR
       VALUES(gen_random_uuid(), ${userId}, ${governmentId}, ${cityId}, ${address}, ${addressNotes}, ${isMain}, ST_SetSRID(ST_MakePoint(${long}, ${lat}), 4326), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING
       id, "userId", "governmentId", "cityId", address, "addressNotes", "isMain", "createdAt", "updatedAt", ST_X("pointGeography":: geometry) AS long, ST_Y("pointGeography":: geometry) AS lat,
-        (SELECT jsonb_build_object('id', g.id, 'name', g.name, 'nameAr', g."nameAr", 'long', g.long, 'lat', g.lat) FROM governments g WHERE g.id = ${governmentId}) AS government,
-          (SELECT jsonb_build_object('id', c.id, 'name', c.name, 'nameAr', 'c."nameAr", 'long', c.long, 'lat', c.lat, 'governmentId', c."governmentId") FROM cities c WHERE c.id = ${cityId}) AS city
+        (SELECT jsonb_build_object('id', g.id, 'name', g.name, 'nameAr', 'g.nameAr', 'long', g.long, 'lat', g.lat) FROM governments g WHERE g.id = ${governmentId}) AS government,
+          (SELECT jsonb_build_object('id', c.id, 'name', c.name, 'nameAr', 'c.nameAr', 'long', c.long, 'lat', c.lat, 'governmentId', c."governmentId") FROM cities c WHERE c.id = ${cityId}) AS city
             `
       )[0];
 
