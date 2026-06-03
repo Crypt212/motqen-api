@@ -13,6 +13,7 @@ import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../../types
 import { ClientProfileFilter } from 'src/domain/clientProfile.entity.js';
 import { WorkerProfileFilter } from 'src/domain/workerProfile.entity.js';
 import { IDType } from '../interfaces/Repository.js';
+import { isEmptyFilter } from './utils.js';
 
 type PrismaOrderWithImagesWithLocationAndSubSpecialization = Prisma.OrderGetPayload<{
   include: { images: true; subSpecialization: true, clientProfile: { include: { user: true } }, workerProfile: { include: { user: true } } };
@@ -226,30 +227,33 @@ export default class OrderRepository extends Repository implements IOrderReposit
         hasPrev: false,
       };
 
-
-      const preparedFilter = {
-        AND: [
+      const defaultOrderFilter = {
+        OR: [
           {
-            ...this.prepareFilter(filter),
+            workerProfile: { userId: workerUserId },
           },
           {
-            OR: [
+            AND: [
               {
-                workerProfile: { userId: workerUserId },
+                orderMode: OrderMode.GLOBAL,
               },
-              {
-                AND: [
-                  {
-                    orderMode: OrderMode.GLOBAL,
-                  },
-                  { subSpecializationId: { in: workerSubSpecializationIds } },
-                  { clientProfile: { user: { locations: { some: { governmentId: { in: workerWorkingGovernmentIds } } } } } },
-                ]
-              }
+              { subSpecializationId: { in: workerSubSpecializationIds } },
+              { clientProfile: { user: { locations: { some: { governmentId: { in: workerWorkingGovernmentIds } } } } } },
             ]
           }
         ]
-      };
+      }
+
+      const preparedFilter =
+        isEmptyFilter(filter) ? defaultOrderFilter :
+          {
+            AND: [
+              defaultOrderFilter,
+              {
+                ...this.prepareFilter(filter),
+              }
+            ]
+          };
 
       if (pagination) {
         const total = await this.prismaClient.order.count({ where: preparedFilter });
@@ -259,6 +263,8 @@ export default class OrderRepository extends Repository implements IOrderReposit
       }
 
       const orderBy = sort ? handleSort(sort) : undefined;
+
+      console.log(JSON.stringify(preparedFilter, null, 4));
 
       const records = await this.prismaClient.order.findMany({
         where: preparedFilter,

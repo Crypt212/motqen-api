@@ -191,8 +191,8 @@ export const getWorkerGovernments = asyncHandler(async (req, res) => {
   const { filter, pagination } = parseQueryParams(req.query, WorkerGovernmentFilterSchema);
 
   const result = await workerProfileService.getWorkGovernments({
-    filter: { id: req.userState.worker.id },
-    GovernmentFilter: filter,
+    workerProfileFilter: { id: req.userState.worker.id },
+    governmentFilter: filter,
     pagination,
   });
 

@@ -178,7 +178,7 @@ export default class OrderService extends Service {
           const subSpecializationsIds = (await this.workerProfileRepository.findSpecializationsWithSubSpecializations({ filter: { userId: params.userId } }))
             .reduce((acc, { subSpecializations }) => [...acc, ...subSpecializations.map(s => s.id)], []);
 
-            const workingGovernmentIds = (await this.workerProfileRepository.findWorkGovernments({ workerFilter: { userId: params.userId } })).governments .map(g => g.id);
+            const workingGovernmentIds = (await this.workerProfileRepository.findWorkGovernments({ workerProfileFilter: { userId: params.userId } })).governments .map(g => g.id);
 
           return await this.orderRepository.findForWorker({
             workerUserId: params.userId,

@@ -14,7 +14,7 @@ import { DayWorkingHours, DayWorkingHoursCreateInput, DayWorkingHoursReturn } fr
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { IDType } from '../interfaces/Repository.js';
 import { Day, Portfolio, ProjectImage, WorkerBadge } from '../../generated/prisma/client.js';
-import { Government } from 'src/domain/government.entity.js';
+import { Government, GovernmentFilter } from 'src/domain/government.entity.js';
 
 export default interface IWorkerProfileRepository {
   /**
@@ -47,7 +47,8 @@ export default interface IWorkerProfileRepository {
    * Find work governments
    */
   findWorkGovernments(params: {
-    workerFilter: WorkerProfileFilter;
+    workerProfileFilter: WorkerProfileFilter;
+    governmentFilter?: GovernmentFilter;
     pagination?: PaginationOptions;
   }): Promise<PaginatedResultMeta & { governments: Government[] }>;
   /**
