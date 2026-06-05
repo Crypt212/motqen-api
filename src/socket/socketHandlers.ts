@@ -24,7 +24,7 @@
  */
 
 import { logger } from '../libs/winston.js';
-import { chatService, contactDetectionService } from '../state.js';
+import { chatService, contactDetectionService, userRepository } from '../state.js';
 
 /**
  * Register all event handlers for a connected socket.
@@ -60,7 +60,6 @@ export function registerSocketHandlers(
 
       // 1. Cached participant validation + partner ID lookup (Redis → DB fallback)
       const partnerId = await chatService.getPartnerIdCached({ conversationId, userId });
-      console.log('Emitting new_message to partnerId:', partnerId);
 
       // 2. Send the message (atomic counter increment + insert in tx)
       //    sendMessage also auto-updates sender's lastReceivedMessageNumber
@@ -226,6 +225,7 @@ export function registerSocketHandlers(
       // Single-device model: remove socket and clean up all enter sets
       await presence.removeSocket({ userId });
       await presence.removeFromAllEnterSets({ userId });
+      await userRepository.update({ filter: { id: userId }, user: { isOnline: false } });
       socket.to(`presence:${userId}`).emit('partner_offline', { userId });
     } catch (err) {
       logger.error('[socket] disconnect cleanup error', err);

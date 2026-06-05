@@ -23,7 +23,6 @@ import {
 import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../types/query.js';
 
-
 export type ConversationWithMeta = {
   id: string;
   messageCounter: number;
@@ -63,31 +62,47 @@ export default class ChatService extends Service {
 
   // ─── Cache Helpers ─────────────────────────────────────────────────────────
 
-  private async syncCountersCache(conversationId: IDType, userId: IDType, lastReceived: number, lastRead: number) {
-    await this.presence.setParticipantCounters({ conversationId, userId, lastReceived, lastRead }).catch(err => 
-      console.error('[ChatService] Error syncing counters cache:', err)
-    );
+  private async syncCountersCache(
+    conversationId: IDType,
+    userId: IDType,
+    lastReceived: number,
+    lastRead: number
+  ) {
+    await this.presence
+      .setParticipantCounters({ conversationId, userId, lastReceived, lastRead })
+      .catch((err) => console.error('[ChatService] Error syncing counters cache:', err));
   }
 
   async getChatSnapshot(params: { conversationId: IDType; userId: IDType }) {
     const { conversationId, userId } = params;
     const partnerId = await this.getPartnerIdCached({ conversationId, userId });
-    
-    let counters = await this.presence.getParticipantCounters({ conversationId, userId: partnerId });
+
+    let counters = await this.presence.getParticipantCounters({
+      conversationId,
+      userId: partnerId,
+    });
     if (!counters) {
-      const partner = await this.conversationRepository.findParticipant({ conversationId, userId: partnerId });
-      counters = { 
-        lastReceived: partner?.lastReceivedMessageNumber || 0, 
-        lastRead: partner?.lastReadMessageNumber || 0 
+      const partner = await this.conversationRepository.findParticipant({
+        conversationId,
+        userId: partnerId,
+      });
+      counters = {
+        lastReceived: partner?.lastReceivedMessageNumber || 0,
+        lastRead: partner?.lastReadMessageNumber || 0,
       };
-      await this.syncCountersCache(conversationId, partnerId, counters.lastReceived, counters.lastRead);
+      await this.syncCountersCache(
+        conversationId,
+        partnerId,
+        counters.lastReceived,
+        counters.lastRead
+      );
     }
 
     const conv = await this.conversationRepository.findById({ id: conversationId });
     return {
       partnerLastReceivedMessageNumber: counters.lastReceived,
       partnerLastReadMessageNumber: counters.lastRead,
-      messageCounter: conv?.messageCounter || 0
+      messageCounter: conv?.messageCounter || 0,
     };
   }
 
@@ -205,10 +220,8 @@ export default class ChatService extends Service {
         };
       });
 
-
-
       return {
-        conversations: conversations as unknown as GetConversations[],
+        conversations: conversations as GetConversations[],
         page: convs.page,
         limit: convs.limit,
         count: convs.count,
@@ -251,7 +264,12 @@ export default class ChatService extends Service {
         type: type || 'TEXT',
       });
 
-      await this.syncCountersCache(conversationId, senderId, message.messageNumber, message.messageNumber);
+      await this.syncCountersCache(
+        conversationId,
+        senderId,
+        message.messageNumber,
+        message.messageNumber
+      );
 
       return message;
     });
@@ -346,6 +364,7 @@ export default class ChatService extends Service {
    * Auto-mark all messages as read up to the conversation's current messageCounter.
    * Called when a user enters a chat screen.
    */
+  //dead code, not used for now, can be re-enabled if we want this auto-read behavior on chat enter
   async markAllAsRead(params: { conversationId: IDType; userId: IDType }): Promise<void> {
     const { conversationId, userId } = params;
     return tryCatch(async () => {

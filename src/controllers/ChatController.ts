@@ -77,19 +77,11 @@ export const getMissedMessages = asyncHandler(async (req, res) => {
   let { after, limit } = req.query as { after: string; limit?: string };
   const conversationId = req.params.conversationId as string;
 
-  console.log(
-    'Fetching missed messages for conversation ',
-    conversationId,
-    ' after message number ',
-    after,
-    ' with limit ',
-    limit
-  );
   const result = await chatService.getMissedMessages({
     conversationId,
     userId,
     afterMessageNumber: parseInt(after, 10),
-    limit: limit ? Math.max(parseInt(limit, 10), 50) : 50,
+    limit: limit ? Math.min(parseInt(limit, 10), 50) : 50,
   });
 
   new SuccessResponse('Missed messages', result, 200).send(res);

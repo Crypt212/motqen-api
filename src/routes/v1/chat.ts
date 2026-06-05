@@ -25,7 +25,7 @@ import { validateBody, validateParams, validateQuery } from '../../middlewares/v
 import { buildFilterSchema, createQuerySchema } from '../../schemas/common.js';
 import upload from '../../configs/multer.js';
 
-const chatRouter:Router = Router();
+const chatRouter: Router = Router();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /chat/conversations
@@ -57,7 +57,6 @@ chatRouter.get(
   ],
   getConversations
 );
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /chat/conversations/:conversationId/messages
@@ -101,7 +100,7 @@ chatRouter.get(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// POST /chat/conversations/:conversationId/messages/image
+// POST /chat/conversations/:conversationId/upload-image
 // ─────────────────────────────────────────────────────────────────────────────
 
 chatRouter.post(

@@ -1,4 +1,7 @@
-import type { NotificationPayload, NotificationEventContext } from '../domain/notification.entity.js';
+import type {
+  NotificationPayload,
+  NotificationEventContext,
+} from '../domain/notification.entity.js';
 
 export function mapEventToNotification(event: NotificationEventContext): NotificationPayload {
   switch (event.type) {
@@ -66,12 +69,12 @@ export function mapEventToNotification(event: NotificationEventContext): Notific
       };
     }
     case 'WORK_DONE': {
-      const { orderId } = event.ctx;
+      const { orderId , workerId} = event.ctx;
       return {
         type: 'WORK_DONE',
         title: 'انتهى العامل من طلبك 🏁',
         body: 'راجع وأكد الاستلام',
-        data: { screen: 'order_details', entityId: orderId, entityType: 'order' },
+        data: { screen: 'order_details', entityId: orderId,workerId: workerId, entityType: 'order' },
       };
     }
     case 'PAYMENT_REQUIRED': {
@@ -186,6 +189,15 @@ export function mapEventToNotification(event: NotificationEventContext): Notific
           entityType: 'admin_action',
           actionType,
         },
+      };
+    }
+    case 'RATING': {
+      const { orderId, orderTitle } = event.ctx;
+      return {
+        type: 'RATING',
+        title: 'تم تقييم طلبك ⭐',
+        body: `تم تقييم طلب "${orderTitle}" من قبل العميل`,
+        data: { screen: 'order_details', entityId: orderId, entityType: 'order' },
       };
     }
     // case  'TEST_NOTIFICATION': {

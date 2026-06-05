@@ -19,6 +19,7 @@ import { registerSocketHandlers } from './socketHandlers.js';
 import { initEmitter } from './socket-emitter.js';
 import { chatService, rateLimitCache } from '../state.js';
 import prisma from '../libs/database.js';
+import AppError from 'src/errors/AppError.js';
 
 /** Initialize the Socket.IO server and attach it to the HTTP server. */
 export async function initSocketServer(httpServer: import('http').Server): Promise<Server> {
@@ -49,7 +50,10 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
   io.use((socket, next) => {
     socketAuth(socket, next)
       .then(() => logger.info(`[socket] authenticated: ${socket.data.userId}`))
-      .catch(() => logger.warn('[socket] authentication failed'));
+      .catch((err) => {
+        logger.warn('[socket] authentication failed', err);
+        next(err instanceof AppError ? err : new AppError('Authentication failed', 401));
+      });
   });
 
   // ─── Connection handler ──────────────────────────────────────────────────────
@@ -96,7 +100,7 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
   cp."lastReceivedMessageNumber",
   cp."lastReadMessageNumber",
   c."messageCounter",
-  (c."messageCounter" - cp."lastReadMessageNumber") AS "missed"
+  (c."messageCounter" - cp."lastReceivedMessageNumber") AS "missed"
 FROM conversation_participants cp
 JOIN conversations c ON c.id = cp."conversationId"
 WHERE cp."userId" = ${userId}

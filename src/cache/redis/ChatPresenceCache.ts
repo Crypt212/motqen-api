@@ -24,7 +24,6 @@ import IChatPresenceCache from '../interfaces/ChatPresenceCache.js';
 
 /** Safety TTL for presence Sets (seconds) */
 const PRESENCE_TTL: number = 300;
-
 export default class ChatPresenceCache implements IChatPresenceCache {
   constructor(private readonly client: RedisClientType) {}
 
@@ -171,7 +170,7 @@ export default class ChatPresenceCache implements IChatPresenceCache {
   }): Promise<{ lastReceived: number; lastRead: number } | null> {
     const key = `chat:counters:${conversationId}:${userId}`;
     const result = await this.client.hGetAll(key);
-    if (!result) return null;
+    if (!result || Object.keys(result).length === 0) return null;
 
     let lastReceived: string | undefined;
     let lastRead: string | undefined;
