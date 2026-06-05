@@ -55,6 +55,7 @@ export type NotificationEventContext =
       ctx: { orderId: string; orderTitle: string; proposedAmount: number };
     }
   | { type: 'RATING'; ctx: { orderId: string; orderTitle: string } }
+  | { type: 'ORDER_RATED'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'NEGOTIATION_ACCEPTED'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'NEGOTIATION_REJECTED'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'WORK_STARTED'; ctx: { orderId: string; orderTitle: string } }
@@ -73,4 +74,5 @@ export type NotificationEventContext =
       type: 'ADMIN_ACTION';
       ctx: { userId: string; actionType: 'WARNING' | 'SUSPENDED' | 'BANNED'; reason?: string };
     }
-  | { type: 'TEST_NOTIFICATION'; ctx: {} };
+  | { type: 'NEW_ORDER'; ctx: { orderId: string; orderTitle: string } }
+  | { type: 'TEST_NOTIFICATION'; ctx: { message: string } };

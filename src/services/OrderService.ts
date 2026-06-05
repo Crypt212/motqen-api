@@ -19,6 +19,8 @@ import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerReposito
 import { Role } from 'src/domain/user.entity.js';
 import { EscrowService } from './financial/EscrowService.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
+import { notificationService } from 'src/state.js';
+import { logger } from 'src/libs/winston.js';
 
 interface OrderServiceDeps {
   orderRepository: IOrderRepository;
@@ -267,6 +269,25 @@ export default class OrderService extends Service {
           await timeSlotRepo.deleteByOrderId({ orderId: params.orderId });
         }
       );
+      if (order.workerUserId) {
+        setImmediate(() => {
+          notificationService
+            .notify(order.workerUserId!, {
+              type: 'ORDER_CANCELLED',
+              ctx: {
+                orderId: order.id,
+                orderTitle: order.title,
+              },
+            })
+            .catch((error) => {
+              logger.error('Failed to send notification for cancelled order', {
+                workerUserId: order.workerUserId,
+                orderId: order.id,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
+        });
+      }
     });
   }
 
@@ -294,6 +315,23 @@ export default class OrderService extends Service {
       if (today !== scheduledDay) {
         throw new AppError('Work can only be started on the scheduled date (UTC)', 400);
       }
+      setImmediate(() => {
+        notificationService
+          .notify(order.clientUserId, {
+            type: 'WORK_STARTED',
+            ctx: {
+              orderId: order.id,
+              orderTitle: order.title,
+            },
+          })
+          .catch((error) => {
+            logger.error('Failed to send notification for work started', {
+              clientUserId: order.clientUserId,
+              orderId: order.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+      });
 
       return await this.orderRepository.update({
         filter: { id: params.orderId },
@@ -303,7 +341,7 @@ export default class OrderService extends Service {
   }
 
   async finishWork(params: { orderId: string; workerUserId?: string }) {
-    return tryCatch(async () => {
+    return await tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
       if (!order) throw new AppError('Order not found', 404);
 
@@ -314,7 +352,7 @@ export default class OrderService extends Service {
       if (!canTransitionOrderStatus(order.orderStatus, OrderStatus.COMPLETED))
         throw new AppError('Cannot complete order in current status', 400);
 
-      return await this.transactionManager.execute(
+      const data = await this.transactionManager.execute(
         {
           orderRepo: OrderRepository,
           timeSlotRepo: WorkerOccupiedTimeSlotRepository,
@@ -348,6 +386,25 @@ export default class OrderService extends Service {
           return updated;
         }
       );
+
+      setImmediate(() => {
+        notificationService
+          .notify(data.clientUserId, {
+            type: 'WORK_DONE',
+            ctx: {
+              orderId: data.id,
+              workerId: data.workerUserId!,
+            },
+          })
+          .catch((error) => {
+            logger.error('Failed to send notification for work done', {
+              clientUserId: data.clientUserId,
+              orderId: data.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+      });
+      return data;
     });
   }
   async rateOrder(params: {
@@ -385,5 +442,22 @@ export default class OrderService extends Service {
         });
       }
     );
+    setImmediate(() => {
+      notificationService
+        .notify(order.workerUserId!, {
+          type: 'ORDER_RATED',
+          ctx: {
+            orderId: order.id,
+            orderTitle: order.title,
+          },
+        })
+        .catch((error) => {
+          logger.error('Failed to send notification for order rated', {
+            workerUserId: order.workerUserId,
+            orderId: order.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+    });
   }
 }

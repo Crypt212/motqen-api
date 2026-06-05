@@ -3,7 +3,7 @@ import { adminDashboardController } from '../../../state.js';
 import { authenticateAccess } from '../../../middlewares/authMiddleware.js';
 import { authorizeAdmin } from '../../../middlewares/accessMiddleware.js';
 
-const router = Router();
+const router: Router = Router();
 
 router.use(authenticateAccess, authorizeAdmin);
 
