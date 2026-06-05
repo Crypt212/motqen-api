@@ -1,5 +1,4 @@
 import {
-  Report,
   ReportWithImages,
   ReportCreateInput,
   ReportUpdateInput,

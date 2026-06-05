@@ -24,12 +24,12 @@ export type Order = {
   estimatedDurationHours: number | null;
   isUrgent: boolean;
   rate: number;
-  comment?: string;
+  comment: string | null;
   workStartedAt: Date | null;
   workFinishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  images?: string[];
+  images: string[];
   orderMode: OrderMode;
 };
 

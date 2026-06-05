@@ -12,7 +12,9 @@ export default class ReportController {
   }
 
   create = asyncHandler(async (req, res) => {
-    const { userId: requesterId, role: requesterRole } = req.userState;
+    const { userId: requesterId, worker, client } = req.userState;
+
+    const requesterType = worker ? 'WORKER' : client ? 'CLIENT' : 'CLIENT';
     const files = req.files as Express.Multer.File[] | undefined;
     const bodyData = CreateReportSchema.parse(req.body);
 
@@ -21,7 +23,7 @@ export default class ReportController {
         ...bodyData,
         reporterId: requesterId,
       },
-      requesterRole,
+      requesterType,
       files,
     });
 

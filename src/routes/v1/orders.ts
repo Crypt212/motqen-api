@@ -30,6 +30,8 @@ import {
   rejectNegotiation,
 } from '../../controllers/NegotiationController.js';
 import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
+import { parseFormDataJson } from 'src/middlewares/multiformParserMiddleware.js';
+import { authorizeClient, authorizeWorker } from 'src/middlewares/accessMiddleware.js';
 
 const router: Router = Router();
 router.use('/:orderId/proposals', proposalsRouter);
@@ -38,21 +40,30 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { files: 3 } })
 router.post(
   '/',
   upload.array('images', 3),
+  parseFormDataJson('orderData'),
   validateBody(CreateOrderSchema),
+  authorizeClient,
   orderController.create
 );
 router.get('/', validateQuery(OrderQuerySchema), orderController.list);
 router.get('/:orderId', validateParams(OrderIdParamsSchema), orderController.getById);
-router.delete('/:orderId', validateParams(OrderIdParamsSchema), orderController.cancel);
+router.delete('/:orderId', validateParams(OrderIdParamsSchema), authorizeClient, orderController.cancel);
 router.get('/:orderId/location', validateParams(OrderIdParamsSchema), orderController.getLocation);
-router.post('/:orderId/start-work', validateParams(OrderIdParamsSchema), orderController.startWork);
+router.post(
+  '/:orderId/start-work',
+  validateParams(OrderIdParamsSchema),
+  authorizeWorker,
+  orderController.startWork
+);
 router.post(
   '/:orderId/finish-work',
+  authorizeWorker,
   validateParams(OrderIdParamsSchema),
   orderController.finishWork
 );
 router.post(
   '/:orderId/rate',
+  authorizeClient,
   validateParams(OrderIdParamsSchema),
   validateBody(OrderRateSchema),
   orderController.rate

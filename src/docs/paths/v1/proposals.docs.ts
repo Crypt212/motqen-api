@@ -84,6 +84,35 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // GET /orders/{orderId}/proposals/mine
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/orders/{orderId}/proposals/mine',
+    tags: ['Proposals'],
+    summary: 'Get details of a my proposal as a worker on a specific order',
+    description:
+      'Returns the details of my proposal as a worker on a specific order, includes worker profile summary and latest negotiation. Accessible only by submitting worker.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      params: OrderIdParamsSchema,
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Proposal retrieved successfully',
+        content: { 'application/json': { schema: ProposalResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // GET /orders/{orderId}/proposals/{proposalId}
   // ─────────────────────────────────────────────────────────────────────────────
 

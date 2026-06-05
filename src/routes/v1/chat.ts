@@ -11,7 +11,7 @@
  */
 
 import { Router } from 'express';
-import { authorizeClient } from '../../middlewares/clientMiddleware.js';
+import { authorizeClient } from '../../middlewares/accessMiddleware.js';
 import { z } from '../../libs/zod.js';
 import {
   getOrCreateConversation,

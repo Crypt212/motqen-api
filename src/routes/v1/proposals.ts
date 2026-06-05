@@ -1,11 +1,10 @@
 import { Router } from 'express';
 import { proposalController } from '../../state.js';
 import { isActive } from '../../middlewares/authMiddleware.js';
-import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
+import { validateBody, validateParams } from '../../middlewares/validateRequest.js';
 import { OrderIdParamsSchema } from '../../schemas/requests/order.request.js';
 import {
   CreateProposalSchema,
-  ProposalIdParamsSchema,
   OrderProposalParamsSchema,
 } from '../../schemas/requests/proposal.request.js';
 import {
@@ -15,12 +14,14 @@ import {
   rejectNegotiation,
 } from '../../controllers/NegotiationController.js';
 import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
+import { authorizeApprovedWorker, authorizeWorker, authorizeClient } from 'src/middlewares/accessMiddleware.js';
 
 const proposalsRouter: Router = Router({ mergeParams: true });
 
 proposalsRouter.post(
   '/',
   isActive,
+  authorizeApprovedWorker,
   validateParams(OrderIdParamsSchema),
   validateBody(CreateProposalSchema),
   proposalController.submit
@@ -29,8 +30,17 @@ proposalsRouter.post(
 proposalsRouter.get(
   '/',
   isActive,
+  authorizeClient,
   validateParams(OrderIdParamsSchema),
   proposalController.list
+);
+
+proposalsRouter.get(
+  '/mine',
+  isActive,
+  authorizeWorker,
+  validateParams(OrderIdParamsSchema),
+  proposalController.getMine
 );
 
 proposalsRouter.get(
@@ -39,8 +49,6 @@ proposalsRouter.get(
   validateParams(OrderProposalParamsSchema),
   proposalController.getById
 );
-
-
 
 proposalsRouter.get(
   '/:proposalId/negotiations',

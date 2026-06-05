@@ -25,7 +25,6 @@ governmentRouter.get(
   governmentController.getGovernmentById
 );
 
-
 governmentRouter.get(
   '/:governmentId/cities',
   validateParams(GovernmentIdParamsSchema),

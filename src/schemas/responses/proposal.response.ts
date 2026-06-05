@@ -18,25 +18,24 @@ export const LatestNegotiationSnapshotSchema = z.object({
   id: UUIDSchema,
   price: z.number(),
   status: z.enum(['PENDING', 'ACCEPTED', 'REJECTED']),
+  startDate: z.date(),
+  estimatedDurationHours: z.number(),
   direction: z.enum(['WORKER_TO_CLIENT', 'CLIENT_TO_WORKER']),
   createdAt: z.date(),
-}).nullable().optional();
+}).nullable();
 
 export const ProposalObjectSchema = z.object({
   id: UUIDSchema,
   orderId: UUIDSchema,
   workerProfileId: UUIDSchema,
   status: z.enum(['PENDING', 'NEGOTIATING', 'ACCEPTED', 'REJECTED', 'WITHDRAWN', 'DISMISSED']),
-  initialPrice: z.number(),
-  note: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  latestNegotiationPrice: z.number().nullable().optional(),
 });
 
 export const ProposalWithWorkerSummarySchema = ProposalObjectSchema.extend({
   workerProfile: WorkerSummarySchema,
-  latestNegotiation: LatestNegotiationSnapshotSchema,
+  latestNegotiation: LatestNegotiationSnapshotSchema.nullable(),
 });
 
 export const ProposalResponseSchema = SuccessResponseSchema(ProposalWithWorkerSummarySchema);

@@ -20,6 +20,7 @@ export const validateZod = (schema: z.ZodTypeAny, location: Location) =>
       return;
     }
     Object.assign(req[location], result.data);
+    console.log(req.body)
     next();
   });
 

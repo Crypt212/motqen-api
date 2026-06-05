@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import multer from 'multer';
-
 import {
   CreateReportSchema,
   UpdateReportSchema,
@@ -23,17 +22,9 @@ reportsRouter.post(
   reportController.create
 );
 
-reportsRouter.get(
-  '/',
-  validateQuery(ReportQuerySchema),
-  reportController.list
-);
+reportsRouter.get('/', validateQuery(ReportQuerySchema), reportController.list);
 
-reportsRouter.get(
-  '/:reportId',
-  validateParams(ReportIdParamsSchema),
-  reportController.getById
-);
+reportsRouter.get('/:reportId', validateParams(ReportIdParamsSchema), reportController.getById);
 
 reportsRouter.patch(
   '/:reportId',
@@ -43,11 +34,6 @@ reportsRouter.patch(
   reportController.update
 );
 
-reportsRouter.delete(
-  '/:reportId',
-  validateParams(ReportIdParamsSchema),
-  reportController.cancel
-);
-
+reportsRouter.delete('/:reportId', validateParams(ReportIdParamsSchema), reportController.cancel);
 
 export default reportsRouter;
