@@ -5,7 +5,7 @@ import { IDType } from '../interfaces/Repository.js';
 import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../../domain/specialization.entity.js';
 import { isEmptyFilter } from './utils.js';
 import {
-    WorkerOrdersStatistics,
+  WorkerOrdersStatistics,
   WorkerProfile,
   WorkerProfileCreateInput,
   WorkerProfileFilter,
@@ -18,7 +18,7 @@ import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { ExploreWorkerPublicDetail, } from '../../types/exploreWorker.js';
-import { Government } from 'src/domain/government.entity.js';
+import { Government, GovernmentFilter } from 'src/domain/government.entity.js';
 import { convertDayNumberToEnum } from 'src/utils/dayNumberToEnum.js';
 
 type SpecializationsWithSubSpecializationsPrisma = Prisma.SpecializationGetPayload<{ include: { subSpecializations: true } }>;
@@ -120,9 +120,9 @@ export default class WorkerProfileRepository
 
   async findOrdersStatistics(params: { workerProfileId: IDType }): Promise<WorkerOrdersStatistics> {
     const { workerProfileId } = params;
-const [stats] = await this.prismaClient.$queryRaw<
-  Array<WorkerOrdersStatistics>
->(Prisma.sql`SELECT
+    const [stats] = await this.prismaClient.$queryRaw<
+      Array<WorkerOrdersStatistics>
+    >(Prisma.sql`SELECT
   (COUNT(*) FILTER (WHERE "orderStatus" = 'PENDING'))::int AS pending,
   (COUNT(*) FILTER (WHERE "orderStatus" = 'CANCELLED'))::int AS canceled,
   (COUNT(*) FILTER (WHERE "orderStatus" = 'COMPLETED'))::int AS completed,
@@ -296,10 +296,12 @@ WHERE "workerProfileId" = ${workerProfileId};`);
   }
 
   async findWorkGovernments({
-    workerFilter,
+    workerProfileFilter,
+    governmentFilter,
     pagination,
   }: {
-    workerFilter: WorkerProfileFilter;
+    workerProfileFilter: WorkerProfileFilter;
+    governmentFilter?: GovernmentFilter;
     pagination?: PaginationOptions;
   }): Promise<PaginatedResultMeta & { governments: Government[] }> {
     try {
@@ -308,9 +310,13 @@ WHERE "workerProfileId" = ${workerProfileId};`);
       const offset = (page - 1) * limit;
 
       const profile = await this.prismaClient.workerProfile.findFirst({
-        where: workerFilter,
+        where: workerProfileFilter,
         select: { id: true },
       });
+      const ultimateFilter = !isEmptyFilter(governmentFilter) ?
+        { AND: [{ workers: { some: { id: profile.id } } }, governmentFilter] } :
+        { workers: { some: { id: profile.id } } };
+
 
       if (!profile) {
         return {
@@ -325,12 +331,14 @@ WHERE "workerProfileId" = ${workerProfileId};`);
         };
       }
 
+
+      console.log(ultimateFilter);
       const total = await this.prismaClient.government.count({
-        where: { workers: { some: { id: profile.id } } },
+        where: ultimateFilter,
       });
 
       const governments = await this.prismaClient.government.findMany({
-        where: { workers: { some: { id: profile.id } } },
+        where: ultimateFilter,
         skip: offset,
         take: limit,
       });

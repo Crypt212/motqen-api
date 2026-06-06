@@ -3,6 +3,7 @@ import { IDType } from '../repositories/interfaces/Repository.js';
 import { User } from './user.entity.js';
 import { FilterFromDescriptor } from '../schemas/common.js';
 import { FieldTypeDefinition } from '../types/query.js';
+import { Message } from './message.entity.js';
 
 export type ConversationRole = $Enums.ConversationRole;
 
@@ -55,17 +56,6 @@ export type ConversationWithParticipantsAndMessages = Conversation & {
   LastMessage?: { content: string; type: string };
   participants: ConversationParticipant[];
   messages?: Message[];
-};
-
-export type Message = {
-  id: IDType;
-  conversationId: IDType;
-  senderId: IDType;
-  messageNumber: number;
-  content: string;
-  type: string;
-  createdAt: Date;
-  updatedAt: Date;
 };
 
 export type GetConversations = {

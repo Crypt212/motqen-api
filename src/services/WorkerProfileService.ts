@@ -191,14 +191,15 @@ export default class WorkerService extends Service {
    */
   async getWorkGovernments(params: {
     pagination: PaginationOptions;
-    filter: WorkerProfileFilter;
-    GovernmentFilter: GovernmentFilter;
+    workerProfileFilter: WorkerProfileFilter;
+    governmentFilter: GovernmentFilter;
   }): Promise<PaginatedResultMeta & { governments: Government[] }> {
-    const { pagination, GovernmentFilter: filter } = params;
+    const { pagination, workerProfileFilter, governmentFilter } = params;
     return tryCatch(async () => {
       const result = await this.workerProfileRepository.findWorkGovernments({
         pagination,
-        workerFilter: filter,
+        workerProfileFilter,
+        governmentFilter
       });
       return result;
     });

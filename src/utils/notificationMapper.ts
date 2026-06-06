@@ -1,4 +1,8 @@
-import type { NotificationPayload, NotificationEventContext } from '../domain/notification.entity.js';
+import { NotificationType } from 'src/generated/prisma/enums.js';
+import type {
+  NotificationPayload,
+  NotificationEventContext,
+} from '../domain/notification.entity.js';
 
 export function mapEventToNotification(event: NotificationEventContext): NotificationPayload {
   switch (event.type) {
@@ -26,6 +30,15 @@ export function mapEventToNotification(event: NotificationEventContext): Notific
         type: 'ORDER_COMPLETED',
         title: 'تم إكمال الطلب 🎉',
         body: `تم إكمال طلب "${orderTitle}" بنجاح`,
+        data: { screen: 'order_details', entityId: orderId, entityType: 'order' },
+      };
+    }
+    case 'WORK_STARTED': {
+      const { orderId, orderTitle } = event.ctx;
+      return {
+        type: 'WORK_STARTED',
+        title: 'بدأ العامل الشغل 🔨',
+        body: `بدأ العامل العمل على طلب "${orderTitle}"`,
         data: { screen: 'order_details', entityId: orderId, entityType: 'order' },
       };
     }
@@ -66,12 +79,17 @@ export function mapEventToNotification(event: NotificationEventContext): Notific
       };
     }
     case 'WORK_DONE': {
-      const { orderId } = event.ctx;
+      const { orderId, workerId } = event.ctx;
       return {
         type: 'WORK_DONE',
         title: 'انتهى العامل من طلبك 🏁',
         body: 'راجع وأكد الاستلام',
-        data: { screen: 'order_details', entityId: orderId, entityType: 'order' },
+        data: {
+          screen: 'order_details',
+          entityId: orderId,
+          workerId: workerId,
+          entityType: 'order',
+        },
       };
     }
     case 'PAYMENT_REQUIRED': {
@@ -188,19 +206,45 @@ export function mapEventToNotification(event: NotificationEventContext): Notific
         },
       };
     }
-    // case  'TEST_NOTIFICATION': {
-    //   return {
-    //     type: 'TEST_NOTIFICATION',
-    //     title: 'إشعار تجريبي 🧪',
-    //     body: 'هذا إشعار تجريبي لاختبار النظام',
-    //     data: {
-    //       screen: 'home',
-    //       entityId: '',
-    //       entityType: 'none',
-    //     },
-    //   };
-    // }
+    case 'RATING': {
+      const { orderId, orderTitle } = event.ctx;
+      return {
+        type: 'RATING',
+        title: 'تم تقييم طلبك ⭐',
+        body: `تم تقييم طلب "${orderTitle}" من قبل العميل`,
+        data: { screen: 'order_details', entityId: orderId, entityType: 'order' },
+      };
+    }
+    case 'NEW_ORDER': {
+      const { orderId, orderTitle } = event.ctx;
+      return {
+        type: 'NEW_ORDER',
+        title: 'لديك طلب جديد 🆕',
+        body: `تم إنشاء طلب جديد بعنوان "${orderTitle}"`,
+        data: { screen: 'order_details', entityId: orderId, entityType: 'order' },
+      };
+    }
+    case 'ORDER_RATED': {
+      const { orderId, orderTitle } = event.ctx;
+      return {
+        type: 'ORDER_RATED',
+        title: 'تم تقييم طلبك ⭐',
+        body: `تم تقييم طلب "${orderTitle}" من قبل العميل`,
+        data: { screen: 'order_details', entityId: orderId, entityType: 'order' },
+      };
+    }
+    case 'TEST_NOTIFICATION': {
+      const { message } = event.ctx;
+      return {
+        type: 'TEST_NOTIFICATION',
+        title: 'هذه رسالة اختبار 🧪',
+        body: message || 'هذه رسالة اختبار للتحقق من نظام الإشعارات',
+        data: { screen: 'home', entityId: 'test', entityType: 'none' },
+      };
+    }
     default:
-      throw new Error(`Unsupported notification type: ${event.type}`);
+      throw new Error(
+        `Unsupported notification type: ${(event as { type: NotificationType }).type}`
+      );
   }
 }

@@ -38,7 +38,7 @@ export class NotificationService {
       if (state.worker) {
         topics.push('workers');
         const result = await this.workerProfileRepository.findWorkGovernments({
-          workerFilter: { userId: state.userId },
+          workerProfileFilter: { userId: state.userId },
           pagination: { page: 1, limit: 27 },
         });
         topics.push(...result.governments.map((id) => `gov_${id}`));
@@ -55,6 +55,7 @@ export class NotificationService {
     saveNotification: boolean = true
   ): Promise<void> {
     const payload = mapEventToNotification(event);
+    console.log('Mapped notification payload:', payload);
     if (saveNotification) {
       const created = await this.repo.create({
         userId,
@@ -218,7 +219,7 @@ export class NotificationService {
       data: serializedData,
     });
 
-    if (notificationId&&response.successCount > 0) {
+    if (notificationId && response.successCount > 0) {
       await this.repo.markSent(notificationId);
     }
 

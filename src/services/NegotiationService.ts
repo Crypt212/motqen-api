@@ -21,6 +21,7 @@ import IProposalRepository from '../repositories/interfaces/ProposalRepository.j
 import IWorkerOccupiedTimeSlotRepository from '../repositories/interfaces/WorkerOccupiedTimeSlotRepository.js';
 import { hasOverlap } from '../utils/overlapCheck.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
+import { logger } from 'src/libs/winston.js';
 
 type OrderParty = {
   role: 'CLIENT' | 'WORKER';
@@ -68,14 +69,30 @@ export default class NegotiationService extends Service {
    * Determine whether the requester is the client or the worker of this order.
    * @throws {AppError} 403 if the user is not a party to the order
    */
-  private resolveOrderParty(order: OrderForNegotiation, userState: UserState): OrderParty {
+  private async resolveOrderParty(
+    order: OrderForNegotiation,
+    userState: UserState
+  ): Promise<OrderParty> {
+    console.log(userState, order);
     if (userState.client && userState.client.id === order.clientProfileId) {
       return { role: 'CLIENT', profileId: userState.client.id };
-    }
-    if (userState.worker && userState.worker.id === order.workerProfileId) {
-      return { role: 'WORKER', profileId: userState.worker.id };
-    }
-    throw new AppError('You are not a party to this order', 403);
+    } else if (userState.worker) {
+      if (order.workerProfileId && userState.worker.id !== order.workerProfileId) {
+        // Direct order but with different worker
+        throw new AppError('You are not a party to this order', 403);
+      } else if (order.workerProfileId) {
+        return { role: 'WORKER', profileId: userState.worker.id };
+      } else {
+        const proposals = await this.proposalRepository.findMany({
+          filter: { workerProfileId: userState.worker.id, orderId: order.id },
+        });
+        if (proposals.proposals.length === 0) {
+          throw new AppError('You are not a party to this order', 403);
+        } else {
+          return { role: 'WORKER', profileId: userState.worker.id };
+        }
+      }
+    } else throw new AppError('You are not a party to this order', 403);
   }
 
   /**
@@ -88,10 +105,15 @@ export default class NegotiationService extends Service {
   /**
    * Resolves the proposal ID for the negotiation. If not provided, it fetches the single proposal for DIRECT orders.
    */
-  private async resolveProposalId(order: OrderForNegotiation, proposalId?: string): Promise<string> {
+  private async resolveProposalId(
+    order: OrderForNegotiation,
+    proposalId?: string
+  ): Promise<string> {
     if (proposalId) return proposalId;
     if (order.orderMode === 'DIRECT') {
-      const { proposals } = await this.proposalRepository.findMany({ filter: { orderId: order.id } });
+      const { proposals } = await this.proposalRepository.findMany({
+        filter: { orderId: order.id },
+      });
       if (proposals.length > 0) return proposals[0].id;
       throw new AppError('Proposal not found for direct order', 404);
     }
@@ -109,12 +131,12 @@ export default class NegotiationService extends Service {
     const { orderId, proposalId, userState, pagination } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      this.resolveOrderParty(order, userState);
+      await this.resolveOrderParty(order, userState);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
-
-      // Note: currently findByOrderId only filters by orderId, you might want to filter by proposalId in the repository
-      // but for direct orders there's only one anyway. For now we just return negotiations for the order.
-      return this.negotiationRepository.findByOrderId({ orderId, pagination });
+      return this.negotiationRepository.findByProposalId({
+        proposalId: resolvedProposalId,
+        pagination,
+      });
     });
   }
 
@@ -129,10 +151,11 @@ export default class NegotiationService extends Service {
     estimatedDurationHours?: number;
     note?: string;
   }): Promise<Negotiation & { hasOverlapWarning?: boolean }> {
-    const { orderId, proposalId, userState, price, startDate, estimatedDurationHours, note } = params;
+    const { orderId, proposalId, userState, price, startDate, estimatedDurationHours, note } =
+      params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      const party = this.resolveOrderParty(order, userState);
+      const party = await this.resolveOrderParty(order, userState);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
@@ -162,7 +185,9 @@ export default class NegotiationService extends Service {
       let hasOverlapWarning = false;
       if (order.workerProfileId) {
         const targetEndDate = new Date(actualStartDate.getTime() + actualDuration * 60 * 60 * 1000);
-        const workerSlots = await this.workerOccupiedTimeSlotRepository.findMany({ filter: { workerProfileId: order.workerProfileId } });
+        const workerSlots = await this.workerOccupiedTimeSlotRepository.findMany({
+          filter: { workerProfileId: order.workerProfileId, isConfirmed: true },
+        });
         for (const slot of workerSlots) {
           if (hasOverlap(actualStartDate, targetEndDate, slot.startDate, slot.endDate)) {
             hasOverlapWarning = true;
@@ -181,13 +206,29 @@ export default class NegotiationService extends Service {
           direction,
           startDate: actualStartDate,
           estimatedDurationHours: actualDuration,
-          note
+          note,
         },
       });
 
       // Notify the opposing party via socket
-      this.notifyOpponent(order, party, 'negotiation_created', negotiation);
-
+      // this.notifyOpponent(order, party, 'negotiation_created', negotiation);
+      setImmediate(() => {
+        notificationService
+          .notify(party.opponentUserId, {
+            type: 'NEGOTIATION_OFFER',
+            ctx: {
+              orderId: order.id,
+              orderTitle: order.title,
+              proposedAmount: price,
+            },
+          })
+          .catch((err: unknown) => {
+            logger.error('Failed to send negotiation offer notification (fire-and-forget)', {
+              userId: party.opponentUserId,
+              error: err,
+            });
+          });
+      });
       return { ...negotiation, hasOverlapWarning };
     });
   }
@@ -202,7 +243,7 @@ export default class NegotiationService extends Service {
     const { orderId, proposalId, userState } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      const party = this.resolveOrderParty(order, userState);
+      const party = await this.resolveOrderParty(order, userState);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
@@ -231,9 +272,9 @@ export default class NegotiationService extends Service {
           orderRepo: OrderRepository,
           proposalRepo: ProposalRepository,
           workerRepo: WorkerProfileRepository,
-          workerTimeSlotRepo: WorkerOccupiedTimeSlotRepository
+          workerTimeSlotRepo: WorkerOccupiedTimeSlotRepository,
         },
-        async ({ negotiationRepo, orderRepo, proposalRepo,  workerRepo, workerTimeSlotRepo }) => {
+        async ({ negotiationRepo, orderRepo, proposalRepo, workerRepo, workerTimeSlotRepo }) => {
           // 1. Fetch proposal to get worker details
           const proposal = await proposalRepo.find({ filter: { id: resolvedProposalId } });
           if (!proposal) throw new AppError('Proposal not found', 404);
@@ -242,7 +283,10 @@ export default class NegotiationService extends Service {
           await negotiationRepo.updateStatus({ id: latest.id, status: 'ACCEPTED' });
 
           // 3. Set Proposal status = ACCEPTED
-          await proposalRepo.updateStatus({ filter: { id: resolvedProposalId }, status: 'ACCEPTED' });
+          await proposalRepo.updateStatus({
+            filter: { id: resolvedProposalId },
+            status: 'ACCEPTED',
+          });
 
           // 4. Dismiss all other proposals
           await proposalRepo.bulkDismiss({ filter: { orderId, status: 'PENDING' } });
@@ -250,7 +294,9 @@ export default class NegotiationService extends Service {
 
           // 5. Calculate end date for time slot
           const targetStartDate = latest.startDate || new Date();
-          const targetEndDate = new Date(targetStartDate.getTime() + (latest.estimatedDurationHours || 1) * 60 * 60 * 1000);
+          const targetEndDate = new Date(
+            targetStartDate.getTime() + (latest.estimatedDurationHours || 1) * 60 * 60 * 1000
+          );
 
           // 6. Create worker occupied time slot
           await workerTimeSlotRepo.create({
@@ -259,11 +305,12 @@ export default class NegotiationService extends Service {
               orderId: orderId,
               startDate: targetStartDate,
               endDate: targetEndDate,
-              isConfirmed: true,
             },
           });
 
-          const workerProfile = await workerRepo.find({ workerFilter: { id: proposal.workerProfileId } });
+          const workerProfile = await workerRepo.find({
+            workerFilter: { id: proposal.workerProfileId },
+          });
 
           // 7. Update order assignment and status
           const orderResult = await orderRepo.update({
@@ -283,7 +330,24 @@ export default class NegotiationService extends Service {
       );
 
       // Notify the opposing party (socket placeholder)
-      this.notifyOpponent(order, party, 'negotiation_accepted', { orderId });
+      // this.notifyOpponent(order, party, 'negotiation_accepted', { orderId });
+
+      setImmediate(() => {
+        notificationService
+          .notify(party.opponentUserId, {
+            type: 'NEGOTIATION_ACCEPTED',
+            ctx: {
+              orderId: order.id,
+              orderTitle: order.title,
+            },
+          })
+          .catch((err: unknown) => {
+            logger.error('Failed to send negotiation acceptance notification (fire-and-forget)', {
+              userId: party.opponentUserId,
+              error: err,
+            });
+          });
+      });
 
       // Send push notification to client — ORDER_ACCEPTED
       // Resolve the client's userId from the order's clientProfile
@@ -292,15 +356,17 @@ export default class NegotiationService extends Service {
       });
 
       if (clientUser) {
-        notificationService.notify(clientUser.userId, {
-          type: 'ORDER_ACCEPTED',
-          ctx: {
-            orderId: order.id,
-            orderTitle: order.title,
-          },
-        }).catch((err: unknown) => {
-          // Fire-and-forget — don't break negotiation flow
-        });
+        notificationService
+          .notify(clientUser.userId, {
+            type: 'ORDER_ACCEPTED',
+            ctx: {
+              orderId: order.id,
+              orderTitle: order.title,
+            },
+          })
+          .catch((err: unknown) => {
+            // Fire-and-forget — don't break negotiation flow
+          });
       }
 
       return {
@@ -314,11 +380,15 @@ export default class NegotiationService extends Service {
 
   // ─── REJECT negotiation ───────────────────────────────────────────────────
 
-  async rejectNegotiation(params: { orderId: string; proposalId?: string; userState: UserState }): Promise<Negotiation> {
+  async rejectNegotiation(params: {
+    orderId: string;
+    proposalId?: string;
+    userState: UserState;
+  }): Promise<Negotiation> {
     const { orderId, proposalId, userState } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      const party = this.resolveOrderParty(order, userState);
+      const party = await this.resolveOrderParty(order, userState);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
@@ -329,7 +399,9 @@ export default class NegotiationService extends Service {
         );
       }
 
-      const latest = await this.negotiationRepository.findLatestByOrderId({ orderId });
+      const latest = await this.negotiationRepository.findLatestByProposalId({
+        proposalId: resolvedProposalId,
+      });
       if (!latest || latest.status !== 'PENDING') {
         throw new AppError('No pending negotiation to reject', 400);
       }
@@ -346,38 +418,25 @@ export default class NegotiationService extends Service {
       });
 
       // Notify the opposing party
-      this.notifyOpponent(order, party, 'negotiation_rejected', { orderId });
+      //   this.notifyOpponent(order, party, 'negotiation_rejected', { orderId });
+      setImmediate(() => {
+        notificationService
+          .notify(party.opponentUserId, {
+            type: 'NEGOTIATION_REJECTED',
+            ctx: {
+              orderId: order.id,
+              orderTitle: order.title,
+            },
+          })
+          .catch((err: unknown) => {
+            logger.error('Failed to send negotiation rejection notification (fire-and-forget)', {
+              userId: party.opponentUserId,
+              error: err,
+            });
+          });
+      });
 
       return rejected;
     });
-  }
-
-  // ─── Socket notifications ────────────────────────────────────────────────
-
-  /**
-   * Emit a socket event to the opposing party.
-   * Resolves userId from the order's client/worker profile relationship.
-   * Fire-and-forget — failures are silently ignored.
-   */
-  private notifyOpponent(
-    order: OrderForNegotiation,
-    party: OrderParty,
-    event: string,
-    data: unknown
-  ): void {
-    try {
-      // We need to resolve the opponent's userId from their profile.
-      // Since userState carries the IDs and the order carries profileIds,
-      // we can determine who to notify based on the requester's role.
-      // However, we don't have the opponent's userId directly from OrderForNegotiation.
-      // For now, we emit to a profile-based room. This can be enhanced
-      // when the full Orders module provides user lookup.
-      //
-      // TODO: Resolve opponent userId for socket notification when
-      // the Orders module provides the user-profile relationship.
-      // For now this is a no-op placeholder that matches the architecture.
-    } catch {
-      // Fire-and-forget
-    }
   }
 }

@@ -75,8 +75,8 @@ export default class LocationRepository extends Repository implements ILocationR
              ST_X(l."pointGeography"::geometry) as long,
              ST_Y(l."pointGeography"::geometry) as lat,
              l."createdAt", l."updatedAt",
-        jsonb_build_object('id', g.id, 'name', g.name, 'nameAr', 'g.nameAr', 'long', g.long, 'lat', g.lat) as government,
-        jsonb_build_object('id', c.id, 'name', c.name, 'nameAr', 'c.nameAr', 'long', c.long, 'lat', c.lat) as city
+        jsonb_build_object('id', g.id, 'name', g.name, 'nameAr', g."nameAr", 'long', g.long, 'lat', g.lat) as government,
+        jsonb_build_object('id', c.id, 'name', c.name, 'nameAr', c."nameAr", 'long', c.long, 'lat', c.lat) as city
       FROM locations l
       LEFT JOIN governments g ON l."governmentId" = g.id
       LEFT JOIN cities c ON l."cityId" = c.id

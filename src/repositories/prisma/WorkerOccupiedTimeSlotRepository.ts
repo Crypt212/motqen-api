@@ -6,6 +6,7 @@ import {
   WorkerOccupiedTimeSlotFilter,
 } from '../../domain/workerOccupiedTimeSlot.entity.js';
 import { Prisma } from 'src/generated/prisma/client.js';
+import { IDType } from '../interfaces/Repository.js';
 
 type PrismaWorkerOccupiedTimeSlot = Prisma.WorkerOccupiedTimeSlotGetPayload<{}>;
 
@@ -52,6 +53,28 @@ export default class WorkerOccupiedTimeSlotRepository
       return this.toDomain(record);
     } catch (error) {
       throw handlePrismaError(error, 'create worker occupied time slot');
+    }
+  }
+
+  async confirmByOrderAndWorker({ orderId, workerProfileId }: { orderId: IDType; workerProfileId: IDType }): Promise<WorkerOccupiedTimeSlot> {
+    try {
+      const record = await this.prismaClient.workerOccupiedTimeSlot.update({
+        where: { orderId, workerProfileId },
+        data: { isConfirmed: true },
+      });
+      return this.toDomain(record);
+    } catch (error) {
+      throw handlePrismaError(error, 'confirm worker occupied time slot');
+    }
+  }
+
+  async deleteUnconfirmedByOrderId({ orderId }: { orderId: string }): Promise<void> {
+    try {
+      await this.prismaClient.workerOccupiedTimeSlot.deleteMany({
+        where: { orderId, isConfirmed: false },
+      });
+    } catch (error) {
+      throw handlePrismaError(error, 'delete worker occupied time slot');
     }
   }
 

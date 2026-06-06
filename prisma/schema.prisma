@@ -61,7 +61,7 @@ model Admin {
   firstName       String
   lastName        String
   profileImageUrl String?
-  role            AdminRole    @default(SUPER_ADMIN)
+  role            AdminRole    @default(SUPER_ADMIN)//
   status          AdminStatus  @default(ACTIVE)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
@@ -114,28 +114,28 @@ model AdminAuditLog {
 }
 
 model User {
-  id              String                    @id @default(uuid())
-  phoneNumber     String                    @unique
-  firstName       String
-  lastName        String
-  status          AccountStatus             @default(ACTIVE)
-  role            Role                      @default(USER)
-  createdAt       DateTime                  @default(now())
-  isOnline        Boolean                   @default(false)
-  middleName      String
-  profileImageUrl String?
-  updatedAt       DateTime                  @updatedAt
-  clientProfile   ClientProfile?
-  conversations   ConversationParticipant[]
-  locations       Location[]
-  sentMessages    Message[]
-  sessions        Session[]
-  workerProfile   WorkerProfile?
+  id                     String                    @id @default(uuid())
+  phoneNumber            String                    @unique
+  firstName              String
+  lastName               String
+  status                 AccountStatus             @default(ACTIVE)
+  role                   Role                      @default(USER)
+  createdAt              DateTime                  @default(now())
+  isOnline               Boolean                   @default(false)
+  middleName             String
+  profileImageUrl        String?
+  updatedAt              DateTime                  @updatedAt
+  clientProfile          ClientProfile?
+  conversations          ConversationParticipant[]
+  locations              Location[]
+  sentMessages           Message[]
+  sessions               Session[]
+  workerProfile          WorkerProfile?
   lastNotificationReadAt DateTime?
   notifications          Notification[]
-  sentNegotiations     Negotiation[]  @relation("NegotiationSender")
-  acceptedNegotiations Negotiation[]  @relation("NegotiationAccepter")
-  reports              Report[]       @relation("ReportsByUser")
+  sentNegotiations       Negotiation[]             @relation("NegotiationSender")
+  acceptedNegotiations   Negotiation[]             @relation("NegotiationAccepter")
+  reports                Report[]                  @relation("ReportsByUser")
 
   @@index([status, isOnline, id])
   @@map("users")
@@ -161,6 +161,10 @@ enum NotificationType {
   WITHDRAW_APPROVED
   WITHDRAW_REJECTED
   ADMIN_ACTION
+  RATING
+  NEW_ORDER
+  ORDER_RATED
+  TEST_NOTIFICATION
 }
 
 enum BroadcastTargetRole {
@@ -258,10 +262,10 @@ model WorkerProfile {
   user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   workGovernments       Government[]             @relation("GovernmentToWorkerProfile")
 
-  workerBalance         WorkerBalance?
-  payoutMethods         PayoutMethod[]
-  withdrawRequests      WithdrawRequest[]
-  daysWorkingHours      DayWorkingHours[]
+  workerBalance    WorkerBalance?
+  payoutMethods    PayoutMethod[]
+  withdrawRequests WithdrawRequest[]
+  daysWorkingHours DayWorkingHours[]
 
   @@index([userId], map: "idx_worker_profiles_user_id")
   @@index([acceptsUrgentJobs, userId])
@@ -275,10 +279,10 @@ model DayWorkingHours {
   id              String @id @default(uuid())
   workerProfileId String
 
-  day            Day
-  startTime      String // e.g., "09:00"
-  endTime        String // e.g., "17:00"
-  workerProfile  WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  day           Day
+  startTime     String // e.g., "09:00"
+  endTime       String // e.g., "17:00"
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
 
   @@unique([workerProfileId, day])
   @@map("worker_availability")
@@ -426,27 +430,27 @@ model WorkerBadge {
 }
 
 model Order {
-  id                  String      @id @default(uuid())
-  title               String
-  description         String
-  clientProfileId     String
-  workerProfileId     String?
-  locationId          String
-  subSpecializationId String
-  orderStatus         OrderStatus @default(PENDING)
-  workStatus          WorkStatus  @default(PENDING)
-  initialPrice        Float?
-  finalPrice          Float?
-  startDate           DateTime?
+  id                     String      @id @default(uuid())
+  title                  String
+  description            String
+  clientProfileId        String
+  workerProfileId        String?
+  locationId             String
+  subSpecializationId    String
+  orderStatus            OrderStatus @default(PENDING)
+  workStatus             WorkStatus  @default(PENDING)
+  initialPrice           Float?
+  finalPrice             Float?
+  startDate              DateTime?
   estimatedDurationHours Int?
-  orderMode           OrderMode   @default(DIRECT)
-  isUrgent            Boolean     @default(false)
-  rate                Float       @default(-1.0)
-  comment             String?
-  workStartedAt       DateTime?
-  workFinishedAt      DateTime?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  orderMode              OrderMode   @default(DIRECT)
+  isUrgent               Boolean     @default(false)
+  rate                   Float       @default(-1.0)
+  comment                String?
+  workStartedAt          DateTime?
+  workFinishedAt         DateTime?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
 
   clientProfile     ClientProfile           @relation(fields: [clientProfileId], references: [id])
   workerProfile     WorkerProfile?          @relation(fields: [workerProfileId], references: [id])
@@ -461,7 +465,7 @@ model Order {
   escrowHold        EscrowHold?
   disputes          Dispute[]
   paymentIntentions PaymentIntention[]
-  reports             Report[]          @relation("ReportContextOrder")
+  reports           Report[]                @relation("ReportContextOrder")
 
   @@index([clientProfileId])
   @@index([workerProfileId])
@@ -490,16 +494,16 @@ model Negotiation {
   senderId   String
   acceptedBy String?
 
-  note       String?
-  proposalId String
-  startDate  DateTime
+  note                   String?
+  proposalId             String
+  startDate              DateTime
   estimatedDurationHours Int
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  sender    User     @relation("NegotiationSender", fields: [senderId], references: [id])
-  accepter  User?    @relation("NegotiationAccepter", fields: [acceptedBy], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sender    User      @relation("NegotiationSender", fields: [senderId], references: [id])
+  accepter  User?     @relation("NegotiationAccepter", fields: [acceptedBy], references: [id])
   proposal  Proposal? @relation(fields: [proposalId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
@@ -544,8 +548,8 @@ model Proposal {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  workerProfile WorkerProfile  @relation(fields: [workerProfileId], references: [id])
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id])
   negotiations  Negotiation[]
 
   @@unique([orderId, workerProfileId])
@@ -661,6 +665,7 @@ model Conversation {
 
   participants ConversationParticipant[]
   messages     Message[]
+  reports      Report[]
 
   @@map("conversations")
 }
@@ -884,21 +889,21 @@ model WorkerBalance {
 }
 
 model PayoutMethod {
-  id              String           @id @default(uuid())
-  workerProfileId String
-  methodType      PayoutMethodType
-  accountName     String
-  accountNumber   String
-  bankName        String?
-  isDefault       Boolean          @default(false)
-  isVerified      Boolean          @default(true)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
- withdrawRequests WithdrawRequest[]
-  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id])
+  id               String            @id @default(uuid())
+  workerProfileId  String
+  methodType       PayoutMethodType
+  accountName      String
+  accountNumber    String
+  bankName         String?
+  isDefault        Boolean           @default(false)
+  isVerified       Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  withdrawRequests WithdrawRequest[]
+  workerProfile    WorkerProfile     @relation(fields: [workerProfileId], references: [id])
 
+  @@unique([workerProfileId, accountNumber])
   @@index([workerProfileId])
-  @@unique([workerProfileId,accountNumber])
   @@map("payout_methods")
 }
 
@@ -917,8 +922,9 @@ model WithdrawRequest {
   updatedAt            DateTime              @updatedAt
 
   payoutExecution PayoutExecution?
- workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id])
-  payoutMethod PayoutMethod @relation(fields: [payoutMethodId], references: [id])
+  workerProfile   WorkerProfile    @relation(fields: [workerProfileId], references: [id])
+  payoutMethod    PayoutMethod     @relation(fields: [payoutMethodId], references: [id])
+
   @@index([workerProfileId, status])
   @@index([status])
   @@map("withdraw_requests")
@@ -1093,8 +1099,9 @@ model Report {
   id              String           @id @default(uuid())
   reporterId      String
   targetType      ReportTargetType
-  targetId        String
+  targetId        String?
   contextOrderId  String?
+  conversationId  String?
   problemCategory ProblemCategory
   problemType     ProblemType
   description     String
@@ -1108,6 +1115,7 @@ model Report {
 
   reporter     User          @relation("ReportsByUser", fields: [reporterId], references: [id], onDelete: Cascade)
   contextOrder Order?        @relation("ReportContextOrder", fields: [contextOrderId], references: [id], onDelete: SetNull)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   images       ReportImage[]
 
   @@index([reporterId])
@@ -1117,10 +1125,10 @@ model Report {
 }
 
 model ReportImage {
-  id          String    @id @default(uuid())
-  reportId    String
-  url         String
-  createdAt   DateTime  @default(now())
+  id        String   @id @default(uuid())
+  reportId  String
+  url       String
+  createdAt DateTime @default(now())
 
   report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
 

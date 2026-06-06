@@ -27,6 +27,7 @@ export interface NotificationData {
     | 'broadcast'
     | 'none';
   actionType?: 'WARNING' | 'SUSPENDED' | 'BANNED';
+  workerId?: string;
   openOrdersCount?: string;
 }
 
@@ -53,10 +54,12 @@ export type NotificationEventContext =
       type: 'NEGOTIATION_OFFER';
       ctx: { orderId: string; orderTitle: string; proposedAmount: number };
     }
+  | { type: 'RATING'; ctx: { orderId: string; orderTitle: string } }
+  | { type: 'ORDER_RATED'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'NEGOTIATION_ACCEPTED'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'NEGOTIATION_REJECTED'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'WORK_STARTED'; ctx: { orderId: string; orderTitle: string } }
-  | { type: 'WORK_DONE'; ctx: { orderId: string } }
+  | { type: 'WORK_DONE'; ctx: { orderId: string; workerId: string } }
   | { type: 'PAYMENT_REQUIRED'; ctx: { orderId: string; orderTitle: string; amount: number } }
   | { type: 'PAYMENT_RECEIVED'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'PAYOUT_COMPLETED'; ctx: { payoutId: string; amount: number } }
@@ -71,4 +74,5 @@ export type NotificationEventContext =
       type: 'ADMIN_ACTION';
       ctx: { userId: string; actionType: 'WARNING' | 'SUSPENDED' | 'BANNED'; reason?: string };
     }
-  | { type: 'TEST_NOTIFICATION'; ctx: {} };
+  | { type: 'NEW_ORDER'; ctx: { orderId: string; orderTitle: string } }
+  | { type: 'TEST_NOTIFICATION'; ctx: { message: string } };

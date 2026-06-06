@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { disputeController } from '../../../state.js';
-import { authenticateAdminAccess, requireAdminPermission } from '../../../middlewares/adminAuthMiddleware.js';
+import {
+  authenticateAdminAccess,
+  requireAdminPermission,
+} from '../../../middlewares/adminAuthMiddleware.js';
 import { validateCsrf } from '../../../middlewares/csrfMiddleware.js';
 
 const router: Router = Router();

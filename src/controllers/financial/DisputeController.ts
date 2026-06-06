@@ -10,10 +10,10 @@ export class DisputeController {
   private async enforceOwnership(req: Request, disputeId: string) {
     if (!req.adminState) throw new AppError('Unauthorized', 401);
     if (req.adminState.role === 'SUPER_ADMIN') return;
-    
+
     const dispute = await this.disputeService.getDispute(disputeId);
     if (!dispute) throw new AppError('Dispute not found', 404);
-    
+
     if ((dispute as any).assignedAdminId !== req.adminState!.adminId) {
       throw new AppError('You do not own this dispute. Please claim it first.', 403);
     }
@@ -65,7 +65,7 @@ export class DisputeController {
       const data = await this.disputeService.listDisputes(
         { status: status as any, orderId: orderId as string },
         limit ? parseInt(limit as string, 10) : 20,
-        offset ? parseInt(offset as string, 10) : 0,
+        offset ? parseInt(offset as string, 10) : 0
       );
 
       res.status(200).json({ status: 'success', data });
@@ -145,7 +145,7 @@ export class DisputeController {
     try {
       const id = req.params.id as string;
       await this.enforceOwnership(req, id);
-      
+
       const messages = await this.disputeService.getMessages(id);
       res.status(200).json({ status: 'success', data: messages });
     } catch (e: any) {

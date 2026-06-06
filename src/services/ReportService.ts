@@ -22,12 +22,16 @@ export default class ReportService extends Service {
 
   async createReport(params: {
     report: ReportCreateInput;
-    requesterRole: string;
+    requesterType: "WORKER" | "CLIENT";
     files?: Express.Multer.File[];
   }): Promise<ReportWithImages> {
     return tryCatch(async () => {
-      if (params.report.targetType === "CLIENT_PROFILE" && params.requesterRole !== 'WORKER') {
+      if (params.report.targetType === "CLIENT_PROFILE" && params.requesterType !== 'WORKER') {
         throw new AppError('Only workers can report client profiles', 403);
+      }
+
+      if (params.report.targetType === "WORKER_PROFILE" && params.requesterType !== 'CLIENT') {
+        throw new AppError('Only clients can report worker profiles', 403);
       }
 
       if (params.files && params.files.length > 5) {

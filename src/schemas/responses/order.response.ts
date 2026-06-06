@@ -2,6 +2,7 @@ import { z } from '../../libs/zod.js';
 
 import { SuccessResponseSchema } from "../responses.js";
 import { UUIDSchema } from '../common.js';
+import { SubSpecializationObjectSchema } from './specialization.response.js';
 
 export const ClientSummarySchema = z.object({
   id: UUIDSchema,
@@ -17,31 +18,25 @@ export const OrderObjectSchema = z.object({
   title: z.string(),
   description: z.string(),
   clientUserId: UUIDSchema,
-  workerUserId: UUIDSchema.nullable().optional(),
+  workerUserId: UUIDSchema.nullable(),
   locationId: UUIDSchema,
-  subSpecialization: z.object({
-    id: UUIDSchema,
-    nameAr: z.string(),
-    nameEn: z.string(),
-    specializationId: UUIDSchema,
-    createdAt: z.coerce.date(),
-    updatedAt: z.coerce.date(),
-  }),
+  subSpecialization: SubSpecializationObjectSchema,
   orderStatus: z.enum(['PENDING', 'OPEN', 'WORKER_SELECTED', 'TIME_SPECIFIED', 'PRICE_AGREED', 'PAID', 'COMPLETED', 'CANCELLED']),
   workStatus: z.enum(['PENDING', 'WAITING_FOR_WORK', 'STARTED', 'DONE']),
-  finalPrice: z.number().nullable().optional(),
-  startDate: z.coerce.date().nullable().optional(),
-  endDate: z.coerce.date().nullable().optional(),
+  initialPrice: z.number().nullable(),
+  finalPrice: z.number().nullable(),
+  startDate: z.coerce.date().nullable(),
+  estimatedDurationHours: z.number().nullable(),
   isUrgent: z.boolean(),
-  rate: z.number().nullable().optional(),
-  comment: z.string().nullable().optional(),
-  workStartedAt: z.coerce.date().nullable().optional(),
-  workFinishedAt: z.coerce.date().nullable().optional(),
+  rate: z.number().nullable(),
+  comment: z.string().nullable(),
+  workStartedAt: z.coerce.date().nullable(),
+  workFinishedAt: z.coerce.date().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+  images: z.array(z.string()),
   orderMode: z.enum(['DIRECT', 'GLOBAL']),
-  clientSummary: ClientSummarySchema.optional().nullable(),
-  images: z.array(z.string()).optional(),
+
 });
 
 export const OrderListResponseSchema = SuccessResponseSchema(z.object({

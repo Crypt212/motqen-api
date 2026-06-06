@@ -13,7 +13,6 @@ import { validateParams, validateQuery } from '../../middlewares/validateRequest
 import {
   SpecializationIdParamsSchema,
   SpecializationQuerySchema,
-  SubSpecializationIdParamsSchema,
   SubSpecializationQuerySchema,
 } from '../../schemas/requests/specialization.request.js';
 
@@ -33,7 +32,5 @@ specializationRouter.get(
   validateQuery(SubSpecializationQuerySchema),
   getSubSpecializations
 );
-
-
 
 export default specializationRouter;

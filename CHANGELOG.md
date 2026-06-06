@@ -1,5 +1,34 @@
 # Changelog
 
+## [Unreleased] - 2026-05-31
+
+### Added
+- Consolidated all access control logic (`authorizeClient`, `authorizeWorker`, `authorizeAdmin`, etc.) into a single `accessMiddleware.ts` file.
+
+### Changed
+- Removed deprecated `clientMiddleware.ts`, `workerMiddleware.ts`, and `adminMiddleware.ts` in favor of the unified `accessMiddleware.ts`.
+- Updated imports across all route files (`chat`, `dashboard`, `orders`, `proposals`, `reports`, `specializations`, `financial`, etc.) to use the unified `accessMiddleware.ts`.
+- Added specific role-based access control (`authorizeClient`, `authorizeWorker`) to the `orders` endpoints, ensuring only authorized actors can create, cancel, start, finish, or rate orders.
+- Removed conflicting simultaneous `authorizeClient` and `authorizeWorker` middleware definitions from the `proposals` endpoints.
+
+## [Unreleased] - 2026-05-30
+
+### Added
+- Added `getMine` endpoint to `ProposalController` to allow workers to fetch their own proposal for a specific order.
+- Added OpenAPI documentation for the new `GET /orders/{orderId}/proposals/mine` endpoint.
+- Created `adminMiddleware.ts` to cleanly separate `authorizeAdmin` logic from general auth middleware.
+
+### Changed
+- Refactored `authorizeAdmin` out of `authMiddleware.ts` into a dedicated `adminMiddleware.ts` file.
+- Updated all financial routes (`admin-dashboard`, `disputes`, `escrow`, `refunds`, `withdrawals`), `governments`, `reports`, and `specializations` to import `authorizeAdmin` from the new middleware file.
+- Enhanced `proposals.ts` routes by adding strict role-based access control (`authorizeApprovedWorker`, `authorizeWorker`, `authorizeClient`) to specific endpoints.
+- Improved `OrderService.ts`: Added worker existence validation before order creation. Prevented clients from creating orders with themselves as the worker.
+- Updated `ProposalService.ts`: Added `getMyProposal` method to retrieve worker-specific proposals. Blocked users from submitting proposals to their own orders.
+
+### Fixed
+- Fixed URL parameter validation in `OrderController` by consistently using `OrderIdParamsSchema.parse(req.params)`.
+- Fixed missing `orderId` parameter usage in `NegotiationController`.
+
 ## [Unreleased] - 2026-05-28
 
 ### Added
