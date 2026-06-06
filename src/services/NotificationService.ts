@@ -55,6 +55,7 @@ export class NotificationService {
     saveNotification: boolean = true
   ): Promise<void> {
     const payload = mapEventToNotification(event);
+    console.log('Mapped notification payload:', payload);
     if (saveNotification) {
       const created = await this.repo.create({
         userId,
