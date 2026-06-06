@@ -22,7 +22,7 @@ export default function registerAdminWithdrawalsDocs(registry: OpenAPIRegistry) 
     security: [BEARER_AUTH],
     request: { query: listWithdrawRequestsQuerySchema },
     responses: {
-      200: { description: 'Withdraw requests retrieved successfully', content: { 'application/json': { schema: 
+      200: { description: 'Withdraw requests retrieved successfully', content: { 'application/json': { schema:
         z.object({ status: z.literal('success'), message: z.string(), data: z.object({ items: withdrawRequestListResponseSchema, nextCursor: z.string().nullable(), hasNext: z.boolean() }) })
       } } }
     }
@@ -36,7 +36,7 @@ export default function registerAdminWithdrawalsDocs(registry: OpenAPIRegistry) 
     security: [BEARER_AUTH],
     request: { params: z.object({ id: z.string().uuid() }) },
     responses: {
-      200: { description: 'Withdraw request details retrieved successfully', content: { 'application/json': { schema: 
+      200: { description: 'Withdraw request details retrieved successfully', content: { 'application/json': { schema:
         z.object({ status: z.literal('success'), message: z.string(), data: withdrawRequestResponseSchema.extend({
           workerProfile: z.any(),
           payoutExecution: z.any(),
@@ -57,7 +57,7 @@ export default function registerAdminWithdrawalsDocs(registry: OpenAPIRegistry) 
       200: { description: 'Processing started', content: { 'application/json': { schema: z.object({ status: z.literal('success'), message: z.string() }) } } }
     }
   });
-  
+
   registry.registerPath({
     method: 'post',
     path: '/api/v1/admin/withdrawals/withdraw-requests/{id}/reject',
@@ -76,15 +76,15 @@ export default function registerAdminWithdrawalsDocs(registry: OpenAPIRegistry) 
     tags: ['Admin / Withdrawals'],
     summary: 'Complete payout execution',
     security: [BEARER_AUTH],
-    request: { 
-      params: z.object({ id: z.string().uuid() }), 
-      body: { 
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+      body: {
         content: { 'multipart/form-data': { schema: z.object({
           externalReferenceId: z.string(),
           proofOfPaymentImage: z.any(),
           notes: z.string().optional()
-        }) } } 
-      } 
+        }) } }
+      }
     },
     responses: {
       200: { description: 'Payout completed successfully', content: { 'application/json': { schema: z.object({ status: z.literal('success'), message: z.string() }) } } }
@@ -111,7 +111,7 @@ export default function registerAdminWithdrawalsDocs(registry: OpenAPIRegistry) 
     security: [BEARER_AUTH],
     request: { params: z.object({ id: z.string().uuid() }) },
     responses: {
-      200: { description: 'Payout execution proof retrieved successfully', content: { 'application/json': { schema: 
+      200: { description: 'Payout execution proof retrieved successfully', content: { 'application/json': { schema:
         z.object({ status: z.literal('success'), message: z.string(), data: z.object({
           proofOfPaymentUrl: z.string().url().nullable(),
           externalReferenceId: z.string().nullable(),
@@ -132,7 +132,7 @@ export default function registerAdminWithdrawalsDocs(registry: OpenAPIRegistry) 
     security: [BEARER_AUTH],
     request: { query: listDebtsQuerySchema },
     responses: {
-      200: { description: 'Debts fetched successfully', content: { 'application/json': { schema: 
+      200: { description: 'Debts fetched successfully', content: { 'application/json': { schema:
         z.object({ status: z.literal('success'), message: z.string() })
       } } }
     }

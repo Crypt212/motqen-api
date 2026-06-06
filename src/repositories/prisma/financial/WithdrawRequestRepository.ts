@@ -81,13 +81,13 @@ export class WithdrawRequestRepository extends Repository implements IWithdrawRe
         equals: filter.payoutMethodType,
       };
     }
-    
+
     if (filter.createdFrom || filter.createdTo) {
       where.createdAt = {};
       if (filter.createdFrom) where.createdAt.gte = filter.createdFrom;
       if (filter.createdTo) where.createdAt.lte = filter.createdTo;
     }
-    
+
     if (filter.workerName || filter.phoneNumber) {
       where.workerProfile = {
         user: {
