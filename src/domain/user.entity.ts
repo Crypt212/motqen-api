@@ -39,7 +39,22 @@ export type UserUpdateInput = Partial<UserCreateInput> & { lastNotificationReadA
 
 export const UserFilterDescriptor = {
   id: { type: 'uuid' as const },
-  phoneNumber: { type: 'string' as const },
+  phoneNumber: { type: 'string' as const, searchable: true },
+  firstName: { type: 'string' as const, searchable: true },
+  middleName: { type: 'string' as const, searchable: true },
+  lastName: { type: 'string' as const, searchable: true },
+  status: {
+    type: 'enum' as const,
+    enumValues: Object.values($Enums.AccountStatus) as [string, ...string[]],
+    sortable: true,
+  },
+  role: {
+    type: 'enum' as const,
+    enumValues: Object.values($Enums.Role) as [string, ...string[]],
+    sortable: true,
+  },
+  isOnline: { type: 'boolean' as const },
+  createdAt: { type: 'date' as const, sortable: true },
 } satisfies Record<string, FieldTypeDefinition>;
 
 export type UserFilter = FilterFromDescriptor<typeof UserFilterDescriptor>;

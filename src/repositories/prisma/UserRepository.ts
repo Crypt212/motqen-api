@@ -57,7 +57,7 @@ export default class UserRepository extends Repository implements IUserRepositor
     try {
       if (isEmptyFilter(filter)) return false;
       const count = await this.prismaClient.user.count({
-        where: filter,
+        where: filter as any,
       });
       return count > 0;
     } catch (error: unknown) {
@@ -73,7 +73,7 @@ export default class UserRepository extends Repository implements IUserRepositor
     try {
       console.log('Finding user with filter:', filter);
       const record = await this.prismaClient.user.findFirst({
-        where: filter,
+        where: filter as any,
       });
       if (!record) return null;
       const isWorker =
@@ -97,7 +97,7 @@ export default class UserRepository extends Repository implements IUserRepositor
   }): Promise<PaginatedResultMeta & { users: User[] }> {
     try {
       const total = await this.prismaClient.user.count({
-        where: filter,
+        where: filter as any,
       });
       const sortQuery = handleSort(sort);
       const { paginationResult, paginationQuery } = handlePagination({
@@ -106,7 +106,7 @@ export default class UserRepository extends Repository implements IUserRepositor
       });
 
       const users = await this.prismaClient.user.findMany({
-        where: filter,
+        where: filter as any,
         ...paginationQuery,
         orderBy: sortQuery,
       });
@@ -139,7 +139,7 @@ export default class UserRepository extends Repository implements IUserRepositor
       };
 
       const total = await this.prismaClient.user.count({
-        where: whereCondition,
+        where: whereCondition as any,
       });
       const sortQuery = handleSort(sort);
       const { paginationResult, paginationQuery } = handlePagination({
@@ -148,7 +148,7 @@ export default class UserRepository extends Repository implements IUserRepositor
       });
 
       const users = await this.prismaClient.user.findMany({
-        where: whereCondition,
+        where: whereCondition as any,
         ...paginationQuery,
         orderBy: sortQuery,
       });
@@ -182,7 +182,7 @@ export default class UserRepository extends Repository implements IUserRepositor
         throw new Error('User not found');
       }
       const existingUser = await this.prismaClient.user.findFirst({
-        where: filter,
+        where: filter as any,
       });
 
       if (!existingUser) {
@@ -203,7 +203,7 @@ export default class UserRepository extends Repository implements IUserRepositor
     try {
       if (isEmptyFilter(filter)) return;
       const existingUser = await this.prismaClient.user.findFirst({
-        where: filter,
+        where: filter as any,
       });
 
       if (!existingUser) return;
@@ -226,7 +226,7 @@ export default class UserRepository extends Repository implements IUserRepositor
       if (isEmptyFilter(filter)) return null;
 
       const user = await this.prismaClient.user.findFirst({
-        where: filter,
+        where: filter as any,
       });
 
       if (!user) return null;

@@ -688,7 +688,7 @@ export default function registerAdminDocs(registry: OpenAPIRegistry): void {
   // --- Admin Dashboard ---
   registry.registerPath({
     method: 'get',
-    path: '/api/v1/admin/financial/summary',
+    path: '/api/v1/admin/finance/summary',
     summary: 'Get financial dashboard summary',
     tags: ['Admin Dashboard'],
     security: [{ BearerAuth: [] }],
@@ -706,7 +706,7 @@ export default function registerAdminDocs(registry: OpenAPIRegistry): void {
 
   registry.registerPath({
     method: 'get',
-    path: '/api/v1/admin/financial/activity-log',
+    path: '/api/v1/admin/finance/activity-log',
     summary: 'Get financial activity log',
     tags: ['Admin Dashboard'],
     security: [{ BearerAuth: [] }],
@@ -724,7 +724,7 @@ export default function registerAdminDocs(registry: OpenAPIRegistry): void {
 
   registry.registerPath({
     method: 'get',
-    path: '/api/v1/admin/financial/users/{userId}/aggregation',
+    path: '/api/v1/admin/finance/users/{userId}/aggregation',
     summary: 'Get user financial aggregation',
     tags: ['Admin Dashboard'],
     security: [{ BearerAuth: [] }],

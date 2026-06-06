@@ -6,6 +6,7 @@ import {
 } from '../../../middlewares/adminAuthMiddleware.js';
 import { validateCsrf } from '../../../middlewares/csrfMiddleware.js';
 import { validateBody, validateParams, validateQuery } from '../../../middlewares/validateRequest.js';
+import upload from '../../../configs/multer.js';
 import {
   idParamsSchema,
   rejectWithdrawRequestBodySchema,
@@ -26,6 +27,12 @@ router.get(
   withdrawalAdminController.listWithdrawRequests
 );
 
+router.get(
+  '/withdraw-requests/:id',
+  validateParams(idParamsSchema),
+  withdrawalAdminController.getWithdrawRequest
+);
+
 router.post(
   '/withdraw-requests/:id/start-processing',
   validateParams(idParamsSchema),
@@ -41,6 +48,7 @@ router.post(
 
 router.post(
   '/payout-executions/:id/complete',
+  upload.single('proofOfPaymentImage'),
   validateParams(idParamsSchema),
   validateBody(completePayoutBodySchema),
   withdrawalAdminController.completePayout
@@ -51,6 +59,12 @@ router.post(
   validateParams(idParamsSchema),
   validateBody(failPayoutBodySchema),
   withdrawalAdminController.failPayout
+);
+
+router.get(
+  '/payout-executions/:id/proof',
+  validateParams(idParamsSchema),
+  withdrawalAdminController.getPayoutExecutionProof
 );
 
 router.get(

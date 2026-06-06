@@ -15,6 +15,10 @@ export class WithdrawalAdminController {
         workerProfileId: req.query.workerProfileId as string | undefined,
         status: req.query.status as WithdrawRequestStatus | undefined,
         payoutMethodType: req.query.payoutMethodType as PayoutMethodType | undefined,
+        createdFrom: req.query.createdFrom as Date | undefined,
+        createdTo: req.query.createdTo as Date | undefined,
+        workerName: req.query.workerName as string | undefined,
+        phoneNumber: req.query.phoneNumber as string | undefined,
       },
       cursor: req.query.cursor as string | undefined,
       limit: Number(req.query.limit),
@@ -24,7 +28,13 @@ export class WithdrawalAdminController {
       },
     });
 
-    new SuccessResponse('Withdraw requests retrieved successfully', data, 200).send(res);
+    new SuccessResponse('Withdraw requests retrieved successfully', serializeBigints(data), 200).send(res);
+  });
+
+  public getWithdrawRequest = asyncHandler(async (req, res) => {
+    const id = req.params.id as string;
+    const request = await this.withdrawalService.getWithdrawRequestForAdmin(id);
+    new SuccessResponse('Withdraw request details retrieved successfully', serializeBigints(request), 200).send(res);
   });
 
   public startProcessing = asyncHandler(async (req, res) => {
@@ -50,14 +60,20 @@ export class WithdrawalAdminController {
 
   public completePayout = asyncHandler(async (req, res) => {
     const id = req.params.id as string;
-    const { external_reference_id, proof_of_payment_url } = req.body;
+    const { externalReferenceId, notes } = req.body;
     const adminId = req.adminState?.adminId as IDType;
     if (!adminId) throw new AppError('Unauthorized', 401);
 
+    const file = req.file;
+    if (!file) {
+      throw new AppError('A proof of payment image is required', 400);
+    }
+
     await this.withdrawalService.completePayout(
       id,
-      proof_of_payment_url,
-      external_reference_id,
+      file.buffer, // we'll update service to accept a buffer instead of URL
+      externalReferenceId,
+      notes,
       adminId
     );
 
@@ -73,6 +89,12 @@ export class WithdrawalAdminController {
     await this.withdrawalService.failPayout(id, reason, adminId);
 
     new SuccessResponse('Payout marked as failed').send(res);
+  });
+
+  public getPayoutExecutionProof = asyncHandler(async (req, res) => {
+    const id = req.params.id as string;
+    const proof = await this.withdrawalService.getPayoutExecutionProof(id);
+    new SuccessResponse('Payout execution proof retrieved successfully', proof).send(res);
   });
 
   public listDebts = asyncHandler(async (req, res) => {

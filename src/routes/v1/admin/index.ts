@@ -13,11 +13,16 @@ import adminReportsRouter from './reports.js';
 import adminGovernmentsRouter from './governments.js';
 import adminSpecializationsRouter from './specializations.js';
 import adminAdminsRouter from './admins.js';
+import adminPlatformUsersRouter from './platform-users.js';
+import adminOrdersRouter from './orders.js';
+import adminWorkersRouter from './workers.js';
 
 const adminRouter: Router = Router();
 
 adminRouter.use('/auth', adminAuthRouter);
 adminRouter.use('/users', adminUsersRouter);
+adminRouter.use('/platform-users', adminPlatformUsersRouter);
+adminRouter.use('/workers', adminWorkersRouter);
 adminRouter.use('/audit-logs', adminAuditLogsRouter);
 adminRouter.use('/issues', adminIssuesRouter);
 adminRouter.use('/verifications', adminVerificationsRouter);
@@ -27,7 +32,8 @@ adminRouter.use('/specializations', adminSpecializationsRouter);
 adminRouter.use('/admins', adminAdminsRouter);
 adminRouter.use('/escrow-holds', escrowRouter);
 adminRouter.use('/orders/:orderId/refunds', refundRouter);
-adminRouter.use('/financial', adminDashboardRouter);
+adminRouter.use('/orders', adminOrdersRouter);
+adminRouter.use('/finance', adminDashboardRouter);
 adminRouter.use('/disputes', disputeRouter);
 adminRouter.use('/', withdrawalAdminRouter);
 

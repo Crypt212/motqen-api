@@ -28,6 +28,7 @@ import AdminIssuesController from './controllers/AdminIssuesController.js';
 import AdminVerificationsController from './controllers/AdminVerificationsController.js';
 import AdminReportsController from './controllers/AdminReportsController.js';
 import AdminUsersController from './controllers/AdminUsersController.js';
+import AdminWorkersController from './controllers/AdminWorkersController.js';
 import MessageRepository from './repositories/prisma/MessageRepository.js';
 import FlaggedMessageRepository from './repositories/prisma/FlaggedMessageRepository.js';
 import ChatPresenceCache from './cache/redis/ChatPresenceCache.js';
@@ -125,6 +126,7 @@ export const adminIssuesService = new AdminIssuesService();
 export const adminIssuesController = new AdminIssuesController();
 export const adminVerificationsController = new AdminVerificationsController();
 export const adminReportsController = new AdminReportsController();
+export const adminWorkersController = new AdminWorkersController();
 export const chatService = new ChatService({
   conversationRepository,
   messageRepository,
