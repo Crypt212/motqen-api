@@ -5,7 +5,6 @@ import {
   getWorkerProfile,
   createWorkerProfile,
   updateWorkerProfile,
-  deleteWorkerProfile,
   getWorkerGovernments,
   addWorkerGovernments,
   deleteWorkerGovernments,
@@ -18,7 +17,6 @@ import {
   getClientProfile,
   createClientProfile,
   updateClientProfile,
-  deleteClientProfile,
   getWorkerSpecializationsTree,
   getVerification,
   resubmitVerification,
@@ -169,13 +167,6 @@ usersRouter.put(
   updateWorkerProfile
 );
 
-usersRouter.delete(
-  '/worker-profile',
-  isActive,
-  authorizeApprovedWorker,
-  deleteWorkerProfile
-);
-
 usersRouter.get(
   '/worker-profile/work-governments',
   isActive,
@@ -250,13 +241,6 @@ usersRouter.put(
   authorizeClient,
   validateBody(UpdateClientProfileSchema),
   updateClientProfile
-);
-
-usersRouter.delete(
-  '/client-profile',
-  isActive,
-  authorizeClient,
-  deleteClientProfile
 );
 
 export default usersRouter;

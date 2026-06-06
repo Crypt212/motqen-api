@@ -21,6 +21,7 @@ import IProposalRepository from '../repositories/interfaces/ProposalRepository.j
 import IWorkerOccupiedTimeSlotRepository from '../repositories/interfaces/WorkerOccupiedTimeSlotRepository.js';
 import { hasOverlap } from '../utils/overlapCheck.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
+import { Order } from 'src/domain/order.entity.js';
 
 type OrderParty = {
   role: 'CLIENT' | 'WORKER';
@@ -206,7 +207,7 @@ export default class NegotiationService extends Service {
     orderId: string;
     proposalId?: string;
     userState: UserState;
-  }): Promise<Record<string, unknown>> {
+  }): Promise<Order> {
     const { orderId, proposalId, userState } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
@@ -310,12 +311,7 @@ export default class NegotiationService extends Service {
         });
       }
 
-      return {
-        id: result.updatedOrder.id,
-        clientProfileId: order.clientProfileId,
-        workerProfileId: result.workerProfileId,
-        orderStatus: result.updatedOrder.orderStatus,
-      };
+      return result.updatedOrder;
     });
   }
 

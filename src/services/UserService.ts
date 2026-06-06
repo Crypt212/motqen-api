@@ -49,6 +49,7 @@ export default class UserService extends Service {
   async get(params: { filter: UserFilter }): Promise<User | null> {
     const { filter } = params;
     const user = await this.userRepository.find({ filter });
+    if (user === null) throw new Error('User not found');
     return user;
   }
 

@@ -12,7 +12,6 @@ import { CreateNegotiationSchema } from '../../../schemas/requests/negotiation.r
 import {
   NegotiationResponseSchema,
   NegotiationListResponseSchema,
-  NegotiationOrderResponseSchema
 } from '../../../schemas/responses/negotiation.response.js';
 
 import { createResponseDoc } from '../../../docs/common.js';
@@ -338,7 +337,7 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Negotiation accepted successfully',
-        content: { 'application/json': { schema: NegotiationOrderResponseSchema } },
+        content: { 'application/json': { schema: OrderResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,

@@ -100,13 +100,13 @@ export default class NegotiationRepository extends Repository implements INegoti
         data: {
           order: { connect: { id: data.orderId } },
           sender: { connect: { id: data.senderId } },
+          proposal: { connect: { id: data.proposalId } },
+          startDate: data.startDate,
+          estimatedDurationHours: data.estimatedDurationHours,
           price: data.price,
           direction: data.direction,
           note: data.note ?? null,
           status: 'PENDING',
-          proposal: { connect: { id: data.proposalId } },
-          startDate: data.startDate,
-          estimatedDurationHours: data.estimatedDurationHours,
         },
       });
       return this.toDomain(record);

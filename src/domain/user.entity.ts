@@ -25,6 +25,11 @@ export type User = {
   lastNotificationReadAt?: Date | null;
 };
 
+export type LoggedInUser = User & {
+  isWorker: boolean;
+  isClient: boolean;
+};
+
 export type UserCreateInput = {
   phoneNumber: string;
   firstName: string;

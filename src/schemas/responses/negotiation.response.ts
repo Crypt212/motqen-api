@@ -22,10 +22,3 @@ export const NegotiationObjectSchema = z.object({
 export const NegotiationListResponseSchema = SuccessResponseSchema(z.array(NegotiationObjectSchema),);
 
 export const NegotiationResponseSchema = SuccessResponseSchema(NegotiationObjectSchema,);
-
-export const NegotiationOrderResponseSchema = SuccessResponseSchema(z.object({
-    id: UUIDSchema,
-    clientProfileId: UUIDSchema,
-    workerProfileId: UUIDSchema,
-    orderStatus: z.string(),
-  }),);

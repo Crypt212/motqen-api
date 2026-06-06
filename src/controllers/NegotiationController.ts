@@ -48,7 +48,7 @@ export const createNegotiation = asyncHandler(async (req, res) => {
 
 /**
  * POST /orders/:orderId/negotiations/accept
- * Accept the most recent pending negotiation offer.
+ * Accept the most recent pending negotiation offer. Response is the order.
  */
 export const acceptNegotiation = asyncHandler(async (req, res) => {
   const { orderId, proposalId } = req.params as { orderId: string; proposalId?: string };
