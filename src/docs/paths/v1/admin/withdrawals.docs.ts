@@ -8,8 +8,8 @@ import {
   failPayoutBodySchema,
   listDebtsQuerySchema,
   listWithdrawRequestsQuerySchema,
-} from '../../../schemas/financial/withdrawal.schema.js';
-import { PayoutExecutionStatus } from '../../../domain/financial/withdrawal.entity.js';
+} from'../../../../schemas/financial/withdrawal.schema.js';
+import { PayoutExecutionStatus } from '../../../../domain/financial/withdrawal.entity.js';
 
 export default function registerAdminWithdrawalsDocs(registry: OpenAPIRegistry) {
   const BEARER_AUTH = { bearerAuth: [] };
