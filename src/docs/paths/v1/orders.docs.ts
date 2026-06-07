@@ -376,4 +376,32 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
       internalServerError: true,
     }),
   });
+  // ─────────────────────────────────────────────────────────────────────────────
+  // POST /orders/:orderId/negotiations/cancel (Direct Orders)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/orders/{orderId}/negotiations/cancel',
+    tags: ['Orders'],
+    summary: 'Cancel the latest pending negotiation on a direct order',
+    description: 'Cancels the latest pending owned offer on a direct order without proposing a new one.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      params: OrderIdParamsSchema,
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Negotiation cancelled successfully',
+        content: { 'application/json': { schema: NegotiationResponseSchema } },
+      },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
+  });
 }

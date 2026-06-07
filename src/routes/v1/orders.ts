@@ -28,6 +28,7 @@ import {
   createNegotiation,
   acceptNegotiation,
   rejectNegotiation,
+  cancelNegotiation,
 } from '../../controllers/NegotiationController.js';
 import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
 import { parseFormDataJson } from 'src/middlewares/multiformParserMiddleware.js';
@@ -94,6 +95,12 @@ router.post(
   '/:orderId/negotiations/reject',
   validateParams(OrderIdParamsSchema),
   rejectNegotiation
+);
+
+router.post(
+  '/:orderId/negotiations/cancel',
+  validateParams(OrderIdParamsSchema),
+  cancelNegotiation
 );
 
 export default router;

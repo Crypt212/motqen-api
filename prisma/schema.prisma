@@ -487,6 +487,7 @@ enum NegotiationStatus {
   PENDING
   ACCEPTED
   REJECTED
+  CANCELLED
 }
 
 enum AccountStatus {

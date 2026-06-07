@@ -355,6 +355,46 @@ export default class NegotiationService extends Service {
     });
   }
 
+  // ─── CANCEL negotiation ───────────────────────────────────────────────────
+
+  async cancelNegotiation(params: { orderId: string; proposalId?: string; userState: UserState }): Promise<Negotiation> {
+    const { orderId, proposalId, userState } = params;
+    return tryCatch(async () => {
+      const order = await this.getOrderOrThrow(orderId);
+      const party = await this.resolveOrderParty(order, userState);
+      const resolvedProposalId = await this.resolveProposalId(order, proposalId);
+
+      // Guard: only allow negotiation in these order states
+      if (order.orderStatus !== 'PENDING') {
+        throw new AppError(
+          'Negotiations are only allowed when order status is PENDING',
+          400
+        );
+      }
+
+      const latest = await this.negotiationRepository.findLatestByProposalId({ proposalId: resolvedProposalId });
+      if (!latest || latest.status !== 'PENDING') {
+        throw new AppError('No pending negotiation to reject', 400);
+      }
+
+      // The requester must be the one who created the offer
+      const offerCreator = this.directionToRole(latest.direction);
+      if (offerCreator !== party.role) {
+        throw new AppError('You cannot cancel other party\'s offer', 403);
+      }
+
+      const rejected = await this.negotiationRepository.updateStatus({
+        id: latest.id,
+        status: 'CANCELLED',
+      });
+
+      // Notify the opposing party
+      this.notifyOpponent(order, party, 'negotiation_cancelled', { orderId });
+
+      return rejected;
+    });
+  }
+
   // ─── Socket notifications ────────────────────────────────────────────────
 
   /**

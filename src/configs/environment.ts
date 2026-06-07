@@ -102,10 +102,10 @@ const cron = {
 
   order: {
     expiryIntervalHours: Number(process.env.CRON_ORDER_TIMEOUT_EXPIRATION_TIMEOUT_HOURS) || 24,
-  paymentExpiryIntervalHours: Number(process.env.CRON_ORDER_TIMEOUT_PAYMENT_PERIOD_HOURS) || 24,
-  }
+    paymentExpiryIntervalHours: Number(process.env.CRON_ORDER_TIMEOUT_PAYMENT_PERIOD_HOURS) || 24,
+  },
 
-intervalSeconds: Number(process.env.CRON_JOB_INTERVAL_SECONDS) || 60 * 60 * 3,
+  intervalSeconds: Number(process.env.CRON_JOB_INTERVAL_SECONDS) || 60 * 60 * 3,
 };
 
 const firebase = {

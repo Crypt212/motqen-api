@@ -259,4 +259,34 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
       internalServerError: true,
     }),
   });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // POST /orders/{orderId}/proposals/{proposalId}/negotiations/cancel
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/orders/{orderId}/proposals/{proposalId}/negotiations/cancel',
+    tags: ['Proposals'],
+    summary: 'Cancel the latest pending negotiation',
+    description:
+      'Cancels the most recent PENDING negotiation. Only the owner of the offer creator can reject. Sets negotiation.status = CANCELLED, unlocking new offers.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      params: OrderProposalParamsSchema,
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Negotiation cancelled',
+        content: { 'application/json': { schema: NegotiationResponseSchema } },
+      },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      internalServerError: true,
+    }),
+  });
+
 }
