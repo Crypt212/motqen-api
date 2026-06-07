@@ -12,9 +12,9 @@ import { CreateNegotiationSchema } from '../../../schemas/requests/negotiation.r
 import {
   NegotiationListResponseSchema,
   NegotiationResponseSchema,
-  NegotiationOrderResponseSchema,
 } from '../../../schemas/responses/negotiation.response.js';
 import { createResponseDoc } from '../../../docs/common.js';
+import { OrderResponseSchema } from 'src/schemas/responses/order.response.js';
 
 export default function registerProposalsDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Negotiation accepted, order updated',
-        content: { 'application/json': { schema: NegotiationOrderResponseSchema } },
+        content: { 'application/json': { schema: OrderResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
