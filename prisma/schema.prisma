@@ -421,7 +421,6 @@ enum OrderType {
 
 enum OrderStatus {
   PENDING
-  OPEN
   PRICE_AGREED
   PAID
   COMPLETED

@@ -301,7 +301,7 @@ export default class OrderRepository extends Repository implements IOrderReposit
           estimatedDurationHours: order.estimatedDurationHours,
           isUrgent: order.isUrgent,
           orderMode: (order.orderMode as any) ?? 'DIRECT',
-          orderStatus: order.orderMode === 'GLOBAL' ? 'OPEN' : 'PENDING',
+          orderStatus: 'PENDING',
 
           clientProfile: { connect: { userId: order.clientUserId } },
           workerProfile: order.workerUserId ? { connect: { userId: order.workerUserId } } : undefined,

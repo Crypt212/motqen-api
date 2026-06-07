@@ -180,7 +180,7 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     tags: ['Proposals'],
     summary: 'Create a new negotiation offer',
     description:
-      'Submit a new price offer and time for the proposal. Only allowed when order status is OPEN. Blocked if the previous offer is still PENDING. Direction is inferred from the requester\'s role. The response may contain a hasOverlapWarning boolean flag indicating if the proposed time overlaps with the worker\'s other occupied time slots.',
+      'Submit a new price offer and time for the proposal. Only allowed when order status is PENDING. Blocked if the previous offer is still PENDING. Direction is inferred from the requester\'s role. The response may contain a hasOverlapWarning boolean flag indicating if the proposed time overlaps with the worker\'s other occupied time slots.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {

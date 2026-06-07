@@ -21,7 +21,7 @@ export const OrderObjectSchema = z.object({
   workerUserId: UUIDSchema.nullable(),
   locationId: UUIDSchema,
   subSpecialization: SubSpecializationObjectSchema,
-  orderStatus: z.enum(['PENDING', 'OPEN', 'WORKER_SELECTED', 'TIME_SPECIFIED', 'PRICE_AGREED', 'PAID', 'COMPLETED', 'CANCELLED']),
+  orderStatus: z.enum(['PENDING', 'WORKER_SELECTED', 'TIME_SPECIFIED', 'PRICE_AGREED', 'PAID', 'COMPLETED', 'CANCELLED']),
   workStatus: z.enum(['PENDING', 'WAITING_FOR_WORK', 'STARTED', 'DONE']),
   initialPrice: z.number().nullable(),
   finalPrice: z.number().nullable(),

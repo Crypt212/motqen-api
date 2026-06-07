@@ -39,12 +39,14 @@ export default class ReportService extends Service {
       }
 
       // Check duplicate
-      const isDuplicate = await this.reportRepository.isPendingOrUnderReview({
-        reporterId: params.report.reporterId,
-        targetType: params.report.targetType,
-        targetId: params.report.targetId,
-        problemCategory: params.report.problemCategory,
-      });
+      let isDuplicate = false;
+      if (params.report.problemCategory !== "OTHER")
+        isDuplicate = await this.reportRepository.isPendingOrUnderReview({
+          reporterId: params.report.reporterId,
+          targetType: params.report.targetType,
+          targetId: params.report.targetId,
+          problemCategory: params.report.problemCategory,
+        });
 
       if (isDuplicate) {
         throw new AppError('An active report already exists for this target and category', 409);

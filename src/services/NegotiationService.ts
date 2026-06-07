@@ -145,9 +145,9 @@ export default class NegotiationService extends Service {
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
-      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'OPEN') {
+      if (order.orderStatus !== 'PENDING') {
         throw new AppError(
-          'Negotiations are only allowed when order status is PENDING or OPEN',
+          'Negotiations are only allowed when order status is PENDING',
           400
         );
       }
@@ -215,9 +215,9 @@ export default class NegotiationService extends Service {
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
-      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'OPEN') {
+      if (order.orderStatus !== 'PENDING') {
         throw new AppError(
-          'Negotiations are only allowed when order status is PENDING or OPEN',
+          'Negotiations are only allowed when order status is PENDING',
           400
         );
       }
@@ -325,9 +325,9 @@ export default class NegotiationService extends Service {
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
-      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'OPEN') {
+      if (order.orderStatus !== 'PENDING') {
         throw new AppError(
-          'Negotiations are only allowed when order status is PENDING or OPEN',
+          'Negotiations are only allowed when order status is PENDING',
           400
         );
       }

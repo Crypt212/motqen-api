@@ -67,7 +67,7 @@ export const OrderFilterDescriptor = {
   rate: { type: 'number' },
   orderStatus: {
     type: 'enum',
-    enumValues: ['PENDING', 'OPEN', 'PRICE_AGREED', 'PAID', 'COMPLETED', 'CANCELLED'],
+    enumValues: ['PENDING', 'PRICE_AGREED', 'PAID', 'COMPLETED', 'CANCELLED'],
   },
   orderMode: {
     type: 'enum',
