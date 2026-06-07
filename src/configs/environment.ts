@@ -99,10 +99,17 @@ const paymob = {
 
 const cron = {
   escrowReleaseInterval: process.env.ESCROW_RELEASE_CRON_INTERVAL || '*/5 * * * *',
+
+  order: {
+    expiryIntervalHours: Number(process.env.CRON_ORDER_TIMEOUT_EXPIRATION_TIMEOUT_HOURS) || 24,
+    paymentExpiryIntervalHours: Number(process.env.CRON_ORDER_TIMEOUT_PAYMENT_PERIOD_HOURS) || 24,
+  },
+
+  intervalSeconds: Number(process.env.CRON_JOB_INTERVAL_SECONDS) || 60 * 60 * 3,
 };
 
 const firebase = {
-serviceAccount: process.env.FIREBASE_SERVICE_ACCOUNT,
+  serviceAccount: process.env.FIREBASE_SERVICE_ACCOUNT,
 };
 const environment = {
   nodeEnv,

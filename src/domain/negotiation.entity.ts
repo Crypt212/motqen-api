@@ -7,26 +7,26 @@ export type NegotiationStatus = $Enums.NegotiationStatus;
 export type Negotiation = {
   id: IDType;
   orderId: IDType;
-  price: number;
+  proposalId: IDType;
   direction: NegotiationDirection;
+  startDate: Date;
+  estimatedDurationHours: number;
+  price: number;
   status: NegotiationStatus;
   note: string | null;
   createdAt: Date;
   updatedAt: Date;
-  proposalId: IDType;
-  startDate: Date;
-  estimatedDurationHours: number;
 };
 
 export type CreateNegotiationInput = {
   orderId: IDType;
   senderId: IDType;
-  price: number;
-  direction: NegotiationDirection;
-  note?: string;
   proposalId: IDType;
+  direction: NegotiationDirection;
   startDate: Date;
   estimatedDurationHours: number;
+  price: number;
+  note?: string;
 };
 
 /**

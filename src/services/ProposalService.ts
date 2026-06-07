@@ -61,7 +61,7 @@ export default class ProposalService extends Service {
       if (order.orderMode !== 'GLOBAL') {
         throw new AppError('Proposals can only be submitted for global orders', 400);
       }
-      if (order.orderStatus !== 'OPEN') {
+      if (order.orderStatus !== 'PENDING') {
         throw new AppError('This order is no longer open for proposals', 400);
       }
 

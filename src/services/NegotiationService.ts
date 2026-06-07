@@ -21,6 +21,7 @@ import IProposalRepository from '../repositories/interfaces/ProposalRepository.j
 import IWorkerOccupiedTimeSlotRepository from '../repositories/interfaces/WorkerOccupiedTimeSlotRepository.js';
 import { hasOverlap } from '../utils/overlapCheck.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
+import { Order } from 'src/domain/order.entity.js';
 
 type OrderParty = {
   role: 'CLIENT' | 'WORKER';
@@ -144,9 +145,9 @@ export default class NegotiationService extends Service {
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
-      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'OPEN') {
+      if (order.orderStatus !== 'PENDING') {
         throw new AppError(
-          'Negotiations are only allowed when order status is PENDING or OPEN',
+          'Negotiations are only allowed when order status is PENDING',
           400
         );
       }
@@ -206,7 +207,7 @@ export default class NegotiationService extends Service {
     orderId: string;
     proposalId?: string;
     userState: UserState;
-  }): Promise<Record<string, unknown>> {
+  }): Promise<Order> {
     const { orderId, proposalId, userState } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
@@ -214,9 +215,9 @@ export default class NegotiationService extends Service {
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
-      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'OPEN') {
+      if (order.orderStatus !== 'PENDING') {
         throw new AppError(
-          'Negotiations are only allowed when order status is PENDING or OPEN',
+          'Negotiations are only allowed when order status is PENDING',
           400
         );
       }
@@ -310,12 +311,7 @@ export default class NegotiationService extends Service {
         });
       }
 
-      return {
-        id: result.updatedOrder.id,
-        clientProfileId: order.clientProfileId,
-        workerProfileId: result.workerProfileId,
-        orderStatus: result.updatedOrder.orderStatus,
-      };
+      return result.updatedOrder;
     });
   }
 
@@ -329,9 +325,9 @@ export default class NegotiationService extends Service {
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
-      if (order.orderStatus !== 'PENDING' && order.orderStatus !== 'OPEN') {
+      if (order.orderStatus !== 'PENDING') {
         throw new AppError(
-          'Negotiations are only allowed when order status is PENDING or OPEN',
+          'Negotiations are only allowed when order status is PENDING',
           400
         );
       }
@@ -354,6 +350,46 @@ export default class NegotiationService extends Service {
 
       // Notify the opposing party
       this.notifyOpponent(order, party, 'negotiation_rejected', { orderId });
+
+      return rejected;
+    });
+  }
+
+  // ─── CANCEL negotiation ───────────────────────────────────────────────────
+
+  async cancelNegotiation(params: { orderId: string; proposalId?: string; userState: UserState }): Promise<Negotiation> {
+    const { orderId, proposalId, userState } = params;
+    return tryCatch(async () => {
+      const order = await this.getOrderOrThrow(orderId);
+      const party = await this.resolveOrderParty(order, userState);
+      const resolvedProposalId = await this.resolveProposalId(order, proposalId);
+
+      // Guard: only allow negotiation in these order states
+      if (order.orderStatus !== 'PENDING') {
+        throw new AppError(
+          'Negotiations are only allowed when order status is PENDING',
+          400
+        );
+      }
+
+      const latest = await this.negotiationRepository.findLatestByProposalId({ proposalId: resolvedProposalId });
+      if (!latest || latest.status !== 'PENDING') {
+        throw new AppError('No pending negotiation to reject', 400);
+      }
+
+      // The requester must be the one who created the offer
+      const offerCreator = this.directionToRole(latest.direction);
+      if (offerCreator !== party.role) {
+        throw new AppError('You cannot cancel other party\'s offer', 403);
+      }
+
+      const rejected = await this.negotiationRepository.updateStatus({
+        id: latest.id,
+        status: 'CANCELLED',
+      });
+
+      // Notify the opposing party
+      this.notifyOpponent(order, party, 'negotiation_cancelled', { orderId });
 
       return rejected;
     });

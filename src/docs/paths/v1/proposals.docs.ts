@@ -12,9 +12,9 @@ import { CreateNegotiationSchema } from '../../../schemas/requests/negotiation.r
 import {
   NegotiationListResponseSchema,
   NegotiationResponseSchema,
-  NegotiationOrderResponseSchema,
 } from '../../../schemas/responses/negotiation.response.js';
 import { createResponseDoc } from '../../../docs/common.js';
+import { OrderResponseSchema } from 'src/schemas/responses/order.response.js';
 
 export default function registerProposalsDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     tags: ['Proposals'],
     summary: 'Create a new negotiation offer',
     description:
-      'Submit a new price offer and time for the proposal. Only allowed when order status is OPEN. Blocked if the previous offer is still PENDING. Direction is inferred from the requester\'s role. The response may contain a hasOverlapWarning boolean flag indicating if the proposed time overlaps with the worker\'s other occupied time slots.',
+      'Submit a new price offer and time for the proposal. Only allowed when order status is PENDING. Blocked if the previous offer is still PENDING. Direction is inferred from the requester\'s role. The response may contain a hasOverlapWarning boolean flag indicating if the proposed time overlaps with the worker\'s other occupied time slots.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
@@ -220,7 +220,7 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Negotiation accepted, order updated',
-        content: { 'application/json': { schema: NegotiationOrderResponseSchema } },
+        content: { 'application/json': { schema: OrderResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -259,4 +259,34 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
       internalServerError: true,
     }),
   });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // POST /orders/{orderId}/proposals/{proposalId}/negotiations/cancel
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/orders/{orderId}/proposals/{proposalId}/negotiations/cancel',
+    tags: ['Proposals'],
+    summary: 'Cancel the latest pending negotiation',
+    description:
+      'Cancels the most recent PENDING negotiation. Only the owner of the offer creator can reject. Sets negotiation.status = CANCELLED, unlocking new offers.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      params: OrderProposalParamsSchema,
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Negotiation cancelled',
+        content: { 'application/json': { schema: NegotiationResponseSchema } },
+      },
+      badRequestResponse: true,
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      internalServerError: true,
+    }),
+  });
+
 }

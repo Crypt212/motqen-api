@@ -5,19 +5,28 @@
 
 import AppError from '../errors/AppError.js';
 import SuccessResponse from '../responses/successResponse.js';
-import { clientProfileService, userService, workerProfileService } from '../state.js';
+import { clientProfileService, authService, userService, workerProfileService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { parseQueryParams } from '../schemas/common.js';
 import {
   WorkerGovernmentFilterSchema,
   WorkerSpecializationFilterSchema,
 } from '../schemas/requests/dashboard.request.js';
+import { LoggedInUser } from 'src/domain/user.entity.js';
 
 export const getUser = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
   const user = await userService.get({ filter: { id: userId, phoneNumber: undefined } });
 
-  new SuccessResponse('User retrieved successfully', { user }, 200).send(res);
+  let isClient = false;
+  let isWorker = false;
+
+  if (req.userState.client) isClient = true;
+  if (req.userState.worker) isWorker = true;
+
+  const loggedInUser: LoggedInUser = { ...user, isClient, isWorker };
+
+  new SuccessResponse('User retrieved successfully', { user: loggedInUser }, 200).send(res);
 });
 
 export const updateUser = asyncHandler(async (req, res) => {
@@ -42,13 +51,29 @@ export const updateUser = asyncHandler(async (req, res) => {
 
 export const createClientProfile = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
+  const phoneNumber = req.userState.phoneNumber;
+  const role = req.userState.role;
+  const deviceId = req.deviceId;
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   const clientProfile = await clientProfileService.create({
     userId,
     data: {},
   });
 
-  new SuccessResponse('created client profile successfully', { clientProfile }, 200).send(res);
+  await authService.logout({ userId, deviceId });
+
+  const { unHashedRefreshToken: refreshToken } = await authService.login({ phoneNumber, deviceId, expiresAt });
+
+  const accessToken = await authService.generateAccessToken({
+    deviceId,
+    userId,
+    role,
+    refreshToken,
+  });
+
+
+  new SuccessResponse('created client profile successfully', { clientProfile, accessToken, refreshToken }, 200).send(res);
 });
 
 export const updateClientProfile = asyncHandler(async (req, res) => {
@@ -57,14 +82,6 @@ export const updateClientProfile = asyncHandler(async (req, res) => {
   const clientProfile = await clientProfileService.update({
     filter: { id: clientProfileId },
     data: {},
-  });
-
-  new SuccessResponse('updated client profile successfully', { clientProfile }, 200).send(res);
-});
-
-export const deleteClientProfile = asyncHandler(async (req, res) => {
-  const clientProfile = await clientProfileService.delete({
-    filter: { id: req.userState.client.id },
   });
 
   new SuccessResponse('updated client profile successfully', { clientProfile }, 200).send(res);
@@ -88,6 +105,10 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
   } = req.body;
   const userId = req.userState.userId;
   const images = req.files;
+  const phoneNumber = req.userState.phoneNumber;
+  const role = req.userState.role;
+  const deviceId = req.deviceId;
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   if (
     !images ||
@@ -111,7 +132,18 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
     },
   });
 
-  new SuccessResponse('created worker profile successfully', { workerProfile }, 200).send(res);
+  await authService.logout({ userId, deviceId });
+
+  const { unHashedRefreshToken: refreshToken } = await authService.login({ phoneNumber, deviceId, expiresAt });
+
+  const accessToken = await authService.generateAccessToken({
+    deviceId,
+    userId,
+    role,
+    refreshToken,
+  });
+
+  new SuccessResponse('created worker profile successfully', { workerProfile, accessToken, refreshToken }, 200).send(res);
 });
 
 export const getWorkerOrdersCount = asyncHandler(async (req, res) => {

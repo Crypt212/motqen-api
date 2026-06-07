@@ -48,7 +48,7 @@ export const createNegotiation = asyncHandler(async (req, res) => {
 
 /**
  * POST /orders/:orderId/negotiations/accept
- * Accept the most recent pending negotiation offer.
+ * Accept the most recent pending negotiation offer. Response is the order.
  */
 export const acceptNegotiation = asyncHandler(async (req, res) => {
   const { orderId, proposalId } = req.params as { orderId: string; proposalId?: string };
@@ -78,4 +78,22 @@ export const rejectNegotiation = asyncHandler(async (req, res) => {
   });
 
   new SuccessResponse('Negotiation rejected', negotiation, 200).send(res);
+});
+
+
+/**
+ * POST /orders/:orderId/negotiations/cancel
+ * Cancels the most recent negotiation offer, only if it is pending.
+ */
+export const cancelNegotiation = asyncHandler(async (req, res) => {
+  const { orderId, proposalId } = req.params as { orderId: string; proposalId?: string };
+  const userState = req.userState;
+
+  const negotiation = await negotiationService.cancelNegotiation({
+    orderId,
+    proposalId,
+    userState,
+  });
+
+  new SuccessResponse('Negotiation cancelled', negotiation, 200).send(res);
 });

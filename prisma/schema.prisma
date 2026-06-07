@@ -421,7 +421,6 @@ enum OrderType {
 
 enum OrderStatus {
   PENDING
-  OPEN
   PRICE_AGREED
   PAID
   COMPLETED
@@ -488,6 +487,7 @@ enum NegotiationStatus {
   PENDING
   ACCEPTED
   REJECTED
+  CANCELLED
 }
 
 enum AccountStatus {

@@ -12,6 +12,7 @@ import {
   createNegotiation,
   acceptNegotiation,
   rejectNegotiation,
+  cancelNegotiation,
 } from '../../controllers/NegotiationController.js';
 import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
 import { authorizeApprovedWorker, authorizeWorker, authorizeClient } from 'src/middlewares/accessMiddleware.js';
@@ -77,6 +78,12 @@ proposalsRouter.post(
   isActive,
   validateParams(OrderProposalParamsSchema),
   rejectNegotiation
+);
+
+proposalsRouter.post(
+  '/:orderId/negotiations/cancel',
+  validateParams(OrderIdParamsSchema),
+  cancelNegotiation
 );
 
 export default proposalsRouter;
