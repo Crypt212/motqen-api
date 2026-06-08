@@ -5,6 +5,8 @@ import SuccessResponse from '../../responses/successResponse.js';
 import { serializeBigints } from '../../utils/serializeBigints.js';
 import AppError from '../../errors/AppError.js';
 import { WithdrawRequestStatus, PayoutMethodType } from '../../domain/financial/withdrawal.entity.js';
+import { adminAuditLogService } from '../../state.js';
+import { AdminRole } from '../../domain/admin.entity.js';
 
 export class WithdrawalAdminController {
   constructor(private readonly withdrawalService: WithdrawalService) {}
@@ -55,6 +57,20 @@ export class WithdrawalAdminController {
 
     await this.withdrawalService.rejectRequest(id, adminId, notes);
 
+    await adminAuditLogService.record({
+      actor: {
+        adminId,
+        username: req.adminState!.username,
+        role: req.adminState!.role as AdminRole,
+      },
+      action: 'WITHDRAWAL_REJECTED',
+      category: 'FINANCIAL',
+      severity: 'WARNING',
+      targetType: 'WITHDRAW_REQUEST',
+      targetId: id,
+      metadata: { notes },
+    });
+
     new SuccessResponse('Request rejected successfully').send(res);
   });
 
@@ -76,6 +92,20 @@ export class WithdrawalAdminController {
       notes,
       adminId
     );
+
+    await adminAuditLogService.record({
+      actor: {
+        adminId,
+        username: req.adminState!.username,
+        role: req.adminState!.role as AdminRole,
+      },
+      action: 'PAYOUT_COMPLETED',
+      category: 'FINANCIAL',
+      severity: 'INFO',
+      targetType: 'PAYOUT_EXECUTION',
+      targetId: id,
+      metadata: { externalReferenceId, notes },
+    });
 
     new SuccessResponse('Payout completed successfully').send(res);
   });

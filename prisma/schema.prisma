@@ -807,6 +807,8 @@ model EscrowHold {
   escrowReleaseEligibleAt DateTime?
   releasedAt              DateTime?
   idempotencyKey          String           @unique
+  assignedDepartment      AdminRole?
+  assignedAdminId         String?
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
 
@@ -814,6 +816,8 @@ model EscrowHold {
   payment Payment @relation(fields: [paymentId], references: [id])
 
   @@index([status, escrowReleaseEligibleAt])
+  @@index([assignedDepartment, status])
+  @@index([assignedAdminId])
   @@map("escrow_holds")
 }
 
@@ -920,6 +924,8 @@ model WithdrawRequest {
   idempotencyKey       String                @unique
   adminNotes           String?
   processedBy          String?
+  assignedDepartment   AdminRole?
+  assignedAdminId      String?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 
@@ -929,6 +935,8 @@ model WithdrawRequest {
 
   @@index([workerProfileId, status])
   @@index([status])
+  @@index([assignedDepartment, status])
+  @@index([assignedAdminId])
   @@map("withdraw_requests")
 }
 
@@ -965,10 +973,14 @@ model Refund {
   initiatedBy              String
   idempotencyKey           String           @unique
   notes                    String?
+  assignedDepartment       AdminRole?
+  assignedAdminId          String?
   createdAt                DateTime         @default(now())
 
   @@index([orderId])
   @@index([escrowHoldId])
+  @@index([assignedDepartment])
+  @@index([assignedAdminId])
   @@map("refunds")
 }
 

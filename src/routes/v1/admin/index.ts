@@ -23,6 +23,7 @@ adminRouter.use('/users', adminUsersRouter);
 adminRouter.use('/platform-users', adminPlatformUsersRouter);
 adminRouter.use('/audit-logs', adminAuditLogsRouter);
 adminRouter.use('/issues', adminIssuesRouter);
+adminRouter.use('/cases', adminCasesRouter);
 adminRouter.use('/verifications', adminVerificationsRouter);
 adminRouter.use('/reports', adminReportsRouter);
 adminRouter.use('/governments', adminGovernmentsRouter);

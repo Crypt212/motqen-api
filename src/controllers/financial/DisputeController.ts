@@ -3,6 +3,8 @@ import { Request } from '../../types/asyncHandler.js';
 import { DisputeService } from '../../services/financial/DisputeService.js';
 import { serializeBigints } from '../../utils/serializeBigints.js';
 import AppError from '../../errors/AppError.js';
+import { adminAuditLogService } from '../../state.js';
+import { AdminRole } from '../../domain/admin.entity.js';
 
 export class DisputeController {
   constructor(private readonly disputeService: DisputeService) {}
@@ -14,7 +16,7 @@ export class DisputeController {
     const dispute = await this.disputeService.getDispute(disputeId);
     if (!dispute) throw new AppError('Dispute not found', 404);
 
-    if ((dispute as any).assignedAdminId !== req.adminState!.adminId) {
+    if (dispute.assignedAdminId !== req.adminState!.adminId) {
       throw new AppError('You do not own this dispute. Please claim it first.', 403);
     }
   }
@@ -110,6 +112,21 @@ export class DisputeController {
       }
 
       const data = await this.disputeService.resolveDispute(id, adminId, resolution, reason);
+
+      await adminAuditLogService.record({
+        actor: {
+          adminId,
+          username: req.adminState!.username,
+          role: req.adminState!.role as AdminRole,
+        },
+        action: 'DISPUTE_RESOLVED',
+        category: 'ISSUES',
+        severity: 'INFO',
+        targetType: 'DISPUTE',
+        targetId: id,
+        metadata: { resolution, reason },
+      });
+
       res.status(200).json({ status: 'success', data });
     } catch (e: any) {
       if (e.statusCode === 403) res.status(403).json({ error: e.message });

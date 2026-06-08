@@ -1,4 +1,5 @@
 import { IDType } from '../../repositories/interfaces/Repository.js';
+import { AdminRole } from '../admin.entity.js';
 
 export type DisputeStatus = 'OPEN' | 'AWAITING_INFO' | 'RESOLVED' | 'DISMISSED';
 export type DisputeResolution = 'REFUND_CLIENT' | 'FAVOR_WORKER' | 'PARTIAL_REFUND' | 'NO_ACTION';
@@ -16,6 +17,8 @@ export type Dispute = {
   flaggedMessageIds: string[];
   eventTimeline: unknown[];
   linkedTransactionLogIds: string[];
+  assignedDepartment: AdminRole | null;
+  assignedAdminId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };

@@ -22,6 +22,8 @@ export default class DisputeRepository extends Repository implements IDisputeRep
       flaggedMessageIds: record.flaggedMessageIds,
       eventTimeline: record.eventTimeline as unknown[],
       linkedTransactionLogIds: record.linkedTransactionLogIds,
+      assignedDepartment: record.assignedDepartment,
+      assignedAdminId: record.assignedAdminId,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };

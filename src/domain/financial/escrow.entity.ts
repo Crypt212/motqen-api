@@ -1,5 +1,6 @@
 import { $Enums } from '../../generated/prisma/client.js';
 import { IDType } from '../../repositories/interfaces/Repository.js';
+import { AdminRole } from '../admin.entity.js';
 
 export type EscrowHoldStatus = $Enums.EscrowHoldStatus;
 
@@ -15,6 +16,8 @@ export type EscrowHold = {
   escrowReleaseEligibleAt: Date | null;
   releasedAt: Date | null;
   idempotencyKey: IDType;
+  assignedDepartment?: AdminRole | null;
+  assignedAdminId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 };

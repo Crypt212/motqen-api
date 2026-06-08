@@ -1,10 +1,14 @@
 import AppError from '../errors/AppError.js';
 import { adminAuditLogService, adminRepository } from '../state.js';
 import { AdminRole } from '../domain/admin.entity.js';
+import { AdminAuditCategory } from '../domain/adminAuditLog.entity.js';
+import { IssueTargetType } from '../domain/adminCase.entity.js';
 import prisma from '../libs/database.js';
 
+export type { IssueTargetType };
+
 export type ClaimIssueParams = {
-  targetType: 'REPORT' | 'DISPUTE' | 'VERIFICATION';
+  targetType: IssueTargetType;
   targetId: string;
   adminId: string;
   adminRole: AdminRole;
@@ -27,7 +31,7 @@ export type IssueData = {
 };
 
 export type TransferToAdminParams = {
-  targetType: 'REPORT' | 'DISPUTE' | 'VERIFICATION';
+  targetType: IssueTargetType;
   targetId: string;
   adminId: string;
   adminRole: AdminRole;
@@ -37,7 +41,7 @@ export type TransferToAdminParams = {
 };
 
 export type TransferToDepartmentParams = {
-  targetType: 'REPORT' | 'DISPUTE' | 'VERIFICATION';
+  targetType: IssueTargetType;
   targetId: string;
   adminId: string;
   adminRole: AdminRole;
@@ -47,13 +51,26 @@ export type TransferToDepartmentParams = {
 };
 
 export type UnassignIssueParams = {
-  targetType: 'REPORT' | 'DISPUTE' | 'VERIFICATION';
+  targetType: IssueTargetType;
   targetId: string;
   adminId: string;
   adminRole: AdminRole;
   adminUsername: string;
   note?: string;
 };
+
+const FINANCIAL_TARGET_TYPES: IssueTargetType[] = [
+  'WITHDRAW_REQUEST',
+  'REFUND',
+  'ESCROW_HOLD',
+];
+
+function auditCategoryForTarget(targetType: IssueTargetType): AdminAuditCategory {
+  if (FINANCIAL_TARGET_TYPES.includes(targetType)) return 'FINANCIAL';
+  if (targetType === 'DISPUTE') return 'ISSUES';
+  if (targetType === 'REPORT') return 'REPORT_MODERATION';
+  return 'USER_MANAGEMENT';
+}
 
 export default class AdminIssuesService {
   constructor() {}
@@ -70,13 +87,14 @@ export default class AdminIssuesService {
       assignedDepartment: AdminRole | null;
       assignedAdminId: string | null;
       createdAt: Date;
-      type: 'REPORT' | 'DISPUTE' | 'VERIFICATION';
+      type: IssueTargetType;
     }>
   > {
-    // We aggregate counts and limited rows from each table
+    const ownershipWhere = this.buildWhereClause(filter);
+
     const reports = await prisma.report
       .findMany({
-        where: this.buildWhereClause(filter),
+        where: ownershipWhere,
         select: {
           id: true,
           status: true,
@@ -90,7 +108,7 @@ export default class AdminIssuesService {
 
     const disputes = await prisma.dispute
       .findMany({
-        where: this.buildWhereClause(filter),
+        where: ownershipWhere,
         select: {
           id: true,
           status: true,
@@ -104,7 +122,7 @@ export default class AdminIssuesService {
 
     const verifications = await prisma.workerVerification
       .findMany({
-        where: this.buildWhereClause(filter),
+        where: ownershipWhere,
         select: {
           id: true,
           status: true,
@@ -116,15 +134,72 @@ export default class AdminIssuesService {
       })
       .then((items) => items.map((i) => ({ ...i, type: 'VERIFICATION' as const })));
 
-    const all = [...reports, ...disputes, ...verifications].sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-    );
+    const withdrawRequests = await prisma.withdrawRequest
+      .findMany({
+        where: ownershipWhere,
+        select: {
+          id: true,
+          status: true,
+          assignedDepartment: true,
+          assignedAdminId: true,
+          createdAt: true,
+        },
+        take: 20,
+      })
+      .then((items) => items.map((i) => ({ ...i, type: 'WITHDRAW_REQUEST' as const })));
 
-    return all.slice(0, 50); // limit unified response
+    const refunds = await prisma.refund
+      .findMany({
+        where: ownershipWhere,
+        select: {
+          id: true,
+          assignedDepartment: true,
+          assignedAdminId: true,
+          createdAt: true,
+        },
+        take: 20,
+      })
+      .then((items) =>
+        items.map((i) => ({
+          ...i,
+          status: 'RESOLVED',
+          type: 'REFUND' as const,
+        }))
+      );
+
+    const escrowHolds = await prisma.escrowHold
+      .findMany({
+        where: ownershipWhere,
+        select: {
+          id: true,
+          status: true,
+          assignedDepartment: true,
+          assignedAdminId: true,
+          createdAt: true,
+        },
+        take: 20,
+      })
+      .then((items) => items.map((i) => ({ ...i, type: 'ESCROW_HOLD' as const })));
+
+    const all = [
+      ...reports,
+      ...disputes,
+      ...verifications,
+      ...withdrawRequests,
+      ...refunds,
+      ...escrowHolds,
+    ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    return all.slice(0, 50);
   }
 
-  private buildWhereClause(filter: any): Record<string, any> {
-    const where: any = {};
+  private buildWhereClause(filter: {
+    department?: AdminRole;
+    status?: string;
+    isAssigned?: boolean;
+    adminId?: string;
+  }): Record<string, unknown> {
+    const where: Record<string, unknown> = {};
     if (filter.department) where.assignedDepartment = filter.department;
     if (filter.status) where.status = filter.status;
     if (filter.adminId) where.assignedAdminId = filter.adminId;
@@ -151,9 +226,10 @@ export default class AdminIssuesService {
       throw new AppError('Issue is already claimed', 409);
     }
 
-    const assignedDept = params.adminRole !== 'SUPER_ADMIN'
-      ? params.adminRole
-      : issue.assignedDepartment || 'SUPER_ADMIN';
+    const assignedDept =
+      params.adminRole !== 'SUPER_ADMIN'
+        ? params.adminRole
+        : issue.assignedDepartment || 'SUPER_ADMIN';
 
     await this.updateIssue(params.targetType, params.targetId, {
       assignedAdminId: params.adminId,
@@ -179,7 +255,7 @@ export default class AdminIssuesService {
         role: params.adminRole,
       },
       action: 'ISSUE_CLAIMED',
-      category: 'ISSUES',
+      category: auditCategoryForTarget(params.targetType),
       severity: 'INFO',
       targetType: params.targetType,
       targetId: params.targetId,
@@ -200,7 +276,6 @@ export default class AdminIssuesService {
     const targetAdmin = await adminRepository.find({ filter: { id: params.newAdminId } });
     if (!targetAdmin) throw new AppError('Target admin not found', 404);
 
-    // Enforce same-department constraint on admin-to-admin transfers
     if (
       targetAdmin.role !== 'SUPER_ADMIN' &&
       issue.assignedDepartment &&
@@ -235,7 +310,7 @@ export default class AdminIssuesService {
         role: params.adminRole,
       },
       action: 'ISSUE_TRANSFERRED_ADMIN',
-      category: 'ISSUES',
+      category: auditCategoryForTarget(params.targetType),
       severity: 'INFO',
       targetType: params.targetType,
       targetId: params.targetId,
@@ -283,7 +358,7 @@ export default class AdminIssuesService {
         role: params.adminRole,
       },
       action: 'ISSUE_TRANSFERRED_DEPARTMENT',
-      category: 'ISSUES',
+      category: auditCategoryForTarget(params.targetType),
       severity: 'INFO',
       targetType: params.targetType,
       targetId: params.targetId,
@@ -330,7 +405,7 @@ export default class AdminIssuesService {
         role: params.adminRole,
       },
       action: 'ISSUE_UNASSIGNED',
-      category: 'ISSUES',
+      category: auditCategoryForTarget(params.targetType),
       severity: 'INFO',
       targetType: params.targetType,
       targetId: params.targetId,
@@ -366,36 +441,46 @@ export default class AdminIssuesService {
   }
 
   private async getIssue(targetType: string, targetId: string): Promise<IssueData | null> {
-    if (targetType === 'REPORT') {
-      return prisma.report.findUnique({
-        where: { id: targetId },
-        select: { assignedAdminId: true, assignedDepartment: true },
-      });
-    } else if (targetType === 'DISPUTE') {
-      return prisma.dispute.findUnique({
-        where: { id: targetId },
-        select: { assignedAdminId: true, assignedDepartment: true },
-      });
-    } else if (targetType === 'VERIFICATION') {
-      return prisma.workerVerification.findUnique({
-        where: { id: targetId },
-        select: { assignedAdminId: true, assignedDepartment: true },
-      });
+    const select = { assignedAdminId: true, assignedDepartment: true };
+
+    switch (targetType) {
+      case 'REPORT':
+        return prisma.report.findUnique({ where: { id: targetId }, select });
+      case 'DISPUTE':
+        return prisma.dispute.findUnique({ where: { id: targetId }, select });
+      case 'VERIFICATION':
+        return prisma.workerVerification.findUnique({ where: { id: targetId }, select });
+      case 'WITHDRAW_REQUEST':
+        return prisma.withdrawRequest.findUnique({ where: { id: targetId }, select });
+      case 'REFUND':
+        return prisma.refund.findUnique({ where: { id: targetId }, select });
+      case 'ESCROW_HOLD':
+        return prisma.escrowHold.findUnique({ where: { id: targetId }, select });
+      default:
+        return null;
     }
-    return null;
   }
 
   private async updateIssue(
     targetType: string,
     targetId: string,
     data: Partial<IssueData>
-  ): Promise<any> {
-    if (targetType === 'REPORT') {
-      return prisma.report.update({ where: { id: targetId }, data });
-    } else if (targetType === 'DISPUTE') {
-      return prisma.dispute.update({ where: { id: targetId }, data });
-    } else if (targetType === 'VERIFICATION') {
-      return prisma.workerVerification.update({ where: { id: targetId }, data });
+  ): Promise<unknown> {
+    switch (targetType) {
+      case 'REPORT':
+        return prisma.report.update({ where: { id: targetId }, data });
+      case 'DISPUTE':
+        return prisma.dispute.update({ where: { id: targetId }, data });
+      case 'VERIFICATION':
+        return prisma.workerVerification.update({ where: { id: targetId }, data });
+      case 'WITHDRAW_REQUEST':
+        return prisma.withdrawRequest.update({ where: { id: targetId }, data });
+      case 'REFUND':
+        return prisma.refund.update({ where: { id: targetId }, data });
+      case 'ESCROW_HOLD':
+        return prisma.escrowHold.update({ where: { id: targetId }, data });
+      default:
+        throw new AppError('Unsupported issue target type', 400);
     }
   }
 }

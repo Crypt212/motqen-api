@@ -1,4 +1,5 @@
 import { $Enums } from '../../generated/prisma/client.js';
+import { AdminRole } from '../admin.entity.js';
 
 export type RefundReasonCode = $Enums.RefundReasonCode;
 
@@ -14,6 +15,8 @@ export type Refund = {
   initiatedBy: string;
   idempotencyKey: string;
   notes: string | null;
+  assignedDepartment?: AdminRole | null;
+  assignedAdminId?: string | null;
   createdAt: Date;
 };
 

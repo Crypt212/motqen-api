@@ -305,6 +305,17 @@ export const disputeService = new DisputeService(
 );
 
 export const disputeController = new DisputeController(disputeService);
+
+import AdminCasesService from './services/AdminCasesService.js';
+import AdminCasesController from './controllers/AdminCasesController.js';
+
+export const adminCasesService = new AdminCasesService(
+  adminIssuesService,
+  withdrawalService,
+  disputeService
+);
+export const adminCasesController = new AdminCasesController();
+
 export const reportRepository = new ReportRepository(prisma);
 export const reportService = new ReportService({ reportRepository });
 export const reportController = new ReportController({ reportService });

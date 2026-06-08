@@ -3,6 +3,7 @@ import SuccessResponse from '../responses/successResponse.js';
 import AppError from '../errors/AppError.js';
 import { adminIssuesService } from '../state.js';
 import { AdminRole } from '../domain/admin.entity.js';
+import { IssueTargetType } from '../domain/adminCase.entity.js';
 
 export default class AdminIssuesController {
   getUnifiedQueue = asyncHandler(async (req, res): Promise<void> => {
@@ -80,7 +81,7 @@ export default class AdminIssuesController {
     const { targetType, targetId } = req.params as { targetType: string; targetId: string };
     const { content } = req.body;
     const note = await adminIssuesService.addNote({
-      targetType: targetType as 'REPORT' | 'DISPUTE' | 'VERIFICATION',
+      targetType: targetType as IssueTargetType,
       targetId,
       adminId: req.adminState.adminId,
       content,

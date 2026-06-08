@@ -48,7 +48,9 @@ export type AdminAuditAction =
   | 'ISSUE_TRANSFERRED_ADMIN'
   | 'ISSUE_TRANSFERRED_DEPARTMENT'
   | 'ISSUE_UNASSIGNED'
-  | 'VERIFICATION_APPROVED';
+  | 'VERIFICATION_APPROVED'
+  | 'VERIFICATION_REJECTED'
+  | 'CASE_VIEWED';
 
 export type AdminAuditLog = {
   id: IDType;

@@ -124,6 +124,8 @@ export class WithdrawalService {
         {
           status: 'IN_PROGRESS',
           processedBy: adminId,
+          assignedAdminId: adminId,
+          assignedDepartment: 'FINANCIAL_MONITOR',
           updatedAt: new Date(),
         },
         tx
@@ -449,5 +451,51 @@ export class WithdrawalService {
 
       return { status: 'SETTLED', id: debtId };
     });
+  }
+
+  async getWithdrawRequestForAdmin(requestId: string) {
+    const request = await this.prisma.withdrawRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        workerProfile: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                middleName: true,
+                phoneNumber: true,
+              },
+            },
+          },
+        },
+        payoutMethod: true,
+        payoutExecution: true,
+      },
+    });
+
+    if (!request) throw new AppError('Withdraw request not found', 404);
+
+    return {
+      withdrawalRequest: {
+        id: request.id,
+        amount: request.amount,
+        status: request.status,
+        adminNotes: request.adminNotes,
+        processedBy: request.processedBy,
+        assignedAdminId: request.assignedAdminId,
+        assignedDepartment: request.assignedDepartment,
+        payoutMethodSnapshot: request.payoutMethodSnapshot,
+        createdAt: request.createdAt,
+        updatedAt: request.updatedAt,
+      },
+      worker: request.workerProfile.user,
+      payoutMethod: request.payoutMethod,
+      amount: request.amount,
+      status: request.status,
+      payoutExecution: request.payoutExecution,
+      proofImageUrl: request.payoutExecution?.proofOfPaymentUrl ?? null,
+    };
   }
 }

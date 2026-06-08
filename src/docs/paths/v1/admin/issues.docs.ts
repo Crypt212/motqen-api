@@ -6,7 +6,14 @@ import { createResponseDoc } from '../../../../docs/common.js';
 export default function registerAdminIssuesDocs(registry: OpenAPIRegistry) {
   const TAG = 'Admin Issues';
 
-  const IssueTypeSchema = z.enum(['REPORT', 'DISPUTE', 'VERIFICATION']);
+  const IssueTypeSchema = z.enum([
+    'REPORT',
+    'DISPUTE',
+    'VERIFICATION',
+    'WITHDRAW_REQUEST',
+    'REFUND',
+    'ESCROW_HOLD',
+  ]);
 
   const UnifiedQueueItemSchema = z.object({
     id: z.string().uuid(),

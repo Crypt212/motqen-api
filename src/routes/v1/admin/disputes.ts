@@ -8,7 +8,7 @@ import { validateCsrf } from '../../../middlewares/csrfMiddleware.js';
 
 const router: Router = Router();
 
-router.use(authenticateAdminAccess, requireAdminPermission(['FINANCIAL_MONITOR']));
+router.use(authenticateAdminAccess, requireAdminPermission(['ISSUES_MANAGEMENT']));
 router.use(validateCsrf);
 
 /**

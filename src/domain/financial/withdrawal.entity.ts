@@ -29,6 +29,8 @@ export type WithdrawRequest = {
   idempotencyKey: string;
   adminNotes: string | null;
   processedBy: string | null;
+  assignedDepartment?: string | null;
+  assignedAdminId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
