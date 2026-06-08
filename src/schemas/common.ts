@@ -131,6 +131,15 @@ export const ProjectImageSchema = z.object({
   updatedAt: z.date(),
 });
 
+export const FirstCreatedLocationSchema = z.object({
+  address: z.string().trim().min(1, 'address is required'),
+  governmentId: UUIDSchema,
+  cityId: UUIDSchema,
+  addressNotes: z.string().trim().optional(),
+  long: LongitudeSchema,
+  lat: LatitudeSchema,
+});
+
 export const LocationSchema = z.object({
   address: z.string().trim().min(1, 'address is required'),
   governmentId: UUIDSchema,
@@ -147,7 +156,7 @@ export const UserDataSchema = z.object({
   firstName: z.string().trim().min(1, 'firstName is required'),
   middleName: z.string().trim().optional(),
   lastName: z.string().trim().min(1, 'lastName is required'),
-  location: LocationSchema,
+  location: FirstCreatedLocationSchema,
 });
 
 export const UserDataOptionalSchema = z.object({
