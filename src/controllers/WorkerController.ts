@@ -3,14 +3,14 @@
  * @module controllers/WorkerController
  */
 
-import SuccessResponse from '../responses/successResponse.js';
 import { locationRepository, workerProfileService, workerProfileRepository } from '../state.js';
-import { ExploreSearchSchema } from '../schemas/requests/worker-explore.request.js';
+import { ExploreSearchDTO, OccupiedTimeSlotsQueryDTO } from '../schemas/requests/worker-explore.request.js';
+import { ExploreSearchResponseDTO, ExploreDetailResponseDTO, OccupiedTimeSlotsResponseDTO } from '../schemas/responses/worker-explore.response.js';
 
 import { asyncHandler } from '../types/asyncHandler.js';
 import AppError from 'src/errors/AppError.js';
 
-export const searchWorkers = asyncHandler(async (req, res) => {
+export const searchWorkers = asyncHandler<ExploreSearchResponseDTO, any, ExploreSearchDTO>(async (req, res) => {
   const {
     specializationId,
     subSpecializationId,
@@ -23,7 +23,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     limit,
     'location[latitude]': latitude,
     'location[longitude]': longitude,
-  } = ExploreSearchSchema.parse(req.query);
+  } = req.parsed!.query!;
 
   let customerLatitude = latitude;
   let customerLongitude = longitude;
@@ -56,7 +56,7 @@ export const searchWorkers = asyncHandler(async (req, res) => {
     excludeUserId: req.userState?.userId,
   });
 
-  new SuccessResponse('Workers results retrieved successfully', result, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Workers results retrieved successfully', data: result });
 });
 
 /**
@@ -65,8 +65,8 @@ export const searchWorkers = asyncHandler(async (req, res) => {
  * @param {import('../types/asyncHandler.js').Request} req
  * @param {import('express').Response} res
  */
-export const getWorkerById = asyncHandler(async (req, res) => {
-  const id = String(req.params.id);
+export const getWorkerById = asyncHandler<ExploreDetailResponseDTO, any, any, { id: string }>(async (req, res) => {
+  const id = req.parsed!.params!.id;
 
   const worker = await workerProfileService.getExploreWorkerById({ userId: id });
 
@@ -74,21 +74,17 @@ export const getWorkerById = asyncHandler(async (req, res) => {
     throw new AppError('Worker not found or not approved', 404);
   }
 
-  new SuccessResponse('Worker retrieved successfully', worker, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Worker retrieved successfully', data: { worker } });
 });
 
-export const getWorkerOccupiedTimeSlots = asyncHandler(async (req, res) => {
-  const workerProfileId = String(req.params.id);
-  const { selectedDate } = req.query as { selectedDate: string };
+export const getWorkerOccupiedTimeSlots = asyncHandler<OccupiedTimeSlotsResponseDTO, any, OccupiedTimeSlotsQueryDTO, { id: string }>(async (req, res) => {
+  const workerUserId = req.parsed!.params!.id;
+  const { selectedDate } = req.parsed!.query!;
 
   const slots = await workerProfileRepository.findOccupiedTimeSlots({
-    workerId: workerProfileId,
+    workerId: workerUserId,
     selectedDate,
   });
 
-  new SuccessResponse(
-    'Occupied time slots retrieved successfully',
-    { occupiedSlots: slots },
-    200
-  ).send(res);
+  res.status(200).send({ status: 'success', message: 'Occupied time slots retrieved successfully', data: { occupiedSlots: slots } });
 });

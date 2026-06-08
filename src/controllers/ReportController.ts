@@ -1,8 +1,8 @@
 import ReportService from '../services/ReportService.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { parseQueryParams } from '../schemas/common.js';
-import { CreateReportSchema, ReportFilterSchema, ReportIdParamsSchema, UpdateReportSchema, UpdateReportStatusSchema } from '../schemas/requests/report.request.js';
-import SuccessResponse from 'src/responses/successResponse.js';
+import { CreateReportDTO, ReportFilterSchema, ReportQuery, UpdateReportDTO, UpdateReportStatusDTO } from '../schemas/requests/report.request.js';
+import { ReportResponseDTO, PaginatedReportsResponseDTO } from '../schemas/responses/report.response.js';
 
 export default class ReportController {
   private reportService: ReportService;
@@ -11,12 +11,12 @@ export default class ReportController {
     this.reportService = dependencies.reportService;
   }
 
-  create = asyncHandler(async (req, res) => {
-    const { userId: requesterId, worker, client } = req.userState;
+  create = asyncHandler<ReportResponseDTO, CreateReportDTO>(async (req, res) => {
+    const { userId: requesterId, role } = req.userState!;
 
-    const requesterType = worker ? 'WORKER' : client ? 'CLIENT' : 'CLIENT';
+    const requesterType = role;
     const files = req.files as Express.Multer.File[] | undefined;
-    const bodyData = CreateReportSchema.parse(req.body);
+    const bodyData = req.parsed!.body!;
 
     const report = await this.reportService.createReport({
       report: {
@@ -27,13 +27,13 @@ export default class ReportController {
       files,
     });
 
-    new SuccessResponse('Report created successfully', { report }).send(res);
+    res.status(201).send({ status: 'success', message: 'Report created successfully', data: { report } });
   });
 
-  list = asyncHandler(async (req, res) => {
-    const { userId: requesterId } = req.userState;
+  list = asyncHandler<PaginatedReportsResponseDTO, any, ReportQuery>(async (req, res) => {
+    const { userId: requesterId } = req.userState!;
     const adminState = req.adminState;
-    const { filter, pagination, sort } = parseQueryParams(req.query, ReportFilterSchema);
+    const { filter, pagination, sort } = parseQueryParams(req.parsed!.query!, ReportFilterSchema);
 
     const result = await this.reportService.getReports({
       filter,
@@ -43,13 +43,13 @@ export default class ReportController {
       sort,
     });
 
-    new SuccessResponse('Reports retrieved successfully', result).send(res);
+    res.status(200).send({ status: 'success', message: 'Reports retrieved successfully', data: result });
   });
 
-  getById = asyncHandler(async (req, res) => {
-    const { userId: requesterId } = req.userState;
+  getById = asyncHandler<ReportResponseDTO, any, any, { reportId: string }>(async (req, res) => {
+    const { userId: requesterId } = req.userState!;
     const adminState = req.adminState;
-    const { reportId } = ReportIdParamsSchema.parse(req.params);
+    const { reportId } = req.parsed!.params!;
 
     const report = await this.reportService.getReportById({
       reportId,
@@ -57,14 +57,14 @@ export default class ReportController {
       isAdmin: adminState !== undefined,
     });
 
-    new SuccessResponse('Report retrieved successfully', { report }).send(res);
+    res.status(200).send({ status: 'success', message: 'Report retrieved successfully', data: { report } });
   });
 
-  update = asyncHandler(async (req, res) => {
-    const { userId: requesterId } = req.userState;
+  update = asyncHandler<ReportResponseDTO, UpdateReportDTO, any, { reportId: string }>(async (req, res) => {
+    const { userId: requesterId } = req.userState!;
     const adminState = req.adminState;
-    const { reportId } = ReportIdParamsSchema.parse(req.params);
-    const bodyData = UpdateReportSchema.parse(req.body);
+    const { reportId } = req.parsed!.params!;
+    const bodyData = req.parsed!.body!;
     const files = req.files as Express.Multer.File[] | undefined;
 
     const report = await this.reportService.updateReport({
@@ -75,13 +75,13 @@ export default class ReportController {
       files,
     });
 
-    new SuccessResponse('Report updated successfully', { report }).send(res);
+    res.status(200).send({ status: 'success', message: 'Report updated successfully', data: { report } });
   });
 
-  cancel = asyncHandler(async (req, res) => {
-    const { userId: requesterId } = req.userState;
+  cancel = asyncHandler<any, any, any, { reportId: string }>(async (req, res) => {
+    const { userId: requesterId } = req.userState!;
     const adminState = req.adminState;
-    const { reportId } = ReportIdParamsSchema.parse(req.params);
+    const { reportId } = req.parsed!.params!;
 
     await this.reportService.cancelReport({
       reportId,
@@ -89,13 +89,13 @@ export default class ReportController {
       isAdmin: adminState !== undefined,
     });
 
-    new SuccessResponse('Report cancelled successfully', null).send(res);
+    res.status(200).send({ status: 'success', message: 'Report cancelled successfully', data: null });
   });
 
-  updateStatus = asyncHandler(async (req, res) => {
-    const { userId: requesterId } = req.userState;
-    const { reportId } = ReportIdParamsSchema.parse(req.params);
-    const { status } = UpdateReportStatusSchema.parse(req.body);
+  updateStatus = asyncHandler<ReportResponseDTO, UpdateReportStatusDTO, any, { reportId: string }>(async (req, res) => {
+    const { userId: requesterId } = req.userState!;
+    const { reportId } = req.parsed!.params!;
+    const { status } = req.parsed!.body!;
 
     const report = await this.reportService.updateReportStatus({
       reportId,
@@ -103,6 +103,6 @@ export default class ReportController {
       resolvedBy: requesterId,
     });
 
-    new SuccessResponse('Report status updated successfully', { report }).send(res);
+    res.status(200).send({ status: 'success', message: 'Report status updated successfully', data: { report } });
   });
 }

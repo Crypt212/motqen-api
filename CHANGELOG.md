@@ -10,6 +10,13 @@
 - Removed user role field from `DashboardService` response.
 - Added debugging logs to `WorkerProfileService` image upload flow.
 
+### Fixed
+- Fixed critical user role logic in `ReportController.ts` by checking `req.userState.role` instead of incorrectly prioritizing the worker role.
+- Refactored `workerProfileId` to `workerUserId` in `WorkerController.ts` for clarity in `getWorkerOccupiedTimeSlots`.
+- Fixed Cloudinary 400 "Empty File" error in `DashboardController.createWorkerProfile` by properly indexing the `multer` fields array for images.
+- Fixed potential runtime crash in `DashboardController.updateUser` by introducing optional chaining on the `image` buffer.
+- Verified robust image buffer extraction across all endpoints utilizing `multer` (`auth`, `orders`, `reports`, `chat`, `dashboard`).
+
 ## [Unreleased] - 2026-05-31
 
 ### Added
