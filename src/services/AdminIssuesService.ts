@@ -19,7 +19,7 @@ export type ClaimIssueParams = {
 export type IssueNoteTargetType = 'REPORT' | 'DISPUTE' | 'VERIFICATION' | 'ORDER';
 
 export type AddNoteParams = {
-  targetType: IssueNoteTargetType;
+  targetType: IssueTargetType;
   targetId: string;
   adminId: string;
   content: string;

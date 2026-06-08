@@ -15,6 +15,8 @@ import adminSpecializationsRouter from './specializations.js';
 import adminAdminsRouter from './admins.js';
 import adminPlatformUsersRouter from './platform-users.js';
 import adminOrdersRouter from './orders.js';
+import adminWorkersRouter from './workers.js';
+import adminCasesRouter from './cases.js';
 
 const adminRouter: Router = Router();
 
