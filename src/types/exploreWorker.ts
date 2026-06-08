@@ -1,8 +1,7 @@
 import { User } from '../domain/user.entity.js';
 import { Location } from '../domain/location.entity.js';
 import { City } from 'src/domain/government.entity.js';
-import { Portfolio, WorkerProfile } from 'src/domain/workerProfile.entity.js';
-import { ProjectImage } from 'src/generated/prisma/client.js';
+import { WorkerProfile } from 'src/domain/workerProfile.entity.js';
 
 type user = Pick<User, 'id' | 'isOnline' | 'profileImageUrl'>;
 type location = Pick<Location, 'id' | 'address' | 'addressNotes'>;

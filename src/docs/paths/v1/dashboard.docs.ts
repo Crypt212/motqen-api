@@ -57,7 +57,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get current user',
     description: "Returns the authenticated user's profile information.",
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     responses: createResponseDoc({
       successfulResponse: {
         description: 'User retrieved',
@@ -79,7 +79,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Update current user',
     description: "Updates the authenticated user's basic info. All fields are optional.",
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: {
@@ -112,7 +112,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       'Creates a worker profile for the authenticated user (who must not already be a worker). Send as multipart/form-data with three required image files.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: {
@@ -163,7 +163,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       'Returns the complete profile of the authenticated craftsman/worker. Includes experience, specializations, operating governments, rating, badges, verification status, and portfolio. User must be registered as a Worker.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker profile retrieved successfully',
@@ -187,7 +187,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       'Returns the number of orders for the authenticated craftsman/worker. User must be registered as a Worker.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker orders count retrieved successfully',
@@ -210,7 +210,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get worker working hours',
     description: 'Returns the current working-hours schedule for the authenticated worker.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Working hours retrieved',
@@ -234,7 +234,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       'creates the working-hours of input days schedule for the authenticated worker. It does not replace the schedule of already set days.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: { 'application/json': { schema: AddDaysWorkingHoursSchema } },
@@ -264,7 +264,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       'deletes the working-hours of input days schedule for the authenticated worker. It does not delete the schedule of days which periods are already used for orders.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: { 'application/json': { schema: RemoveDaysWorkingHoursSchema } },
@@ -293,7 +293,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Update worker profile',
     description: "Updates the authenticated worker's profile. All fields are optional.",
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: { 'application/json': { schema: UpdateWorkerProfileSchema } },
@@ -312,29 +312,6 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // DELETE /me/worker-profile
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  registry.registerPath({
-    method: 'delete',
-    path: '/api/v1/me/worker-profile',
-    tags: ['Dashboard'],
-    summary: 'Delete worker profile',
-    description: "Deletes the authenticated worker's profile.",
-    security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
-    responses: createResponseDoc({
-      successfulResponse: {
-        description: 'Worker profile deleted',
-        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
-      },
-      unauthorizedResponse: true,
-      forbiddenResponse: true,
-      internalServerError: true,
-    }),
-  });
-
-  // ─────────────────────────────────────────────────────────────────────────────
   // GET /me/worker-profile/work-governments
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -345,7 +322,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get worker governments',
     description: 'Returns the list of governments where the authenticated worker operates.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       query: WorkerGovernmentQuerySchema,
     },
@@ -371,7 +348,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Add worker governments',
     description: 'Adds governments where the authenticated worker operates.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: { 'application/json': { schema: AddWorkerGovernmentsSchema } },
@@ -401,7 +378,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       "Removes governments from the authenticated worker's operating regions. Pass `all=true` query to remove all.",
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       query: DeleteWorkerGovernmentsQuerySchema,
       body: {
@@ -431,7 +408,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get worker specializations and their sub-specializations',
     description: 'Returns the list of specializations and chosen sub-specializations for the authenticated worker.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
     },
     responses: createResponseDoc({
@@ -456,7 +433,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get worker specializations',
     description: 'Returns the list of specializations for the authenticated worker.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       query: WorkerSpecializationQuerySchema,
     },
@@ -482,7 +459,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Add worker specializations',
     description: 'Adds specializations for the authenticated worker.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: { 'application/json': { schema: AddWorkerSpecializationsSchema } },
@@ -512,7 +489,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       'Removes specializations from the authenticated worker. Pass `all=true` to remove all, or `allSub=true` to remove all sub-specializations.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       query: DeleteWorkerSpecializationsQuerySchema,
       body: {
@@ -541,7 +518,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get worker verification status',
     description: 'Returns the verification status and details for the authenticated worker.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Verification details retrieved',
@@ -563,7 +540,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Resubmit worker verification',
     description: 'Resubmits verification images for the authenticated worker. Requires `id_image` and `personal_with_id_image`.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: {
@@ -595,7 +572,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Create worker portfolio',
     description: 'Creates a portfolio for the authenticated worker.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: { 'application/json': { schema: CreatePortfolioSchema } },
@@ -622,7 +599,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get worker portfolio',
     description: 'Returns the portfolio for the authenticated worker.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Portfolio retrieved',
@@ -644,7 +621,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Update worker portfolio',
     description: 'Updates the portfolio description for the authenticated worker.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: { 'application/json': { schema: UpdatePortfolioSchema } },
@@ -671,7 +648,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Add portfolio images',
     description: 'Uploads images to the authenticated worker\'s portfolio. Pass images in the `images` form data field.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: {
@@ -703,7 +680,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Delete portfolio image',
     description: 'Deletes an image from the authenticated worker\'s portfolio.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       params: PortfolioImageIdParamsSchema,
     },
@@ -728,7 +705,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get worker stats',
     description: 'Returns statistics like ratings and completed jobs for the authenticated worker.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker stats retrieved',
@@ -750,7 +727,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get worker badges',
     description: 'Returns the badges earned by the authenticated worker.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker badges retrieved',
@@ -772,7 +749,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get worker occupied time slots',
     description: 'Returns the time slots that are currently occupied for the authenticated worker for a specific date.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       query: OccupiedTimeSlotsQuerySchema,
     },
@@ -799,7 +776,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     description:
       'Creates a client profile for the authenticated user (who must not already be a client).',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: { 'application/json': { schema: CreateClientProfileSchema } },
@@ -827,7 +804,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Get client profile',
     description: "Returns the authenticated client's profile. User must have a client profile.",
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Client profile retrieved',
@@ -850,7 +827,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     summary: 'Update client profile',
     description: "Updates the authenticated client's profile. All fields are optional.",
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: { 'application/json': { schema: UpdateClientProfileSchema } },
@@ -859,30 +836,6 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Client profile updated',
-        content: { 'application/json': { schema: DashboardClientProfileResponseSchema } },
-      },
-      unauthorizedResponse: true,
-      forbiddenResponse: true,
-      validationErrorResponse: true,
-      internalServerError: true,
-    }),
-  });
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // DELETE /me/client-profile
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  registry.registerPath({
-    method: 'delete',
-    path: '/api/v1/me/client-profile',
-    tags: ['Dashboard'],
-    summary: 'Delete client profile',
-    description: "Deletes the authenticated client's profile.",
-    security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
-    responses: createResponseDoc({
-      successfulResponse: {
-        description: 'Client profile deleted',
         content: { 'application/json': { schema: DashboardClientProfileResponseSchema } },
       },
       unauthorizedResponse: true,

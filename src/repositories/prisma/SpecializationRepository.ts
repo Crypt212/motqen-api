@@ -178,7 +178,7 @@ export default class SpecializationRepository
   async createSubSpecialization(params: {
     mainSpecializationId: IDType;
     subSpecialization: SubSpecializationCreateInput;
-  }): Promise<Specialization> {
+  }): Promise<SubSpecialization> {
     try {
       const record = await this.prismaClient.subSpecialization.create({
         data: {
@@ -186,14 +186,7 @@ export default class SpecializationRepository
           mainSpecialization: { connect: { id: params.mainSpecializationId } },
         },
       });
-      return this.toDomain({
-        id: record.mainSpecializationId,
-        name: '',
-        nameAr: '',
-        category: 'DEFAULTCATEGORY',
-        createdAt: record.createdAt,
-        updatedAt: record.updatedAt,
-      } as Specialization);
+      return this.toDomainSub(record);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'createSubSpecialization');
     }

@@ -3,8 +3,23 @@
  * @module controllers/AuthController
  */
 
+import {
+  RegisterClientDTO,
+  RequestOTPDTO,
+  VerifyOTPDTO,
+  RegisterWorkerDTO,
+  FcmTokenDTO,
+} from '../schemas/requests/auth.request.js';
+import {
+  RequestOTPResponseDTO,
+  VerifyOTPResponseDTO,
+  RegisterClientResponseDTO,
+  RegisterWorkerResponseDTO,
+  LoginResponseDTO,
+  AccessTokenResponseDTO,
+  ReviewStatusResponseDTO,
+} from '../schemas/responses/auth.response.js';
 import AppError from '../errors/AppError.js';
-import SuccessResponse from '../responses/successResponse.js';
 import { authService, rateLimitService, presenceService, firebaseProvider } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import prisma from '../libs/database.js';
@@ -13,23 +28,23 @@ import prisma from '../libs/database.js';
  * Request OTP for phone number verification
  * @description Initiates OTP request by generating and sending OTP to the provided phone number
  */
-export const requestOTP = asyncHandler(async (req, res) => {
-  const { method, phoneNumber } = req.body;
+export const requestOTP = asyncHandler<RequestOTPResponseDTO, RequestOTPDTO>(async (req, res) => {
+  const { method, phoneNumber } = req.parsed!.body!;
   const deviceId = req.deviceId;
 
   const { cooldown } = await rateLimitService.incrementSend(phoneNumber, method, deviceId);
 
   await authService.requestOTP(phoneNumber, method);
 
-  new SuccessResponse('OTP sent successfully', { phoneNumber, method, cooldown }, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'OTP sent successfully', data: { phoneNumber, method, cooldown } });
 });
 
 /**
  * Verify OTP and return login or register token
  * @description Verifies the OTP and returns either a login or register token based on user existence
  */
-export const verifyOTP = asyncHandler(async (req, res) => {
-  const { phoneNumber, otp, method } = req.body;
+export const verifyOTP = asyncHandler<VerifyOTPResponseDTO, VerifyOTPDTO>(async (req, res) => {
+  const { phoneNumber, otp, method } = req.parsed!.body!;
   const deviceId = req.deviceId;
 
   const { tokenType, token, workerVerificationInfo } = await authService.verifyOTP(
@@ -39,20 +54,20 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     deviceId
   );
 
-  new SuccessResponse(
-    'OTP verified successfully',
-    { tokenType, token, ...workerVerificationInfo },
-    200
-  ).send(res);
+  res.status(200).send({
+    status: 'success',
+    message: 'OTP verified successfully',
+    data: { tokenType, token, ...workerVerificationInfo },
+  });
 });
 
 /**
  * Register a new client user
  * @description Registers a new client user with basic profile information
  */
-export const registerClient = asyncHandler(async (req, res) => {
+export const registerClient = asyncHandler<RegisterClientResponseDTO, RegisterClientDTO>(async (req, res) => {
   const deviceId = req.deviceId;
-  const { userData } = req.body;
+  const { userData } = req.parsed!.body!;
   const { firstName, middleName, lastName, location } = userData;
 
   const rawToken = req.headers['authorization']?.split(' ')[1];
@@ -88,19 +103,19 @@ export const registerClient = asyncHandler(async (req, res) => {
     refreshToken: unHashedRefreshToken,
   });
 
-  new SuccessResponse(
-    'User created successfully',
-    { user, clientProfile: profile, accessToken, refreshToken: unHashedRefreshToken },
-    201
-  ).send(res);
+  res.status(201).send({
+    status: 'success',
+    message: 'User created successfully',
+    data: { user, clientProfile: profile, accessToken, refreshToken: unHashedRefreshToken },
+  });
 });
 
 /**
  * Register a new worker user
  * @description Registers a new worker user with professional profile information
  */
-export const registerWorker = asyncHandler(async (req, res) => {
-  const { userData, workerProfile } = req.body;
+export const registerWorker = asyncHandler<RegisterWorkerResponseDTO, RegisterWorkerDTO>(async (req, res) => {
+  const { userData, workerProfile } = req.parsed!.body!;
   const { firstName, middleName, lastName, location } = userData;
   const { experienceYears, isInTeam, acceptsUrgentJobs, specializationsTree, workGovernmentIds } =
     workerProfile;
@@ -153,18 +168,18 @@ export const registerWorker = asyncHandler(async (req, res) => {
     refreshToken: unHashedRefreshToken,
   });
 
-  new SuccessResponse(
-    'User created successfully',
-    { user, workerProfile: profile, accessToken, refreshToken: unHashedRefreshToken },
-    201
-  ).send(res);
+  res.status(201).send({
+    status: 'success',
+    message: 'User created successfully',
+    data: { user, workerProfile: profile, accessToken, refreshToken: unHashedRefreshToken },
+  });
 });
 
 /**
  * Login an existing user and create session
  * @description Authenticates user with login token and creates a new session
  */
-export const login = asyncHandler(async (req, res) => {
+export const login = asyncHandler<LoginResponseDTO>(async (req, res) => {
   const deviceId = req.deviceId;
   const rawToken = req.headers['authorization']?.split(' ')[1];
   if (!rawToken) throw new AppError('Unauthorized, login token not found', 401);
@@ -184,11 +199,11 @@ export const login = asyncHandler(async (req, res) => {
     refreshToken: unHashedRefreshToken,
   });
 
-  new SuccessResponse(
-    'login successfully',
-    { user, refreshToken: unHashedRefreshToken, accessToken },
-    200
-  ).send(res);
+  res.status(200).send({
+    status: 'success',
+    message: 'login successfully',
+    data: { user, refreshToken: unHashedRefreshToken, accessToken },
+  });
 });
 
 /**
@@ -248,14 +263,14 @@ export const logout = asyncHandler(async (req, res) => {
     await presenceService.handleUserOffline({ userId, reason: 'logout' });
   }
 
-  new SuccessResponse('Logged out successfully', null, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Logged out successfully', data: null });
 });
 
 /**
  * Generate new access token using refresh token
  * @description Validates refresh token and generates a new access token
  */
-export const generateAccessToken = asyncHandler(async (req, res) => {
+export const generateAccessToken = asyncHandler<AccessTokenResponseDTO>(async (req, res) => {
   const deviceId = String(req.headers['x-device-fingerprint']);
   const { userId } = req.userState;
   const adminState = req.adminState;
@@ -269,15 +284,15 @@ export const generateAccessToken = asyncHandler(async (req, res) => {
     refreshToken,
   });
 
-  new SuccessResponse('Access token generated successfully', { accessToken }, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Access token generated successfully', data: { accessToken } });
 });
 
 /**
  * Reviews the status of a user (pending, approved, rejected)
  */
-export const reviewStatus = asyncHandler(async (req, res) => {
+export const reviewStatus = asyncHandler<ReviewStatusResponseDTO>(async (req, res) => {
   if (req.userState.client) {
-    new SuccessResponse('You are a client, you can whatever you want <3', {}, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'You are a client, you can whatever you want <3', data: { } });
     return;
   }
 
@@ -286,10 +301,10 @@ export const reviewStatus = asyncHandler(async (req, res) => {
     const reason = req.userState.worker.verification.reason;
     const status = req.userState.worker.verification.status;
     if (!isApproved) {
-      new SuccessResponse('You are not approved yet', { reason, status }, 200).send(res);
+      res.status(200).send({ status: 'success', message: 'You are not approved yet', data: { reason, status } });
       return;
     }
-    new SuccessResponse('You have been approved by admin', { reason: '', status }, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'You have been approved by admin', data: { reason: '', status } });
     return;
   }
 
@@ -299,11 +314,11 @@ export const reviewStatus = asyncHandler(async (req, res) => {
 /**
  * Update FCM token for the current session
  */
-export const updateFcmToken = asyncHandler(async (req, res) => {
+export const updateFcmToken = asyncHandler<any, FcmTokenDTO>(async (req, res) => {
   const userId = req.userState.userId;
   const adminState = req.adminState;
   const deviceId = req.deviceId;
-  const { fcmToken } = req.body;
+  const { fcmToken } = req.parsed!.body!;
 
   // Find the active session by userId + deviceId
   const session = await prisma.session.findFirst({
@@ -369,5 +384,5 @@ export const updateFcmToken = asyncHandler(async (req, res) => {
     })();
   }
 
-  new SuccessResponse('FCM token updated successfully', { success: true }, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'FCM token updated successfully', data: { success: true } });
 });

@@ -2,7 +2,6 @@ import { validationResult, ValidationError as ExpressValidationError } from 'exp
 import { logger } from '../libs/winston.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { z } from 'zod';
-import { Request, Response } from 'express';
 import ValidationError from '../errors/ValidationError.js';
 
 type Location = 'body' | 'query' | 'params';
@@ -13,18 +12,19 @@ interface FormattedError {
 }
 
 export const validateZod = (schema: z.ZodTypeAny, location: Location) =>
-  asyncHandler((req: Request, _: Response, next: NextFunction): void => {
+  asyncHandler((req, _, next): void => {
     const result = schema.safeParse(req[location]);
     if (!result.success) {
       next(new ValidationError('Validation failed', result.error));
       return;
     }
-    Object.assign(req[location], result.data);
+    if (!req.parsed) req.parsed = {};
+    req.parsed[location] = result.data;
     console.log(req.body)
     next();
   });
 
-export const validateExpress = asyncHandler((req: Request, res: Response, next: NextFunction) => {
+export const validateExpress = asyncHandler((req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {

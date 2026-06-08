@@ -28,7 +28,7 @@ export default function registerChatDocs(registry: OpenAPIRegistry) {
     description:
       'Idempotent — returns the existing conversation if one already exists for the given Worker + Client pair. Creates a new one otherwise. Only Worker ↔ Client pairs are allowed. A user cannot start a conversation with themselves.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: { 'application/json': { schema: CreateConversationSchema } },
@@ -57,7 +57,7 @@ export default function registerChatDocs(registry: OpenAPIRegistry) {
     description:
       'Returns all conversations the authenticated user participates in, ordered by most recently updated. Each item includes unreadCount, lastMessage preview, and partner public info. This is the app-open HTTP sync endpoint.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       query: ConversationListQuerySchema,
     },
@@ -82,7 +82,7 @@ export default function registerChatDocs(registry: OpenAPIRegistry) {
     description:
       'Returns only conversations with unread messages (unreadCount > 0). Same shape as GET /conversations but filtered. Use for app-open badge count or notification summary.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       query: UnreadConversationQuerySchema,
     },
@@ -107,7 +107,7 @@ export default function registerChatDocs(registry: OpenAPIRegistry) {
     description:
       'Returns a page of messages in ascending order (oldest first). Uses messageNumber as the cursor for stable pagination. Only accessible by participants of the conversation.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       params: ConversationIdParamsSchema,
       query: MessageListQuerySchema,
@@ -136,7 +136,7 @@ export default function registerChatDocs(registry: OpenAPIRegistry) {
     description:
       'Called by the client after receiving a `missed_messages_available` socket event on reconnect. Returns all messages with messageNumber > after (up to 100).',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       params: ConversationIdParamsSchema,
       query: MissedMessagesQuerySchema,

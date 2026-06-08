@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { proposalController } from '../../state.js';
 import { isActive } from '../../middlewares/authMiddleware.js';
-import { validateBody, validateParams } from '../../middlewares/validateRequest.js';
+import { createRoute } from '../../types/asyncHandler.js';
 import { OrderIdParamsSchema } from '../../schemas/requests/order.request.js';
 import {
   CreateProposalSchema,
@@ -23,67 +23,83 @@ proposalsRouter.post(
   '/',
   isActive,
   authorizeApprovedWorker,
-  validateParams(OrderIdParamsSchema),
-  validateBody(CreateProposalSchema),
-  proposalController.submit
+  createRoute({
+    schemas: { params: OrderIdParamsSchema, body: CreateProposalSchema },
+    handler: proposalController.submit,
+  })
 );
 
 proposalsRouter.get(
   '/',
   isActive,
   authorizeClient,
-  validateParams(OrderIdParamsSchema),
-  proposalController.list
+  createRoute({
+    schemas: { params: OrderIdParamsSchema },
+    handler: proposalController.list,
+  })
 );
 
 proposalsRouter.get(
   '/mine',
   isActive,
   authorizeWorker,
-  validateParams(OrderIdParamsSchema),
-  proposalController.getMine
+  createRoute({
+    schemas: { params: OrderIdParamsSchema },
+    handler: proposalController.getMine,
+  })
 );
 
 proposalsRouter.get(
   '/:proposalId',
   isActive,
-  validateParams(OrderProposalParamsSchema),
-  proposalController.getById
+  createRoute({
+    schemas: { params: OrderProposalParamsSchema },
+    handler: proposalController.getById,
+  })
 );
 
 proposalsRouter.get(
   '/:proposalId/negotiations',
   isActive,
-  validateParams(OrderProposalParamsSchema),
-  getNegotiations
+  createRoute({
+    schemas: { params: OrderProposalParamsSchema },
+    handler: getNegotiations,
+  })
 );
 
 proposalsRouter.post(
   '/:proposalId/negotiations',
   isActive,
-  validateParams(OrderProposalParamsSchema),
-  validateBody(CreateNegotiationSchema),
-  createNegotiation
+  createRoute({
+    schemas: { params: OrderProposalParamsSchema, body: CreateNegotiationSchema },
+    handler: createNegotiation,
+  })
 );
 
 proposalsRouter.post(
   '/:proposalId/negotiations/accept',
   isActive,
-  validateParams(OrderProposalParamsSchema),
-  acceptNegotiation
+  createRoute({
+    schemas: { params: OrderProposalParamsSchema },
+    handler: acceptNegotiation,
+  })
 );
 
 proposalsRouter.post(
   '/:proposalId/negotiations/reject',
   isActive,
-  validateParams(OrderProposalParamsSchema),
-  rejectNegotiation
+  createRoute({
+    schemas: { params: OrderProposalParamsSchema },
+    handler: rejectNegotiation,
+  })
 );
 
 proposalsRouter.post(
   '/:orderId/negotiations/cancel',
-  validateParams(OrderIdParamsSchema),
-  cancelNegotiation
+  createRoute({
+    schemas: { params: OrderIdParamsSchema },
+    handler: cancelNegotiation,
+  })
 );
 
 export default proposalsRouter;

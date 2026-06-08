@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
-import { UUIDSchema } from '../common.js';
+import { PaginationResponseSchema, UUIDSchema } from '../common.js';
 
 
 export const GovernmentObjectSchema = z.object({
@@ -23,25 +23,22 @@ export const CityObjectSchema = z.object({
   updatedAt: z.date(),
 });
 
-export const PaginationMetaSchema = z.object({
-  page: z.number(),
-  limit: z.number(),
-  total: z.number(),
-  totalPages: z.number(),
-});
-
 export const GovernmentListResponseSchema = SuccessResponseSchema(z.object({
     governments: z.array(GovernmentObjectSchema),
-    meta: PaginationMetaSchema.optional(),
+    meta: PaginationResponseSchema.optional(),
   }),);
+export type GovernmentListResponseDTO = z.infer<typeof GovernmentListResponseSchema>;
 
 export const GovernmentResponseSchema = SuccessResponseSchema(z.object({
     government: GovernmentObjectSchema,
   }),);
+export type GovernmentResponseDTO = z.infer<typeof GovernmentResponseSchema>;
 
 export const CityListResponseSchema = SuccessResponseSchema(z.object({
     cities: z.array(CityObjectSchema),
-    meta: PaginationMetaSchema.optional(),
+    meta: PaginationResponseSchema.optional(),
   }),);
+export type CityListResponseDTO = z.infer<typeof CityListResponseSchema>;
 
 export const DeleteGovernmentResponseSchema = SuccessResponseSchema(z.null(),);
+export type DeleteGovernmentResponseDTO = z.infer<typeof DeleteGovernmentResponseSchema>;

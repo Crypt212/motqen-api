@@ -40,6 +40,14 @@ const initApp = async () => {
 
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(generateOpenAPISpec()));
 
+  app.get(
+    '/docs.json',
+    (_, res) => {
+      res.setHeader('Content-Type', 'application/json');
+      res.send(generateOpenAPISpec());
+    }
+  );
+
   app.use(errorHandler);
 
   app.use(

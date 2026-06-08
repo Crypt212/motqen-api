@@ -51,7 +51,7 @@ export default interface ISpecializationRepository {
   createSubSpecialization: (params: {
     mainSpecializationId: IDType;
     subSpecialization: SubSpecializationCreateInput;
-  }) => Promise<Specialization>;
+  }) => Promise<SubSpecialization>;
   /**
    * update a specialization
    */

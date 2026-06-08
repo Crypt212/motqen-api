@@ -1,6 +1,8 @@
 import { z } from '../../libs/zod.js';
 import { SuccessResponseSchema } from '../responses.js';
-import { SpecializationsTreeSchema, UUIDSchema } from '../common.js';
+import { SpecializationsTreeSchema, UUIDSchema, PaginationResponseSchema } from '../common.js';
+import { UserObjectSchema } from './auth.response.js';
+import { LocationObjectSchema } from './location.response.js';
 
 export const ExploreWorkerCardSchema = z.object({
   workerId: UUIDSchema,
@@ -49,29 +51,59 @@ export const ExploreWorkerDetailSchema = ExploreWorkerCardSchema.extend({
   locations: z.array(ExploreLocationSchema),
 });
 
-const PaginationMetaSchema = z.object({
-  page: z.number(),
-  limit: z.number(),
-  total: z.number(),
-  totalPages: z.number(),
-  count: z.number(),
-  hasNext: z.boolean(),
-  hasPrev: z.boolean(),
-});
-
 export const ExploreSearchResponseSchema = SuccessResponseSchema(
-  z.object({
-    workers: z.array(ExploreWorkerCardSchema),
-    meta: PaginationMetaSchema,
-  })
+  z.object({ meta: PaginationResponseSchema, workers: z.array(ExploreWorkerCardSchema) })
 );
+export type ExploreSearchResponseDTO = z.infer<typeof ExploreSearchResponseSchema>;
 
 export const ExploreDetailResponseSchema = SuccessResponseSchema(
   z.object({
-    worker: ExploreWorkerDetailSchema,
+    worker: z.object({
+      userInfo: z.object({
+        id: UUIDSchema,
+        isOnline: z.boolean(),
+        profileImageUrl: z.string(),
+        name: z.string()
+      }),
+
+      location: z.object({
+        id: UUIDSchema,
+        address: z.string(),
+        addressNotes: z.string(),
+        city: z.object({
+          name: z.string(),
+          id: UUIDSchema,
+          nameAr: z.string(),
+          long: z.number(),
+          lat: z.number(),
+        }),
+        government: z.object({
+          name: z.string(),
+          id: UUIDSchema,
+          nameAr: z.string(),
+          long: z.number(),
+          lat: z.number(),
+        }),
+      }),
+
+      portfolio: {
+        id: z.string(),
+        mainImage: z.string().nullable(),
+      },
+      workInfo: z.object({
+        completedJobsCount: z.number(),
+        ratingCount: z.number(),
+        experienceYears: z.number(),
+        isInTeam: z.boolean(),
+        acceptsUrgentJobs: z.boolean(),
+        rate: z.number(),
+        bio: z.string().optional(),
+      }),
+    })
   })
 );
 
+export type ExploreDetailResponseDTO = z.infer<typeof ExploreDetailResponseSchema>;
 
 const AreaInfoSchema = z.object({
   id: UUIDSchema,
@@ -81,7 +113,7 @@ const AreaInfoSchema = z.object({
   lat: z.number(),
 });
 
-const ExploreWorkerSchema = z.object({
+export const ExploreWorkerSchema = z.object({
   userInfo: z.object({
     id: UUIDSchema,
     isOnline: z.boolean(),
@@ -107,16 +139,19 @@ const ExploreWorkerSchema = z.object({
 });
 
 export const ExploreWorkersResponseSchema = SuccessResponseSchema(
-  z.object({
-    workers: z.array(ExploreWorkerSchema),
-    total: z.number(),
-    page: z.number(),
-    limit: z.number(),
-    count: z.number(),
-    hasNext: z.boolean(),
-    hasPrev: z.boolean(),
-    totalPages: z.number(),
-  })
+  PaginationResponseSchema.extend({ workers: z.array(ExploreWorkerSchema) })
 );
+export type ExploreWorkersResponseDTO = z.infer<typeof ExploreWorkersResponseSchema>;
 
 export const ExploreWorkerDetailResponseSchema = SuccessResponseSchema(ExploreWorkerSchema);
+export type ExploreWorkerDetailResponseDTO = z.infer<typeof ExploreWorkerDetailResponseSchema>;
+
+export const OccupiedTimeSlotSchema = z.object({
+  startDate: z.date(),
+  endDate: z.date(),
+});
+
+export const OccupiedTimeSlotsResponseSchema = SuccessResponseSchema(
+  z.object({ occupiedSlots: z.array(OccupiedTimeSlotSchema) })
+);
+export type OccupiedTimeSlotsResponseDTO = z.infer<typeof OccupiedTimeSlotsResponseSchema>;

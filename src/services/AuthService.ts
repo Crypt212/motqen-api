@@ -69,7 +69,7 @@ interface InputUserType {
     governmentId: IDType;
     cityId: IDType;
     address: string;
-    addressNotes: string;
+    addressNotes?: string;
     long: number;
     lat: number;
   };

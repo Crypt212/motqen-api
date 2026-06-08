@@ -15,7 +15,7 @@ export default function registerNotificationsDocs(registry: OpenAPIRegistry) {
     description: 'Retrieves a paginated list of notifications for the authenticated user.',
     security: [{ BearerAuth: [] }],
     parameters: [
-      { $ref: '#/components/parameters/DeviceFingerprint' },
+      { $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' },
       {
         in: 'query',
         name: 'cursor',
@@ -52,7 +52,7 @@ export default function registerNotificationsDocs(registry: OpenAPIRegistry) {
     summary: 'Mark all notifications as read',
     description: 'Marks all notifications for the authenticated user as read.',
     security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     responses: createResponseDoc({
       successfulResponse: {
         description: 'All notifications marked as read',

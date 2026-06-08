@@ -3,8 +3,18 @@
  * @module controllers/GovernmentController
  */
 
-import { GovernmentFilterSchema } from '../schemas/requests/government.request.js';
-import SuccessResponse from '../responses/successResponse.js';
+import {
+  GovernmentFilterSchema,
+  GovernmentQuery,
+  CreateGovernmentDTO,
+  UpdateGovernmentDTO,
+} from '../schemas/requests/government.request.js';
+import {
+  GovernmentListResponseDTO,
+  GovernmentResponseDTO,
+  CityListResponseDTO,
+  DeleteGovernmentResponseDTO,
+} from '../schemas/responses/government.response.js';
 import GovernmentService from '../services/GovernmentService.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { parseQueryParams } from '../schemas/common.js';
@@ -28,27 +38,27 @@ export default class GovernmentController {
     this.governmentService = params.governmentService;
   }
 
-  getGovernments = asyncHandler(async (req, res) => {
-    const { filter, pagination, sort } = parseQueryParams(req.query, GovernmentFilterSchema);
+  getGovernments = asyncHandler<GovernmentListResponseDTO, any, GovernmentQuery>(async (req, res) => {
+    const { filter, pagination, sort } = parseQueryParams(req.parsed!.query!, GovernmentFilterSchema);
     const result = await this.governmentService.getGovernments({
       filter,
       pagination,
       sort,
     });
 
-    new SuccessResponse('Governments retrieved successfully', result, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Governments retrieved successfully', data: result });
   });
 
-  getGovernmentById = asyncHandler(async (req, res) => {
-    const id = req.params.governmentId as string;
+  getGovernmentById = asyncHandler<GovernmentResponseDTO, any, any, { governmentId: string }>(async (req, res) => {
+    const id = req.parsed!.params!.governmentId;
 
     const government = await this.governmentService.getGovernmentById({ id });
 
-    new SuccessResponse('Government retrieved successfully', { government }, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Government retrieved successfully', data: { government } });
   });
 
-  createGovernment = asyncHandler(async (req, res) => {
-    const { name, nameAr, long, lat } = req.body;
+  createGovernment = asyncHandler<GovernmentResponseDTO, CreateGovernmentDTO>(async (req, res) => {
+    const { name, nameAr, long, lat } = req.parsed!.body!;
     const normalizedLong = this.normalizeCoordinate(long);
     const normalizedLat = this.normalizeCoordinate(lat);
 
@@ -61,11 +71,12 @@ export default class GovernmentController {
       },
     });
 
-    new SuccessResponse('Government created successfully', { government }, 201).send(res);
+    res.status(201).send({ status: 'success', message: 'Government created successfully', data: { government } });
   });
 
-  updateGovernment = asyncHandler(async (req, res) => {
-    const { governmentId: id, name, nameAr, long, lat } = req.body;
+  updateGovernment = asyncHandler<GovernmentResponseDTO, UpdateGovernmentDTO, any, { governmentId: string }>(async (req, res) => {
+    const id = req.parsed!.params!.governmentId;
+    const { name, nameAr, long, lat } = req.parsed!.body!;
     const normalizedLong = this.normalizeCoordinate(long);
     const normalizedLat = this.normalizeCoordinate(lat);
 
@@ -79,20 +90,20 @@ export default class GovernmentController {
       },
     });
 
-    new SuccessResponse('Government updated successfully', { government }, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Government updated successfully', data: { government } });
   });
 
-  deleteGovernment = asyncHandler(async (req, res) => {
-    const { governmentId: id } = req.body;
+  deleteGovernment = asyncHandler<DeleteGovernmentResponseDTO, any, any, { governmentId: string }>(async (req, res) => {
+    const id = req.parsed!.params!.governmentId;
 
     await this.governmentService.deleteGovernment({ id });
 
-    new SuccessResponse('Government deleted successfully', null, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Government deleted successfully', data: null });
   });
 
-  getCitiesByGovernment = asyncHandler(async (req, res) => {
-    const { filter, pagination, sort } = parseQueryParams(req.query, GovernmentFilterSchema);
-    const governmentId = req.params.governmentId as string;
+  getCitiesByGovernment = asyncHandler<CityListResponseDTO, any, GovernmentQuery, { governmentId: string }>(async (req, res) => {
+    const { filter, pagination, sort } = parseQueryParams(req.parsed!.query!, GovernmentFilterSchema);
+    const governmentId = req.parsed!.params!.governmentId;
 
     const result = await this.governmentService.getCitiesByGovernment({
       governmentId,
@@ -101,6 +112,6 @@ export default class GovernmentController {
       sort,
     });
 
-    new SuccessResponse('Cities retrieved', result).send(res);
+    res.status(200).send({ status: 'success', message: 'Cities retrieved', data: result });
   });
 }

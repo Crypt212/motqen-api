@@ -3,17 +3,19 @@
  * @module controllers/NegotiationController
  */
 
-import SuccessResponse from '../responses/successResponse.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { negotiationService } from '../state.js';
+import { CreateNegotiationDTO } from '../schemas/requests/negotiation.request.js';
+import { NegotiationListResponseDTO, NegotiationResponseDTO } from '../schemas/responses/negotiation.response.js';
+import { OrderResponseDTO } from 'src/schemas/responses/order.response.js';
 
 /**
  * GET /orders/:orderId/negotiations
  * Return the full negotiation history for the order, sorted by createdAt DESC.
  */
-export const getNegotiations = asyncHandler(async (req, res) => {
-  const { orderId, proposalId } = req.params as { orderId: string; proposalId?: string };
-  const userState = req.userState;
+export const getNegotiations = asyncHandler<NegotiationListResponseDTO, any, any, { orderId: string; proposalId?: string }>(async (req, res) => {
+  const { orderId, proposalId } = req.parsed!.params!;
+  const userState = req.userState!;
 
   const result = await negotiationService.getNegotiations({
     orderId,
@@ -21,38 +23,38 @@ export const getNegotiations = asyncHandler(async (req, res) => {
     userState,
   });
 
-  new SuccessResponse('Negotiations retrieved', result, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Negotiations retrieved', data: result });
 });
 
 /**
  * POST /orders/:orderId/negotiations
  * Create a new negotiation offer for the order.
  */
-export const createNegotiation = asyncHandler(async (req, res) => {
-  const { orderId, proposalId } = req.params as { orderId: string; proposalId?: string };
-  const { price, startDate, estimatedDurationHours, note } = req.body;
-  const userState = req.userState;
+export const createNegotiation = asyncHandler<NegotiationResponseDTO, CreateNegotiationDTO, any, { orderId: string; proposalId?: string }>(async (req, res) => {
+  const { orderId, proposalId } = req.parsed!.params!;
+  const { price, startDate, estimatedDurationHours, note } = req.parsed!.body!;
+  const userState = req.userState!;
 
   const negotiation = await negotiationService.createNegotiation({
     orderId,
     proposalId,
     userState,
-    price,
-    startDate,
+    price: price!,
+    startDate: startDate ?? undefined,
     estimatedDurationHours,
     note,
   });
 
-  new SuccessResponse('Negotiation created', negotiation, 201).send(res);
+  res.status(201).send({ status: 'success', message: 'Negotiation created', data: { negotiation } });
 });
 
 /**
  * POST /orders/:orderId/negotiations/accept
  * Accept the most recent pending negotiation offer. Response is the order.
  */
-export const acceptNegotiation = asyncHandler(async (req, res) => {
-  const { orderId, proposalId } = req.params as { orderId: string; proposalId?: string };
-  const userState = req.userState;
+export const acceptNegotiation = asyncHandler<OrderResponseDTO, any, any, { orderId: string; proposalId?: string }>(async (req, res) => {
+  const { orderId, proposalId } = req.parsed!.params!;
+  const userState = req.userState!;
 
   const order = await negotiationService.acceptNegotiation({
     orderId,
@@ -60,16 +62,16 @@ export const acceptNegotiation = asyncHandler(async (req, res) => {
     userState,
   });
 
-  new SuccessResponse('Negotiation accepted', order, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Negotiation accepted', data: { order } });
 });
 
 /**
  * POST /orders/:orderId/negotiations/reject
  * Reject the most recent pending negotiation offer.
  */
-export const rejectNegotiation = asyncHandler(async (req, res) => {
-  const { orderId, proposalId } = req.params as { orderId: string; proposalId?: string };
-  const userState = req.userState;
+export const rejectNegotiation = asyncHandler<NegotiationResponseDTO, any, any, { orderId: string; proposalId?: string }>(async (req, res) => {
+  const { orderId, proposalId } = req.parsed!.params!;
+  const userState = req.userState!;
 
   const negotiation = await negotiationService.rejectNegotiation({
     orderId,
@@ -77,7 +79,7 @@ export const rejectNegotiation = asyncHandler(async (req, res) => {
     userState,
   });
 
-  new SuccessResponse('Negotiation rejected', negotiation, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Negotiation rejected', data: { negotiation } });
 });
 
 
@@ -85,9 +87,9 @@ export const rejectNegotiation = asyncHandler(async (req, res) => {
  * POST /orders/:orderId/negotiations/cancel
  * Cancels the most recent negotiation offer, only if it is pending.
  */
-export const cancelNegotiation = asyncHandler(async (req, res) => {
-  const { orderId, proposalId } = req.params as { orderId: string; proposalId?: string };
-  const userState = req.userState;
+export const cancelNegotiation = asyncHandler<NegotiationResponseDTO, any, any, { orderId: string; proposalId?: string }>(async (req, res) => {
+  const { orderId, proposalId } = req.parsed!.params!;
+  const userState = req.userState!;
 
   const negotiation = await negotiationService.cancelNegotiation({
     orderId,
@@ -95,5 +97,5 @@ export const cancelNegotiation = asyncHandler(async (req, res) => {
     userState,
   });
 
-  new SuccessResponse('Negotiation cancelled', negotiation, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Negotiation cancelled', data: { negotiation } });
 });

@@ -133,7 +133,7 @@ export default class SpecializationService extends Service {
   async createSubSpecialization(params: {
     parentId: string;
     input: CreateSubSpecializationInput;
-  }): Promise<Specialization> {
+  }): Promise<SubSpecialization> {
     const { parentId, input } = params;
 
     const parent = await this.specializationRepository.find({ filter: { id: parentId } });

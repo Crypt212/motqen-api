@@ -9,7 +9,7 @@ import {
   ReportQuerySchema,
 } from '../../schemas/requests/report.request.js';
 import { reportController } from '../../state.js';
-import { validateBody, validateParams, validateQuery } from 'src/middlewares/validateRequest.js';
+import { createRoute } from 'src/types/asyncHandler.js';
 
 const reportsRouter = Router();
 const upload = multer({
@@ -20,42 +20,52 @@ const upload = multer({
 reportsRouter.post(
   '/',
   upload.array('images', 5),
-  validateBody(CreateReportSchema),
-  reportController.create
+  createRoute({
+    schemas: { body: CreateReportSchema },
+    handler: reportController.create,
+  })
 );
 
 reportsRouter.get(
   '/',
-  validateQuery(ReportQuerySchema),
-  reportController.list
+  createRoute({
+    schemas: { query: ReportQuerySchema },
+    handler: reportController.list,
+  })
 );
 
 reportsRouter.get(
   '/:reportId',
-  validateParams(ReportIdParamsSchema),
-  reportController.getById
+  createRoute({
+    schemas: { params: ReportIdParamsSchema },
+    handler: reportController.getById,
+  })
 );
 
 reportsRouter.patch(
   '/:reportId',
-  validateParams(ReportIdParamsSchema),
   upload.array('images', 5),
-  validateBody(UpdateReportSchema),
-  reportController.update
+  createRoute({
+    schemas: { params: ReportIdParamsSchema, body: UpdateReportSchema },
+    handler: reportController.update,
+  })
 );
 
 reportsRouter.delete(
   '/:reportId',
-  validateParams(ReportIdParamsSchema),
-  reportController.cancel
+  createRoute({
+    schemas: { params: ReportIdParamsSchema },
+    handler: reportController.cancel,
+  })
 );
 
 reportsRouter.patch(
   '/:reportId/status',
-  validateParams(ReportIdParamsSchema),
-  validateBody(UpdateReportStatusSchema),
   authorizeAdmin,
-  reportController.updateStatus
+  createRoute({
+    schemas: { params: ReportIdParamsSchema, body: UpdateReportStatusSchema },
+    handler: reportController.updateStatus,
+  })
 );
 
 export default reportsRouter;

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
 import { UUIDSchema } from '../common.js';
+import { CityObjectSchema, GovernmentObjectSchema } from './government.response.js';
 
 
 export const LocationObjectSchema = z.object({
@@ -9,8 +10,8 @@ export const LocationObjectSchema = z.object({
   userId: UUIDSchema,
   address: z.string(),
   addressNotes: z.string().nullable().optional(),
-  governmentId: UUIDSchema,
-  cityId: UUIDSchema,
+  government: GovernmentObjectSchema,
+  city: CityObjectSchema,
   long: z.number(),
   lat: z.number(),
   isMain: z.boolean(),
@@ -30,7 +31,9 @@ export const LocationListResponseSchema = SuccessResponseSchema(z.object({
     locations: z.array(LocationObjectSchema),
     meta: PaginationMetaSchema.optional(),
   }),);
+export type LocationListResponseDTO = z.infer<typeof LocationListResponseSchema>;
 
 export const LocationResponseSchema = SuccessResponseSchema(z.object({
     location: LocationObjectSchema,
   }),);
+export type LocationResponseDTO = z.infer<typeof LocationResponseSchema>;

@@ -1,51 +1,28 @@
 import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
-import { UUIDSchema } from '../common.js';
+import { SpecializationObjectSchema, SubSpecializationObjectSchema, PaginationResponseSchema } from '../common.js';
 
 
-const PaginationMetaSchema = z.object({
-  page: z.number(),
-  limit: z.number(),
-  total: z.number(),
-  totalPages: z.number(),
-});
-
-export const SpecializationObjectSchema = z.object({
-  id: UUIDSchema,
-  name: z.string(),
-  nameAr: z.string(),
-  category: z.string(),
-  ordersCount: z.number(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
-export const SubSpecializationObjectSchema = z.object({
-  id: UUIDSchema,
-  mainSpecializationId: UUIDSchema,
-  name: z.string(),
-  nameAr: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
-export const SpecializationListResponseSchema = SuccessResponseSchema(z.object({
-    specializations: z.array(SpecializationObjectSchema),
-    meta: PaginationMetaSchema,
-  }),);
+export const SpecializationListResponseSchema = SuccessResponseSchema(
+  PaginationResponseSchema.extend({ specializations: z.array(SpecializationObjectSchema) })
+);
+export type SpecializationListResponseDTO = z.infer<typeof SpecializationListResponseSchema>;
 
 export const SpecializationResponseSchema = SuccessResponseSchema(z.object({
     specialization: SpecializationObjectSchema,
-  }),);
+  }));
+export type SpecializationResponseDTO = z.infer<typeof SpecializationResponseSchema>;
 
-export const SubSpecializationListResponseSchema = SuccessResponseSchema(z.object({
-    subSpecializations: z.array(SubSpecializationObjectSchema),
-    meta: PaginationMetaSchema,
-  }),);
+export const SubSpecializationListResponseSchema = SuccessResponseSchema(
+  PaginationResponseSchema.extend({ subSpecializations: z.array(SubSpecializationObjectSchema) })
+);
+export type SubSpecializationListResponseDTO = z.infer<typeof SubSpecializationListResponseSchema>;
 
 export const SubSpecializationResponseSchema = SuccessResponseSchema(z.object({
     subSpecialization: SubSpecializationObjectSchema,
-  }),);
+  }));
+export type SubSpecializationResponseDTO = z.infer<typeof SubSpecializationResponseSchema>;
 
-export const DeleteResponseSchema = SuccessResponseSchema(z.null(),);
+export const DeleteResponseSchema = SuccessResponseSchema(z.null());
+export type DeleteResponseDTO = z.infer<typeof DeleteResponseSchema>;

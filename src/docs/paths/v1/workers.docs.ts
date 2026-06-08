@@ -3,10 +3,12 @@ import { ExploreSearchSchema, ExploreWorkerIdParamsSchema } from '../../../schem
 import {
   ExploreSearchResponseSchema,
   ExploreDetailResponseSchema,
+  OccupiedTimeSlotsResponseSchema,
 } from '../../../schemas/responses/worker-explore.response.js';
 import { WorkerWorkingHoursResponseSchema } from '../../../schemas/responses/worker-profile.response.js';
 import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
+import { z } from '../../../libs/zod.js';
 
 export default function registerWorkersDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────
@@ -85,6 +87,33 @@ Each worker includes userInfo, location (with nested city/government), specializ
       },
       notFoundResponse: true,
       validationErrorResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /workers/:id/occupied-time-slots
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/workers/{id}/occupied-time-slots',
+    tags: ['Workers'],
+    summary: 'Get worker occupied time slots',
+    description: 'Returns the occupied time slots for the worker on a specific date.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      params: ExploreWorkerIdParamsSchema,
+      query: z.object({ selectedDate: z.string().openapi({ description: 'YYYY-MM-DD' }) }),
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Occupied time slots retrieved',
+        content: { 'application/json': { schema: OccupiedTimeSlotsResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
       internalServerError: true,
     }),
   });

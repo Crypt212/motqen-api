@@ -62,6 +62,11 @@ export const RegisterWorkerSchema = z.object({
 });
 export type RegisterWorkerDTO = z.infer<typeof RegisterWorkerSchema>;
 
+export const FcmTokenSchema = z.object({
+  fcmToken: z.string().min(1),
+});
+export type FcmTokenDTO = z.infer<typeof FcmTokenSchema>;
+
 export const SessionFilterSchema = buildFilterSchema(SessionFilterDescriptor);
 export const SessionQuerySchema = createQuerySchema(SessionFilterSchema);
 export type SessionQuery = z.infer<typeof SessionQuerySchema>;

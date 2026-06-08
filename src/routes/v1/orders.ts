@@ -14,7 +14,7 @@
 
 import { Router } from 'express';
 import { orderController } from '../../state.js';
-import { validateBody, validateQuery, validateParams } from '../../middlewares/validateRequest.js';
+import { createRoute } from '../../types/asyncHandler.js';
 import {
   CreateOrderSchema,
   OrderQuerySchema,
@@ -33,7 +33,6 @@ import {
 import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
 import { parseFormDataJson } from 'src/middlewares/multiformParserMiddleware.js';
 import { authorizeClient, authorizeWorker } from 'src/middlewares/accessMiddleware.js';
-import { AsRoleSchema } from 'src/schemas/common.js';
 
 
 const router = Router();
@@ -44,32 +43,64 @@ router.post(
   '/',
   upload.array('images', 3),
   parseFormDataJson('orderData'),
-  validateBody(CreateOrderSchema),
   authorizeClient,
-  orderController.create
+  createRoute({
+    schemas: { body: CreateOrderSchema },
+    handler: orderController.create,
+  })
 );
-router.get('/', validateQuery(OrderQuerySchema), orderController.list);
-router.get('/:orderId', validateParams(OrderIdParamsSchema), orderController.getById);
-router.delete('/:orderId', validateParams(OrderIdParamsSchema), authorizeClient, orderController.cancel);
-router.get('/:orderId/location', validateParams(OrderIdParamsSchema), orderController.getLocation);
+router.get(
+  '/',
+  createRoute({
+    schemas: { query: OrderQuerySchema },
+    handler: orderController.list,
+  })
+);
+router.get(
+  '/:orderId',
+  createRoute({
+    schemas: { params: OrderIdParamsSchema },
+    handler: orderController.getById,
+  })
+);
+router.delete(
+  '/:orderId',
+  authorizeClient,
+  createRoute({
+    schemas: { params: OrderIdParamsSchema },
+    handler: orderController.cancel,
+  })
+);
+router.get(
+  '/:orderId/location',
+  createRoute({
+    schemas: { params: OrderIdParamsSchema },
+    handler: orderController.getLocation,
+  })
+);
 router.post(
   '/:orderId/start-work',
-  validateParams(OrderIdParamsSchema),
   authorizeWorker,
-  orderController.startWork
+  createRoute({
+    schemas: { params: OrderIdParamsSchema },
+    handler: orderController.startWork,
+  })
 );
 router.post(
   '/:orderId/finish-work',
   authorizeWorker,
-  validateParams(OrderIdParamsSchema),
-  orderController.finishWork
+  createRoute({
+    schemas: { params: OrderIdParamsSchema },
+    handler: orderController.finishWork,
+  })
 );
 router.post(
   '/:orderId/rate',
   authorizeClient,
-  validateParams(OrderIdParamsSchema),
-  validateBody(OrderRateSchema),
-  orderController.rate
+  createRoute({
+    schemas: { params: OrderIdParamsSchema, body: OrderRateSchema },
+    handler: orderController.rate,
+  })
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -77,31 +108,44 @@ router.post(
 // ─────────────────────────────────────────────────────────────────────────────
 // These routes are used for Direct Orders (where proposalId is implicit)
 
-router.get('/:orderId/negotiations', validateParams(OrderIdParamsSchema), getNegotiations);
+router.get(
+  '/:orderId/negotiations',
+  createRoute({
+    schemas: { params: OrderIdParamsSchema },
+    handler: getNegotiations,
+  })
+);
 
 router.post(
   '/:orderId/negotiations',
-  validateParams(OrderIdParamsSchema),
-  validateBody(CreateNegotiationSchema),
-  createNegotiation
+  createRoute({
+    schemas: { params: OrderIdParamsSchema, body: CreateNegotiationSchema },
+    handler: createNegotiation,
+  })
 );
 
 router.post(
   '/:orderId/negotiations/accept',
-  validateParams(OrderIdParamsSchema),
-  acceptNegotiation
+  createRoute({
+    schemas: { params: OrderIdParamsSchema },
+    handler: acceptNegotiation,
+  })
 );
 
 router.post(
   '/:orderId/negotiations/reject',
-  validateParams(OrderIdParamsSchema),
-  rejectNegotiation
+  createRoute({
+    schemas: { params: OrderIdParamsSchema },
+    handler: rejectNegotiation,
+  })
 );
 
 router.post(
   '/:orderId/negotiations/cancel',
-  validateParams(OrderIdParamsSchema),
-  cancelNegotiation
+  createRoute({
+    schemas: { params: OrderIdParamsSchema },
+    handler: cancelNegotiation,
+  })
 );
 
 export default router;

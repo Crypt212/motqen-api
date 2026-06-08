@@ -19,8 +19,8 @@ import {
   VerifyOTPSchema,
   RegisterClientSchema,
   RegisterWorkerSchema,
+  FcmTokenSchema,
 } from '../../schemas/requests/auth.request.js';
-import { z } from 'zod';
 import {
   authenticateAccess,
   authenticateLogin,
@@ -28,23 +28,38 @@ import {
   authenticateRegister,
   isActive,
 } from '../../middlewares/authMiddleware.js';
-// import { validateBody } from 'twilio/lib/webhooks/webhooks.js';
-import { validateBody } from '../../middlewares/validateRequest.js';
 import { parseFormDataJson } from 'src/middlewares/multiformParserMiddleware.js';
+import { createRoute } from 'src/types/asyncHandler.js';
 
 const authRouter = Router();
 
-authRouter.post('/otp/request', validateBody(RequestOTPSchema), checkSendOtpLimit, requestOTP);
+authRouter.post(
+  '/otp/request',
+  createRoute({
+    schemas: { body: RequestOTPSchema },
+    inBetweenMiddlewares: [checkSendOtpLimit],
+    handler: requestOTP,
+  })
+);
 
-authRouter.post('/otp/verify', validateBody(VerifyOTPSchema), checkVerifyLimit, verifyOTP);
+authRouter.post(
+  '/otp/verify',
+  createRoute({
+    schemas: { body: VerifyOTPSchema },
+    inBetweenMiddlewares: [checkVerifyLimit],
+    handler: verifyOTP,
+  })
+);
 
 authRouter.post(
   '/register-client',
   upload.single('personal_image'),
   authenticateRegister,
   parseFormDataJson('userData'),
-  validateBody(RegisterClientSchema),
-  registerClient
+  createRoute({
+    schemas: { body: RegisterClientSchema },
+    handler: registerClient,
+  })
 );
 
 authRouter.post(
@@ -57,8 +72,10 @@ authRouter.post(
   authenticateRegister,
   parseFormDataJson('userData'),
   parseFormDataJson('workerProfile'),
-  validateBody(RegisterWorkerSchema),
-  registerWorker
+  createRoute({
+    schemas: { body: RegisterWorkerSchema },
+    handler: registerWorker,
+  })
 );
 
 authRouter.post('/login', authenticateLogin, login);
@@ -69,15 +86,14 @@ authRouter.get('/access', authenticateRefresh, isActive, generateAccessToken);
 
 authRouter.get('/review-status', authenticateAccess, reviewStatus);
 
-const FcmTokenSchema = z.object({
-  fcmToken: z.string().min(1),
-});
-
 authRouter.patch(
   '/fcm-token',
   authenticateAccess,
   isActive,
-  validateBody(FcmTokenSchema),
-  updateFcmToken
+  createRoute({
+    schemas: { body: FcmTokenSchema },
+    handler: updateFcmToken,
+  })
 );
+
 export default authRouter;

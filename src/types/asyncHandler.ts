@@ -3,11 +3,13 @@
  * @module types/asyncHandler
  */
 
+import { z } from '../libs/zod.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { AccountStatus } from '../domain/user.entity.js';
 import { VerificationStatus } from '../domain/workerProfile.entity.js';
 import { Request as ExpressRequest, Response, NextFunction } from 'express';
 import { ErrorRequestHandler } from 'express';
+import { validateBody, validateParams, validateQuery } from 'src/middlewares/validateRequest.js';
 
 // Map token types to the payload that should be attached to request
 
@@ -39,20 +41,40 @@ export type AdminState = {
 };
 
 export type Request = ExpressRequest & { deviceId?: DeviceID, userState?: UserState, adminState?: AdminState };
+export type ParsedRequest<Body = any, Query = any, Params = any> = Request & { parsed?: { body?: Body, query?: Query, params?: Params } };
 
-export type RequestHandler = (
-  req: Request,
-  res: Response,
+export type RequestHandler<Body = any, Query = any, Params = any, ResponseBody = any> = (
+  req: ParsedRequest<Body, Query, Params>,
+  res: Response<ResponseBody>,
   next: NextFunction
 ) => void | Promise<void>;
 
 /**
  * Controller wrapper to ensure consistent error handling
  */
-export function asyncHandler(controller: RequestHandler): RequestHandler {
+export function asyncHandler<TResponse = any, TBody = any, TQuery = any, TParams = any>(controller: RequestHandler<TBody, TQuery, TParams, TResponse>): RequestHandler<TBody, TQuery, TParams, TResponse> {
   return (req, res, next) => {
     Promise.resolve(controller(req, res, next)).catch(next);
   };
+}
+
+
+export function createRoute<TResponseBody, TBody, TQuery, TParams>(params: {
+  schemas: {
+    body?: z.ZodType<TBody>,
+    query?: z.ZodType<TQuery>,
+    params?: z.ZodType<TParams>,
+  },
+  inBetweenMiddlewares?: RequestHandler[],
+  handler: RequestHandler<TBody, TQuery, TParams, TResponseBody>
+}) {
+  const { schemas, inBetweenMiddlewares, handler } = params;
+  const middlewares = [];
+  if (schemas.body) middlewares.push(validateBody(schemas.body));
+  if (schemas.query) middlewares.push(validateQuery(schemas.query));
+  if (schemas.params) middlewares.push(validateParams(schemas.params));
+
+  return [...middlewares, ...(Array.isArray(inBetweenMiddlewares) ? inBetweenMiddlewares : []), asyncHandler(handler)];
 }
 
 export const errorHandler: ErrorRequestHandler = (err, _, res) => {

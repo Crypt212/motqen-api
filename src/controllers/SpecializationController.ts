@@ -3,20 +3,31 @@
  * @module controllers/SpecializationController
  */
 
-import SuccessResponse from '../responses/successResponse.js';
 import { specializationService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { parseQueryParams } from '../schemas/common.js';
 import {
   SpecializationFilterSchema,
+  SpecializationQuery,
   SubSpecializationFilterSchema,
+  SubSpecializationQuery,
+  CreateSpecializationDTO,
+  UpdateSpecializationDTO,
+  CreateSubSpecializationDTO,
 } from '../schemas/requests/specialization.request.js';
+import {
+  SpecializationListResponseDTO,
+  SpecializationResponseDTO,
+  SubSpecializationListResponseDTO,
+  SubSpecializationResponseDTO,
+  DeleteResponseDTO,
+} from '../schemas/responses/specialization.response.js';
 
 /**
  * Get all specializations with pagination, filtering, and ordering
  */
-export const getSpecializations = asyncHandler(async (req, res) => {
-  const { filter, pagination, sort } = parseQueryParams(req.query, SpecializationFilterSchema);
+export const getSpecializations = asyncHandler<SpecializationListResponseDTO, any, SpecializationQuery>(async (req, res) => {
+  const { filter, pagination, sort } = parseQueryParams(req.parsed!.query!, SpecializationFilterSchema);
 
   const result = await specializationService.getSpecializations({
     filter,
@@ -24,25 +35,25 @@ export const getSpecializations = asyncHandler(async (req, res) => {
     sort,
   });
 
-  new SuccessResponse('Specializations retrieved successfully', result, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Specializations retrieved successfully', data: result });
 });
 
 /**
  * Get specialization by ID
  */
-export const getSpecializationById = asyncHandler(async (req, res) => {
-  const id = req.params.specializationId as string;
+export const getSpecializationById = asyncHandler<SpecializationResponseDTO, any, any, { specializationId: string }>(async (req, res) => {
+  const id = req.parsed!.params!.specializationId;
   const specialization = await specializationService.getSpecializationById({ id });
 
-  new SuccessResponse('Specialization retrieved successfully', { specialization }, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Specialization retrieved successfully', data: { specialization } });
 });
 
 /**
  * Get sub-specializations by parent ID with pagination
  */
-export const getSubSpecializations = asyncHandler(async (req, res) => {
-  const { filter, pagination, sort } = parseQueryParams(req.query, SubSpecializationFilterSchema);
-  const parentId = String(req.params.specializationId);
+export const getSubSpecializations = asyncHandler<SubSpecializationListResponseDTO, any, SubSpecializationQuery, { specializationId: string }>(async (req, res) => {
+  const { filter, pagination, sort } = parseQueryParams(req.parsed!.query!, SubSpecializationFilterSchema);
+  const parentId = req.parsed!.params!.specializationId;
 
   const result = await specializationService.getSubSpecializations({
     parentId,
@@ -51,73 +62,71 @@ export const getSubSpecializations = asyncHandler(async (req, res) => {
     sort,
   });
 
-  new SuccessResponse('Sub-specializations retrieved successfully', result, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Sub-specializations retrieved successfully', data: result });
 });
 
 /**
  * Create a new specialization (Admin only)
  */
-export const createSpecialization = asyncHandler(async (req, res) => {
-  const { name, nameAr, category } = req.body;
+export const createSpecialization = asyncHandler<SpecializationResponseDTO, CreateSpecializationDTO>(async (req, res) => {
+  const { name, nameAr, category } = req.parsed!.body!;
 
   const specialization = await specializationService.createSpecialization({
     input: { name, nameAr, category },
   });
 
-  new SuccessResponse('Specialization created successfully', { specialization }, 201).send(res);
+  res.status(201).send({ status: 'success', message: 'Specialization created successfully', data: { specialization } });
 });
 
 /**
  * Update specialization (Admin only)
  */
-export const updateSpecialization = asyncHandler(async (req, res) => {
-  const { name, nameAr, category } = req.body;
-  const id = req.params.specializationId as string;
+export const updateSpecialization = asyncHandler<SpecializationResponseDTO, UpdateSpecializationDTO, any, { specializationId: string }>(async (req, res) => {
+  const { name, nameAr, category } = req.parsed!.body!;
+  const id = req.parsed!.params!.specializationId;
 
   const specialization = await specializationService.updateSpecialization({
     id,
     input: { name, nameAr, category },
   });
 
-  new SuccessResponse('Specialization updated successfully', { specialization }, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Specialization updated successfully', data: { specialization } });
 });
 
 /**
  * Delete specialization (Admin only)
  */
-export const deleteSpecialization = asyncHandler(async (req, res) => {
-  const id = req.params.specializationId as string;
+export const deleteSpecialization = asyncHandler<DeleteResponseDTO, any, any, { specializationId: string }>(async (req, res) => {
+  const id = req.parsed!.params!.specializationId;
 
   await specializationService.deleteSpecialization({ id });
 
-  new SuccessResponse('Specialization deleted successfully', null, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Specialization deleted successfully', data: null });
 });
 
 /**
  * Create a new sub-specialization (Admin only)
  */
-export const createSubSpecialization = asyncHandler(async (req, res) => {
-  const { name, nameAr } = req.body;
-  const id = String(req.params.specializationId);
+export const createSubSpecialization = asyncHandler<SubSpecializationResponseDTO, CreateSubSpecializationDTO, any, { specializationId: string }>(async (req, res) => {
+  const { name, nameAr } = req.parsed!.body!;
+  const id = req.parsed!.params!.specializationId;
 
   const subSpecialization = await specializationService.createSubSpecialization({
     parentId: id,
     input: { name, nameAr },
   });
 
-  new SuccessResponse('Sub-specialization created successfully', { subSpecialization }, 201).send(
-    res
-  );
+  res.status(201).send({ status: 'success', message: 'Sub-specialization created successfully', data: { subSpecialization } });
 });
 
 /**
  * Delete sub-specialization (Admin only)
  */
-export const deleteSubSpecialization = asyncHandler(async (req, res) => {
-  const subId = req.params.subSpecializationId as string;
-  const id = req.params.specializationId as string;
+export const deleteSubSpecialization = asyncHandler<DeleteResponseDTO, any, any, { specializationId: string; subSpecializationId: string }>(async (req, res) => {
+  const subId = req.parsed!.params!.subSpecializationId;
+  const id = req.parsed!.params!.specializationId;
 
   await specializationService.deleteSubSpecialization({ parentId: id, subId });
 
-  new SuccessResponse('Sub-specialization deleted successfully', null, 200).send(res);
+  res.status(200).send({ status: 'success', message: 'Sub-specialization deleted successfully', data: null });
 });

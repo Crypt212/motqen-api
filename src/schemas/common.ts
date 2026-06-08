@@ -5,11 +5,71 @@
 import { FieldTypeDefinition } from '../types/query.js';
 import { z } from '../libs/zod.js';
 
+export const UUIDSchema = z.string().uuid('must be a valid UUID');
+
+export const SubSpecializationObjectSchema = z.object({
+  id: UUIDSchema,
+  mainSpecializationId: UUIDSchema,
+  name: z.string(),
+  nameAr: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const SpecializationObjectSchema = z.object({
+  id: UUIDSchema,
+  name: z.string(),
+  nameAr: z.string(),
+  category: z.string(),
+  ordersCount: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const SpecializationWithSubSpecializationsObjectSchema = z.object({
+  id: UUIDSchema,
+  subSpecializations: z.array(SubSpecializationObjectSchema),
+  name: z.string(),
+  nameAr: z.string(),
+  category: z.string(),
+  ordersCount: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const ReportObjectSchema = z.object({
+  id: z.string().uuid(),
+  reporterId: z.string().uuid(),
+  targetType: z.enum(['ORDER', 'CHAT_MESSAGE', 'WORKER_PROFILE', 'CLIENT_PROFILE']),
+  targetId: z.string(),
+  contextOrderId: z.string().uuid().nullable().optional(),
+  problemCategory: z.enum(['ORDER_ISSUE', 'WORKER_CONDUCT', 'CLIENT_CONDUCT', 'CHAT_MESSAGE', 'OTHER']),
+  problemType: z.enum([
+    'UNFINISHED_WORK',
+    'PAYMENT_DISPUTE',
+    'NO_SHOW',
+    'PROPERTY_DAMAGE',
+    'UNPROFESSIONAL_BEHAVIOR',
+    'FRAUD',
+    'PAYMENT_FRAUD',
+    'UNREASONABLE_DEMANDS',
+    'SPAM',
+    'INAPPROPRIATE_CONTENT',
+    'HARASSMENT',
+    'OTHER',
+  ]),
+  description: z.string(),
+  status: z.enum(['PENDING', 'UNDER_REVIEW', 'RESOLVED', 'REJECTED', 'CANCELLED']),
+  resolvedBy: z.string().uuid().nullable().optional(),
+  retainUntil: z.date().nullable().optional(),
+  images: z.array(z.string().url()),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
 // ============================================
 // Primitives
 // ============================================
-
-export const UUIDSchema = z.string().uuid('must be a valid UUID');
 
 export const EgyptianPhoneSchema = z
   .string()
@@ -45,18 +105,37 @@ export const LatitudeSchema = z
   .min(-90, 'lat must be between -90 and 90')
   .max(90, 'lat must be between -90 and 90');
 
-export const AsRoleSchema = z.object({
-  as: z.enum(['CLIENT', 'WORKER'], { message: 'asRole must be either CLIENT or WORKER'})
+export const OccupiedTimeSlotObjectSchema = z.object({
+  startDate: z.date(),
+  endDate: z.date(),
 });
 
 // ============================================
 // Shared object schemas
 // ============================================
 
+export const PortfolioObjectSchema = z.object({
+  id: UUIDSchema,
+  workerProfileId: UUIDSchema,
+  description: z.string(),
+  updatedAt: z.date(),
+  createdAt: z.date(),
+});
+
+export const ProjectImageSchema = z.object({
+
+  id: UUIDSchema,
+  portfolioId: UUIDSchema,
+  imageUrl: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
 export const LocationSchema = z.object({
   address: z.string().trim().min(1, 'address is required'),
   governmentId: UUIDSchema,
   cityId: UUIDSchema,
+  isMain: z.boolean(),
   addressNotes: z.string().trim().optional(),
   long: LongitudeSchema,
   lat: LatitudeSchema,
@@ -80,7 +159,7 @@ export const UserDataOptionalSchema = z.object({
 
 export const SpecializationTreeItemSchema = z.object({
   mainId: UUIDSchema,
-  subIds: z.array(UUIDSchema).optional(),
+  subIds: z.array(UUIDSchema),
 });
 
 export const SpecializationsTreeSchema = z
@@ -104,6 +183,100 @@ export const WorkerProfileOptionalSchema = WorkerProfileSchema.partial();
 export const ClientProfileSchema = z.object({});
 
 export const ClientProfileOptionalSchema = ClientProfileSchema.partial();
+
+export const ClientSummarySchema = z.object({
+  id: UUIDSchema,
+  userId: UUIDSchema,
+  firstName: z.string(),
+  lastName: z.string(),
+  profileImageUrl: z.string().nullable().optional(),
+  rating: z.number().optional().nullable(),
+});
+
+export const OrderObjectSchema = z.object({
+  id: UUIDSchema,
+  title: z.string(),
+  description: z.string(),
+  clientUserId: UUIDSchema,
+  workerUserId: UUIDSchema.nullable(),
+  locationId: UUIDSchema,
+  subSpecialization: SubSpecializationObjectSchema,
+  orderStatus: z.enum(['PENDING', 'WORKER_SELECTED', 'TIME_SPECIFIED', 'PRICE_AGREED', 'PAID', 'COMPLETED', 'CANCELLED']),
+  workStatus: z.enum(['PENDING', 'WAITING_FOR_WORK', 'STARTED', 'DONE']),
+  initialPrice: z.number().nullable(),
+  finalPrice: z.number().nullable(),
+  startDate: z.coerce.date().nullable(),
+  estimatedDurationHours: z.number().nullable(),
+  isUrgent: z.boolean(),
+  rate: z.number().nullable(),
+  comment: z.string().nullable(),
+  workStartedAt: z.coerce.date().nullable(),
+  workFinishedAt: z.coerce.date().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  images: z.array(z.string()),
+  orderMode: z.enum(['DIRECT', 'GLOBAL']),
+});
+
+export const NegotiationObjectSchema = z.object({
+  id: UUIDSchema,
+  orderId: UUIDSchema,
+  proposalId: UUIDSchema,
+  price: z.number(),
+  direction: z.enum(['WORKER_TO_CLIENT', 'CLIENT_TO_WORKER']),
+  status: z.enum(['PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED']),
+  note: z.string().nullable(),
+  startDate: z.date(),
+  estimatedDurationHours: z.number(),
+  hasOverlapWarning: z.boolean().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const WorkerSummarySchema = z.object({
+  id: UUIDSchema,
+  userId: UUIDSchema,
+  firstName: z.string(),
+  lastName: z.string(),
+  profileImageUrl: z.string().nullable(),
+  experienceYears: z.number(),
+  rate: z.number(),
+  ratingCount: z.number(),
+  completedJobsCount: z.number(),
+});
+
+export const LatestNegotiationSnapshotSchema = z.object({
+  id: UUIDSchema,
+  price: z.number(),
+  status: z.enum(['PENDING', 'ACCEPTED', 'REJECTED']),
+  startDate: z.date(),
+  estimatedDurationHours: z.number(),
+  direction: z.enum(['WORKER_TO_CLIENT', 'CLIENT_TO_WORKER']),
+  createdAt: z.date(),
+}).nullable();
+
+export const ProposalObjectSchema = z.object({
+  id: UUIDSchema,
+  orderId: UUIDSchema,
+  workerProfileId: UUIDSchema,
+  status: z.enum(['PENDING', 'NEGOTIATING', 'ACCEPTED', 'REJECTED', 'WITHDRAWN', 'DISMISSED']),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const ProposalWithWorkerSummarySchema = ProposalObjectSchema.extend({
+  workerProfile: WorkerSummarySchema,
+  latestNegotiation: LatestNegotiationSnapshotSchema.nullable(),
+});
+
+export const PaginationResponseSchema = z.object({
+  page: z.number(),
+  limit: z.number(),
+  count: z.number(),
+  hasNext: z.boolean(),
+  hasPrev: z.boolean(),
+
+});
 
 // ============================================
 // Filter descriptor

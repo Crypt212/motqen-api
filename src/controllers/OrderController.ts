@@ -1,9 +1,9 @@
 import { asyncHandler } from '../types/asyncHandler.js';
-import SuccessResponse from '../responses/successResponse.js';
 import OrderService from '../services/OrderService.js';
 import { FilterFromDescriptor, parseQueryParams } from '../schemas/common.js';
-import { OrderFilterSchema, CreateOrderSchema, OrderIdParamsSchema } from '../schemas/requests/order.request.js';
-import { OrderResponseSchema } from '../schemas/responses/order.response.js';
+import { OrderFilterSchema, CreateOrderDTO, OrderQuery } from '../schemas/requests/order.request.js';
+import { OrderResponseDTO, OrderListResponseDTO } from '../schemas/responses/order.response.js';
+import { LocationResponseDTO } from '../schemas/responses/location.response.js';
 import { FieldTypeDefinition, SortOptions } from 'src/types/query.js';
 import { Order } from 'src/domain/order.entity.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
@@ -18,8 +18,8 @@ export default class OrderController {
     this.locationService = deps.locationService;
   }
 
-  create = asyncHandler(async (req, res) => {
-    const parsedBody = CreateOrderSchema.parse(req.body);
+  create = asyncHandler<OrderResponseDTO, CreateOrderDTO>(async (req, res) => {
+    const parsedBody = req.parsed!.body!;
     const images = (req.files as Express.Multer.File[]) || [];
     const clientUserId = req.userState.userId;
 
@@ -29,24 +29,18 @@ export default class OrderController {
 
     const order = await this.orderService.createOrder({
       data: {
-        ...parsedBody,
+        orderData: parsedBody.orderData,
         clientUserId,
       },
       images,
     });
 
-    const responsePayload = {
-      status: 'success' as const,
-      message: 'Order created successfully',
-      data: order,
-    };
-    const validatedResponse = OrderResponseSchema.parse(responsePayload);
-    new SuccessResponse(validatedResponse.message, validatedResponse.data, 201).send(res);
+    res.status(201).send({ status: 'success', message: 'Order created successfully', data: { order } });
   });
 
-  list = asyncHandler(async (req, res) => {
+  list = asyncHandler<OrderListResponseDTO, any, OrderQuery>(async (req, res) => {
     const { filter, pagination, sort } = parseQueryParams(
-      req.query as Record<string, unknown>,
+      req.parsed!.query!,
       OrderFilterSchema
     );
 
@@ -62,22 +56,22 @@ export default class OrderController {
       pagination,
       sort: sort as SortOptions<Order>,
     });
-    new SuccessResponse('Orders retrieved successfully', result, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Orders retrieved successfully', data: result });
   });
 
-  getById = asyncHandler(async (req, res) => {
-    const { orderId } = OrderIdParamsSchema.parse(req.params);
+  getById = asyncHandler<OrderResponseDTO, any, any, { orderId: string }>(async (req, res) => {
+    const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     const order = await this.orderService.getOrderById({
       orderId: orderId as string,
       userId: userState.userId,
       role: userState.role,
     });
-    new SuccessResponse('Order retrieved successfully', { order }, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Order retrieved successfully', data: { order } });
   });
 
-  getLocation = asyncHandler(async (req, res) => {
-    const { orderId } = OrderIdParamsSchema.parse(req.params);
+  getLocation = asyncHandler<LocationResponseDTO, any, any, { orderId: string }>(async (req, res) => {
+    const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     const order = await this.orderService.getOrderById({
       orderId: orderId as string,
@@ -89,43 +83,43 @@ export default class OrderController {
       userId: order.clientUserId,
       locationId: order.locationId
     });
-    new SuccessResponse('Location of order retrieved successfully', { location }, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Location of order retrieved successfully', data: { location } });
   });
 
-  cancel = asyncHandler(async (req, res) => {
-    const { orderId } = OrderIdParamsSchema.parse(req.params);
+  cancel = asyncHandler<any, any, any, { orderId: string }>(async (req, res) => {
+    const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     await this.orderService.cancelOrder({
       orderId: orderId as string,
       clientUserId: userState.userId,
     });
-    new SuccessResponse('Order cancelled successfully', null, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Order cancelled successfully', data: null });
   });
 
 
-  startWork = asyncHandler(async (req, res) => {
-    const { orderId } = OrderIdParamsSchema.parse(req.params);
+  startWork = asyncHandler<OrderResponseDTO, any, any, { orderId: string }>(async (req, res) => {
+    const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     const order = await this.orderService.startWork({
       orderId: orderId as string,
       workerUserId: userState.userId,
     });
-    new SuccessResponse('Work started successfully', { order }, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Work started successfully', data: { order } });
   });
 
-  finishWork = asyncHandler(async (req, res) => {
-    const { orderId } = OrderIdParamsSchema.parse(req.params);
+  finishWork = asyncHandler<OrderResponseDTO, any, any, { orderId: string }>(async (req, res) => {
+    const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     const order = await this.orderService.finishWork({
       orderId: orderId,
       workerUserId: userState.userId,
     });
-    new SuccessResponse('Work finished successfully', { order }, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Work finished successfully', data: { order } });
   });
 
-  rate = asyncHandler(async (req, res) => {
-    const { orderId } = OrderIdParamsSchema.parse(req.params);
-    const { rate, comment } = req.body;
+  rate = asyncHandler<any, { rate: number, comment?: string }, any, { orderId: string }>(async (req, res) => {
+    const { orderId } = req.parsed!.params!;
+    const { rate, comment } = req.parsed!.body!;
     const userState = req.userState!;
     await this.orderService.rateOrder({
       orderId: orderId,
@@ -133,6 +127,6 @@ export default class OrderController {
       rate,
       comment,
     });
-    new SuccessResponse('Order rated successfully', 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Order rated successfully', data: {} });
   });
 }

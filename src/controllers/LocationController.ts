@@ -1,8 +1,16 @@
 import LocationService from '../services/LocationService.js';
 import { asyncHandler } from '../types/asyncHandler.js';
-import SuccessResponse from '../responses/successResponse.js';
 import { parseQueryParams } from '../schemas/common.js';
-import { LocationFilterSchema } from '../schemas/requests/location.request.js';
+import {
+  LocationFilterSchema,
+  CreateLocationDTO,
+  UpdateLocationDTO,
+  LocationQuery,
+} from '../schemas/requests/location.request.js';
+import {
+  LocationListResponseDTO,
+  LocationResponseDTO,
+} from '../schemas/responses/location.response.js';
 
 export default class LocationController {
   private locationService: LocationService;
@@ -11,8 +19,8 @@ export default class LocationController {
     this.locationService = params.locationService;
   }
 
-  list = asyncHandler(async (req, res) => {
-    const { filter, pagination, sort } = parseQueryParams(req.query, LocationFilterSchema);
+  list = asyncHandler<LocationListResponseDTO, any, LocationQuery>(async (req, res) => {
+    const { filter, pagination, sort } = parseQueryParams(req.parsed!.query!, LocationFilterSchema);
     const userId = req.userState!.userId;
 
     if (!("isHidden" in filter)) filter.isHidden = false
@@ -23,48 +31,48 @@ export default class LocationController {
       pagination,
       sort,
     });
-    new SuccessResponse('Locations retrieved successfully', result, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Locations retrieved successfully', data: result });
   });
 
-  create = asyncHandler(async (req, res) => {
-    const dto = req.body;
+  create = asyncHandler<LocationResponseDTO, CreateLocationDTO>(async (req, res) => {
+    const dto = req.parsed!.body!;
     const userId = req.userState!.userId;
     const location = await this.locationService.createLocation({ userId, data: dto });
-    new SuccessResponse('Location created successfully', { location }, 201).send(res);
+    res.status(201).send({ status: 'success', message: 'Location created successfully', data: { location } });
   });
 
-  getMain = asyncHandler(async (req, res) => {
+  getMain = asyncHandler<LocationResponseDTO>(async (req, res) => {
     const userId = req.userState!.userId;
     const location = await this.locationService.getMainLocation({ userId });
-    new SuccessResponse('Main location retrieved successfully', { location }, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Main location retrieved successfully', data: { location } });
   });
 
-  update = asyncHandler(async (req, res) => {
-    const locationId = req.params.locationId as string;
+  update = asyncHandler<LocationResponseDTO, UpdateLocationDTO, any, { locationId: string }>(async (req, res) => {
+    const locationId = req.parsed!.params!.locationId;
     const userId = req.userState!.userId;
-    const dto = req.body;
+    const dto = req.parsed!.body!;
     const location = await this.locationService.updateLocation({ userId, locationId, data: dto });
-    new SuccessResponse('Location updated successfully', { location }, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Location updated successfully', data: { location } });
   });
 
-  setMain = asyncHandler(async (req, res) => {
-    const locationId = req.params.locationId as string;
+  setMain = asyncHandler<LocationResponseDTO, any, any, { locationId: string }>(async (req, res) => {
+    const locationId = req.parsed!.params!.locationId;
     const userId = req.userState!.userId;
     const location = await this.locationService.setMainLocation({ userId, locationId });
-    new SuccessResponse('Location has been set as main successfully', { location }, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Location has been set as main successfully', data: { location } });
   });
 
-  updateMain = asyncHandler(async (req, res) => {
+  updateMain = asyncHandler<LocationResponseDTO, UpdateLocationDTO>(async (req, res) => {
     const userId = req.userState!.userId;
-    const dto = req.body;
+    const dto = req.parsed!.body!;
     const location = await this.locationService.updateMainLocation({ userId, data: dto });
-    new SuccessResponse('Main location updated successfully', { location }, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Main location updated successfully', data: { location } });
   });
 
-  getById = asyncHandler(async (req, res) => {
-    const locationId = req.params.locationId as string;
+  getById = asyncHandler<LocationResponseDTO, any, any, { locationId: string }>(async (req, res) => {
+    const locationId = req.parsed!.params!.locationId;
     const userId = req.userState!.userId;
     const location = await this.locationService.getLocationById({ userId, locationId });
-    new SuccessResponse('Location retrieved successfully', { location }, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Location retrieved successfully', data: { location } });
   });
 }

@@ -6,7 +6,7 @@
 import { Router } from 'express';
 import { governmentController } from '../../state.js';
 import { isActive } from '../../middlewares/authMiddleware.js';
-import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
+import { createRoute } from '../../types/asyncHandler.js';
 import {
   CreateGovernmentSchema,
   GovernmentIdParamsSchema,
@@ -19,46 +19,56 @@ const governmentRouter = Router();
 
 governmentRouter.get(
   '/',
-  validateQuery(GovernmentQuerySchema),
-  governmentController.getGovernments
+  createRoute({
+    schemas: { query: GovernmentQuerySchema },
+    handler: governmentController.getGovernments,
+  })
 );
 
 governmentRouter.get(
   '/:governmentId',
-  validateParams(GovernmentIdParamsSchema),
-  governmentController.getGovernmentById
+  createRoute({
+    schemas: { params: GovernmentIdParamsSchema },
+    handler: governmentController.getGovernmentById,
+  })
 );
 
 governmentRouter.post(
   '/',
   isActive,
   authorizeAdmin,
-  validateBody(CreateGovernmentSchema),
-  governmentController.createGovernment
+  createRoute({
+    schemas: { body: CreateGovernmentSchema },
+    handler: governmentController.createGovernment,
+  })
 );
 
 governmentRouter.put(
   '/:governmentId',
   isActive,
   authorizeAdmin,
-  validateParams(GovernmentIdParamsSchema),
-  validateBody(UpdateGovernmentSchema),
-  governmentController.updateGovernment
+  createRoute({
+    schemas: { params: GovernmentIdParamsSchema, body: UpdateGovernmentSchema },
+    handler: governmentController.updateGovernment,
+  })
 );
 
 governmentRouter.delete(
   '/:governmentId',
   isActive,
   authorizeAdmin,
-  validateParams(GovernmentIdParamsSchema),
-  governmentController.deleteGovernment
+  createRoute({
+    schemas: { params: GovernmentIdParamsSchema },
+    handler: governmentController.deleteGovernment,
+  })
 );
 
 governmentRouter.get(
   '/:governmentId/cities',
-  validateParams(GovernmentIdParamsSchema),
-  validateQuery(GovernmentQuerySchema),
-  governmentController.getCitiesByGovernment
+  createRoute({
+    schemas: { params: GovernmentIdParamsSchema, query: GovernmentQuerySchema },
+    handler: governmentController.getCitiesByGovernment,
+  })
 );
 
 export default governmentRouter;

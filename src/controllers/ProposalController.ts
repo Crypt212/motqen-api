@@ -1,12 +1,7 @@
 import { asyncHandler } from '../types/asyncHandler.js';
-import SuccessResponse from '../responses/successResponse.js';
 import ProposalService from '../services/ProposalService.js';
-import { OrderIdParamsSchema } from '../schemas/requests/order.request.js';
-import {
-  CreateProposalSchema,
-  OrderProposalParamsSchema,
-} from '../schemas/requests/proposal.request.js';
-import { ProposalResponseSchema, ProposalListResponseSchema } from '../schemas/responses/proposal.response.js';
+import { CreateProposalDTO } from '../schemas/requests/proposal.request.js';
+import { ProposalResponseDTO, ProposalListResponseDTO } from '../schemas/responses/proposal.response.js';
 
 export default class ProposalController {
   private proposalService: ProposalService;
@@ -15,9 +10,9 @@ export default class ProposalController {
     this.proposalService = deps.proposalService;
   }
 
-  submit = asyncHandler(async (req, res) => {
-    const { orderId } = OrderIdParamsSchema.parse(req.params);
-    const parsedBody = CreateProposalSchema.parse(req.body);
+  submit = asyncHandler<ProposalResponseDTO, CreateProposalDTO, any, { orderId: string }>(async (req, res) => {
+    const { orderId } = req.parsed!.params!;
+    const parsedBody = req.parsed!.body!;
     const workerUserId = req.userState.userId;
 
     const proposal = await this.proposalService.submitProposal({
@@ -31,17 +26,11 @@ export default class ProposalController {
       userId: workerUserId,
     });
 
-    const responsePayload = {
-      status: 'success' as const,
-      message: 'Proposal submitted successfully',
-      data: fullProposal,
-    };
-    const validated = ProposalResponseSchema.parse(responsePayload);
-    new SuccessResponse(validated.message, validated.data, 201).send(res);
+    res.status(201).send({ status: 'success', message: 'Proposal submitted successfully', data: { proposal: fullProposal } });
   });
 
-  list = asyncHandler(async (req, res) => {
-    const { orderId } = OrderIdParamsSchema.parse(req.params);
+  list = asyncHandler<ProposalListResponseDTO, any, any, { orderId: string }>(async (req, res) => {
+    const { orderId } = req.parsed!.params!;
     const userId = req.userState.userId;
 
     const proposals = await this.proposalService.getProposals({
@@ -49,25 +38,22 @@ export default class ProposalController {
       userId,
     });
 
-    const responsePayload = {
-      status: 'success' as const,
+    res.status(200).send({
+      status: 'success',
       message: 'Proposals retrieved successfully',
       data: {
         proposals,
-        meta: {
-          page: 1,
-          limit: proposals.length,
-          total: proposals.length,
-          totalPages: 1,
-        },
+        page: 1,
+        limit: proposals.length,
+        count: proposals.length,
+        hasNext: false,
+        hasPrev: false,
       },
-    };
-    const validated = ProposalListResponseSchema.parse(responsePayload);
-    new SuccessResponse(validated.message, validated.data, 200).send(res);
+    });
   });
 
-  getMine = asyncHandler(async (req, res) => {
-    const { orderId } = OrderIdParamsSchema.parse(req.params);
+  getMine = asyncHandler<ProposalResponseDTO, any, any, { orderId: string }>(async (req, res) => {
+    const { orderId } = req.parsed!.params!;
     const workerProfileId = req.userState.worker?.id;
 
     const proposal = await this.proposalService.getMyProposal({
@@ -75,17 +61,11 @@ export default class ProposalController {
       workerProfileId
     });
 
-    const responsePayload = {
-      status: 'success' as const,
-      message: 'Proposal retrieved successfully',
-      data: proposal,
-    };
-    const validated = ProposalResponseSchema.parse(responsePayload);
-    new SuccessResponse(validated.message, validated.data, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Proposal retrieved successfully', data: { proposal } });
   });
 
-  getById = asyncHandler(async (req, res) => {
-    const { orderId, proposalId } = OrderProposalParamsSchema.parse(req.params);
+  getById = asyncHandler<ProposalResponseDTO, any, any, { orderId: string; proposalId: string }>(async (req, res) => {
+    const { orderId, proposalId } = req.parsed!.params!;
     const userId = req.userState.userId;
 
     const proposal = await this.proposalService.getProposalById({
@@ -94,13 +74,7 @@ export default class ProposalController {
       userId,
     });
 
-    const responsePayload = {
-      status: 'success' as const,
-      message: 'Proposal retrieved successfully',
-      data: proposal,
-    };
-    const validated = ProposalResponseSchema.parse(responsePayload);
-    new SuccessResponse(validated.message, validated.data, 200).send(res);
+    res.status(200).send({ status: 'success', message: 'Proposal retrieved successfully', data: { proposal } });
   });
 
 

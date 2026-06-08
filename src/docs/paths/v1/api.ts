@@ -47,3 +47,14 @@ registryV1.registerComponent('parameters', 'DeviceFingerprint', {
     default: 'abc123',
   },
 });
+
+registryV1.registerComponent('parameters', 'UserType', {
+  in: 'header',
+  name: 'x-user-type',
+  required: true,
+  description: 'User Type (\'Client\' | \'Worker\')',
+  schema: {
+    type: 'string',
+    default: 'CLIENT',
+  },
+});

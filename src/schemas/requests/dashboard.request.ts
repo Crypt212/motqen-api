@@ -82,6 +82,18 @@ export const DeleteWorkerSpecializationsQuerySchema = z.object({
   all: z.coerce.boolean().optional(),
 });
 
+export const CreatePortfolioSchema = z.object({
+  description: z.string().optional(),
+});
+
+export type CreatePortfolioDTO = z.infer<typeof CreatePortfolioSchema>;
+
+export const UpdatePortfolioSchema = z.object({
+  description: z.string().optional(),
+});
+
+export type UpdatePortfolioDTO = z.infer<typeof UpdatePortfolioSchema>;
+
 export const WorkerGovernmentFilterSchema = buildFilterSchema({
   governmentId: { type: 'uuid' as const },
 });

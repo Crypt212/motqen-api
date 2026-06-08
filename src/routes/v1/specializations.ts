@@ -16,7 +16,7 @@ import {
 } from '../../controllers/SpecializationController.js';
 import { isActive } from '../../middlewares/authMiddleware.js';
 import { authorizeAdmin } from '../../middlewares/accessMiddleware.js';
-import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
+import { createRoute } from '../../types/asyncHandler.js';
 import {
   CreateSpecializationSchema,
   CreateSubSpecializationSchema,
@@ -29,63 +29,78 @@ import {
 
 const specializationRouter = Router();
 
-specializationRouter.get('/', validateQuery(SpecializationQuerySchema), getSpecializations);
+specializationRouter.get(
+  '/',
+  createRoute({
+    schemas: { query: SpecializationQuerySchema },
+    handler: getSpecializations,
+  })
+);
 
 specializationRouter.get(
   '/:specializationId',
-  validateParams(SpecializationIdParamsSchema),
-  getSpecializationById
+  createRoute({
+    schemas: { params: SpecializationIdParamsSchema },
+    handler: getSpecializationById,
+  })
 );
 
 specializationRouter.get(
   '/:specializationId/sub-specializations',
-  validateParams(SpecializationIdParamsSchema),
-  validateQuery(SubSpecializationQuerySchema),
-  getSubSpecializations
+  createRoute({
+    schemas: { params: SpecializationIdParamsSchema, query: SubSpecializationQuerySchema },
+    handler: getSubSpecializations,
+  })
 );
 
 specializationRouter.post(
   '/',
   isActive,
   authorizeAdmin,
-  validateBody(CreateSpecializationSchema),
-  createSpecialization
+  createRoute({
+    schemas: { body: CreateSpecializationSchema },
+    handler: createSpecialization,
+  })
 );
 
 specializationRouter.put(
   '/:specializationId',
   isActive,
   authorizeAdmin,
-  validateParams(SpecializationIdParamsSchema),
-  validateBody(UpdateSpecializationSchema),
-  updateSpecialization
+  createRoute({
+    schemas: { params: SpecializationIdParamsSchema, body: UpdateSpecializationSchema },
+    handler: updateSpecialization,
+  })
 );
 
 specializationRouter.delete(
   '/:specializationId',
   isActive,
   authorizeAdmin,
-  validateParams(SpecializationIdParamsSchema),
-  deleteSpecialization
+  createRoute({
+    schemas: { params: SpecializationIdParamsSchema },
+    handler: deleteSpecialization,
+  })
 );
 
 specializationRouter.post(
   '/:specializationId/sub-specializations',
   isActive,
   authorizeAdmin,
-  validateParams(SpecializationIdParamsSchema),
-  validateBody(CreateSubSpecializationSchema),
-  createSubSpecialization
+  createRoute({
+    schemas: { params: SpecializationIdParamsSchema, body: CreateSubSpecializationSchema },
+    handler: createSubSpecialization,
+  })
 );
 
 specializationRouter.delete(
   '/:specializationId/sub-specializations/:subSpecializationId',
   isActive,
   authorizeAdmin,
-  validateParams(SpecializationIdParamsSchema),
-  validateParams(SubSpecializationIdParamsSchema),
-
-  deleteSubSpecialization
+  createRoute({
+    schemas: { params: SpecializationIdParamsSchema.merge(SubSpecializationIdParamsSchema) },
+    handler: deleteSubSpecialization,
+  })
 );
 
 export default specializationRouter;

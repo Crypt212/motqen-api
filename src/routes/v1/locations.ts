@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { locationController } from '../../state.js';
-import { validateQuery, validateBody, validateParams } from '../../middlewares/validateRequest.js';
+import { createRoute } from '../../types/asyncHandler.js';
 import {
   LocationQuerySchema,
   CreateLocationSchema,
@@ -10,21 +10,60 @@ import {
 
 const router = Router();
 
-router.get('/', validateQuery(LocationQuerySchema), locationController.list);
-router.post('/', validateBody(CreateLocationSchema), locationController.create);
-router.get('/main', locationController.getMain);
-router.put('/main', validateBody(UpdateLocationSchema), locationController.updateMain);
+router.get(
+  '/',
+  createRoute({
+    schemas: { query: LocationQuerySchema },
+    handler: locationController.list,
+  })
+);
+
+router.post(
+  '/',
+  createRoute({
+    schemas: { body: CreateLocationSchema },
+    handler: locationController.create,
+  })
+);
+
+router.get(
+  '/main',
+  createRoute({
+    schemas: {},
+    handler: locationController.getMain,
+  })
+);
+
+router.put(
+  '/main',
+  createRoute({
+    schemas: { body: UpdateLocationSchema },
+    handler: locationController.updateMain,
+  })
+);
+
 router.put(
   '/:locationId',
-  validateParams(LocationIdParamsSchema),
-  validateBody(UpdateLocationSchema),
-  locationController.update
+  createRoute({
+    schemas: { params: LocationIdParamsSchema, body: UpdateLocationSchema },
+    handler: locationController.update,
+  })
 );
+
 router.patch(
   '/:locationId/set-main',
-  validateParams(LocationIdParamsSchema),
-  locationController.setMain
+  createRoute({
+    schemas: { params: LocationIdParamsSchema },
+    handler: locationController.setMain,
+  })
 );
-router.get('/:locationId', validateParams(LocationIdParamsSchema), locationController.getById);
+
+router.get(
+  '/:locationId',
+  createRoute({
+    schemas: { params: LocationIdParamsSchema },
+    handler: locationController.getById,
+  })
+);
 
 export default router;

@@ -24,6 +24,7 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     tags: [TAG],
     summary: 'Submit a report or complaint',
     security: [{ bearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       body: {
         content: {
@@ -63,6 +64,7 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     summary: 'List reports',
     description: 'Retrieves a list of reports. Reporters see only their own; Admins see all.',
     security: [{ bearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       query: ReportQuerySchema,
     },
@@ -82,6 +84,7 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     tags: [TAG],
     summary: 'Get a report by ID',
     security: [{ bearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       params: ReportIdParamsSchema,
     },
@@ -103,6 +106,7 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     summary: 'Update a PENDING report',
     description: 'Update the description and replace images of an existing PENDING report.',
     security: [{ bearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       params: ReportIdParamsSchema,
       body: {
@@ -142,6 +146,7 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     tags: [TAG],
     summary: 'Cancel a PENDING report',
     security: [{ bearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       params: ReportIdParamsSchema,
     },
@@ -159,6 +164,7 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     tags: [TAG],
     summary: 'Update report status (Admin only)',
     security: [{ bearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
       params: ReportIdParamsSchema,
       body: {
