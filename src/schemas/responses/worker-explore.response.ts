@@ -86,10 +86,10 @@ export const ExploreDetailResponseSchema = SuccessResponseSchema(
         }),
       }),
 
-      portfolio: {
+      portfolio: z.object({
         id: z.string(),
         mainImage: z.string().nullable(),
-      },
+      }).nullable(),
       workInfo: z.object({
         completedJobsCount: z.number(),
         ratingCount: z.number(),
