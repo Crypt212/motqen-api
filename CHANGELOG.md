@@ -9,6 +9,14 @@
 - Added `AdminState` type and included `adminState` in the Express `Request` object.
 - Removed user role field from `DashboardService` response.
 - Added debugging logs to `WorkerProfileService` image upload flow.
+- Centralized domain entity validation objects (e.g., `OrderObjectSchema`, `NegotiationObjectSchema`) inside `/schemas/common.ts` to enforce a single source of truth.
+- Refactored domains (`Orders`, `Reports`, `Negotiations`, `Specializations`, `Workers`, and `Proposals`) to use unified `PaginationResponseSchema.extend()` for all paginated responses.
+- Converted domain routes (`orders.ts`, `reports.ts`, `dashboard.ts`, `auth.ts`, etc.) to use the robust `createRoute` middleware instead of raw callbacks, providing runtime type checking and OpenAPI inferences.
+- Transitioned heavily to `asyncHandler<ResponseDTO, RequestDTO>` for strict end-to-end type safety in Controllers.
+- Synchronized all `v1/*.docs.ts` OpenAPI swagger specifications to directly reference Zod schemas to ensure documentation cannot drift from runtime validation.
+
+### Added
+- Created the `GET /workers/{id}/occupied-time-slots` endpoint and documented it within `workers.docs.ts` leveraging `OccupiedTimeSlotsResponseSchema`.
 
 ### Fixed
 - Fixed critical user role logic in `ReportController.ts` by checking `req.userState.role` instead of incorrectly prioritizing the worker role.
