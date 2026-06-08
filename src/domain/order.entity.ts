@@ -10,6 +10,8 @@ export type OrderMode = $Enums.OrderMode;
 
 export type Order = {
   id: IDType;
+  referenceNumber: number;
+  orderReference: string;
   title: string;
   description: string;
   clientUserId: IDType;
@@ -31,6 +33,10 @@ export type Order = {
   updatedAt: Date;
   images: string[];
   orderMode: OrderMode;
+  clientName?: string;
+  workerName?: string | null;
+  disputeExists?: boolean;
+  reportExists?: boolean;
 };
 
 export type OrderCreateInput = {
@@ -74,6 +80,13 @@ export const OrderFilterDescriptor = {
     enumValues: ['DIRECT', 'GLOBAL'],
   },
   isUrgent: { type: 'boolean' },
+  orderReference: { type: 'string', searchable: true },
+  clientName: { type: 'string', searchable: true },
+  workerName: { type: 'string', searchable: true },
+  governmentId: { type: 'uuid' },
+  specializationId: { type: 'uuid' },
+  createdFrom: { type: 'date' },
+  createdTo: { type: 'date' },
   createdAt: { type: 'date', sortable: true },
 } satisfies Record<string, FieldTypeDefinition>;
 

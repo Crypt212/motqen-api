@@ -15,14 +15,12 @@ import adminSpecializationsRouter from './specializations.js';
 import adminAdminsRouter from './admins.js';
 import adminPlatformUsersRouter from './platform-users.js';
 import adminOrdersRouter from './orders.js';
-import adminWorkersRouter from './workers.js';
 
 const adminRouter: Router = Router();
 
 adminRouter.use('/auth', adminAuthRouter);
 adminRouter.use('/users', adminUsersRouter);
 adminRouter.use('/platform-users', adminPlatformUsersRouter);
-adminRouter.use('/workers', adminWorkersRouter);
 adminRouter.use('/audit-logs', adminAuditLogsRouter);
 adminRouter.use('/issues', adminIssuesRouter);
 adminRouter.use('/verifications', adminVerificationsRouter);

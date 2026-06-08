@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import http from 'http';
 import initApp from './app.js';
 import environment from './configs/environment.js';
@@ -10,7 +11,11 @@ import { connectWhatsApp } from './providers/whatsapp.js';
 const startServer = async () => {
   try {
     await redisClient.connect();
-    await prismaClient.$connect().then(() => logger.info('✅ Database connected'));
+    try {
+      await prismaClient.$connect().then(() => logger.info('✅ Database connected'));
+    } catch (dbError) {
+      logger.error('⚠️  Database connection failed:', dbError);
+    }
     const app = await initApp();
 
     // Wrap Express in an HTTP server so Socket.IO can share the same port

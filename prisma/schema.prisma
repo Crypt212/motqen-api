@@ -431,6 +431,8 @@ model WorkerBadge {
 
 model Order {
   id                     String      @id @default(uuid())
+  referenceNumber        Int         @unique @default(autoincrement())
+  orderReference         String?     @unique
   title                  String
   description            String
   clientProfileId        String

@@ -28,6 +28,14 @@ export const OrderRateSchema = z.object({
   comment: z.string().optional(),
 });
 
+export const OrderNoteSchema = z.object({
+  content: z.string().trim().min(1, 'content is required'),
+});
+
+export const ConvertToIssueSchema = z.object({
+  description: z.string().trim().optional(),
+});
+
 export const OrderFilterSchema = buildFilterSchema(OrderFilterDescriptor);
 export const OrderQuerySchema = createQuerySchema(OrderFilterSchema);
 export type OrderQuery = z.infer<typeof OrderQuerySchema>;

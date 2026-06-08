@@ -12,8 +12,10 @@ export type ClaimIssueParams = {
   note?: string;
 };
 
+export type IssueNoteTargetType = 'REPORT' | 'DISPUTE' | 'VERIFICATION' | 'ORDER';
+
 export type AddNoteParams = {
-  targetType: 'REPORT' | 'DISPUTE' | 'VERIFICATION';
+  targetType: IssueNoteTargetType;
   targetId: string;
   adminId: string;
   content: string;

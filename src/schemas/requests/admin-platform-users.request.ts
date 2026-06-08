@@ -3,6 +3,7 @@ import { UUIDSchema, buildFilterSchema, createQuerySchema } from '../common.js';
 import { $Enums } from '../../generated/prisma/client.js';
 import { UserFilterDescriptor } from '../../domain/user.entity.js';
 
+const Role = $Enums.Role;
 const AccountStatus = $Enums.AccountStatus;
 
 export const CreatePlatformUserSchema = z.object({
@@ -10,7 +11,12 @@ export const CreatePlatformUserSchema = z.object({
   middleName: z.string().trim().optional(),
   lastName: z.string().trim().min(1),
   phoneNumber: z.string().trim().min(1),
-  role: z.enum(['CLIENT', 'WORKER']),
+  role: z.nativeEnum(Role).refine(
+    (value) => value === Role.CLIENT || value === Role.WORKER,
+    {
+      message: 'role must be either CLIENT or WORKER',
+    }
+  ),
   status: z.nativeEnum(AccountStatus).default(AccountStatus.ACTIVE),
   profileImageUrl: z.string().url().optional(),
 });

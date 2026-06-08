@@ -34,6 +34,6 @@ export type PaginationOptions =
  * Ordering options for queries
  */
 export type SortOptions<T> = {
-  sortBy: keyof T;
+  sortBy: keyof T | string;
   sortOrder?: 'asc' | 'desc';
 }[];
