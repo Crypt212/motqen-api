@@ -51,10 +51,11 @@ export default class OrderController {
     );
 
     const userState = req.userState!;
+    const adminState = req.adminState;
     const result = await this.orderService.getOrders({
       userId: userState.userId,
+      isAdmin: adminState !== undefined,
       role: userState.role,
-      userType: userState.worker ? "WORKER" : "CLIENT",
       clientUserId: filter.clientUserId as IDType,
       workerUserId: filter.workerUserId as IDType,
       filter: filter as FilterFromDescriptor<Record<string, FieldTypeDefinition>>,
@@ -70,7 +71,7 @@ export default class OrderController {
     const order = await this.orderService.getOrderById({
       orderId: orderId as string,
       userId: userState.userId,
-      userType: userState.worker ? "WORKER" : "CLIENT",
+      role: userState.role,
     });
     new SuccessResponse('Order retrieved successfully', { order }, 200).send(res);
   });
@@ -81,7 +82,7 @@ export default class OrderController {
     const order = await this.orderService.getOrderById({
       orderId: orderId as string,
       userId: userState.userId,
-      userType: userState.worker ? "WORKER" : "CLIENT",
+      role: userState.role,
     });
 
     const location = await this.locationService.getLocationById({

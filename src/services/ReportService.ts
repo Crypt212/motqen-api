@@ -83,13 +83,13 @@ export default class ReportService extends Service {
   async getReports(params: {
     filter: ReportFilter;
     requesterId: string;
-    requesterRole: string;
+    isAdmin: boolean;
     pagination?: PaginationOptions;
     sort?: SortOptions<ReportWithImages>;
   }): Promise<PaginatedResultMeta & { reports: ReportWithImages[] }> {
     return tryCatch(async () => {
       const finalFilter = { ...params.filter };
-      if (params.requesterRole !== 'ADMIN') {
+      if (!params.isAdmin) {
         finalFilter.reporterId = params.requesterId;
       }
 
@@ -104,7 +104,7 @@ export default class ReportService extends Service {
   async getReportById(params: {
     reportId: string;
     requesterId: string;
-    requesterRole: string;
+    isAdmin: boolean;
   }): Promise<ReportWithImages> {
     return tryCatch(async () => {
       const report = await this.reportRepository.findById({
@@ -115,7 +115,7 @@ export default class ReportService extends Service {
         throw new AppError('Report not found', 404);
       }
 
-      if (params.requesterRole !== 'ADMIN' && report.reporterId !== params.requesterId) {
+      if (!params.isAdmin && report.reporterId !== params.requesterId) {
         throw new AppError('Forbidden', 403);
       }
 
@@ -126,7 +126,7 @@ export default class ReportService extends Service {
   async updateReport(params: {
     reportId: string;
     requesterId: string;
-    requesterRole: string;
+    isAdmin: boolean;
     report: ReportUpdateInput;
     files?: Express.Multer.File[];
   }): Promise<ReportWithImages> {
@@ -134,7 +134,7 @@ export default class ReportService extends Service {
       const existing = await this.getReportById({
         reportId: params.reportId,
         requesterId: params.requesterId,
-        requesterRole: params.requesterRole,
+        isAdmin: params.isAdmin,
       });
 
       if (existing.status !== "PENDING") {
@@ -167,13 +167,13 @@ export default class ReportService extends Service {
   async cancelReport(params: {
     reportId: string;
     requesterId: string;
-    requesterRole: string;
+    isAdmin: boolean;
   }): Promise<void> {
     return tryCatch(async () => {
       const existing = await this.getReportById({
         reportId: params.reportId,
         requesterId: params.requesterId,
-        requesterRole: params.requesterRole,
+        isAdmin: params.isAdmin,
       });
 
       if (!isReporterCancellable(existing.status)) {
@@ -198,7 +198,7 @@ export default class ReportService extends Service {
       const existing = await this.getReportById({
         reportId: params.reportId,
         requesterId: params.resolvedBy,
-        requesterRole: 'ADMIN',
+        isAdmin: true,
       });
 
       if (!canReportTransitionTo(existing.status, params.status)) {

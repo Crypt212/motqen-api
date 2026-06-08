@@ -45,6 +45,10 @@ export const LatitudeSchema = z
   .min(-90, 'lat must be between -90 and 90')
   .max(90, 'lat must be between -90 and 90');
 
+export const AsRoleSchema = z.object({
+  as: z.enum(['CLIENT', 'WORKER'], { message: 'asRole must be either CLIENT or WORKER'})
+});
+
 // ============================================
 // Shared object schemas
 // ============================================

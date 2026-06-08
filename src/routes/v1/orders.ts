@@ -33,6 +33,7 @@ import {
 import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
 import { parseFormDataJson } from 'src/middlewares/multiformParserMiddleware.js';
 import { authorizeClient, authorizeWorker } from 'src/middlewares/accessMiddleware.js';
+import { AsRoleSchema } from 'src/schemas/common.js';
 
 
 const router = Router();

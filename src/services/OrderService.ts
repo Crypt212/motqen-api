@@ -16,7 +16,6 @@ import SpecializationRepository from 'src/repositories/prisma/SpecializationRepo
 import ProposalRepository from '../repositories/prisma/ProposalRepository.js';
 import NegotiationRepository from '../repositories/prisma/NegotiationRepository.js';
 import IWorkerProfileRepository from 'src/repositories/interfaces/WorkerRepository.js';
-import { Role } from 'src/domain/user.entity.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
 
 interface OrderServiceDeps {
@@ -156,8 +155,8 @@ export default class OrderService extends Service {
 
   async getOrders(params: {
     userId: string;
-    role: Role;
-    userType: "WORKER" | "CLIENT";
+    isAdmin: boolean;
+    role: "WORKER" | "CLIENT";
     clientUserId?: string;
     workerUserId?: string;
     filter: OrderFilter;
@@ -172,8 +171,8 @@ export default class OrderService extends Service {
         workerUserId: params.workerUserId,
       };
 
-      if (params.role === "USER") {
-        if (params.userType === "WORKER") {
+      if (!params.isAdmin) {
+        if (params.role === "WORKER") {
 
           const subSpecializationsIds = (await this.workerProfileRepository.findSpecializationsWithSubSpecializations({ filter: { userId: params.userId } }))
             .reduce((acc, { subSpecializations }) => [...acc, ...subSpecializations.map(s => s.id)], []);
@@ -189,7 +188,7 @@ export default class OrderService extends Service {
             sort: params.sort,
           });
 
-        } else if (params.userType === "CLIENT") {
+        } else if (params.role === "CLIENT") {
 
           return await this.orderRepository.findForClient({
             clientUserId: params.userId,
@@ -200,7 +199,7 @@ export default class OrderService extends Service {
         } else {
           throw new AppError('User type not supported', 400);
         }
-      } else throw new AppError('User type not supported', 400);
+      } else return this.orderRepository.findMany({ filter: finalFilter, pagination: params.pagination, sort: params.sort });
 
     });
   }
@@ -208,7 +207,7 @@ export default class OrderService extends Service {
   async getOrderById(params: {
     orderId: string;
     userId: string;
-    userType: "WORKER" | "CLIENT";
+    role: "WORKER" | "CLIENT";
   }) {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
@@ -216,12 +215,12 @@ export default class OrderService extends Service {
         throw new AppError('Order not found', 404);
       }
 
-      if (params.userType === "WORKER") {
+      if (params.role === "WORKER") {
         const isAssigned = order.workerUserId && order.workerUserId === params.userId;
         if (!isAssigned && order.orderMode !== "GLOBAL") {
           throw new AppError('Access denied', 403);
         }
-      } else if (params.userType === "CLIENT") {
+      } else if (params.role === "CLIENT") {
         const isOwner = order.clientUserId === params.userId;
         if (!isOwner)
           throw new AppError('Access denied', 403);

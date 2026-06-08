@@ -31,13 +31,14 @@ export default class ReportController {
   });
 
   list = asyncHandler(async (req, res) => {
-    const { userId: requesterId, role: requesterRole } = req.userState;
+    const { userId: requesterId } = req.userState;
+    const adminState = req.adminState;
     const { filter, pagination, sort } = parseQueryParams(req.query, ReportFilterSchema);
 
     const result = await this.reportService.getReports({
       filter,
       requesterId,
-      requesterRole,
+      isAdmin: adminState !== undefined,
       pagination,
       sort,
     });
@@ -46,20 +47,22 @@ export default class ReportController {
   });
 
   getById = asyncHandler(async (req, res) => {
-    const { userId: requesterId, role: requesterRole } = req.userState;
+    const { userId: requesterId } = req.userState;
+    const adminState = req.adminState;
     const { reportId } = ReportIdParamsSchema.parse(req.params);
 
     const report = await this.reportService.getReportById({
       reportId,
       requesterId,
-      requesterRole,
+      isAdmin: adminState !== undefined,
     });
 
     new SuccessResponse('Report retrieved successfully', { report }).send(res);
   });
 
   update = asyncHandler(async (req, res) => {
-    const { userId: requesterId, role: requesterRole } = req.userState;
+    const { userId: requesterId } = req.userState;
+    const adminState = req.adminState;
     const { reportId } = ReportIdParamsSchema.parse(req.params);
     const bodyData = UpdateReportSchema.parse(req.body);
     const files = req.files as Express.Multer.File[] | undefined;
@@ -67,7 +70,7 @@ export default class ReportController {
     const report = await this.reportService.updateReport({
       reportId,
       requesterId,
-      requesterRole,
+      isAdmin: adminState !== undefined,
       report: bodyData,
       files,
     });
@@ -76,13 +79,14 @@ export default class ReportController {
   });
 
   cancel = asyncHandler(async (req, res) => {
-    const { userId: requesterId, role: requesterRole } = req.userState;
+    const { userId: requesterId } = req.userState;
+    const adminState = req.adminState;
     const { reportId } = ReportIdParamsSchema.parse(req.params);
 
     await this.reportService.cancelReport({
       reportId,
       requesterId,
-      requesterRole,
+      isAdmin: adminState !== undefined,
     });
 
     new SuccessResponse('Report cancelled successfully', null).send(res);

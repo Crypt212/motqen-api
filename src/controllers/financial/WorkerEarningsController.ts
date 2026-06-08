@@ -22,7 +22,7 @@ export class WorkerEarningsController {
   public listWithdrawRequests = asyncHandler(async (req, res) => {
     let workerProfileId: string | undefined;
 
-    if (req?.userState?.role === 'ADMIN') {
+    if (req?.adminState) {
       workerProfileId = req.query.workerProfileId as string | undefined;
     } else {
       workerProfileId = req.userState?.worker?.id;

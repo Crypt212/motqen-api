@@ -5,8 +5,6 @@ import { FieldTypeDefinition } from '../types/query.js';
 
 export type AccountStatus = $Enums.AccountStatus;
 
-export type Role = $Enums.Role;
-
 export type User = {
   id: IDType;
 
@@ -16,7 +14,6 @@ export type User = {
   lastName: string;
   profileImageUrl: string;
   status: AccountStatus;
-  role: Role;
 
   isOnline: boolean;
 
@@ -37,7 +34,6 @@ export type UserCreateInput = {
   lastName: string;
   profileImageUrl?: string;
   status: AccountStatus;
-  role: Role;
 };
 
 export type UserUpdateInput = Partial<UserCreateInput> & { lastNotificationReadAt?: Date | null };

@@ -8,7 +8,7 @@ import uploadToCloudinary, { deleteFromCloudinary } from '../providers/cloudinar
 import AppError from '../errors/AppError.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import {
-    WorkerOrdersStatistics,
+  WorkerOrdersStatistics,
   WorkerProfile,
   WorkerProfileFilter,
   WorkerProfileVerification,
@@ -90,9 +90,11 @@ export default class WorkerService extends Service {
       },
     } = params;
     return tryCatch(async () => {
+      console.log(1);
       const nationalID = (
         await uploadToCloudinary(idImageBuffer, `${userId}/verification_info`, 'nationalID')
       ).url;
+      console.log(2);
       const selfiWithID = (
         await uploadToCloudinary(
           profileWithIdImageBuffer,
@@ -131,11 +133,13 @@ export default class WorkerService extends Service {
       });
 
       if (profileImageBuffer) {
+        console.log(3);
         const { url } = await uploadToCloudinary(
           profileImageBuffer,
           `${userId}/profile_image`,
           'profileMain'
         );
+        console.log(4);
         await this.userRepository.update({
           filter: { id: workerProfile.userId },
           user: { profileImageUrl: url },
@@ -632,7 +636,7 @@ export default class WorkerService extends Service {
   }): Promise<DaysWorkingHoursDTO> {
     const { workerProfileId, daysWorkingHours } = params;
     return tryCatch(async () => {
-      const workingHours =  await this.workerProfileRepository.addDaysWorkingHours({
+      const workingHours = await this.workerProfileRepository.addDaysWorkingHours({
         workerProfileId,
         daysWorkingHours
       });

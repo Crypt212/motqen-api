@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased] - 2026-06-08
+
+### Changed
+- Replaced role-based authorization with `isAdmin` boolean flag in `ReportService` methods.
+- Removed user role updates from `UserService` and hardcoded user state role to `'CLIENT'`.
+- Updated JWT token payloads (`AccessTokenPayload` and `RefreshTokenPayload`) to use `isAdmin` boolean instead of `role`.
+- Added `AdminState` type and included `adminState` in the Express `Request` object.
+- Removed user role field from `DashboardService` response.
+- Added debugging logs to `WorkerProfileService` image upload flow.
+
 ## [Unreleased] - 2026-05-31
 
 ### Added

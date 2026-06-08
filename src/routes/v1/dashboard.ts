@@ -59,6 +59,7 @@ import { isActive } from '../../middlewares/authMiddleware.js';
 import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
 
 import locationRouter from './locations.js';
+import { parseFormDataJson } from 'src/middlewares/multiformParserMiddleware.js';
 
 const usersRouter = Router();
 
@@ -83,6 +84,7 @@ usersRouter.post(
     { name: 'id_image', maxCount: 1 },
     { name: 'personal_with_id_image', maxCount: 1 },
   ]),
+  parseFormDataJson('workerProfile'),
   validateBody(CreateWorkerProfileSchema),
   createWorkerProfile
 );
@@ -229,9 +231,11 @@ usersRouter.post(
   '/client-profile',
   isActive,
   unAuthorizeClient,
+  parseFormDataJson('clientProfile'),
   validateBody(CreateClientProfileSchema),
   createClientProfile
 );
+
 
 usersRouter.get('/client-profile', isActive, authorizeClient, getClientProfile);
 

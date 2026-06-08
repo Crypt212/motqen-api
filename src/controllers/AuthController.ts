@@ -84,7 +84,7 @@ export const registerClient = asyncHandler(async (req, res) => {
   const accessToken = await authService.generateAccessToken({
     deviceId,
     userId: user.id,
-    role: user.role,
+    isAdmin: false,
     refreshToken: unHashedRefreshToken,
   });
 
@@ -149,7 +149,7 @@ export const registerWorker = asyncHandler(async (req, res) => {
   const accessToken = await authService.generateAccessToken({
     deviceId,
     userId: user.id,
-    role: user.role,
+    isAdmin: false,
     refreshToken: unHashedRefreshToken,
   });
 
@@ -180,7 +180,7 @@ export const login = asyncHandler(async (req, res) => {
   const accessToken = await authService.generateAccessToken({
     deviceId,
     userId: user.id,
-    role: user.role,
+    isAdmin: false,
     refreshToken: unHashedRefreshToken,
   });
 
@@ -223,7 +223,7 @@ export const logout = asyncHandler(async (req, res) => {
         if (!user) return;
 
         const topics = ['all', 'admins', 'workers', 'clients'];
-        
+
         // Add all possible government topics the user might have been in
         if (user.workerProfile) {
           user.workerProfile.workGovernments.forEach((gov) => topics.push(`gov_${gov.id}`));
@@ -257,14 +257,15 @@ export const logout = asyncHandler(async (req, res) => {
  */
 export const generateAccessToken = asyncHandler(async (req, res) => {
   const deviceId = String(req.headers['x-device-fingerprint']);
-  const { userId, role } = req.userState;
+  const { userId } = req.userState;
+  const adminState = req.adminState;
 
   const refreshToken = req.headers['authorization']?.split(' ')[1];
 
   const accessToken = await authService.generateAccessToken({
     deviceId,
     userId,
-    role,
+    isAdmin: adminState !== undefined,
     refreshToken,
   });
 
@@ -300,6 +301,7 @@ export const reviewStatus = asyncHandler(async (req, res) => {
  */
 export const updateFcmToken = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
+  const adminState = req.adminState;
   const deviceId = req.deviceId;
   const { fcmToken } = req.body;
 
@@ -336,7 +338,7 @@ export const updateFcmToken = asyncHandler(async (req, res) => {
         const topics = ['all'];
 
         // Role-based topics
-        if (user.role === 'ADMIN') {
+        if (adminState) {
           topics.push('admins');
         }
         if (user.workerProfile) {

@@ -54,6 +54,8 @@ export const authenticateRegister = asyncHandler(async (req, _, next) => {
  */
 export const authenticateAccess = asyncHandler(async (req, _, next) => {
   const authHeader = req.headers.authorization;
+  const role = req.headers['x-user-type'] ? (req.headers['x-user-type'] as string).toUpperCase() : undefined;
+
   try {
     const payload = verifyHeaderToken(authHeader, 'access');
     req.userState = await redisRetreiveOrCache('access:' + payload.userId, async () => {
@@ -62,6 +64,32 @@ export const authenticateAccess = asyncHandler(async (req, _, next) => {
   } catch (err: unknown) {
     return next(err);
   }
+
+  if (!role) {
+    if (req.userState.worker && req.userState.client)
+      next(new AppError('You are both a client and a worker. Please specify your role', 403));
+    else if (req.userState.worker)
+      req.userState.role = 'WORKER';
+    else if (req.userState.client)
+      req.userState.role = 'CLIENT';
+    else
+      next(new AppError('You are neither a client nor a worker', 403));
+
+    next();
+  }
+
+
+
+  if (role !== 'CLIENT' && role !== 'WORKER')
+    next(new AppError('Invalid user type', 403));
+
+  if (role === 'CLIENT' && !req.userState.client)
+    next(new AppError('You do not have access as client user', 403));
+
+  if (role === 'WORKER' && !req.userState.worker)
+    next(new AppError('You do not have access as worker user', 403));
+
+  req.userState.role = (role as 'CLIENT' | 'WORKER');
 
   next();
 });

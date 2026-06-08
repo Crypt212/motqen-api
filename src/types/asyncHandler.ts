@@ -4,7 +4,7 @@
  */
 
 import { IDType } from '../repositories/interfaces/Repository.js';
-import { AccountStatus, Role } from '../domain/user.entity.js';
+import { AccountStatus } from '../domain/user.entity.js';
 import { VerificationStatus } from '../domain/workerProfile.entity.js';
 import { Request as ExpressRequest, Response, NextFunction } from 'express';
 import { ErrorRequestHandler } from 'express';
@@ -16,7 +16,7 @@ export type DeviceID = string;
 export type UserState = {
   userId: IDType;
   phoneNumber: string;
-  role: Role;
+  role: 'WORKER' | 'CLIENT';
   accountStatus: AccountStatus;
   worker?: {
     id: IDType;
@@ -30,7 +30,15 @@ export type UserState = {
   };
 };
 
-export type Request = ExpressRequest & { deviceId?: DeviceID } & { userState?: UserState };
+export type AdminState = {
+  adminId: IDType;
+  username: string;
+  role: string;
+  domain: string;
+  type: string;
+};
+
+export type Request = ExpressRequest & { deviceId?: DeviceID, userState?: UserState, adminState?: AdminState };
 
 export type RequestHandler = (
   req: Request,

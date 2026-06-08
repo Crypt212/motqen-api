@@ -52,13 +52,13 @@ export function parseJSON() {
 }
 
 export const RegisterClientSchema = z.object({
-  userData: parseJSON().pipe(UserDataSchema),
+  userData: UserDataSchema,
 });
 export type RegisterClientDTO = z.infer<typeof RegisterClientSchema>;
 
 export const RegisterWorkerSchema = z.object({
-  userData: parseJSON().pipe(UserDataSchema),
-  workerProfile: parseJSON().pipe(WorkerProfileSchema),
+  userData: UserDataSchema,
+  workerProfile: WorkerProfileSchema,
 });
 export type RegisterWorkerDTO = z.infer<typeof RegisterWorkerSchema>;
 

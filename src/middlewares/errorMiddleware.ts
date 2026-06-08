@@ -18,6 +18,7 @@ const errorHandler: ErrorRequestHandler = function (
     return res.status(500).json({
       status: 'error',
       message: 'Bad error format',
+      error: err,
     });
   }
 

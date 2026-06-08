@@ -30,6 +30,7 @@ import {
 } from '../../middlewares/authMiddleware.js';
 // import { validateBody } from 'twilio/lib/webhooks/webhooks.js';
 import { validateBody } from '../../middlewares/validateRequest.js';
+import { parseFormDataJson } from 'src/middlewares/multiformParserMiddleware.js';
 
 const authRouter = Router();
 
@@ -41,6 +42,7 @@ authRouter.post(
   '/register-client',
   upload.single('personal_image'),
   authenticateRegister,
+  parseFormDataJson('userData'),
   validateBody(RegisterClientSchema),
   registerClient
 );
@@ -53,6 +55,8 @@ authRouter.post(
     { name: 'personal_with_id_image', maxCount: 1 },
   ]),
   authenticateRegister,
+  parseFormDataJson('userData'),
+  parseFormDataJson('workerProfile'),
   validateBody(RegisterWorkerSchema),
   registerWorker
 );

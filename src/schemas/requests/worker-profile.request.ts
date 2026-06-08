@@ -6,7 +6,9 @@ import {
   WorkGovernmentsSchema,
 } from '../common.js';
 
-export const CreateWorkerProfileSchema = WorkerProfileSchema;
+export const CreateWorkerProfileSchema = z.object({
+  workerProfile: WorkerProfileSchema,
+});
 export type CreateWorkerProfileDTO = z.infer<typeof CreateWorkerProfileSchema>;
 
 export const UpdateWorkerProfileSchema = WorkerProfileOptionalSchema.extend({

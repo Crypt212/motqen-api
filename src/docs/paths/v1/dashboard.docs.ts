@@ -43,6 +43,7 @@ import {
 } from '../../../schemas/responses/worker-profile.response.js';
 import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
+import { z } from '../../../libs/zod.js';
 
 export default function registerDashboardDocs(registry: OpenAPIRegistry) {
   // ─────────────────────────────────────────────────────────────────────────────
@@ -116,7 +117,23 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
       body: {
         content: {
           'multipart/form-data': {
-            schema: CreateWorkerProfileSchema,
+            schema: CreateWorkerProfileSchema.extend({
+              personal_image: z.any().openapi({
+                type: 'string',
+                format: 'binary',
+                description: 'Personal photo (required, jpeg/png/bmp/gif)',
+              }),
+              id_image: z.any().openapi({
+                type: 'string',
+                format: 'binary',
+                description: 'National ID document image (required, jpeg/png/bmp/gif)',
+              }),
+              personal_with_id_image: z.any().openapi({
+                type: 'string',
+                format: 'binary',
+                description: 'Selfie holding national ID (required, jpeg/png/bmp/gif)',
+              }),
+            }),
           },
         },
       },

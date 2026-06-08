@@ -28,7 +28,6 @@ export default class UserRepository extends Repository implements IUserRepositor
       lastName: record.lastName,
       profileImageUrl: record.profileImageUrl,
       status: record.status,
-      role: record.role,
       isOnline: record.isOnline,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,

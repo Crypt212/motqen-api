@@ -16,14 +16,8 @@ import { z } from '../../../libs/zod.js';
 export default function registerReportsDocs(registry: OpenAPIRegistry) {
   const TAG = 'Reports';
 
-  const CreateReportMultipartSchema = CreateReportSchema.extend({
-    images: z.any().openapi({ type: 'array', items: { type: 'string', format: 'binary' } }),
-  });
-
-  const UpdateReportMultipartSchema = UpdateReportSchema.extend({
-    images: z.any().openapi({ type: 'array', items: { type: 'string', format: 'binary' } }),
-  });
-
+  const CreateReportMultipartSchema = CreateReportSchema;
+  const UpdateReportMultipartSchema = UpdateReportSchema;
   registry.registerPath({
     method: 'post',
     path: '/api/v1/reports',
@@ -34,7 +28,16 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
       body: {
         content: {
           'multipart/form-data': {
-            schema: CreateReportMultipartSchema,
+            schema: CreateReportMultipartSchema.extend({
+              images: z
+                .any()
+                .openapi({
+                  type: 'array',
+                  items: { type: 'string', format: 'binary' },
+                  description: 'Up to 5 order images (optional)',
+                })
+                .optional(),
+            }),
           },
         },
         description: 'Report data with up to 5 images',
@@ -105,7 +108,16 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
       body: {
         content: {
           'multipart/form-data': {
-            schema: UpdateReportMultipartSchema,
+            schema: UpdateReportMultipartSchema.extend({
+              images: z
+                .any()
+                .openapi({
+                  type: 'array',
+                  items: { type: 'string', format: 'binary' },
+                  description: 'Up to 5 order images (optional)',
+                })
+                .optional(),
+            }),
           },
         },
         description: 'Updated report data',

@@ -19,7 +19,7 @@ import { emitToUser } from '../socket/socket-emitter.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
-import { Role, User } from '../domain/user.entity.js';
+import { User } from '../domain/user.entity.js';
 import { WorkerProfile, WorkerProfileVerification } from '../domain/workerProfile.entity.js';
 import { ClientProfile } from '../domain/clientProfile.entity.js';
 import { Method } from '../domain/otp.entity.js';
@@ -145,7 +145,6 @@ export default class AuthService extends Service {
           const user = await userRepo.create({
             user: {
               phoneNumber,
-              role: 'USER',
               firstName,
               middleName,
               lastName,
@@ -267,7 +266,6 @@ export default class AuthService extends Service {
           const user = await userRepo.create({
             user: {
               phoneNumber,
-              role: 'USER',
               firstName,
               middleName,
               lastName,
@@ -473,7 +471,7 @@ export default class AuthService extends Service {
     refreshToken: string;
     deviceId: IDType;
     userId: IDType;
-    role: Role;
+    isAdmin: boolean;
   }): Promise<string> {
     const hashedToken = crypto.createHash('sha256').update(params.refreshToken).digest('hex');
 
@@ -504,7 +502,7 @@ export default class AuthService extends Service {
     const accessToken = generateToken({
       type: 'access',
       userId: params.userId,
-      role: params.role,
+      isAdmin: params.isAdmin,
       phoneNumber: user.phoneNumber,
     });
     return accessToken;
@@ -525,7 +523,7 @@ export default class AuthService extends Service {
       type: 'refresh',
       userId: user.id,
       phoneNumber: user.phoneNumber,
-      role: user.role,
+      isAdmin: false,
     });
 
     logger.info('Generated Refresh Token:', params.expiresAt);

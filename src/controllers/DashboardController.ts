@@ -52,7 +52,6 @@ export const updateUser = asyncHandler(async (req, res) => {
 export const createClientProfile = asyncHandler(async (req, res) => {
   const userId = req.userState.userId;
   const phoneNumber = req.userState.phoneNumber;
-  const role = req.userState.role;
   const deviceId = req.deviceId;
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -68,7 +67,7 @@ export const createClientProfile = asyncHandler(async (req, res) => {
   const accessToken = await authService.generateAccessToken({
     deviceId,
     userId,
-    role,
+    isAdmin: req.adminState !== undefined,
     refreshToken,
   });
 
@@ -97,16 +96,17 @@ export const getClientProfile = asyncHandler(async (req, res) => {
 
 export const createWorkerProfile = asyncHandler(async (req, res) => {
   const {
-    experienceYears,
-    isInTeam,
-    acceptsUrgentJobs,
-    specializationsTree: specializationsTree,
-    workGovernmentIds,
+    workerProfile: {
+      experienceYears,
+      isInTeam,
+      acceptsUrgentJobs,
+      specializationsTree: specializationsTree,
+      workGovernmentIds,
+    }
   } = req.body;
   const userId = req.userState.userId;
   const images = req.files;
   const phoneNumber = req.userState.phoneNumber;
-  const role = req.userState.role;
   const deviceId = req.deviceId;
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -139,7 +139,7 @@ export const createWorkerProfile = asyncHandler(async (req, res) => {
   const accessToken = await authService.generateAccessToken({
     deviceId,
     userId,
-    role,
+    isAdmin: req.adminState !== undefined,
     refreshToken,
   });
 

@@ -159,7 +159,6 @@ export class DashboardService {
         lastName: user.lastName,
         middleName: user.middleName,
         status: user.status,
-        role: user.role,
         createdAt: user.createdAt,
         profileImageUrl: user.profileImageUrl,
       },

@@ -18,7 +18,9 @@ import { DayOfWeekSchema, DaysWorkingHoursSchema } from './worker-profile.reques
 export const UpdateUserSchema = UserDataOptionalSchema;
 export type UpdateUserDTO = z.infer<typeof UpdateUserSchema>;
 
-export const CreateClientProfileSchema = ClientProfileSchema;
+export const CreateClientProfileSchema = z.object({
+  clientProfile: ClientProfileSchema,
+});
 export type CreateClientProfileDTO = z.infer<typeof CreateClientProfileSchema>;
 
 export const UpdateClientProfileSchema = ClientProfileOptionalSchema;

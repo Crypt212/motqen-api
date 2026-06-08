@@ -8,7 +8,7 @@ import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
-import { AccountStatus, Role, User, UserFilter } from '../domain/user.entity.js';
+import { AccountStatus, User, UserFilter } from '../domain/user.entity.js';
 import { LocationCreateInput, LocationUpdateInput, Location } from '../domain/location.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/query.js';
 import { UserState } from '../types/asyncHandler.js';
@@ -19,7 +19,6 @@ type InputUserType = {
   firstName: string;
   middleName: string;
   lastName: string;
-  role: Role;
   status: AccountStatus;
   profileImageBuffer: Buffer;
 };
@@ -89,7 +88,6 @@ export default class UserService extends Service {
     await this.userRepository.update({
       filter,
       user: {
-        role: data.role,
         firstName: data.firstName,
         lastName: data.lastName,
         status: data.status,
@@ -115,7 +113,7 @@ export default class UserService extends Service {
     const client = await this.clientProfileRepository.find({ filter: { userId: user.id } });
 
     const userState = {
-      role: user.role,
+      role: 'CLIENT' as 'CLIENT' | 'WORKER', // placeholder
       userId: user.id,
       phoneNumber: user.phoneNumber,
       accountStatus: user.status,

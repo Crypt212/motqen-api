@@ -3,21 +3,20 @@
  * @module types/tokens
  */
 
-import { Role } from '../domain/user.entity.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 
 export type RefreshTokenPayload = {
   type: 'refresh';
   phoneNumber: string;
   userId: IDType;
-  role: Role;
+  isAdmin: boolean;
 };
 
 export type AccessTokenPayload = {
   type: 'access';
   phoneNumber: string;
   userId: IDType;
-  role: Role;
+  isAdmin: boolean;
 };
 
 export type LoginTokenPayload = {

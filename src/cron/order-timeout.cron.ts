@@ -7,7 +7,7 @@ const payingPeriodSeconds = environment.cron.order.paymentExpiryIntervalHours;
 const expirationTimeoutSeconds = environment.cron.order.expiryIntervalHours;
 
 /**
- * turns the state of unpaid orders which has the state "PRICE_AGREED" and has passed the timeout period, back to "PENDING" (if order mode is "DIRECT") or "OPEN" (if order mode is "GLOBAL")
+ * turns the state of unpaid orders which has the state "PRICE_AGREED" and has passed the timeout period, back to "PENDING"
  */
 async function freeAgreedUnpaidOrders(timeoutSeconds: number): Promise<void> {
 
