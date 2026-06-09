@@ -25,7 +25,7 @@ import { validateCsrf } from '../../../middlewares/csrfMiddleware.js';
 import { validateBody, validateParams, validateQuery } from '../../../middlewares/validateRequest.js';
 import {
   CreatePlatformUserSchema,
-  UpdateUserStatusSchema,
+  UpdatePlatformUserSchema,
   AdminUserIdParamsSchema,
   AdminUserExtendedFilterSchema,
   SuspendUserSchema,
@@ -56,8 +56,27 @@ router.get('/', validateQuery(AdminUserExtendedFilterSchema), controller.listUse
 
 // Create a new user
 router.post('/', validateBody(CreatePlatformUserSchema), controller.createUser);
-router.get('/:userId', validateParams(AdminUserIdParamsSchema), controller.getUserById);
-router.patch('/:userId/status', validateParams(AdminUserIdParamsSchema), validateBody(UpdateUserStatusSchema), controller.updateUserStatus);
+
+// Get user details
+router.get('/:userId', validateParams(AdminUserIdParamsSchema), controller.getUser);
+
+// Update user profile
+router.patch('/:userId', validateParams(AdminUserIdParamsSchema), validateBody(UpdatePlatformUserSchema), controller.updateUser);
+
+// ============================================
+// User Status Management
+// ============================================
+
+// Suspend user
+router.post('/:userId/suspend', validateParams(AdminUserIdParamsSchema), validateBody(SuspendUserSchema), controller.suspendUser);
+
+// Ban user
+router.post('/:userId/ban', validateParams(AdminUserIdParamsSchema), validateBody(BanUserSchema), controller.banUser);
+
+// Reactivate user
+router.post('/:userId/reactivate', validateParams(AdminUserIdParamsSchema), controller.reactivateUser);
+
+// Force logout user
 router.post('/:userId/force-logout', validateParams(AdminUserIdParamsSchema), controller.forceLogout);
 
 // ============================================
