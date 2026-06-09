@@ -36,7 +36,7 @@ export default class OtpCache implements IOtpCache {
     ttlSeconds: number
   ): Promise<string | {}> {
     const key = this.keys.otp(phone, method);
-    return await this.client.set(key, hashedOtp, { EX: ttlSeconds });
+    return await this.client.set(key, hashedOtp, { expiration: { type: "EX", value: ttlSeconds } });
   }
 
   /**
