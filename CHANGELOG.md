@@ -14,6 +14,9 @@
 - Converted domain routes (`orders.ts`, `reports.ts`, `dashboard.ts`, `auth.ts`, etc.) to use the robust `createRoute` middleware instead of raw callbacks, providing runtime type checking and OpenAPI inferences.
 - Transitioned heavily to `asyncHandler<ResponseDTO, RequestDTO>` for strict end-to-end type safety in Controllers.
 - Synchronized all `v1/*.docs.ts` OpenAPI swagger specifications to directly reference Zod schemas to ensure documentation cannot drift from runtime validation.
+- Decoupled `NegotiationService` from the full `userState` object by explicitly passing `role` and `profileId` arguments for better service-level isolation.
+- Updated `WorkerProfileService.get` to proactively throw a `404 AppError` when a worker profile is missing.
+- Completed standardizing `DashboardController` routes, DTOs, and OpenAPI docs to fully adhere to the new validation patterns.
 
 ### Added
 - Created the `GET /workers/{id}/occupied-time-slots` endpoint and documented it within `workers.docs.ts` leveraging `OccupiedTimeSlotsResponseSchema`.

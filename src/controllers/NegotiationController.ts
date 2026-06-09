@@ -16,11 +16,14 @@ import { OrderResponseDTO } from 'src/schemas/responses/order.response.js';
 export const getNegotiations = asyncHandler<NegotiationListResponseDTO, any, any, { orderId: string; proposalId?: string }>(async (req, res) => {
   const { orderId, proposalId } = req.parsed!.params!;
   const userState = req.userState!;
+  const role = userState.role;
+  const profileId = role === 'WORKER' ? userState.worker!.id! : userState.client!.id!;
 
   const result = await negotiationService.getNegotiations({
     orderId,
     proposalId,
-    userState,
+    role,
+    profileId,
   });
 
   res.status(200).send({ status: 'success', message: 'Negotiations retrieved', data: result });
@@ -34,11 +37,16 @@ export const createNegotiation = asyncHandler<NegotiationResponseDTO, CreateNego
   const { orderId, proposalId } = req.parsed!.params!;
   const { price, startDate, estimatedDurationHours, note } = req.parsed!.body!;
   const userState = req.userState!;
+  const userId = userState.userId;
+  const role = userState.role;
+  const profileId = role === 'WORKER' ? userState.worker!.id! : userState.client!.id!;
 
   const negotiation = await negotiationService.createNegotiation({
     orderId,
     proposalId,
-    userState,
+    userId,
+    profileId,
+    role,
     price: price!,
     startDate: startDate ?? undefined,
     estimatedDurationHours,
@@ -55,11 +63,14 @@ export const createNegotiation = asyncHandler<NegotiationResponseDTO, CreateNego
 export const acceptNegotiation = asyncHandler<OrderResponseDTO, any, any, { orderId: string; proposalId?: string }>(async (req, res) => {
   const { orderId, proposalId } = req.parsed!.params!;
   const userState = req.userState!;
+  const role = userState.role;
+  const profileId = role === 'WORKER' ? userState.worker!.id! : userState.client!.id!;
 
   const order = await negotiationService.acceptNegotiation({
     orderId,
     proposalId,
-    userState,
+    role,
+    profileId,
   });
 
   res.status(200).send({ status: 'success', message: 'Negotiation accepted', data: { order } });
@@ -72,11 +83,14 @@ export const acceptNegotiation = asyncHandler<OrderResponseDTO, any, any, { orde
 export const rejectNegotiation = asyncHandler<NegotiationResponseDTO, any, any, { orderId: string; proposalId?: string }>(async (req, res) => {
   const { orderId, proposalId } = req.parsed!.params!;
   const userState = req.userState!;
+  const role = userState.role;
+  const profileId = role === 'WORKER' ? userState.worker!.id! : userState.client!.id!;
 
   const negotiation = await negotiationService.rejectNegotiation({
     orderId,
     proposalId,
-    userState,
+    role,
+    profileId,
   });
 
   res.status(200).send({ status: 'success', message: 'Negotiation rejected', data: { negotiation } });
@@ -90,11 +104,14 @@ export const rejectNegotiation = asyncHandler<NegotiationResponseDTO, any, any, 
 export const cancelNegotiation = asyncHandler<NegotiationResponseDTO, any, any, { orderId: string; proposalId?: string }>(async (req, res) => {
   const { orderId, proposalId } = req.parsed!.params!;
   const userState = req.userState!;
+  const role = userState.role;
+  const profileId = role === 'WORKER' ? userState.worker!.id! : userState.client!.id!;
 
   const negotiation = await negotiationService.cancelNegotiation({
     orderId,
     proposalId,
-    userState,
+    role,
+    profileId,
   });
 
   res.status(200).send({ status: 'success', message: 'Negotiation cancelled', data: { negotiation } });

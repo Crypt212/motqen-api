@@ -16,7 +16,6 @@ import {
   deleteWorkerSpecializations,
   getClientProfile,
   createClientProfile,
-  updateClientProfile,
   getWorkerSpecializationsTree,
   getVerification,
   resubmitVerification,
@@ -41,7 +40,7 @@ import {
   DeleteWorkerSpecializationsSchema,
   DeleteWorkerSpecializationsQuerySchema,
   CreateClientProfileSchema,
-  UpdateClientProfileSchema,
+  // UpdateClientProfileSchema,
   WorkerGovernmentQuerySchema,
   WorkerSpecializationQuerySchema,
   AddDaysWorkingHoursSchema,
@@ -271,14 +270,14 @@ usersRouter.post(
 
 usersRouter.get('/client-profile', isActive, authorizeClient, createRoute({ schemas: {}, handler: getClientProfile }));
 
-usersRouter.put(
-  '/client-profile',
-  isActive,
-  authorizeClient,
-  createRoute({
-    schemas: { body: UpdateClientProfileSchema },
-    handler: updateClientProfile,
-  })
-);
+// usersRouter.put(
+//   '/client-profile',
+//   isActive,
+//   authorizeClient,
+//   createRoute({
+//     schemas: { body: UpdateClientProfileSchema },
+//     handler: updateClientProfile,
+//   })
+// );
 
 export default usersRouter;

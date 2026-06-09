@@ -13,7 +13,6 @@ import OrderRepository from '../repositories/prisma/OrderRepository.js';
 import ProposalRepository from '../repositories/prisma/ProposalRepository.js';
 import WorkerOccupiedTimeSlotRepository from '../repositories/prisma/WorkerOccupiedTimeSlotRepository.js';
 
-import { UserState } from '../types/asyncHandler.js';
 import { PaginatedResultMeta } from '../types/query.js';
 import { notificationService } from '../state.js';
 import prisma from 'src/libs/database.js';
@@ -22,6 +21,7 @@ import IWorkerOccupiedTimeSlotRepository from '../repositories/interfaces/Worker
 import { hasOverlap } from '../utils/overlapCheck.js';
 import WorkerProfileRepository from 'src/repositories/prisma/WorkerRepository.js';
 import { Order } from 'src/domain/order.entity.js';
+import { IDType } from 'src/repositories/interfaces/Repository.js';
 
 type OrderParty = {
   role: 'CLIENT' | 'WORKER';
@@ -69,25 +69,25 @@ export default class NegotiationService extends Service {
    * Determine whether the requester is the client or the worker of this order.
    * @throws {AppError} 403 if the user is not a party to the order
    */
-  private async resolveOrderParty(order: OrderForNegotiation, userState: UserState): Promise<OrderParty> {
-    console.log(userState, order);
-    if (userState.client && userState.client.id === order.clientProfileId) {
-      return { role: 'CLIENT', profileId: userState.client.id };
-    } else if (userState.worker) {
-      if (order.workerProfileId && userState.worker.id !== order.workerProfileId) {
-        // Direct order but with different worker
+  private async resolveOrderParty(order: OrderForNegotiation, role: "WORKER" | "CLIENT", profileId: IDType): Promise<OrderParty> {
+    if (role === 'CLIENT' && profileId !== order.clientProfileId)
+      throw new AppError('You are not the owner of this order', 403);
+
+    if (role === 'WORKER') {
+
+      // Direct order but with different worker
+      if (order.workerProfileId && profileId !== order.workerProfileId)
+        throw new AppError('This order is not assigned to you', 403);
+    }
+
+    if (!order.workerProfileId) {
+      const proposals = await this.proposalRepository.findMany({ filter: { workerProfileId: profileId, orderId: order.id } });
+      if (proposals.proposals.length === 0) {
         throw new AppError('You are not a party to this order', 403);
-      } else if (order.workerProfileId) {
-        return { role: 'WORKER', profileId: userState.worker.id };
-      } else {
-        const proposals = await this.proposalRepository.findMany({ filter: { workerProfileId: userState.worker.id, orderId: order.id } });
-        if (proposals.proposals.length === 0) {
-          throw new AppError('You are not a party to this order', 403);
-        } else {
-        return { role: 'WORKER', profileId: userState.worker.id };
-        }
       }
-    } else throw new AppError('You are not a party to this order', 403);
+    }
+
+    return { role, profileId };
   }
 
   /**
@@ -115,13 +115,14 @@ export default class NegotiationService extends Service {
   async getNegotiations(params: {
     orderId: string;
     proposalId?: string;
-    userState: UserState;
+    role: "WORKER" | "CLIENT";
+    profileId: IDType;
     pagination?: { page?: number; limit?: number };
   }): Promise<PaginatedResultMeta & { negotiations: Negotiation[] }> {
-    const { orderId, proposalId, userState, pagination } = params;
+    const { orderId, proposalId, role, profileId, pagination } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      this.resolveOrderParty(order, userState);
+      this.resolveOrderParty(order, role, profileId);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
       return this.negotiationRepository.findByProposalId({ proposalId: resolvedProposalId, pagination });
     });
@@ -132,16 +133,18 @@ export default class NegotiationService extends Service {
   async createNegotiation(params: {
     orderId: string;
     proposalId?: string;
-    userState: UserState;
+    userId: IDType;
+    profileId: IDType;
+    role: "WORKER" | "CLIENT";
     price: number;
     startDate?: Date;
     estimatedDurationHours?: number;
     note?: string;
   }): Promise<Negotiation & { hasOverlapWarning?: boolean }> {
-    const { orderId, proposalId, userState, price, startDate, estimatedDurationHours, note } = params;
+    const { orderId, proposalId, userId, role, profileId, price, startDate, estimatedDurationHours, note } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      const party = await this.resolveOrderParty(order, userState);
+      const party = await this.resolveOrderParty(order, role, profileId);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
@@ -180,7 +183,7 @@ export default class NegotiationService extends Service {
         }
       }
 
-      const senderId = userState.userId;
+      const senderId = userId;
       const negotiation = await this.negotiationRepository.create({
         data: {
           orderId,
@@ -206,12 +209,13 @@ export default class NegotiationService extends Service {
   async acceptNegotiation(params: {
     orderId: string;
     proposalId?: string;
-    userState: UserState;
+    role: "WORKER" | "CLIENT";
+    profileId: IDType;
   }): Promise<Order> {
-    const { orderId, proposalId, userState } = params;
+    const { orderId, proposalId, role, profileId } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      const party = await this.resolveOrderParty(order, userState);
+      const party = await this.resolveOrderParty(order, role, profileId);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
@@ -317,11 +321,11 @@ export default class NegotiationService extends Service {
 
   // ─── REJECT negotiation ───────────────────────────────────────────────────
 
-  async rejectNegotiation(params: { orderId: string; proposalId?: string; userState: UserState }): Promise<Negotiation> {
-    const { orderId, proposalId, userState } = params;
+  async rejectNegotiation(params: { orderId: string; proposalId?: string; role: 'WORKER' | 'CLIENT'; profileId: IDType }): Promise<Negotiation> {
+    const { orderId, proposalId, role, profileId } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      const party = await this.resolveOrderParty(order, userState);
+      const party = await this.resolveOrderParty(order, role, profileId);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states
@@ -357,11 +361,11 @@ export default class NegotiationService extends Service {
 
   // ─── CANCEL negotiation ───────────────────────────────────────────────────
 
-  async cancelNegotiation(params: { orderId: string; proposalId?: string; userState: UserState }): Promise<Negotiation> {
-    const { orderId, proposalId, userState } = params;
+  async cancelNegotiation(params: { orderId: string; proposalId?: string; role: 'WORKER' | 'CLIENT'; profileId: IDType }): Promise<Negotiation> {
+    const { orderId, proposalId, role, profileId } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      const party = await this.resolveOrderParty(order, userState);
+      const party = await this.resolveOrderParty(order, role, profileId);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
 
       // Guard: only allow negotiation in these order states

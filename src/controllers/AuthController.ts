@@ -291,12 +291,12 @@ export const generateAccessToken = asyncHandler<AccessTokenResponseDTO>(async (r
  * Reviews the status of a user (pending, approved, rejected)
  */
 export const reviewStatus = asyncHandler<ReviewStatusResponseDTO>(async (req, res) => {
-  if (req.userState.client) {
-    res.status(200).send({ status: 'success', message: 'You are a client, you can whatever you want <3', data: { } });
+  if (req.userState.role === 'CLIENT') {
+    res.status(200).send({ status: 'success', message: 'You are a client, you can whatever you want <3', data: { reason: 'You are a client', status: 'APPROVED' } });
     return;
   }
 
-  if (req.userState.worker) {
+  if (req.userState.role === 'WORKER') {
     const isApproved = req.userState.worker.verification.status === 'APPROVED';
     const reason = req.userState.worker.verification.reason;
     const status = req.userState.worker.verification.status;

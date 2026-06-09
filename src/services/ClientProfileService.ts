@@ -35,7 +35,7 @@ export default class ClientService extends Service {
    * Get a client's profile for a user
    * @throws {AppError} If user or profile not found
    */
-  async get(params: ClientProfileFilter): Promise<ClientProfile | null> {
+  async get(params: ClientProfileFilter): Promise<ClientProfile> {
     return tryCatch(async () => {
       const { userId } = params;
       const user = await this.userRepository.find({ filter: { id: userId } });
@@ -56,7 +56,7 @@ export default class ClientService extends Service {
   async create(params: {
     userId: IDType;
     data: ClientProfileCreateInput;
-  }): Promise<ClientProfile | null> {
+  }): Promise<ClientProfile> {
     return tryCatch(async () => {
       const { userId, data } = params;
       const user = await this.userRepository.find({ filter: { id: userId } });

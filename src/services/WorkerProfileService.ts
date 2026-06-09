@@ -601,10 +601,12 @@ export default class WorkerService extends Service {
   /**
    * Get a worker's profile for a user
    */
-  async get(params: { filter: WorkerProfileFilter }): Promise<WorkerProfile | null> {
+  async get(params: { filter: WorkerProfileFilter }): Promise<WorkerProfile> {
     const { filter } = params;
     return tryCatch(async () => {
-      return await this.workerProfileRepository.find({ workerFilter: filter });
+      const workerProfile = await this.workerProfileRepository.find({ workerFilter: filter });
+      if (!workerProfile) throw new AppError('Worker profile not found', 404);
+      return workerProfile;
     });
   }
 

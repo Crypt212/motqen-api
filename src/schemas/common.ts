@@ -38,11 +38,11 @@ export const SpecializationWithSubSpecializationsObjectSchema = z.object({
 });
 
 export const ReportObjectSchema = z.object({
-  id: z.string().uuid(),
-  reporterId: z.string().uuid(),
+  id: UUIDSchema,
+  reporterId: UUIDSchema,
   targetType: z.enum(['ORDER', 'CHAT_MESSAGE', 'WORKER_PROFILE', 'CLIENT_PROFILE']),
   targetId: z.string(),
-  contextOrderId: z.string().uuid().nullable().optional(),
+  contextOrderId: UUIDSchema.nullable().optional(),
   problemCategory: z.enum(['ORDER_ISSUE', 'WORKER_CONDUCT', 'CLIENT_CONDUCT', 'CHAT_MESSAGE', 'OTHER']),
   problemType: z.enum([
     'UNFINISHED_WORK',
@@ -60,9 +60,59 @@ export const ReportObjectSchema = z.object({
   ]),
   description: z.string(),
   status: z.enum(['PENDING', 'UNDER_REVIEW', 'RESOLVED', 'REJECTED', 'CANCELLED']),
-  resolvedBy: z.string().uuid().nullable().optional(),
+  resolvedBy: UUIDSchema.nullable().optional(),
   retainUntil: z.date().nullable().optional(),
   images: z.array(z.string().url()),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const UserObjectSchema = z.object({
+  id: UUIDSchema,
+  phoneNumber: z.string(),
+  firstName: z.string(),
+  middleName: z.string().nullable(),
+  lastName: z.string(),
+  profileImageUrl: z.string().nullable(),
+  status: z.enum(['ACTIVE', 'SUSPENDED', 'BANNED']),
+  lastNotificationReadAt: z.date().nullable(),
+  isOnline: z.boolean(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+
+export const LoggedInUserObjectSchema = UserObjectSchema.extend({
+  isWorker: z.boolean(),
+  isClient: z.boolean(),
+});
+
+export const ClientProfileObjectSchema = z.object({
+  id: UUIDSchema,
+  userId: UUIDSchema,
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const WorkerOrdersStatisticsSchema = z.object({
+  ordersCounts: z.object({
+    cancelled: z.number(),
+    completed: z.number(),
+    pending: z.number(),
+    today: z.number(),
+  })
+});
+
+export const WorkerProfileObjectSchema = z.object({
+  id: UUIDSchema,
+  userId: UUIDSchema,
+  experienceYears: z.number(),
+  isInTeam: z.boolean(),
+  acceptsUrgentJobs: z.boolean(),
+  rate: z.number(),
+  ratingCount: z.number(),
+  completedJobsCount: z.number(),
+  bio: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -180,11 +230,18 @@ export const WorkGovernmentsSchema = z
   .min(1, 'workGovernments must contain at least one government ID');
 
 export const WorkerProfileSchema = z.object({
+  userId: UUIDSchema,
   specializationsTree: SpecializationsTreeSchema,
   workGovernmentIds: WorkGovernmentsSchema,
   experienceYears: z.number({ message: 'experienceYears must be a number' }).int().min(0),
   isInTeam: z.boolean({ message: 'isInTeam must be a boolean' }),
   acceptsUrgentJobs: z.boolean({ message: 'acceptsUrgentJobs must be a boolean' }),
+  rate: z.number(),
+  ratingCount: z.number(),
+  completedJobsCount: z.number(),
+  bio: z.string().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 export const WorkerProfileOptionalSchema = WorkerProfileSchema.partial();

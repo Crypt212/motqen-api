@@ -354,7 +354,7 @@ export default class AuthService extends Service {
   ): Promise<{
     tokenType: 'register' | 'login';
     token: string;
-    workerVerificationInfo: { isWorker: boolean; isWorkerSignedUp: boolean } | {};
+    workerVerificationInfo: { isWorker: boolean; isWorkerSignedUp: boolean };
   }> {
     // in production -> Invalid or expired OTP only
 

@@ -9,7 +9,7 @@ import {
   DeleteWorkerSpecializationsSchema,
   DeleteWorkerSpecializationsQuerySchema,
   CreateClientProfileSchema,
-  UpdateClientProfileSchema,
+  // UpdateClientProfileSchema,
   WorkerGovernmentQuerySchema,
   WorkerSpecializationQuerySchema,
   RemoveDaysWorkingHoursSchema,
@@ -27,7 +27,8 @@ import {
   DashboardUserResponseSchema,
   DashboardWorkerProfileResponseSchema,
   DashboardClientProfileResponseSchema,
-  WorkerOrdersStatisticsSchema,
+  DashboardWorkerOrdersStatisticsResponseSchema,
+  DashboardUpdateUserResponseSchema,
 } from '../../../schemas/responses/dashboard.response.js';
 import {
   WorkerVerificationResponseSchema,
@@ -92,7 +93,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'User updated',
-        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
+        content: { 'application/json': { schema: DashboardUpdateUserResponseSchema } },
       },
       unauthorizedResponse: true,
       validationErrorResponse: true,
@@ -191,7 +192,7 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker orders count retrieved successfully',
-        content: { 'application/json': { schema: WorkerOrdersStatisticsSchema } },
+        content: { 'application/json': { schema: DashboardWorkerOrdersStatisticsResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -816,32 +817,32 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     }),
   });
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // PUT /me/client-profile
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  registry.registerPath({
-    method: 'put',
-    path: '/api/v1/me/client-profile',
-    tags: ['Dashboard'],
-    summary: 'Update client profile',
-    description: "Updates the authenticated client's profile. All fields are optional.",
-    security: [{ BearerAuth: [] }],
-    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
-    request: {
-      body: {
-        content: { 'application/json': { schema: UpdateClientProfileSchema } },
-      },
-    },
-    responses: createResponseDoc({
-      successfulResponse: {
-        description: 'Client profile updated',
-        content: { 'application/json': { schema: DashboardClientProfileResponseSchema } },
-      },
-      unauthorizedResponse: true,
-      forbiddenResponse: true,
-      validationErrorResponse: true,
-      internalServerError: true,
-    }),
-  });
+  // // ─────────────────────────────────────────────────────────────────────────────
+  // // PUT /me/client-profile
+  // // ─────────────────────────────────────────────────────────────────────────────
+  //
+  // registry.registerPath({
+  //   method: 'put',
+  //   path: '/api/v1/me/client-profile',
+  //   tags: ['Dashboard'],
+  //   summary: 'Update client profile',
+  //   description: "Updates the authenticated client's profile. All fields are optional.",
+  //   security: [{ BearerAuth: [] }],
+  //   parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
+  //   request: {
+  //     body: {
+  //       content: { 'application/json': { schema: UpdateClientProfileSchema } },
+  //     },
+  //   },
+  //   responses: createResponseDoc({
+  //     successfulResponse: {
+  //       description: 'Client profile updated',
+  //       content: { 'application/json': { schema: DashboardClientProfileResponseSchema } },
+  //     },
+  //     unauthorizedResponse: true,
+  //     forbiddenResponse: true,
+  //     validationErrorResponse: true,
+  //     internalServerError: true,
+  //   }),
+  // });
 }

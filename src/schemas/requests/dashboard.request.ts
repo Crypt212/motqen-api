@@ -33,9 +33,12 @@ const Time24HourSchema = z
 export const AddDaysWorkingHoursSchema = z.object({
   schedules: DaysWorkingHoursSchema
 });
+export type AddDaysWorkingHoursDTO = z.infer<typeof AddDaysWorkingHoursSchema>;
+
 export const RemoveDaysWorkingHoursSchema = z.object({
   days: z.array(DayOfWeekSchema)
 });
+export type RemoveDaysWorkingHoursDTO = z.infer<typeof RemoveDaysWorkingHoursSchema>;
 
 export type SetWorkingHoursDTO = z.infer<typeof AddDaysWorkingHoursSchema>;
 

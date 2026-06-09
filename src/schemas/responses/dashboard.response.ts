@@ -1,58 +1,33 @@
 import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
-import { OccupiedTimeSlotObjectSchema, PaginationResponseSchema, PortfolioObjectSchema, ProjectImageSchema, UUIDSchema } from '../common.js';
+
 import { GovernmentObjectSchema } from './government.response.js';
-import { SpecializationObjectSchema, SpecializationWithSubSpecializationsObjectSchema } from '../common.js';
+import {
+  OccupiedTimeSlotObjectSchema,
+  PaginationResponseSchema,
+  PortfolioObjectSchema,
+  ProjectImageSchema,
+  UserObjectSchema,
+  LoggedInUserObjectSchema,
+  UUIDSchema,
+  SpecializationObjectSchema,
+  SpecializationWithSubSpecializationsObjectSchema,
+  ClientProfileObjectSchema,
+  WorkerProfileObjectSchema,
+} from '../common.js';
 import { DaysWorkingHoursSchema } from '../requests/worker-profile.request.js';
 import { LocationObjectSchema } from './location.response.js';
 
-
-export const UserObjectSchema = z.object({
-  id: UUIDSchema,
-  firstName: z.string(),
-  middleName: z.string().nullable().optional(),
-  lastName: z.string(),
-  phoneNumber: z.string(),
-  profileImageUrl: z.string().nullable().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
-export const ClientProfileObjectSchema = z.object({
-  id: UUIDSchema,
-  userId: UUIDSchema,
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
-export const WorkerOrdersStatisticsSchema = z.object({
-  ordersCounts: z.object({
-    cancelled: z.number(),
-    completed: z.number(),
-    pending: z.number(),
-    today: z.number(),
-  })
-});
-
-export const WorkerProfileObjectSchema = z.object({
-  id: UUIDSchema,
-  userId: UUIDSchema,
-  experienceYears: z.number(),
-  isInTeam: z.boolean(),
-  acceptsUrgentJobs: z.boolean(),
-  rate: z.number(),
-  completedJobsCount: z.number(),
-  ratingCount: z.number(),
-  bio: z.string().nullable().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
 export const DashboardUserResponseSchema = SuccessResponseSchema(z.object({
-  user: UserObjectSchema,
+  user: LoggedInUserObjectSchema,
 }),);
 export type DashboardUserResponseDTO = z.infer<typeof DashboardUserResponseSchema>;
+
+export const DashboardUpdateUserResponseSchema = SuccessResponseSchema(z.object({
+  user: UserObjectSchema,
+}),);
+export type DashboardUpdateUserResponseDTO = z.infer<typeof DashboardUpdateUserResponseSchema>;
 
 export const DashboardClientProfileResponseSchema = SuccessResponseSchema(z.object({
   clientProfile: ClientProfileObjectSchema,
@@ -63,6 +38,17 @@ export const DashboardWorkerProfileResponseSchema = SuccessResponseSchema(z.obje
   workerProfile: WorkerProfileObjectSchema,
 }),);
 export type DashboardWorkerProfileResponseDTO = z.infer<typeof DashboardWorkerProfileResponseSchema>;
+
+export const DashboardWorkerOrdersStatisticsResponseSchema = SuccessResponseSchema(z.object({
+  ordersCounts: z.object({
+    pending: z.number(),
+    canceled: z.number(),
+    completed: z.number(),
+    today: z.number()
+  })
+
+}),);
+export type DashboardWorkerOrdersStatisticsResponseDTO = z.infer<typeof DashboardWorkerOrdersStatisticsResponseSchema>;
 
 export const DashboardClientProfileWithTokensResponseSchema = SuccessResponseSchema(z.object({
   clientProfile: ClientProfileObjectSchema,

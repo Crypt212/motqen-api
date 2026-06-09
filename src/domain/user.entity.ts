@@ -12,7 +12,7 @@ export type User = {
   firstName: string;
   middleName: string;
   lastName: string;
-  profileImageUrl: string;
+  profileImageUrl: string | null;
   status: AccountStatus;
 
   isOnline: boolean;

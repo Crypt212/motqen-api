@@ -6,6 +6,7 @@
 import AppError from '../errors/AppError.js';
 import {
   DashboardUserResponseDTO,
+  DashboardUpdateUserResponseDTO,
   DashboardClientProfileResponseDTO,
   DashboardWorkerProfileResponseDTO,
   DashboardClientProfileWithTokensResponseDTO,
@@ -19,11 +20,12 @@ import {
   PortfolioWithImagesResponseDTO,
   ImagesResponseDTO,
   OccupiedTimeSlotsResponseDTO,
+  DashboardWorkerOrdersStatisticsResponseDTO,
 } from '../schemas/responses/dashboard.response.js';
 import {
   UpdateUserDTO,
   CreateClientProfileDTO,
-  UpdateClientProfileDTO,
+  // UpdateClientProfileDTO,
   SetWorkingHoursDTO,
   AddLocationDTO,
   UpdateLocationDTO,
@@ -35,6 +37,7 @@ import {
   WorkerSpecializationQuery,
   CreatePortfolioDTO,
   UpdatePortfolioDTO,
+  RemoveDaysWorkingHoursDTO,
 } from '../schemas/requests/dashboard.request.js';
 import {
   CreateWorkerProfileDTO,
@@ -64,14 +67,14 @@ export const getUser = asyncHandler<DashboardUserResponseDTO, any, any>(async (r
   res.status(200).send({ status: 'success', message: 'User retrieved successfully', data: { user: loggedInUser } });
 });
 
-export const updateUser = asyncHandler<any, UpdateUserDTO, any>(async (req, res) => {
+export const updateUser = asyncHandler<DashboardUpdateUserResponseDTO, UpdateUserDTO, any>(async (req, res) => {
   const { firstName, middleName, lastName } = req.parsed!.body!;
   const userId = req.userState.userId;
   const image = req.file;
 
   // If phoneNumber is provided, update user's phone (need additional verification)
   // For now, update other fields only
-  await userService.update({
+  const updatedUser = await userService.update({
     filter: { id: userId },
     data: {
       firstName,
@@ -81,7 +84,7 @@ export const updateUser = asyncHandler<any, UpdateUserDTO, any>(async (req, res)
     },
   });
 
-  res.status(200).send({ status: 'success', message: 'updated user successfully', data: {} });
+  res.status(200).send({ status: 'success', message: 'updated user successfully', data: { user: updatedUser } });
 });
 
 export const createClientProfile = asyncHandler<DashboardClientProfileWithTokensResponseDTO, CreateClientProfileDTO, any>(async (req, res) => {
@@ -114,16 +117,18 @@ export const createClientProfile = asyncHandler<DashboardClientProfileWithTokens
   });
 });
 
-export const updateClientProfile = asyncHandler<any, UpdateClientProfileDTO, any>(async (req, res) => {
-  const clientProfileId = req.userState.client.id;
-
-  const clientProfile = await clientProfileService.update({
-    filter: { id: clientProfileId },
-    data: {},
-  });
-
-  res.status(200).send({ status: 'success', message: 'updated client profile successfully', data: { clientProfile } });
-});
+// It does not have updatable data currently
+// export const updateClientProfile = asyncHandler<DashboardClientProfileResponseDTO, UpdateClientProfileDTO, any>(async (req, res) => {
+//   const clientProfileId = req.userState.client.id;
+//   const body = req.parsed!.body!;
+//
+//   const clientProfile = await clientProfileService.update({
+//     filter: { id: clientProfileId },
+//     data: body,
+//   });
+//
+//   res.status(200).send({ status: 'success', message: 'updated client profile successfully', data: { clientProfile } });
+// });
 
 export const getClientProfile = asyncHandler<DashboardClientProfileResponseDTO, any, any>(async (req, res) => {
   const userId = req.userState.userId;
@@ -135,14 +140,7 @@ export const getClientProfile = asyncHandler<DashboardClientProfileResponseDTO, 
 
 export const createWorkerProfile = asyncHandler<DashboardWorkerProfileWithTokensResponseDTO, CreateWorkerProfileDTO, any>(async (req, res) => {
   const {
-    workerProfile: {
-      experienceYears,
-      isInTeam,
-      acceptsUrgentJobs,
-      specializationsTree: specializationsTree,
-      workGovernmentIds,
-    }
-  } = req.parsed!.body!;
+    workerProfile: requestBodyWorkerProfile  } = req.parsed!.body!;
   const userId = req.userState.userId;
   const images = req.files as { [fieldname: string]: Express.Multer.File[] };
   const phoneNumber = req.userState.phoneNumber;
@@ -157,18 +155,17 @@ export const createWorkerProfile = asyncHandler<DashboardWorkerProfileWithTokens
   )
     throw new AppError('Please upload all required images', 400);
 
+  const workerProfileBody = {
+    ...requestBodyWorkerProfile,
+    idImageBuffer: images['id_image'][0].buffer,
+    profileWithIdImageBuffer: images['personal_with_id_image'][0].buffer,
+    profileImageBuffer: images['personal_image'][0].buffer,
+    governmentIds: requestBodyWorkerProfile.workGovernmentIds,
+  }
+
   const workerProfile = await workerProfileService.create({
     userId,
-    workerProfile: {
-      experienceYears,
-      isInTeam,
-      acceptsUrgentJobs,
-      specializationsTree,
-      governmentIds: workGovernmentIds,
-      idImageBuffer: images['id_image'][0].buffer,
-      profileWithIdImageBuffer: images['personal_with_id_image'][0].buffer,
-      profileImageBuffer: images['personal_image'][0].buffer,
-    },
+    workerProfile: workerProfileBody,
   });
 
   await authService.logout({ userId, deviceId });
@@ -189,12 +186,10 @@ export const createWorkerProfile = asyncHandler<DashboardWorkerProfileWithTokens
   });
 });
 
-export const getWorkerOrdersCount = asyncHandler<any>(async (req, res) => {
+export const getWorkerOrdersCount = asyncHandler<DashboardWorkerOrdersStatisticsResponseDTO>(async (req, res) => {
   const workerProfileId = req.userState.worker?.id;
 
   const ordersCounts = await workerProfileService.getOrdersStatistics({ workerProfileId });
-
-  console.log(ordersCounts);
 
   res.status(200).send({ status: 'success', message: 'Worker orders count retrieved successfully', data: { ordersCounts } });
 });
@@ -214,7 +209,7 @@ export const getWorkerWorkingHours = asyncHandler<WorkingHoursResponseDTO, any, 
   res.status(200).send({ status: 'success', message: 'retrieved worker working hours successfully', data: { workingHours } });
 });
 
-export const addDaysWorkerWorkingHours = asyncHandler<any, SetWorkingHoursDTO, any>(async (req, res) => {
+export const addDaysWorkerWorkingHours = asyncHandler<WorkingHoursResponseDTO, SetWorkingHoursDTO, any>(async (req, res) => {
   const workerProfileId = req.userState.worker.id;
   const { schedules: daysWorkingHours } = req.parsed!.body!;
 
@@ -227,7 +222,7 @@ export const addDaysWorkerWorkingHours = asyncHandler<any, SetWorkingHoursDTO, a
 });
 
 
-export const removeWorkerWorkingHours = asyncHandler<any>(async (req, res) => {
+export const removeWorkerWorkingHours = asyncHandler<any, RemoveDaysWorkingHoursDTO>(async (req, res) => {
   const workerProfileId = req.userState.worker.id;
   const { days } = req.parsed!.body!;
 
@@ -240,26 +235,19 @@ export const removeWorkerWorkingHours = asyncHandler<any>(async (req, res) => {
 });
 
 export const updateWorkerProfile = asyncHandler<DashboardWorkerProfileResponseDTO, UpdateWorkerProfileDTO, any>(async (req, res) => {
-  const { experienceYears, isInTeam, acceptsUrgentJobs, bio } = req.parsed!.body!;
+  const requestBodyWorkerProfile = req.parsed!.body!;
+
+  const workerProfileBody = {
+    ...requestBodyWorkerProfile,
+    governmentIds: requestBodyWorkerProfile.workGovernmentIds,
+  }
+
   const workerProfile = await workerProfileService.update({
     workerProfileId: req.userState.worker.id,
-    data: {
-      experienceYears,
-      isInTeam,
-      acceptsUrgentJobs,
-      bio,
-    },
+    data: workerProfileBody,
   });
 
   res.status(200).send({ status: 'success', message: 'updated worker profile successfully', data: { workerProfile } });
-});
-
-export const deleteWorkerProfile = asyncHandler<any>(async (req, res) => {
-  const workerProfile = await workerProfileService.delete({
-    workerProfileId: req.userState.worker.id,
-  });
-
-  res.status(200).send({ status: 'success', message: 'deleted worker profile successfully', data: { workerProfile } });
 });
 
 export const getWorkerGovernments = asyncHandler<WorkGovernmentsResponseDTO, any, WorkerGovernmentQuery>(async (req, res) => {
@@ -277,7 +265,7 @@ export const getWorkerGovernments = asyncHandler<WorkGovernmentsResponseDTO, any
 export const addWorkerGovernments = asyncHandler<any, AddWorkerGovernmentsDTO, any>(async (req, res) => {
   const { workGovernments } = req.parsed!.body!;
 
-  const addedGovernmentsCount = await workerProfileService.insertWorkGovernments({
+  await workerProfileService.insertWorkGovernments({
     filter: { id: req.userState.worker.id },
     governmentIds: workGovernments,
   });
@@ -285,7 +273,7 @@ export const addWorkerGovernments = asyncHandler<any, AddWorkerGovernmentsDTO, a
   res.status(200).send({
     status: 'success',
     message: 'added worker working governments successfully',
-    data: { addedGovernmentsCount },
+    data: null,
   });
 });
 

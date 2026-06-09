@@ -8,6 +8,7 @@ import { FieldTypeDefinition, SortOptions } from 'src/types/query.js';
 import { Order } from 'src/domain/order.entity.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
 import LocationService from 'src/services/LocationService.js';
+import AppError from 'src/errors/AppError.js';
 
 export default class OrderController {
   private orderService: OrderService;
@@ -23,8 +24,8 @@ export default class OrderController {
     const images = (req.files as Express.Multer.File[]) || [];
     const clientUserId = req.userState.userId;
 
-    if (!req.userState.client) {
-      throw new Error('User must have a client profile to create orders');
+    if (req.userState.role !== 'CLIENT') {
+      throw new AppError('User must be a client to create an order', 403);
     }
 
     const order = await this.orderService.createOrder({

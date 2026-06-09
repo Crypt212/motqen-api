@@ -1,8 +1,6 @@
 import { z } from '../../libs/zod.js';
 import { SuccessResponseSchema } from '../responses.js';
 import { SpecializationsTreeSchema, UUIDSchema, PaginationResponseSchema } from '../common.js';
-import { UserObjectSchema } from './auth.response.js';
-import { LocationObjectSchema } from './location.response.js';
 
 export const ExploreWorkerCardSchema = z.object({
   workerId: UUIDSchema,
