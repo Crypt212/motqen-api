@@ -45,9 +45,8 @@ export function registerSocketHandlers(
 
   // ─── send_message ───────────────────────────────────────────────────────────
   socket.on('send_message', async ({ conversationId, content, type = 'TEXT', localId }, ack) => {
-    console.log(userId);
     try {
-      if (type !== 'TEXT') {
+      if (type !== 'TEXT' && type !== 'ORDER') {
         if (typeof ack === 'function') {
           ack({ ok: false, error: 'Invalid message type' });
         }
@@ -190,10 +189,10 @@ export function registerSocketHandlers(
 
       if (partnerId) {
         isPartnerOnline = await presence.isOnline({ userId: partnerId });
-        
+
         // Auto-subscribe to partner's online/offline presence updates
         void socket.join(`presence:${partnerId}`);
-        
+
         io.to(`user:${partnerId}`).emit('partner_entered_chat', { conversationId });
 
         // Tell partner their messages are delivered (up to their own messageCounter)
@@ -224,7 +223,7 @@ export function registerSocketHandlers(
       if (partnerId) {
         // Auto-unsubscribe from partner's presence updates
         void socket.leave(`presence:${partnerId}`);
-        
+
         io.to(`user:${partnerId}`).emit('partner_left_chat', { conversationId });
       }
 
@@ -234,8 +233,6 @@ export function registerSocketHandlers(
       if (err instanceof Error && typeof ack === 'function') ack({ ok: false, error: err.message });
     }
   });
-
-
 
   // ─── disconnect ─────────────────────────────────────────────────────────────
   socket.on('disconnect', async () => {

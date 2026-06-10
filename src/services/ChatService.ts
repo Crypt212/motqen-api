@@ -44,6 +44,7 @@ export default class ChatService extends Service {
   private conversationRepository: IConversationRepository;
   private messageRepository: IMessageRepository;
   private workerProfileRepository: IWorkerProfileRepository;
+  private clientProfileRepository: IClientProfileRepository;
   private _presence: IChatPresenceCache;
 
   constructor(params: {
@@ -57,6 +58,7 @@ export default class ChatService extends Service {
     this.conversationRepository = params.conversationRepository;
     this.messageRepository = params.messageRepository;
     this.workerProfileRepository = params.workerProfileRepository;
+    this.clientProfileRepository = params.clientProfileRepository;
     this._presence = params.presence;
   }
 
@@ -66,23 +68,36 @@ export default class ChatService extends Service {
    * Get or create the conversation between a Worker and a Client.
    * Validates that workerId has a workerProfile and clientId has a clientProfile.
    * Returns the existing conversation if the pair already has one (idempotent).
-   * @throws {AppError} 400 if profiles are missing or same user is both roles
+   * @throws {AppError} 400 if workerId/clientId are missing, profiles are missing, or same user is both roles
    * @throws {RepositoryError} 409 if DB race creates duplicate (caught from UNIQUE constraint)
    */
   async getOrCreateConversation(params: {
-    workerId: IDType;
-    clientId: IDType;
+    workerId: IDType | undefined;
+    clientId: IDType | undefined;
   }): Promise<Conversation> {
     const { workerId, clientId } = params;
+
+    // Guard: both IDs must be present (undefined means the caller did not resolve roles)
+    if (!workerId || !clientId)
+      throw new AppError('workerId and clientId are required', 400);
+
     if (workerId === clientId)
       throw new AppError('A user cannot start a conversation with themselves', 400);
 
-    // Validate roles at the profile level
-    const workerProfile = await this.workerProfileRepository.find({
-      workerFilter: { userId: workerId },
-    });
+    // Validate roles at the profile level — worker via workerProfileRepository,
+    // client via clientProfileRepository (not workerProfileRepository)
+    const [workerProfile, clientProfile] = await Promise.all([
+      this.workerProfileRepository.find({
+        workerFilter: { userId: workerId },
+      }),
+      this.clientProfileRepository.find({
+        filter: { userId: clientId },
+      }),
+    ]);
 
     if (!workerProfile) throw new AppError('Worker profile not found', 400);
+
+    if (!clientProfile) throw new AppError('Client profile not found', 400);
 
     const existing = await this.conversationRepository.findByPair({
       workerId,
@@ -126,20 +141,27 @@ export default class ChatService extends Service {
    * List all conversations for a user with derived unreadCount.
    */
   async getConversations(params: {
-    userId: IDType;
     pagination: PaginationOptions;
     sort: SortOptions<ConversationWithParticipantsAndMessages>;
+    filter: { userId: IDType; role: 'WORKER' | 'CLIENT' };
   }): Promise<
     PaginatedResultMeta & {
       conversations: GetConversations[];
     }
   > {
-    const { userId, pagination, sort } = params;
+    const {
+      filter: { userId, role },
+      pagination,
+      sort,
+    } = params;
     return tryCatch(async () => {
       const convs =
         await this.conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
           userId,
+          // Pass an empty filter — the participantRole param does the scoping via the
+          // participants index, which is more efficient than a top-level clientId/workerId filter.
           filter: {},
+          participantRole: role,
           pagination,
           sort,
         });
@@ -177,13 +199,17 @@ export default class ChatService extends Service {
       // Background task: sync delivery state for all fetched conversations
       setImmediate(() => {
         for (const conv of convs.conversationParticipantsWithMessages) {
-          const myParticipant = conv.participants.find(p => p.userId === userId);
+          const myParticipant = conv.participants.find((p) => p.userId === userId);
           if (myParticipant && conv.messageCounter > myParticipant.lastReceivedMessageNumber) {
-            this.conversationRepository.updateLastReceived({
-              conversationId: conv.id,
-              userId,
-              messageNumber: conv.messageCounter
-            }).catch(err => console.error('[ChatService] Error auto-syncing delivery in getConversations:', err));
+            this.conversationRepository
+              .updateLastReceived({
+                conversationId: conv.id,
+                userId,
+                messageNumber: conv.messageCounter,
+              })
+              .catch((err) =>
+                console.error('[ChatService] Error auto-syncing delivery in getConversations:', err)
+              );
           }
         }
       });
@@ -387,14 +413,18 @@ export default class ChatService extends Service {
 
       // Sync delivery state
       if (messages.length > 0) {
-        const highestReceived = Math.max(...messages.map(m => m.messageNumber));
+        const highestReceived = Math.max(...messages.map((m) => m.messageNumber));
         if (highestReceived > participant.lastReceivedMessageNumber) {
           setImmediate(() => {
-            this.conversationRepository.updateLastReceived({
-              conversationId,
-              userId,
-              messageNumber: highestReceived
-            }).catch(err => console.error('[ChatService] Error auto-syncing delivery in getMessages:', err));
+            this.conversationRepository
+              .updateLastReceived({
+                conversationId,
+                userId,
+                messageNumber: highestReceived,
+              })
+              .catch((err) =>
+                console.error('[ChatService] Error auto-syncing delivery in getMessages:', err)
+              );
           });
         }
       }
@@ -428,14 +458,21 @@ export default class ChatService extends Service {
 
       // Sync delivery state
       if (messages.length > 0) {
-        const highestReceived = Math.max(...messages.map(m => m.messageNumber));
+        const highestReceived = Math.max(...messages.map((m) => m.messageNumber));
         if (highestReceived > participant.lastReceivedMessageNumber) {
           setImmediate(() => {
-            this.conversationRepository.updateLastReceived({
-              conversationId,
-              userId,
-              messageNumber: highestReceived
-            }).catch(err => console.error('[ChatService] Error auto-syncing delivery in getMissedMessages:', err));
+            this.conversationRepository
+              .updateLastReceived({
+                conversationId,
+                userId,
+                messageNumber: highestReceived,
+              })
+              .catch((err) =>
+                console.error(
+                  '[ChatService] Error auto-syncing delivery in getMissedMessages:',
+                  err
+                )
+              );
           });
         }
       }

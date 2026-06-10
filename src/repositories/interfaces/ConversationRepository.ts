@@ -53,6 +53,7 @@ export default interface IConversationRepository {
   findNonEmptyConversationsWithParticipantsAndMessages(params: {
     filter: ConversationFilter;
     userId: IDType;
+    participantRole?: 'WORKER' | 'CLIENT';
     pagination?: PaginationOptions;
     sort?: SortOptions<ConversationWithParticipantsAndMessages>;
   }): Promise<

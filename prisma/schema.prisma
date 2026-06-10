@@ -593,6 +593,7 @@ enum ConversationRole {
 enum MessageType {
   TEXT
   IMAGE
+  ORDER
 }
 
 enum FlagState {

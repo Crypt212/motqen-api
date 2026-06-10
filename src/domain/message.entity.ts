@@ -30,7 +30,7 @@ export const MessageFilterDescriptor = {
   conversationId: { type: 'uuid' as const },
   senderId: { type: 'uuid' as const },
   messageNumber: { type: 'number' as const },
-  type: { type: 'enum', enumValues: ['TEXT', 'IMAGE'] as const },
+  type: { type: 'enum', enumValues: ['TEXT', 'IMAGE', 'ORDER'] as const },
 } satisfies Record<string, FieldTypeDefinition>;
 
 export type MessageFilter = FilterFromDescriptor<typeof MessageFilterDescriptor>;

@@ -163,6 +163,7 @@ export default class ConversationRepository extends Repository implements IConve
   async findNonEmptyConversationsWithParticipantsAndMessages(params: {
     filter: ConversationFilter;
     userId: IDType;
+    participantRole?: 'WORKER' | 'CLIENT';
     pagination?: PaginationOptions;
     sort?: SortOptions<ConversationWithParticipantsAndMessages>;
   }): Promise<
@@ -171,10 +172,14 @@ export default class ConversationRepository extends Repository implements IConve
     }
   > {
     try {
-      const { filter, userId, pagination, sort } = params;
+      const { filter, userId, participantRole, pagination, sort } = params;
+
+      const participantFilter = participantRole
+        ? { some: { userId, role: participantRole } }
+        : { some: { userId } };
 
       const total = await this.prismaClient.conversation.count({
-        where: { ...filter, participants: { some: { userId } }, messageCounter: { gt: 0 } },
+        where: { ...filter, participants: participantFilter, messageCounter: { gt: 0 } },
       });
       const sortQuery = handleSort(sort);
       const { paginationResult, paginationQuery } = handlePagination({
@@ -184,7 +189,7 @@ export default class ConversationRepository extends Repository implements IConve
 
       const conversations = await this.prismaClient.conversation.findMany({
         where: {
-          participants: { some: { userId } },
+          participants: participantFilter,
           messageCounter: { gt: 0 },
           ...filter,
         },
@@ -356,10 +361,7 @@ export default class ConversationRepository extends Repository implements IConve
     }
   }
 
-  async findPartnerId(params: {
-    conversationId: IDType;
-    userId: IDType;
-  }): Promise<IDType | null> {
+  async findPartnerId(params: { conversationId: IDType; userId: IDType }): Promise<IDType | null> {
     try {
       const partner = await this.prismaClient.conversationParticipant.findFirst({
         where: {

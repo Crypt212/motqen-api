@@ -2,7 +2,7 @@ import { z } from '../../libs/zod.js';
 import { buildFilterSchema, createQuerySchema } from '../common.js';
 
 export const CreateConversationSchema = z.object({
-  workerId: z.string().uuid({ message: 'workerId must be a valid UUID' }),
+  partnerId: z.string().uuid({ message: 'partnerId must be a valid UUID' }),
 });
 export type CreateConversationDTO = z.infer<typeof CreateConversationSchema>;
 
