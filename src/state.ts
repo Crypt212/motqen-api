@@ -23,6 +23,7 @@ import ConversationRepository from './repositories/prisma/ConversationRepository
 import AdminAuthService from './services/AdminAuthService.js';
 import AdminAuditLogService from './services/AdminAuditLogService.js';
 import AdminUsersService from './services/AdminUsersService.js';
+import AdminPlatformUsersService from './services/AdminPlatformUsersService.js';
 import AdminIssuesService from './services/AdminIssuesService.js';
 import AdminIssuesController from './controllers/AdminIssuesController.js';
 import AdminVerificationsController from './controllers/AdminVerificationsController.js';
@@ -121,6 +122,7 @@ export const adminAuditLogRepository = new AdminAuditLogRepository(prisma);
 export const adminAuthService = new AdminAuthService(adminRepository, adminSessionRepository);
 export const adminAuditLogService = new AdminAuditLogService(adminAuditLogRepository);
 export const adminUsersService = new AdminUsersService(adminRepository);
+export const adminPlatformUsersService = new AdminPlatformUsersService();
 export const adminUsersController = new AdminUsersController();
 export const adminIssuesService = new AdminIssuesService();
 export const adminIssuesController = new AdminIssuesController();

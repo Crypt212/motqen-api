@@ -14,12 +14,7 @@ export const CreatePlatformUserSchema = z.object({
   middleName: z.string().trim().optional(),
   lastName: z.string().trim().min(1),
   phoneNumber: z.string().trim().min(1),
-  role: z.nativeEnum(Role).refine(
-    (value) => value === Role.CLIENT || value === Role.WORKER,
-    {
-      message: 'role must be either CLIENT or WORKER',
-    }
-  ),
+  role: z.enum(['CLIENT', 'WORKER'] as const),
   status: z.nativeEnum(AccountStatus).default(AccountStatus.ACTIVE),
   profileImageUrl: z.string().url().optional(),
   // Optional worker-specific data
@@ -111,23 +106,23 @@ export const AdminUserExtendedFilterSchema = z.object({
   middleName: z.string().optional(),
   lastName: z.string().optional(),
   phoneNumber: z.string().optional(),
-  
+
   // Account and status filters
   status: z.enum(['ACTIVE', 'SUSPENDED', 'BANNED']).optional(),
   isOnline: z.boolean().optional(),
-  
+
   // User type filters
   userType: z.enum(['CLIENT', 'WORKER']).optional(),
-  
+
   // Worker-specific filters
   verificationStatus: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
   governmentId: UUIDSchema.optional(),
   specializationId: UUIDSchema.optional(),
-  
+
   // Pagination
   page: z.number().int().min(1).optional().default(1),
   limit: z.number().int().min(1).max(100).optional().default(20),
-  
+
   // Sorting
   sortBy: z.enum(['createdAt', 'firstName', 'lastName', 'phoneNumber', 'updatedAt']).optional(),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),

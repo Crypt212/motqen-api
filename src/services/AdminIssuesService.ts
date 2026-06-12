@@ -140,21 +140,17 @@ export default class AdminIssuesService {
         select: {
           id: true,
           status: true,
-          assignedDepartment: true,
-          assignedAdminId: true,
           createdAt: true,
         },
         take: 20,
       })
-      .then((items) => items.map((i) => ({ ...i, type: 'WITHDRAW_REQUEST' as const })));
+      .then((items) => items.map((i) => ({ ...i, type: 'WITHDRAW_REQUEST' as const, assignedDepartment: null, assignedAdminId: null })));
 
     const refunds = await prisma.refund
       .findMany({
         where: ownershipWhere,
         select: {
           id: true,
-          assignedDepartment: true,
-          assignedAdminId: true,
           createdAt: true,
         },
         take: 20,
@@ -164,6 +160,8 @@ export default class AdminIssuesService {
           ...i,
           status: 'RESOLVED',
           type: 'REFUND' as const,
+          assignedDepartment: null,
+          assignedAdminId: null,
         }))
       );
 
@@ -173,13 +171,11 @@ export default class AdminIssuesService {
         select: {
           id: true,
           status: true,
-          assignedDepartment: true,
-          assignedAdminId: true,
           createdAt: true,
         },
         take: 20,
       })
-      .then((items) => items.map((i) => ({ ...i, type: 'ESCROW_HOLD' as const })));
+      .then((items) => items.map((i) => ({ ...i, type: 'ESCROW_HOLD' as const, assignedDepartment: null, assignedAdminId: null })));
 
     const all = [
       ...reports,

@@ -64,6 +64,10 @@ export interface ListWithdrawRequestsFilter {
   workerProfileId?: string;
   status?: WithdrawRequestStatus;
   payoutMethodType?: PayoutMethodType;
+  createdFrom?: Date;
+  createdTo?: Date;
+  workerName?: string;
+  phoneNumber?: string;
 }
 
 export interface ListWithdrawRequestsOptions {

@@ -21,8 +21,8 @@ export default class EscrowHoldRepository extends Repository implements IEscrowH
       escrowReleaseEligibleAt: record.escrowReleaseEligibleAt,
       releasedAt: record.releasedAt,
       idempotencyKey: record.idempotencyKey,
-      assignedDepartment: record.assignedDepartment,
-      assignedAdminId: record.assignedAdminId,
+      assignedDepartment: null,
+      assignedAdminId: null,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };

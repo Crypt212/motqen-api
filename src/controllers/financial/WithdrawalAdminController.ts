@@ -12,13 +12,16 @@ export class WithdrawalAdminController {
   constructor(private readonly withdrawalService: WithdrawalService) {}
 
   public listWithdrawRequests = asyncHandler(async (req, res) => {
+    const createdFromStr = req.query.createdFrom as string | undefined;
+    const createdToStr = req.query.createdTo as string | undefined;
+
     const data = await this.withdrawalService.listWithdrawRequests({
       filter: {
         workerProfileId: req.query.workerProfileId as string | undefined,
         status: req.query.status as WithdrawRequestStatus | undefined,
         payoutMethodType: req.query.payoutMethodType as PayoutMethodType | undefined,
-        createdFrom: req.query.createdFrom as Date | undefined,
-        createdTo: req.query.createdTo as Date | undefined,
+        createdFrom: createdFromStr ? new Date(createdFromStr) : undefined,
+        createdTo: createdToStr ? new Date(createdToStr) : undefined,
         workerName: req.query.workerName as string | undefined,
         phoneNumber: req.query.phoneNumber as string | undefined,
       },
@@ -76,7 +79,7 @@ export class WithdrawalAdminController {
 
   public completePayout = asyncHandler(async (req, res) => {
     const id = req.params.id as string;
-    const { externalReferenceId, notes } = req.body;
+    const { externalReferenceId } = req.body;
     const adminId = req.adminState?.adminId as IDType;
     if (!adminId) throw new AppError('Unauthorized', 401);
 
@@ -85,11 +88,13 @@ export class WithdrawalAdminController {
       throw new AppError('A proof of payment image is required', 400);
     }
 
+    // Convert buffer to base64 URL for now
+    const proofUrl = `data:image/jpeg;base64,${file.buffer.toString('base64')}`;
+
     await this.withdrawalService.completePayout(
       id,
-      file.buffer, // we'll update service to accept a buffer instead of URL
+      proofUrl,
       externalReferenceId,
-      notes,
       adminId
     );
 
@@ -104,7 +109,7 @@ export class WithdrawalAdminController {
       severity: 'INFO',
       targetType: 'PAYOUT_EXECUTION',
       targetId: id,
-      metadata: { externalReferenceId, notes },
+      metadata: { externalReferenceId },
     });
 
     new SuccessResponse('Payout completed successfully').send(res);
@@ -123,8 +128,8 @@ export class WithdrawalAdminController {
 
   public getPayoutExecutionProof = asyncHandler(async (req, res) => {
     const id = req.params.id as string;
-    const proof = await this.withdrawalService.getPayoutExecutionProof(id);
-    new SuccessResponse('Payout execution proof retrieved successfully', proof).send(res);
+    const proof = await this.withdrawalService.getPayoutExecution(id);
+    new SuccessResponse('Payout execution retrieved successfully', proof).send(res);
   });
 
   public listDebts = asyncHandler(async (req, res) => {

@@ -363,7 +363,7 @@ export class WithdrawalService {
     const request = await this.withdrawRequestRepo.findById(requestId);
     if (!request) throw new AppError('Withdraw request not found', 404);
     if (request.workerProfileId !== workerProfileId)
-      throw new AppError('Withdraw request not found', 404); 
+      throw new AppError('Withdraw request not found', 404);
     return request;
   }
 
@@ -484,8 +484,8 @@ export class WithdrawalService {
         status: request.status,
         adminNotes: request.adminNotes,
         processedBy: request.processedBy,
-        assignedAdminId: request.assignedAdminId,
-        assignedDepartment: request.assignedDepartment,
+        assignedAdminId: null as any,
+        assignedDepartment: null as any,
         payoutMethodSnapshot: request.payoutMethodSnapshot,
         createdAt: request.createdAt,
         updatedAt: request.updatedAt,

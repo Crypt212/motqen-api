@@ -390,8 +390,6 @@ export default class AdminCasesService {
           id: true,
           status: true,
           amount: true,
-          assignedAdminId: true,
-          assignedDepartment: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -409,8 +407,6 @@ export default class AdminCasesService {
           orderId: true,
           amount: true,
           reasonCode: true,
-          assignedAdminId: true,
-          assignedDepartment: true,
           createdAt: true,
         },
         take: 500,
@@ -427,8 +423,6 @@ export default class AdminCasesService {
           orderId: true,
           status: true,
           totalAmount: true,
-          assignedAdminId: true,
-          assignedDepartment: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -474,8 +468,8 @@ export default class AdminCasesService {
         id: w.id,
         sourceEntityType: 'WITHDRAW_REQUEST' as const,
         rawStatus: w.status,
-        assignedAdminId: w.assignedAdminId,
-        assignedDepartment: w.assignedDepartment,
+        assignedAdminId: null,
+        assignedDepartment: null,
         title: 'Withdrawal Request',
         summary: `Amount: ${w.amount.toString()} EGP`,
         createdAt: w.createdAt,
@@ -486,8 +480,8 @@ export default class AdminCasesService {
         id: r.id,
         sourceEntityType: 'REFUND' as const,
         rawStatus: 'RESOLVED',
-        assignedAdminId: r.assignedAdminId,
-        assignedDepartment: r.assignedDepartment,
+        assignedAdminId: null,
+        assignedDepartment: null,
         title: 'Refund',
         summary: `Order ${r.orderId} - ${r.reasonCode}`,
         createdAt: r.createdAt,
@@ -498,8 +492,8 @@ export default class AdminCasesService {
         id: e.id,
         sourceEntityType: 'ESCROW_HOLD' as const,
         rawStatus: e.status,
-        assignedAdminId: e.assignedAdminId,
-        assignedDepartment: e.assignedDepartment,
+        assignedAdminId: null,
+        assignedDepartment: null,
         title: 'Escrow Hold',
         summary: `Order ${e.orderId} - ${e.totalAmount.toString()} EGP`,
         createdAt: e.createdAt,
@@ -660,43 +654,43 @@ export default class AdminCasesService {
         }
         const withdraw = await prisma.withdrawRequest.findUnique({
           where: { id: caseId },
-          select: { id: true, assignedAdminId: true, assignedDepartment: true },
+          select: { id: true },
         });
         if (withdraw) {
           return {
             sourceEntityType: 'WITHDRAW_REQUEST',
             sourceEntityId: withdraw.id,
             ownership: {
-              assignedAdminId: withdraw.assignedAdminId,
-              assignedDepartment: withdraw.assignedDepartment,
+              assignedAdminId: null,
+              assignedDepartment: null,
             },
           };
         }
         const refund = await prisma.refund.findUnique({
           where: { id: caseId },
-          select: { id: true, assignedAdminId: true, assignedDepartment: true },
+          select: { id: true },
         });
         if (refund) {
           return {
             sourceEntityType: 'REFUND',
             sourceEntityId: refund.id,
             ownership: {
-              assignedAdminId: refund.assignedAdminId,
-              assignedDepartment: refund.assignedDepartment,
+              assignedAdminId: null,
+              assignedDepartment: null,
             },
           };
         }
         const escrow = await prisma.escrowHold.findUnique({
           where: { id: caseId },
-          select: { id: true, assignedAdminId: true, assignedDepartment: true },
+          select: { id: true },
         });
         if (escrow) {
           return {
             sourceEntityType: 'ESCROW_HOLD',
             sourceEntityId: escrow.id,
             ownership: {
-              assignedAdminId: escrow.assignedAdminId,
-              assignedDepartment: escrow.assignedDepartment,
+              assignedAdminId: null,
+              assignedDepartment: null,
             },
           };
         }
@@ -716,15 +710,15 @@ export default class AdminCasesService {
       case 'DISPUTE_CASE': {
         const dispute = await prisma.dispute.findUnique({
           where: { id: caseId },
-          select: { id: true, assignedAdminId: true, assignedDepartment: true },
+          select: { id: true },
         });
         if (!dispute) return null;
         return {
           sourceEntityType: 'DISPUTE',
           sourceEntityId: dispute.id,
           ownership: {
-            assignedAdminId: dispute.assignedAdminId,
-            assignedDepartment: dispute.assignedDepartment,
+            assignedAdminId: null,
+            assignedDepartment: null,
           },
         };
       }
