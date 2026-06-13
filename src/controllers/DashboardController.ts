@@ -288,7 +288,7 @@ export const getWorkerProfile = asyncHandler<GetWorkerProfileResponseDTO, GetWor
 });
 
 export const getWorkerWorkingHours = asyncHandler<GetWorkerWorkingHoursResponseDTO, GetWorkerWorkingHoursRequestDTO, GetWorkerWorkingHoursQueryDTO, GetWorkerWorkingHoursParamsDTO>(async (req, res) => {
-  const userId = req.userState?.userId || String(req.parsed!.params!.id);
+  const userId = req.userState?.userId;
   const workingHours = await workerProfileService.getMyWorkingHours({ userId });
 
   res.status(200).send({ status: 'success', message: 'retrieved worker working hours successfully', data: { workingHours } });

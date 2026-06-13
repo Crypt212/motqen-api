@@ -2,6 +2,11 @@ import { z } from '../../libs/zod.js';
 import { SuccessResponseSchema } from '../responses.js';
 import { UUIDSchema, PaginationResponseSchema } from '../common.js';
 import { SpecializationsTreeViewSchema as SpecializationsTreeSchema } from '../entities/specialization.js';
+import {
+
+GetWorkerWorkingHoursResponseSchema as DashboardGetWorkerWorkingHoursResponseSchema,
+AddWorkerDaysWorkingHoursResponseSchema as DashboardAddWorkerDaysWorkingHoursResponseSchema,
+} from "./dashboard.response.js";
 
 export const ExploreWorkerCardSchema = z.object({
   workerId: UUIDSchema,
@@ -163,3 +168,6 @@ export type GetWorkerByIdResponseDTO = z.infer<typeof GetWorkerByIdResponseSchem
 
 export const GetWorkerOccupiedTimeSlotsResponseSchema = OccupiedTimeSlotsResponseSchema;
 export type GetWorkerOccupiedTimeSlotsResponseDTO = z.infer<typeof GetWorkerOccupiedTimeSlotsResponseSchema>;
+
+export const GetWorkerWorkingHoursResponseSchema = DashboardGetWorkerWorkingHoursResponseSchema;
+export type GetWorkerWorkingHoursResponseDTO = z.infer<typeof GetWorkerWorkingHoursResponseSchema>;

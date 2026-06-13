@@ -79,3 +79,15 @@ export const GetWorkerOccupiedTimeSlotsQuerySchema = OccupiedTimeSlotsQuerySchem
 export type GetWorkerOccupiedTimeSlotsQueryDTO = z.infer<typeof GetWorkerOccupiedTimeSlotsQuerySchema>;
 export const GetWorkerOccupiedTimeSlotsParamsSchema = ExploreWorkerIdParamsSchema;
 export type GetWorkerOccupiedTimeSlotsParamsDTO = z.infer<typeof GetWorkerOccupiedTimeSlotsParamsSchema>;
+
+
+export const GetWorkerWorkingHoursRequestSchema = EmptySchema;
+export type GetWorkerWorkingHoursRequestDTO = z.infer<typeof GetWorkerWorkingHoursRequestSchema>;
+export const GetWorkerWorkingHoursQuerySchema = EmptySchema;
+export type GetWorkerWorkingHoursQueryDTO = z.infer<typeof GetWorkerWorkingHoursQuerySchema>;
+export const GetWorkerWorkingHoursParamsSchema = z.object({
+  id: UUIDSchema
+});
+export type GetWorkerWorkingHoursParamsDTO = z.infer<typeof GetWorkerWorkingHoursParamsSchema>;
+
+

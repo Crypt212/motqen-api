@@ -17,12 +17,16 @@ import {
   GetWorkerByIdParamsDTO,
   GetWorkerOccupiedTimeSlotsRequestDTO,
   GetWorkerOccupiedTimeSlotsQueryDTO,
-  GetWorkerOccupiedTimeSlotsParamsDTO
+  GetWorkerOccupiedTimeSlotsParamsDTO,
+GetWorkerWorkingHoursRequestDTO,
+  GetWorkerWorkingHoursQueryDTO,
+  GetWorkerWorkingHoursParamsDTO
 } from '../schemas/requests/worker-explore.request.js';
 import {
   SearchWorkersResponseDTO,
   GetWorkerByIdResponseDTO,
-  GetWorkerOccupiedTimeSlotsResponseDTO
+  GetWorkerOccupiedTimeSlotsResponseDTO,
+  GetWorkerWorkingHoursResponseDTO
 } from '../schemas/responses/worker-explore.response.js';
 
 import { asyncHandler } from '../types/asyncHandler.js';
@@ -106,3 +110,11 @@ export const getWorkerOccupiedTimeSlots = asyncHandler<GetWorkerOccupiedTimeSlot
 
   res.status(200).send({ status: 'success', message: 'Occupied time slots retrieved successfully', data: { occupiedSlots: slots } });
 });
+
+export const getWorkerWorkingHours = asyncHandler<GetWorkerWorkingHoursResponseDTO, GetWorkerWorkingHoursRequestDTO, GetWorkerWorkingHoursQueryDTO, GetWorkerWorkingHoursParamsDTO>(async (req, res) => {
+  const userId = req.parsed!.params!.id;
+  const workingHours = await workerProfileService.getMyWorkingHours({ userId });
+
+  res.status(200).send({ status: 'success', message: 'retrieved worker working hours successfully', data: { workingHours } });
+});
+

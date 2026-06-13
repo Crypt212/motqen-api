@@ -15,9 +15,8 @@ export const CreateClientProfileRequestSchema = z.object({
   clientProfile: ClientProfileCreateSchema,
 });
 export type CreateClientProfileRequestDTO = z.infer<typeof CreateClientProfileRequestSchema>;
-export const GetWorkerWorkingHoursParamsSchema = z.object({
-  id: UUIDSchema
-});
+
+export const GetWorkerWorkingHoursParamsSchema = EmptySchema;
 export type GetWorkerWorkingHoursParamsDTO = z.infer<typeof GetWorkerWorkingHoursParamsSchema>;
 
 export const AddWorkerDaysWorkingHoursRequestSchema = z.object({
