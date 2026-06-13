@@ -124,13 +124,13 @@ export const SortOrderSchema = z.enum(['asc', 'desc'], {
 }).default('asc');
 
 type BaseExtras = {
-  page: z.ZodCoercedNumber<unknown>;
-  limit: z.ZodCoercedNumber<unknown>;
+  page: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
+  limit: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
 };
 
 type WithSortExtras<TSort extends string> = {
-  sortBy: z.ZodArray<z.ZodEnum<Record<TSort, TSort>>>;
-  sortOrder: z.ZodArray<typeof SortOrderSchema>;
+  sortBy: z.ZodOptional<z.ZodArray<z.ZodEnum<Record<TSort, TSort>>>>;
+  sortOrder: z.ZodOptional<z.ZodArray<typeof SortOrderSchema>>;
 };
 
 export function createQuerySchema<
@@ -166,9 +166,9 @@ export function createQuerySchema<
     extras.sortBy = z.array(
       z.enum(sortableFields, {
         message: `sortBy must be one of: ${sortableFields.join(', ')}`,
-      }));
+      })).optional();
 
-    extras.sortOrder = z.array(SortOrderSchema);
+    extras.sortOrder = z.array(SortOrderSchema).optional();
   }
 
   return filterSchema.extend(extras as any) as unknown as any;
@@ -251,5 +251,5 @@ export function parseJSON() {
     .trim()
     .transform((val: string) => JSON.parse(val));
 }
-export const EmptySchema = z.object({}).strict();
+export const EmptySchema = z.strictObject({});
 export type EmptyObjectDTO = z.infer<typeof EmptySchema>;

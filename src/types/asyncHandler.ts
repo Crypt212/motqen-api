@@ -10,6 +10,7 @@ import { VerificationStatus } from '../domain/workerProfile.entity.js';
 import { Request as ExpressRequest, Response, NextFunction } from 'express';
 import { ErrorRequestHandler } from 'express';
 import { validateBody, validateParams, validateQuery } from 'src/middlewares/validateRequest.js';
+import { EmptySchema } from 'src/schemas/common.js';
 
 // Map token types to the payload that should be attached to request
 
@@ -70,9 +71,9 @@ export function createRoute<TResponseBody, TBody, TQuery, TParams>(params: {
 }) {
   const { schemas, inBetweenMiddlewares, handler } = params;
   const middlewares = [];
-  if (schemas.body) middlewares.push(validateBody(schemas.body));
-  if (schemas.query) middlewares.push(validateQuery(schemas.query));
-  if (schemas.params) middlewares.push(validateParams(schemas.params));
+  if (schemas.body && schemas.body !== EmptySchema) middlewares.push(validateBody(schemas.body));
+  if (schemas.query && schemas.query !== EmptySchema) middlewares.push(validateQuery(schemas.query));
+  if (schemas.params && schemas.params !== EmptySchema) middlewares.push(validateParams(schemas.params));
 
   return [...middlewares, ...(Array.isArray(inBetweenMiddlewares) ? inBetweenMiddlewares : []), asyncHandler(handler)];
 }
