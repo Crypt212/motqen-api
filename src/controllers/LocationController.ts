@@ -46,7 +46,7 @@ export default class LocationController {
   }
 
   list = asyncHandler<GetLocationsResponseDTO, GetLocationsRequestDTO, GetLocationsQueryDTO, GetLocationsParamsDTO>(async (req, res) => {
-    const { filter, pagination, sortBy, sortOrder } = parseQuery(req.parsed!.query!);
+    const { filter, pagination, sort } = parseQuery(req.parsed!.query!);
     const userId = req.userState!.userId;
 
     if (!("isHidden" in filter)) filter.isHidden = false
@@ -55,7 +55,7 @@ export default class LocationController {
       userId,
       filter,
       pagination,
-      sort: sortBy.map((field, index) => ({ sortBy: field, sortOrder: sortOrder[index] })),
+      sort,
     });
     res.status(200).send({ status: 'success', message: 'Locations retrieved successfully', data: result });
   });

@@ -50,14 +50,14 @@ export default class ProposalController {
   list = asyncHandler<ListProposalsResponseDTO, ListProposalsRequestDTO, ListProposalsQueryDTO, ListProposalsParamsDTO>(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userId = req.userState.userId;
-    const { filter, pagination, sortBy, sortOrder } = parseQuery(req.parsed!.query!);
+    const { filter, pagination, sort } = parseQuery(req.parsed!.query!);
 
     const result = await this.proposalService.getProposals({
       orderId,
       userId,
       filter,
       pagination,
-      sort: sortBy.map((field, index) => ({ sortBy: field as any, sortOrder: sortOrder[index] })),
+      sort,
     });
 
     res.status(200).send({

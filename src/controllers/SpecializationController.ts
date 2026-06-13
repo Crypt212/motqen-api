@@ -47,12 +47,12 @@ import {
  * Get all specializations with pagination, filtering, and ordering
  */
 export const getSpecializations = asyncHandler<GetSpecializationsResponseDTO, GetSpecializationsRequestDTO, GetSpecializationsQueryDTO, GetSpecializationsParamsDTO>(async (req, res) => {
-  const { filter, pagination, sortBy, sortOrder } = parseQuery(req.parsed!.query!);
+  const { filter, pagination, sort } = parseQuery(req.parsed!.query!);
 
   const result = await specializationService.getSpecializations({
     specializationFilter: filter,
     pagination,
-    sort: sortBy.map((field, index) => ({ sortBy: field as any, sortOrder: sortOrder[index] })),
+    sort,
   });
 
   res.status(200).send({ status: 'success', message: 'Specializations retrieved successfully', data: result });
@@ -72,14 +72,14 @@ export const getSpecializationById = asyncHandler<GetSpecializationByIdResponseD
  * Get sub-specializations by parent ID with pagination
  */
 export const getSubSpecializations = asyncHandler<GetSubSpecializationsResponseDTO, GetSubSpecializationsRequestDTO, GetSubSpecializationsQueryDTO, GetSubSpecializationsParamsDTO>(async (req, res) => {
-  const { filter, pagination, sortBy, sortOrder } = parseQuery(req.parsed!.query!);
+  const { filter, pagination, sort } = parseQuery(req.parsed!.query!);
   const parentId = req.parsed!.params!.specializationId;
 
   const result = await specializationService.getSubSpecializations({
     parentId,
     filter,
     pagination,
-    sort: sortBy.map((field, index) => ({ sortBy: field as any, sortOrder: sortOrder[index] })),
+    sort,
   });
 
   res.status(200).send({ status: 'success', message: 'Sub-specializations retrieved successfully', data: result });

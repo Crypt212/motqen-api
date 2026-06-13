@@ -71,7 +71,7 @@ export default class OrderController {
   });
 
   list = asyncHandler<GetOrdersResponseDTO, GetOrdersRequestDTO, GetOrdersQueryDTO, GetOrdersParamsDTO>(async (req, res) => {
-    const { filter, pagination, sortBy, sortOrder } = parseQuery(req.parsed!.query!);
+    const { filter, pagination, sort } = parseQuery(req.parsed!.query!);
 
     const userState = req.userState!;
     const adminState = req.adminState;
@@ -83,7 +83,7 @@ export default class OrderController {
       workerUserId: filter.workerUserId as IDType,
       filter,
       pagination,
-      sort: sortBy.map((field, index) => ({ sortBy: field as any, sortOrder: sortOrder[index] })),
+      sort,
     });
     res.status(200).send({ status: 'success', message: 'Orders retrieved successfully', data: result });
   });

@@ -128,7 +128,7 @@ type BaseExtras = {
 };
 
 type WithSortExtras = {
-  sort: z.ZodOptional<z.ZodString>,
+  sort: z.ZodOptional<z.ZodPipe<z.ZodPipe<z.ZodString, z.ZodTransform<string[], string>>, z.ZodArray<z.ZodString>>>
 };
 
 export function createQuerySchema<
@@ -144,27 +144,24 @@ export function createQuerySchema<
 > {
   const { maxPageSize = 100 } = options;
   const { sortableFields } = filterSchema[FILTER_META];
-
-  const extras: Record<string, z.ZodTypeAny> = {
-    page: z.coerce
-      .number({ message: 'page must be a number' })
-      .int()
-      .min(1, 'page must be a positive integer')
-      .optional(),
-    limit: z.coerce
-      .number({ message: 'limit must be a number' })
-      .int()
-      .min(1)
-      .max(maxPageSize, `limit must be between 1 and ${maxPageSize}`)
-      .optional(),
-  };
+  const page = z.coerce
+    .number({ message: 'page must be a number' })
+    .int()
+    .min(1, 'page must be a positive integer')
+    .optional();
+  const limit = z.coerce
+    .number({ message: 'limit must be a number' })
+    .int()
+    .min(1)
+    .max(maxPageSize, `limit must be between 1 and ${maxPageSize}`)
+    .optional();
 
   if (sortableFields.length > 0) {
 
     const validFields = sortableFields.join('|');
-    const sortPattern = new RegExp(`^(${validFields}) (asc|desc)$`);
+    const sortPattern = new RegExp(`^(${validFields})( (asc|desc))?$`);
 
-    extras.sort = z.string()
+    const sort = z.string()
       .transform((val) => val.split(',').map(entry => entry.trim().replace('+', ' ')))
       .pipe(
         z.array(
@@ -173,10 +170,24 @@ export function createQuerySchema<
             `each sort must be "field:asc" or "field:desc" or "field asc" or "field desc", or "field" to sort by default order. valid fields: ${sortableFields.join(', ')}`,
           )
         )
-      ).optional();
+      )
+    const extras = {
+      page,
+      limit,
+      sort: sort.optional()
+    };
+
+
+    return filterSchema.extend(extras) as z.ZodObject<T & BaseExtras & ([TSort] extends [never] ? object : WithSortExtras)>;
   }
 
-  return filterSchema.extend(extras as any) as unknown as any;
+  const extras: Record<string, z.ZodTypeAny> = {
+    page,
+    limit,
+  };
+
+
+  return filterSchema.extend(extras) as z.ZodObject<T & BaseExtras & ([TSort] extends [never] ? object : WithSortExtras)>;
 }
 
 // ============================================
@@ -187,9 +198,9 @@ export function createQuerySchema<
 
 export function parseQuery<T extends object, TSort extends string = never>(
   query: T & {
-    page: number;
-    limit: number;
-    sort?: string;
+    page?: number;
+    limit?: number;
+    sort?: string[];
   }
 ) {
   const q = query;
@@ -201,14 +212,12 @@ export function parseQuery<T extends object, TSort extends string = never>(
 
   const { page, limit, sort, ...filter } = query;
 
-  const rawSort = typeof q.sort === 'string'
-    ? q.sort.split(',').map((e) => e.trim().replace('+', ' '))
-    : [];
+  const rawSort = sort;
 
-  const finalSortBy: TSort[] = [];
-  const finalSortOrder: ('asc' | 'desc')[] = [];
+  const finalSort: { sortBy: TSort, sortOrder: 'asc' | 'desc' }[] = [];
 
   const sorted: Set<TSort> = new Set();
+  console.log(sort, rawSort)
 
   if (rawSort)
     for (const entry of rawSort) {
@@ -216,12 +225,15 @@ export function parseQuery<T extends object, TSort extends string = never>(
       if (sorted.has(field as TSort))
         throw new AppError(`sortBy must be unique: ${sort}`, 400);
 
-      finalSortBy.push(field as TSort);
-      finalSortOrder.push(order as 'asc' | 'desc');
+      finalSort.push({
+        sortBy: field as TSort,
+        sortOrder: order as 'asc' | 'desc',
+      });
+
       sorted.add(field as TSort);
     }
 
-  return { filter, pagination, sortBy: finalSortBy, sortOrder: finalSortOrder };
+  return { filter, pagination, sort: finalSort };
 }
 
 

@@ -59,14 +59,14 @@ export default class ReportController {
   list = asyncHandler<GetReportsResponseDTO, GetReportsRequestDTO, GetReportsQueryDTO, GetReportsParamsDTO>(async (req, res) => {
     const { userId: requesterId } = req.userState!;
     const adminState = req.adminState;
-    const { filter, pagination, sortBy, sortOrder } = parseQuery(req.parsed!.query!);
+    const { filter, pagination, sort } = parseQuery(req.parsed!.query!);
 
     const result = await this.reportService.getReports({
       filter,
       requesterId,
       isAdmin: adminState !== undefined,
       pagination,
-      sort: sortBy.map((field, index) => ({ sortBy: field as any, sortOrder: sortOrder[index] })),
+      sort,
     });
 
     res.status(200).send({ status: 'success', message: 'Reports retrieved successfully', data: result });

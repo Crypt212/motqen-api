@@ -71,11 +71,12 @@ export default class GovernmentController {
   }
 
   getGovernments = asyncHandler<GetGovernmentsResponseDTO, GetGovernmentsRequestDTO, GetGovernmentsQueryDTO, GetGovernmentsParamsDTO>(async (req, res) => {
-    const { filter, pagination, sortBy, sortOrder } = parseQuery(req.parsed!.query!);
+    const { filter, pagination, sort } = parseQuery(req.parsed!.query!);
+    console.log(sort);
     const result = await this.governmentService.getGovernments({
       filter,
       pagination,
-      sort: sortBy.map((field, index) => ({ sortBy: field, sortOrder: sortOrder[index] })),
+      sort
     });
 
     res.status(200).send({ status: 'success', message: 'Governments retrieved successfully', data: result });
@@ -134,14 +135,14 @@ export default class GovernmentController {
   });
 
   getCitiesByGovernment = asyncHandler<GetCitiesByGovernmentResponseDTO, GetCitiesByGovernmentRequestDTO, GetCitiesByGovernmentQueryDTO, GetCitiesByGovernmentParamsDTO>(async (req, res) => {
-    const { filter: cityFilter, pagination, sortBy, sortOrder } = parseQuery(req.parsed!.query!);
+    const { filter: cityFilter, pagination, sort } = parseQuery(req.parsed!.query!);
     const governmentId = req.parsed!.params!.governmentId;
 
     const result = await this.governmentService.getCitiesByGovernment({
       governmentId,
       cityFilter,
       pagination,
-      sort: sortBy.map((field, index) => ({ sortBy: field, sortOrder: sortOrder[index] })),
+      sort,
     });
 
     res.status(200).send({ status: 'success', message: 'Cities retrieved', data: result });
