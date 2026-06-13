@@ -2,7 +2,6 @@
  * @fileoverview Common Zod schemas and helpers
  */
 
-import { FieldTypeDefinition } from '../types/query.js';
 import { z } from '../libs/zod.js';
 import AppError from 'src/errors/AppError.js';
 
@@ -128,9 +127,8 @@ type BaseExtras = {
   limit: z.ZodOptional<z.ZodCoercedNumber<unknown>>;
 };
 
-type WithSortExtras<TSort extends string> = {
-  sortBy: z.ZodOptional<z.ZodArray<z.ZodEnum<Record<TSort, TSort>>>>;
-  sortOrder: z.ZodOptional<z.ZodArray<typeof SortOrderSchema>>;
+type WithSortExtras = {
+  sort: z.ZodOptional<z.ZodString>,
 };
 
 export function createQuerySchema<
@@ -142,7 +140,7 @@ export function createQuerySchema<
 ): z.ZodObject<
   T &
   BaseExtras &
-  ([TSort] extends [never] ? object : WithSortExtras<TSort>)
+  ([TSort] extends [never] ? object : WithSortExtras)
 > {
   const { maxPageSize = 100 } = options;
   const { sortableFields } = filterSchema[FILTER_META];
@@ -163,12 +161,19 @@ export function createQuerySchema<
 
   if (sortableFields.length > 0) {
 
-    extras.sortBy = z.array(
-      z.enum(sortableFields, {
-        message: `sortBy must be one of: ${sortableFields.join(', ')}`,
-      })).optional();
+    const validFields = sortableFields.join('|');
+    const sortPattern = new RegExp(`^(${validFields}) (asc|desc)$`);
 
-    extras.sortOrder = z.array(SortOrderSchema).optional();
+    extras.sort = z.string()
+      .transform((val) => val.split(',').map(entry => entry.trim().replace('+', ' ')))
+      .pipe(
+        z.array(
+          z.string().regex(
+            sortPattern,
+            `each sort must be "field:asc" or "field:desc" or "field asc" or "field desc", or "field" to sort by default order. valid fields: ${sortableFields.join(', ')}`,
+          )
+        )
+      ).optional();
   }
 
   return filterSchema.extend(extras as any) as unknown as any;
@@ -184,8 +189,7 @@ export function parseQuery<T extends object, TSort extends string = never>(
   query: T & {
     page: number;
     limit: number;
-    sortBy?: TSort[];
-    sortOrder?: ('asc' | 'desc')[];
+    sort?: string;
   }
 ) {
   const q = query;
@@ -195,26 +199,26 @@ export function parseQuery<T extends object, TSort extends string = never>(
     limit: q.limit ? Number(q.limit) : 20,
   };
 
-  const { page, limit, sortBy, sortOrder, ...filter } = query;
+  const { page, limit, sort, ...filter } = query;
 
+  const rawSort = typeof q.sort === 'string'
+    ? q.sort.split(',').map((e) => e.trim().replace('+', ' '))
+    : [];
 
   const finalSortBy: TSort[] = [];
   const finalSortOrder: ('asc' | 'desc')[] = [];
 
-  const sortedBy: Set<TSort> = new Set();
+  const sorted: Set<TSort> = new Set();
 
-  if (sortBy && sortBy.length > 0)
-    for (let i = 0; i < sortBy.length; i++) {
-      const sortByValue = sortBy[i];
-      const sortOrderValue = i < sortOrder.length ? sortOrder[i] : 'asc';
+  if (rawSort)
+    for (const entry of rawSort) {
+      const [field, order] = entry.split(' ');
+      if (sorted.has(field as TSort))
+        throw new AppError(`sortBy must be unique: ${sort}`, 400);
 
-      if (sortedBy.has(sortByValue))
-        throw new AppError(`sortBy must be unique: ${sortBy.join(', ')}`, 400);
-
-      sortedBy.add(sortByValue);
-
-      finalSortBy.push(sortByValue);
-      finalSortOrder.push(sortOrderValue);
+      finalSortBy.push(field as TSort);
+      finalSortOrder.push(order as 'asc' | 'desc');
+      sorted.add(field as TSort);
     }
 
   return { filter, pagination, sortBy: finalSortBy, sortOrder: finalSortOrder };
