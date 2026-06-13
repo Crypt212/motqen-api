@@ -23,7 +23,14 @@ import {
 } from '../../controllers/ChatController.js';
 import { authenticateAccess } from '../../middlewares/authMiddleware.js';
 import { validateBody, validateParams, validateQuery } from '../../middlewares/validateRequest.js';
-import { buildFilterSchema, createQuerySchema } from '../../schemas/common.js';
+import {
+  CreateConversationSchema,
+  ConversationIdParamsSchema,
+  ConversationListQuerySchema,
+  UnreadConversationQuerySchema,
+  MessageListQuerySchema,
+  MissedMessagesQuerySchema,
+} from '../../schemas/requests/chat.request.js';
 import upload from '../../configs/multer.js';
 
 const chatRouter = Router();
@@ -36,7 +43,7 @@ chatRouter.post(
   '/conversations',
   authenticateAccess,
   authorizeClient,
-  [validateBody(z.object({ workerId: z.uuid({ message: 'workerId must be a valid UUID' }) }))],
+  [validateBody(CreateConversationSchema)],
   getOrCreateConversation
 );
 
@@ -46,16 +53,7 @@ chatRouter.post(
 
 chatRouter.get(
   '/conversations',
-  [
-    validateQuery(
-      createQuerySchema(
-        buildFilterSchema({
-          skip: { type: 'number' as const, min: 0 },
-          take: { type: 'number' as const, min: 1, max: 30 },
-        })
-      )
-    ),
-  ],
+  [validateQuery(ConversationListQuerySchema)],
   getConversations
 );
 
@@ -66,18 +64,7 @@ chatRouter.get(
 
 chatRouter.get(
   '/conversations/unread',
-  [
-    validateQuery(
-      createQuerySchema(
-        buildFilterSchema({
-          page: { type: 'number' as const, min: 0 },
-          limit: { type: 'number' as const, min: 1, max: 30 },
-          sortBy: { type: 'string' as const, enum: ['updatedAt', 'messageCounter', 'unreadCount'] },
-          sortOrder: { type: 'string' as const, enum: ['asc', 'desc'] },
-        })
-      )
-    ),
-  ],
+  [validateQuery(UnreadConversationQuerySchema)],
   getUnreadSummary
 );
 
@@ -87,19 +74,7 @@ chatRouter.get(
 
 chatRouter.get(
   '/conversations/:conversationId/messages',
-  [
-    validateParams(
-      z.object({ conversationId: z.uuid({ message: 'conversationId must be a valid UUID' }) })
-    ),
-    validateQuery(
-      createQuerySchema(
-        buildFilterSchema({
-          after: { type: 'number' as const, min: 0 },
-          limit: { type: 'number' as const, min: 1, max: 30 },
-        })
-      )
-    ),
-  ],
+  [validateParams(ConversationIdParamsSchema), validateQuery(MessageListQuerySchema)],
   getMessages
 );
 
@@ -109,16 +84,7 @@ chatRouter.get(
 
 chatRouter.get(
   '/conversations/:conversationId/messages/missed',
-  [
-    validateParams(
-      z.object({ conversationId: z.uuid({ message: 'conversationId must be a valid UUID' }) })
-    ),
-    validateQuery(
-      z.object({
-        after: z.string({ message: 'after is required and must be a non-negative integer' }),
-      })
-    ),
-  ],
+  [validateParams(ConversationIdParamsSchema), validateQuery(MissedMessagesQuerySchema)],
   getMissedMessages
 );
 
@@ -128,12 +94,7 @@ chatRouter.get(
 
 chatRouter.post(
   '/conversations/:conversationId/upload-image',
-  [
-    validateParams(
-      z.object({ conversationId: z.uuid({ message: 'conversationId must be a valid UUID' }) })
-    ),
-    upload.single('image'),
-  ],
+  [validateParams(ConversationIdParamsSchema), upload.single('image')],
   sendImageMessage
 );
 

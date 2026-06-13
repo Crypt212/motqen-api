@@ -3,14 +3,36 @@
  * @module controllers/WorkerController
  */
 
-import { locationRepository, workerProfileService, workerProfileRepository } from '../state.js';
-import { ExploreSearchDTO, OccupiedTimeSlotsQueryDTO } from '../schemas/requests/worker-explore.request.js';
-import { ExploreSearchResponseDTO, ExploreDetailResponseDTO, OccupiedTimeSlotsResponseDTO } from '../schemas/responses/worker-explore.response.js';
+import {
+  locationRepository,
+  workerProfileService,
+  workerProfileRepository
+} from '../state.js';
+import {
+  SearchWorkersRequestDTO,
+  SearchWorkersQueryDTO,
+  SearchWorkersParamsDTO,
+  GetWorkerByIdRequestDTO,
+  GetWorkerByIdQueryDTO,
+  GetWorkerByIdParamsDTO,
+  GetWorkerOccupiedTimeSlotsRequestDTO,
+  GetWorkerOccupiedTimeSlotsQueryDTO,
+  GetWorkerOccupiedTimeSlotsParamsDTO,
+GetWorkerWorkingHoursRequestDTO,
+  GetWorkerWorkingHoursQueryDTO,
+  GetWorkerWorkingHoursParamsDTO
+} from '../schemas/requests/worker-explore.request.js';
+import {
+  SearchWorkersResponseDTO,
+  GetWorkerByIdResponseDTO,
+  GetWorkerOccupiedTimeSlotsResponseDTO,
+  GetWorkerWorkingHoursResponseDTO
+} from '../schemas/responses/worker-explore.response.js';
 
 import { asyncHandler } from '../types/asyncHandler.js';
 import AppError from 'src/errors/AppError.js';
 
-export const searchWorkers = asyncHandler<ExploreSearchResponseDTO, any, ExploreSearchDTO>(async (req, res) => {
+export const searchWorkers = asyncHandler<SearchWorkersResponseDTO, SearchWorkersRequestDTO, SearchWorkersQueryDTO, SearchWorkersParamsDTO>(async (req, res) => {
   const {
     specializationId,
     subSpecializationId,
@@ -65,7 +87,7 @@ export const searchWorkers = asyncHandler<ExploreSearchResponseDTO, any, Explore
  * @param {import('../types/asyncHandler.js').Request} req
  * @param {import('express').Response} res
  */
-export const getWorkerById = asyncHandler<ExploreDetailResponseDTO, any, any, { id: string }>(async (req, res) => {
+export const getWorkerById = asyncHandler<GetWorkerByIdResponseDTO, GetWorkerByIdRequestDTO, GetWorkerByIdQueryDTO, GetWorkerByIdParamsDTO>(async (req, res) => {
   const id = req.parsed!.params!.id;
 
   const worker = await workerProfileService.getExploreWorkerById({ userId: id });
@@ -77,7 +99,7 @@ export const getWorkerById = asyncHandler<ExploreDetailResponseDTO, any, any, { 
   res.status(200).send({ status: 'success', message: 'Worker retrieved successfully', data: { worker } });
 });
 
-export const getWorkerOccupiedTimeSlots = asyncHandler<OccupiedTimeSlotsResponseDTO, any, OccupiedTimeSlotsQueryDTO, { id: string }>(async (req, res) => {
+export const getWorkerOccupiedTimeSlots = asyncHandler<GetWorkerOccupiedTimeSlotsResponseDTO, GetWorkerOccupiedTimeSlotsRequestDTO, GetWorkerOccupiedTimeSlotsQueryDTO, GetWorkerOccupiedTimeSlotsParamsDTO>(async (req, res) => {
   const workerUserId = req.parsed!.params!.id;
   const { selectedDate } = req.parsed!.query!;
 
@@ -88,3 +110,11 @@ export const getWorkerOccupiedTimeSlots = asyncHandler<OccupiedTimeSlotsResponse
 
   res.status(200).send({ status: 'success', message: 'Occupied time slots retrieved successfully', data: { occupiedSlots: slots } });
 });
+
+export const getWorkerWorkingHours = asyncHandler<GetWorkerWorkingHoursResponseDTO, GetWorkerWorkingHoursRequestDTO, GetWorkerWorkingHoursQueryDTO, GetWorkerWorkingHoursParamsDTO>(async (req, res) => {
+  const userId = req.parsed!.params!.id;
+  const workingHours = await workerProfileService.getMyWorkingHours({ userId });
+
+  res.status(200).send({ status: 'success', message: 'retrieved worker working hours successfully', data: { workingHours } });
+});
+

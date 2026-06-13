@@ -1,12 +1,37 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import {
-  CreateLocationSchema,
-  UpdateLocationSchema,
-  LocationIdParamsSchema,
-  LocationQuerySchema,
+  GetLocationsQuerySchema,
+  GetLocationsParamsSchema,
+  CreateLocationRequestSchema,
+  CreateLocationQuerySchema,
+  CreateLocationParamsSchema,
+  GetMainLocationRequestSchema,
+  GetMainLocationQuerySchema,
+  GetMainLocationParamsSchema,
+  UpdateMainLocationRequestSchema,
+  UpdateMainLocationQuerySchema,
+  UpdateMainLocationParamsSchema,
+  UpdateLocationRequestSchema,
+  UpdateLocationQuerySchema,
+  UpdateLocationParamsSchema,
+  SetMainLocationQuerySchema,
+  SetMainLocationParamsSchema,
+  GetLocationByIdQuerySchema,
+  GetLocationByIdParamsSchema,
+  DeleteLocationQuerySchema,
+  DeleteLocationParamsSchema,
 } from '../../../schemas/requests/location.request.js';
 import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
-import { LocationResponseSchema, LocationListResponseSchema } from '../../../schemas/responses/location.response.js';
+import {
+  GetLocationsResponseSchema,
+  CreateLocationResponseSchema,
+  GetMainLocationResponseSchema,
+  UpdateMainLocationResponseSchema,
+  UpdateLocationResponseSchema,
+  SetMainLocationResponseSchema,
+  GetLocationByIdResponseSchema,
+  DeleteLocationResponseSchema,
+} from '../../../schemas/responses/location.response.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerLocationsDocs(registry: OpenAPIRegistry) {
@@ -23,12 +48,13 @@ export default function registerLocationsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      query: LocationQuerySchema,
+      query: GetLocationsQuerySchema,
+      params: GetLocationsParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Locations retrieved',
-        content: { 'application/json': { schema: LocationListResponseSchema } },
+        content: { 'application/json': { schema: GetLocationsResponseSchema } },
       },
       unauthorizedResponse: true,
       internalServerError: true,
@@ -48,14 +74,16 @@ export default function registerLocationsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
+      query: CreateLocationQuerySchema,
+      params: CreateLocationParamsSchema,
       body: {
-        content: { 'application/json': { schema: CreateLocationSchema } },
+        content: { 'application/json': { schema: CreateLocationRequestSchema } },
       },
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Location created',
-        content: { 'application/json': { schema: LocationResponseSchema } },
+        content: { 'application/json': { schema: CreateLocationResponseSchema } },
       },
       unauthorizedResponse: true,
       validationErrorResponse: true,
@@ -75,10 +103,14 @@ export default function registerLocationsDocs(registry: OpenAPIRegistry) {
     description: 'Returns the main location for the authenticated user.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      query: GetMainLocationQuerySchema,
+      params: GetMainLocationParamsSchema,
+    },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Main location retrieved',
-        content: { 'application/json': { schema: LocationResponseSchema } },
+        content: { 'application/json': { schema: GetMainLocationResponseSchema } },
       },
       unauthorizedResponse: true,
       notFoundResponse: true,
@@ -99,14 +131,16 @@ export default function registerLocationsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
+      query: UpdateMainLocationQuerySchema,
+      params: UpdateMainLocationParamsSchema,
       body: {
-        content: { 'application/json': { schema: UpdateLocationSchema } },
+        content: { 'application/json': { schema: UpdateMainLocationRequestSchema } },
       },
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Main location updated',
-        content: { 'application/json': { schema: LocationResponseSchema } },
+        content: { 'application/json': { schema: UpdateMainLocationResponseSchema } },
       },
       unauthorizedResponse: true,
       notFoundResponse: true,
@@ -128,12 +162,13 @@ export default function registerLocationsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: LocationIdParamsSchema,
+      query: GetLocationByIdQuerySchema,
+      params: GetLocationByIdParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Location retrieved',
-        content: { 'application/json': { schema: LocationResponseSchema } },
+        content: { 'application/json': { schema: GetLocationByIdResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -156,15 +191,16 @@ export default function registerLocationsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: LocationIdParamsSchema,
+      query: UpdateLocationQuerySchema,
+      params: UpdateLocationParamsSchema,
       body: {
-        content: { 'application/json': { schema: UpdateLocationSchema } },
+        content: { 'application/json': { schema: UpdateLocationRequestSchema } },
       },
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Location updated',
-        content: { 'application/json': { schema: LocationResponseSchema } },
+        content: { 'application/json': { schema: UpdateLocationResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -187,12 +223,42 @@ export default function registerLocationsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: LocationIdParamsSchema,
+      query: SetMainLocationQuerySchema,
+      params: SetMainLocationParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Location has been set as main successfully',
-        content: { 'application/json': { schema: LocationResponseSchema } },
+        content: { 'application/json': { schema: SetMainLocationResponseSchema } },
+      },
+      unauthorizedResponse: true,
+      forbiddenResponse: true,
+      notFoundResponse: true,
+      validationErrorResponse: true,
+      internalServerError: true,
+    }),
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // DELETE /me/locations/{locationId}
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  registry.registerPath({
+    method: 'delete',
+    path: '/api/v1/me/locations/{locationId}',
+    tags: ['Locations'],
+    summary: 'Delete location by ID',
+    description: 'Deletes an existing location by its UUID.',
+    security: [{ BearerAuth: [] }],
+    parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      query: DeleteLocationQuerySchema,
+      params: DeleteLocationParamsSchema,
+    },
+    responses: createResponseDoc({
+      successfulResponse: {
+        description: 'Location deleted',
+        content: { 'application/json': { schema: DeleteLocationResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,

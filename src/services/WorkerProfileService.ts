@@ -19,16 +19,15 @@ import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import { PaginationOptions, PaginatedResultMeta } from '../types/query.js';
 import { Government, GovernmentFilter } from '../domain/government.entity.js';
 import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../domain/specialization.entity.js';
-import { Day, DayWorkingHoursCreateInput, DayWorkingHoursReturn } from '../domain/workingHours.entity.js';
-import type { DaysWorkingHoursDTO as DaysWorkingHoursDTO } from '../schemas/requests/worker-profile.request.js';
+import { Day, DayWorkingHours, DayWorkingHoursCreateInput, DayWorkingHoursReturn } from '../domain/workingHours.entity.js';
 import IDataCache from '../cache/interfaces/DataCache.js';
 import { ExploreWorkerPublicDetail } from '../types/exploreWorker.js';
 
-type InputWorkerData = {
+type WorkerProfileCreateType = {
   experienceYears: number;
   isInTeam: boolean;
   acceptsUrgentJobs: boolean;
-  governmentIds: IDType[];
+  workGovernmentIds: IDType[];
   specializationsTree: SpecializationsTree;
   profileImageBuffer: Buffer;
   idImageBuffer: Buffer;
@@ -36,12 +35,12 @@ type InputWorkerData = {
   bio?: string;
 };
 
-type InputWorkerUpdateData = {
-  experienceYears?: number;
-  isInTeam?: boolean;
-  acceptsUrgentJobs?: boolean;
-  bio?: string;
-};
+type WorkerProfileUpdateType = Partial<{
+  experienceYears: number;
+  isInTeam: boolean;
+  acceptsUrgentJobs: boolean;
+  bio: string;
+}>;
 
 /**
  * Worker Service - Manages worker-related operations
@@ -62,7 +61,7 @@ export default class WorkerService extends Service {
     this.dataCache = params.dataCache;
   }
 
-  private mapWorkingHoursEntityToDTO(daysWorkingHours: DayWorkingHoursReturn[]): DaysWorkingHoursDTO {
+  private mapWorkingHoursEntityToDTO(daysWorkingHours: DayWorkingHoursReturn[]): DayWorkingHours[] {
     return daysWorkingHours.map((workingHours) => ({
       day: workingHours.day,
       startTime: workingHours.startTime,
@@ -74,14 +73,14 @@ export default class WorkerService extends Service {
    * Create a worker profile for a user
    * @throws {AppError} If user not found or invalid data
    */
-  async create(params: { userId: IDType; workerProfile: InputWorkerData }): Promise<WorkerProfile> {
+  async create(params: { userId: IDType; workerProfile: WorkerProfileCreateType }): Promise<WorkerProfile> {
     const {
       userId,
       workerProfile: {
         experienceYears,
         isInTeam,
         acceptsUrgentJobs,
-        governmentIds,
+        workGovernmentIds: governmentIds,
         specializationsTree,
         profileImageBuffer,
         idImageBuffer,
@@ -156,7 +155,7 @@ export default class WorkerService extends Service {
    */
   async update(params: {
     workerProfileId: IDType;
-    data: InputWorkerUpdateData;
+    data: WorkerProfileUpdateType;
   }): Promise<WorkerProfile> {
     const {
       workerProfileId,
@@ -283,9 +282,9 @@ export default class WorkerService extends Service {
   async getSpecializations(params: {
     mainSpecializationIds: IDType[];
     pagination: PaginationOptions;
-    filter: WorkerProfileFilter;
+    workerProileFilter: WorkerProfileFilter;
   }): Promise<PaginatedResultMeta & { specializationIds: IDType[] }> {
-    const { mainSpecializationIds, pagination, filter } = params;
+    const { mainSpecializationIds, pagination, workerProileFilter: filter } = params;
     return tryCatch(async () => {
       const result = await this.workerProfileRepository.findSpecializations({
         mainSpecializationIds,
@@ -389,13 +388,12 @@ export default class WorkerService extends Service {
    */
   async getVerification(params: {
     filter: WorkerProfileFilter;
-  }): Promise<Omit<WorkerProfileVerification, 'idWithPersonalImageUrl' | 'idDocumentUrl'> | null> {
+  }): Promise<WorkerProfileVerification> {
     const { filter } = params;
     return tryCatch(async () => {
       const verification = await this.workerProfileRepository.findVerification({ workerFilter: filter });
-      if (!verification) return null;
-      const { idWithPersonalImageUrl, idDocumentUrl, ...safeVerification } = verification;
-      return safeVerification;
+      if (!verification) throw new AppError('Verification not found', 404);
+      return verification;
     });
   }
 
@@ -406,7 +404,7 @@ export default class WorkerService extends Service {
     userId: IDType;
     idImageBuffer: Buffer;
     profileWithIdImageBuffer: Buffer;
-  }): Promise<Omit<WorkerProfileVerification, 'idWithPersonalImageUrl' | 'idDocumentUrl'>> {
+  }): Promise<WorkerProfileVerification> {
     const { userId, idImageBuffer, profileWithIdImageBuffer } = params;
     return tryCatch(async () => {
       const profile = await this.workerProfileRepository.find({ workerFilter: { userId } });
@@ -455,8 +453,7 @@ export default class WorkerService extends Service {
         deleteFromCloudinary(getPublicIdFromUrl(prevSelfieUrl)).catch(() => { });
       }
 
-      const { idWithPersonalImageUrl, idDocumentUrl, ...safeVerification } = updatedVerification;
-      return safeVerification;
+      return updatedVerification;
     });
   }
 
@@ -621,7 +618,7 @@ export default class WorkerService extends Service {
   /**
    * Get worker's working hours of all work days
    */
-  async getMyWorkingHours(params: { userId: IDType }): Promise<DaysWorkingHoursDTO> {
+  async getMyWorkingHours(params: { userId: IDType }): Promise<DayWorkingHours[]> {
     const { userId } = params;
     return tryCatch(async () => {
       const workingHours = await this.workerProfileRepository.findDaysWorkingHoursByUserId({ userId });
@@ -635,7 +632,7 @@ export default class WorkerService extends Service {
   async addDaysWorkingHours(params: {
     workerProfileId: IDType;
     daysWorkingHours: DayWorkingHoursCreateInput[]
-  }): Promise<DaysWorkingHoursDTO> {
+  }): Promise<DayWorkingHours[]> {
     const { workerProfileId, daysWorkingHours } = params;
     return tryCatch(async () => {
       const workingHours = await this.workerProfileRepository.addDaysWorkingHours({
@@ -648,7 +645,7 @@ export default class WorkerService extends Service {
     });
   }
 
-  async removeDaysWorkingHours(params: {
+  async removeWorkingDays(params: {
     workerProfileId: IDType;
     days: Day[];
   }): Promise<void> {

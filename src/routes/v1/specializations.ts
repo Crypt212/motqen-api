@@ -18,13 +18,14 @@ import { isActive } from '../../middlewares/authMiddleware.js';
 import { authorizeAdmin } from '../../middlewares/accessMiddleware.js';
 import { createRoute } from '../../types/asyncHandler.js';
 import {
-  CreateSpecializationSchema,
-  CreateSubSpecializationSchema,
-  SpecializationIdParamsSchema,
-  SpecializationQuerySchema,
-  SubSpecializationIdParamsSchema,
-  SubSpecializationQuerySchema,
-  UpdateSpecializationSchema,
+  GetSpecializationsRequestSchema, GetSpecializationsQuerySchema, GetSpecializationsParamsSchema,
+  GetSpecializationByIdRequestSchema, GetSpecializationByIdQuerySchema, GetSpecializationByIdParamsSchema,
+  GetSubSpecializationsRequestSchema, GetSubSpecializationsQuerySchema, GetSubSpecializationsParamsSchema,
+  CreateSpecializationRequestSchema, CreateSpecializationQuerySchema, CreateSpecializationParamsSchema,
+  UpdateSpecializationRequestSchema, UpdateSpecializationQuerySchema, UpdateSpecializationParamsSchema,
+  DeleteSpecializationRequestSchema, DeleteSpecializationQuerySchema, DeleteSpecializationParamsSchema,
+  CreateSubSpecializationRequestSchema, CreateSubSpecializationQuerySchema, CreateSubSpecializationParamsSchema,
+  DeleteSubSpecializationRequestSchema, DeleteSubSpecializationQuerySchema, DeleteSubSpecializationParamsSchema
 } from '../../schemas/requests/specialization.request.js';
 
 const specializationRouter = Router();
@@ -32,7 +33,7 @@ const specializationRouter = Router();
 specializationRouter.get(
   '/',
   createRoute({
-    schemas: { query: SpecializationQuerySchema },
+    schemas: { body: GetSpecializationsRequestSchema, query: GetSpecializationsQuerySchema, params: GetSpecializationsParamsSchema },
     handler: getSpecializations,
   })
 );
@@ -40,7 +41,7 @@ specializationRouter.get(
 specializationRouter.get(
   '/:specializationId',
   createRoute({
-    schemas: { params: SpecializationIdParamsSchema },
+    schemas: { body: GetSpecializationByIdRequestSchema, query: GetSpecializationByIdQuerySchema, params: GetSpecializationByIdParamsSchema },
     handler: getSpecializationById,
   })
 );
@@ -48,7 +49,7 @@ specializationRouter.get(
 specializationRouter.get(
   '/:specializationId/sub-specializations',
   createRoute({
-    schemas: { params: SpecializationIdParamsSchema, query: SubSpecializationQuerySchema },
+    schemas: { body: GetSubSpecializationsRequestSchema, query: GetSubSpecializationsQuerySchema, params: GetSubSpecializationsParamsSchema },
     handler: getSubSpecializations,
   })
 );
@@ -58,7 +59,7 @@ specializationRouter.post(
   isActive,
   authorizeAdmin,
   createRoute({
-    schemas: { body: CreateSpecializationSchema },
+    schemas: { body: CreateSpecializationRequestSchema, query: CreateSpecializationQuerySchema, params: CreateSpecializationParamsSchema },
     handler: createSpecialization,
   })
 );
@@ -68,7 +69,7 @@ specializationRouter.put(
   isActive,
   authorizeAdmin,
   createRoute({
-    schemas: { params: SpecializationIdParamsSchema, body: UpdateSpecializationSchema },
+    schemas: { body: UpdateSpecializationRequestSchema, query: UpdateSpecializationQuerySchema, params: UpdateSpecializationParamsSchema },
     handler: updateSpecialization,
   })
 );
@@ -78,7 +79,7 @@ specializationRouter.delete(
   isActive,
   authorizeAdmin,
   createRoute({
-    schemas: { params: SpecializationIdParamsSchema },
+    schemas: { body: DeleteSpecializationRequestSchema, query: DeleteSpecializationQuerySchema, params: DeleteSpecializationParamsSchema },
     handler: deleteSpecialization,
   })
 );
@@ -88,7 +89,7 @@ specializationRouter.post(
   isActive,
   authorizeAdmin,
   createRoute({
-    schemas: { params: SpecializationIdParamsSchema, body: CreateSubSpecializationSchema },
+    schemas: { body: CreateSubSpecializationRequestSchema, query: CreateSubSpecializationQuerySchema, params: CreateSubSpecializationParamsSchema },
     handler: createSubSpecialization,
   })
 );
@@ -98,7 +99,7 @@ specializationRouter.delete(
   isActive,
   authorizeAdmin,
   createRoute({
-    schemas: { params: SpecializationIdParamsSchema.merge(SubSpecializationIdParamsSchema) },
+    schemas: { body: DeleteSubSpecializationRequestSchema, query: DeleteSubSpecializationQuerySchema, params: DeleteSubSpecializationParamsSchema },
     handler: deleteSubSpecialization,
   })
 );

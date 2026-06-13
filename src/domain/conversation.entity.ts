@@ -1,7 +1,7 @@
 import { $Enums } from '../generated/prisma/client.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { User } from './user.entity.js';
-import { FilterFromDescriptor } from '../schemas/common.js';
+
 import { FieldTypeDefinition } from '../types/query.js';
 
 export type ConversationRole = $Enums.ConversationRole;
@@ -29,13 +29,11 @@ export type ConversationUpdateInput = {
   clientId?: IDType;
 };
 
-export const ConversationFilterDescriptor = {
-  id: { type: 'uuid' as const },
-  workerId: { type: 'uuid' as const },
-  clientId: { type: 'uuid' as const },
-} satisfies Record<string, FieldTypeDefinition>;
-
-export type ConversationFilter = FilterFromDescriptor<typeof ConversationFilterDescriptor>;
+export type ConversationFilter = Partial<{
+  id: IDType;
+  workerId: IDType;
+  clientId: IDType;
+}>;
 
 // ==================================================
 

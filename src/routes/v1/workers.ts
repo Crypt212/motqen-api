@@ -10,10 +10,14 @@ import {
   getWorkerOccupiedTimeSlots,
 } from '../../controllers/WorkerController.js';
 import {
-  ExploreSearchSchema,
-  ExploreWorkerIdParamsSchema,
-  OccupiedTimeSlotsQuerySchema,
+  SearchWorkersRequestSchema, SearchWorkersQuerySchema, SearchWorkersParamsSchema,
+  GetWorkerByIdRequestSchema, GetWorkerByIdQuerySchema, GetWorkerByIdParamsSchema,
+  GetWorkerOccupiedTimeSlotsRequestSchema, GetWorkerOccupiedTimeSlotsQuerySchema, GetWorkerOccupiedTimeSlotsParamsSchema,
 } from '../../schemas/requests/worker-explore.request.js';
+import {
+  GetWorkerWorkingHoursRequestSchema, GetWorkerWorkingHoursQuerySchema, GetWorkerWorkingHoursParamsSchema,
+  GetWorkerSpecializationsTreeRequestSchema, GetWorkerSpecializationsTreeQuerySchema, GetWorkerSpecializationsTreeParamsSchema
+} from '../../schemas/requests/dashboard.request.js';
 import { createRoute } from '../../types/asyncHandler.js';
 import { getWorkerSpecializationsTree, getWorkerWorkingHours } from '../../controllers/DashboardController.js';
 import { z } from '../../libs/zod.js';
@@ -23,7 +27,7 @@ const workersRouter = Router();
 workersRouter.get(
   '/',
   createRoute({
-    schemas: { query: ExploreSearchSchema },
+    schemas: { body: SearchWorkersRequestSchema, query: SearchWorkersQuerySchema, params: SearchWorkersParamsSchema },
     handler: searchWorkers,
   })
 );
@@ -31,7 +35,7 @@ workersRouter.get(
 workersRouter.get(
   '/:id',
   createRoute({
-    schemas: { params: ExploreWorkerIdParamsSchema },
+    schemas: { body: GetWorkerByIdRequestSchema, query: GetWorkerByIdQuerySchema, params: GetWorkerByIdParamsSchema },
     handler: getWorkerById,
   })
 );
@@ -39,7 +43,7 @@ workersRouter.get(
 workersRouter.get(
   '/:id/occupied-time-slots',
   createRoute({
-    schemas: { params: ExploreWorkerIdParamsSchema, query: OccupiedTimeSlotsQuerySchema },
+    schemas: { body: GetWorkerOccupiedTimeSlotsRequestSchema, query: GetWorkerOccupiedTimeSlotsQuerySchema, params: GetWorkerOccupiedTimeSlotsParamsSchema },
     handler: getWorkerOccupiedTimeSlots,
   })
 );
@@ -47,7 +51,7 @@ workersRouter.get(
 workersRouter.get(
   '/:id/working-hours',
   createRoute({
-    schemas: { params: ExploreWorkerIdParamsSchema },
+    schemas: { body: GetWorkerWorkingHoursRequestSchema, query: GetWorkerWorkingHoursQuerySchema, params: GetWorkerWorkingHoursParamsSchema },
     handler: getWorkerWorkingHours,
   })
 );
@@ -55,7 +59,7 @@ workersRouter.get(
 workersRouter.get(
   '/:id/specializations/tree',
   createRoute({
-    schemas: { params: z.object({ id: z.string().uuid() }) },
+    schemas: { body: GetWorkerSpecializationsTreeRequestSchema, query: GetWorkerSpecializationsTreeQuerySchema, params: GetWorkerSpecializationsTreeParamsSchema },
     handler: getWorkerSpecializationsTree,
   })
 );

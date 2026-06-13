@@ -5,32 +5,52 @@
 
 import { specializationService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
-import { parseQueryParams } from '../schemas/common.js';
+import { parseQuery } from '../schemas/common.js';
 import {
-  SpecializationFilterSchema,
-  SpecializationQuery,
-  SubSpecializationFilterSchema,
-  SubSpecializationQuery,
-  CreateSpecializationDTO,
-  UpdateSpecializationDTO,
-  CreateSubSpecializationDTO,
+  GetSpecializationsRequestDTO,
+  GetSpecializationsQueryDTO,
+  GetSpecializationsParamsDTO,
+  GetSpecializationByIdRequestDTO,
+  GetSpecializationByIdQueryDTO,
+  GetSpecializationByIdParamsDTO,
+  GetSubSpecializationsRequestDTO,
+  GetSubSpecializationsQueryDTO,
+  GetSubSpecializationsParamsDTO,
+  CreateSpecializationRequestDTO,
+  CreateSpecializationQueryDTO,
+  CreateSpecializationParamsDTO,
+  UpdateSpecializationRequestDTO,
+  UpdateSpecializationQueryDTO,
+  UpdateSpecializationParamsDTO,
+  DeleteSpecializationRequestDTO,
+  DeleteSpecializationQueryDTO,
+  DeleteSpecializationParamsDTO,
+  CreateSubSpecializationRequestDTO,
+  CreateSubSpecializationQueryDTO,
+  CreateSubSpecializationParamsDTO,
+  DeleteSubSpecializationRequestDTO,
+  DeleteSubSpecializationQueryDTO,
+  DeleteSubSpecializationParamsDTO
 } from '../schemas/requests/specialization.request.js';
 import {
-  SpecializationListResponseDTO,
-  SpecializationResponseDTO,
-  SubSpecializationListResponseDTO,
-  SubSpecializationResponseDTO,
-  DeleteResponseDTO,
+  GetSpecializationsResponseDTO,
+  GetSpecializationByIdResponseDTO,
+  GetSubSpecializationsResponseDTO,
+  CreateSpecializationResponseDTO,
+  UpdateSpecializationResponseDTO,
+  DeleteSpecializationResponseDTO,
+  CreateSubSpecializationResponseDTO,
+  DeleteSubSpecializationResponseDTO
 } from '../schemas/responses/specialization.response.js';
 
 /**
  * Get all specializations with pagination, filtering, and ordering
  */
-export const getSpecializations = asyncHandler<SpecializationListResponseDTO, any, SpecializationQuery>(async (req, res) => {
-  const { filter, pagination, sort } = parseQueryParams(req.parsed!.query!, SpecializationFilterSchema);
+export const getSpecializations = asyncHandler<GetSpecializationsResponseDTO, GetSpecializationsRequestDTO, GetSpecializationsQueryDTO, GetSpecializationsParamsDTO>(async (req, res) => {
+  const { filter, pagination, sort } = parseQuery(req.parsed!.query!);
 
   const result = await specializationService.getSpecializations({
-    filter,
+    specializationFilter: filter,
     pagination,
     sort,
   });
@@ -41,7 +61,7 @@ export const getSpecializations = asyncHandler<SpecializationListResponseDTO, an
 /**
  * Get specialization by ID
  */
-export const getSpecializationById = asyncHandler<SpecializationResponseDTO, any, any, { specializationId: string }>(async (req, res) => {
+export const getSpecializationById = asyncHandler<GetSpecializationByIdResponseDTO, GetSpecializationByIdRequestDTO, GetSpecializationByIdQueryDTO, GetSpecializationByIdParamsDTO>(async (req, res) => {
   const id = req.parsed!.params!.specializationId;
   const specialization = await specializationService.getSpecializationById({ id });
 
@@ -51,8 +71,8 @@ export const getSpecializationById = asyncHandler<SpecializationResponseDTO, any
 /**
  * Get sub-specializations by parent ID with pagination
  */
-export const getSubSpecializations = asyncHandler<SubSpecializationListResponseDTO, any, SubSpecializationQuery, { specializationId: string }>(async (req, res) => {
-  const { filter, pagination, sort } = parseQueryParams(req.parsed!.query!, SubSpecializationFilterSchema);
+export const getSubSpecializations = asyncHandler<GetSubSpecializationsResponseDTO, GetSubSpecializationsRequestDTO, GetSubSpecializationsQueryDTO, GetSubSpecializationsParamsDTO>(async (req, res) => {
+  const { filter, pagination, sort } = parseQuery(req.parsed!.query!);
   const parentId = req.parsed!.params!.specializationId;
 
   const result = await specializationService.getSubSpecializations({
@@ -68,7 +88,7 @@ export const getSubSpecializations = asyncHandler<SubSpecializationListResponseD
 /**
  * Create a new specialization (Admin only)
  */
-export const createSpecialization = asyncHandler<SpecializationResponseDTO, CreateSpecializationDTO>(async (req, res) => {
+export const createSpecialization = asyncHandler<CreateSpecializationResponseDTO, CreateSpecializationRequestDTO, CreateSpecializationQueryDTO, CreateSpecializationParamsDTO>(async (req, res) => {
   const { name, nameAr, category } = req.parsed!.body!;
 
   const specialization = await specializationService.createSpecialization({
@@ -81,7 +101,7 @@ export const createSpecialization = asyncHandler<SpecializationResponseDTO, Crea
 /**
  * Update specialization (Admin only)
  */
-export const updateSpecialization = asyncHandler<SpecializationResponseDTO, UpdateSpecializationDTO, any, { specializationId: string }>(async (req, res) => {
+export const updateSpecialization = asyncHandler<UpdateSpecializationResponseDTO, UpdateSpecializationRequestDTO, UpdateSpecializationQueryDTO, UpdateSpecializationParamsDTO>(async (req, res) => {
   const { name, nameAr, category } = req.parsed!.body!;
   const id = req.parsed!.params!.specializationId;
 
@@ -96,7 +116,7 @@ export const updateSpecialization = asyncHandler<SpecializationResponseDTO, Upda
 /**
  * Delete specialization (Admin only)
  */
-export const deleteSpecialization = asyncHandler<DeleteResponseDTO, any, any, { specializationId: string }>(async (req, res) => {
+export const deleteSpecialization = asyncHandler<DeleteSpecializationResponseDTO, DeleteSpecializationRequestDTO, DeleteSpecializationQueryDTO, DeleteSpecializationParamsDTO>(async (req, res) => {
   const id = req.parsed!.params!.specializationId;
 
   await specializationService.deleteSpecialization({ id });
@@ -107,7 +127,7 @@ export const deleteSpecialization = asyncHandler<DeleteResponseDTO, any, any, { 
 /**
  * Create a new sub-specialization (Admin only)
  */
-export const createSubSpecialization = asyncHandler<SubSpecializationResponseDTO, CreateSubSpecializationDTO, any, { specializationId: string }>(async (req, res) => {
+export const createSubSpecialization = asyncHandler<CreateSubSpecializationResponseDTO, CreateSubSpecializationRequestDTO, CreateSubSpecializationQueryDTO, CreateSubSpecializationParamsDTO>(async (req, res) => {
   const { name, nameAr } = req.parsed!.body!;
   const id = req.parsed!.params!.specializationId;
 
@@ -122,7 +142,7 @@ export const createSubSpecialization = asyncHandler<SubSpecializationResponseDTO
 /**
  * Delete sub-specialization (Admin only)
  */
-export const deleteSubSpecialization = asyncHandler<DeleteResponseDTO, any, any, { specializationId: string; subSpecializationId: string }>(async (req, res) => {
+export const deleteSubSpecialization = asyncHandler<DeleteSubSpecializationResponseDTO, DeleteSubSpecializationRequestDTO, DeleteSubSpecializationQueryDTO, DeleteSubSpecializationParamsDTO>(async (req, res) => {
   const subId = req.parsed!.params!.subSpecializationId;
   const id = req.parsed!.params!.specializationId;
 

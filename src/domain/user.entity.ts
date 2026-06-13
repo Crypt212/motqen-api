@@ -1,6 +1,6 @@
 import { $Enums } from '../generated/prisma/client.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
-import { FilterFromDescriptor } from '../schemas/common.js';
+
 import { FieldTypeDefinition } from '../types/query.js';
 
 export type AccountStatus = $Enums.AccountStatus;
@@ -23,8 +23,8 @@ export type User = {
 };
 
 export type LoggedInUser = User & {
-  isWorker: boolean;
-  isClient: boolean;
+  clientProfileId: IDType;
+  workerProfileId: IDType;
 };
 
 export type UserCreateInput = {
@@ -38,9 +38,8 @@ export type UserCreateInput = {
 
 export type UserUpdateInput = Partial<UserCreateInput> & { lastNotificationReadAt?: Date | null };
 
-export const UserFilterDescriptor = {
-  id: { type: 'uuid' as const },
-  phoneNumber: { type: 'string' as const },
-} satisfies Record<string, FieldTypeDefinition>;
+export type UserFilter = Partial<{
+  id: IDType;
+  phoneNumber: string;
+}>;
 
-export type UserFilter = FilterFromDescriptor<typeof UserFilterDescriptor>;

@@ -1,8 +1,6 @@
 export type Day = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
 
 export type DayWorkingHours = {
-  id: string;
-  workerProfileId: string;
   day: Day;
   startTime: string;
   endTime: string;
@@ -16,7 +14,6 @@ export type DayWorkingHoursCreateInput = {
 };
 
 export type DayWorkingHoursReturn = {
-  workerProfileId: string;
   day: Day;
   startTime: string;
   endTime: string;

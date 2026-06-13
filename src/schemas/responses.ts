@@ -8,7 +8,7 @@
  * and individual per-domain response schemas that docs can import.
  */
 
-import { z } from '../libs/zod.js';
+import { z } from 'src/libs/zod.js';
 
 // ============================================
 // Base response helpers

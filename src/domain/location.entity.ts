@@ -1,5 +1,5 @@
 import { IDType } from '../repositories/interfaces/Repository.js';
-import { FilterFromDescriptor } from '../schemas/common.js';
+
 import { FieldTypeDefinition } from '../types/query.js';
 import { City, Government } from './government.entity.js';
 
@@ -32,11 +32,9 @@ export type LocationCreateInput = {
 
 export type LocationUpdateInput = Partial<LocationCreateInput>;
 
-export const LocationFilterDescriptor = {
-  id: { type: 'uuid' as const },
-  userId: { type: 'uuid' as const },
-  isMain: { type: 'boolean' as const },
-  isHidden: { type: 'boolean' as const },
-} satisfies Record<string, FieldTypeDefinition>;
-
-export type LocationFilter = FilterFromDescriptor<typeof LocationFilterDescriptor>;
+export type LocationFilter = Partial<{
+  id: IDType;
+  userId: IDType;
+  isMain: boolean;
+  isHidden: boolean;
+}>;

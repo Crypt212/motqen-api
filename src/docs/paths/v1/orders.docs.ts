@@ -1,17 +1,51 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from '../../../libs/zod.js';
 import {
-  CreateOrderSchema,
-  OrderQuerySchema,
-  OrderIdParamsSchema,
-  OrderRateSchema,
+  CreateOrderRequestSchema,
+  GetOrdersQuerySchema,
+  GetOrderByIdQuerySchema,
+  GetOrderByIdParamsSchema,
+  CancelOrderQuerySchema,
+  CancelOrderParamsSchema,
+  GetOrderLocationQuerySchema,
+  GetOrderLocationParamsSchema,
+  StartWorkQuerySchema,
+  StartWorkParamsSchema,
+  FinishWorkQuerySchema,
+  FinishWorkParamsSchema,
+  RateOrderQuerySchema,
+  RateOrderRequestSchema,
+  RateOrderParamsSchema,
 } from '../../../schemas/requests/order.request.js';
-import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
-import { OrderResponseSchema, OrderListResponseSchema } from '../../../schemas/responses/order.response.js';
-import { CreateNegotiationSchema } from '../../../schemas/requests/negotiation.request.js';
 import {
-  NegotiationResponseSchema,
-  NegotiationListResponseSchema,
+  CreateOrderResponseSchema,
+  GetOrdersResponseSchema,
+  GetOrderByIdResponseSchema,
+  CancelOrderResponseSchema,
+  GetOrderLocationResponseSchema,
+  StartWorkResponseSchema,
+  FinishWorkResponseSchema,
+  RateOrderResponseSchema
+} from '../../../schemas/responses/order.response.js';
+import {
+  GetNegotiationsQuerySchema,
+  GetNegotiationsParamsSchema,
+  CreateNegotiationRequestSchema,
+  CreateNegotiationQuerySchema,
+  CreateNegotiationParamsSchema,
+  AcceptNegotiationQuerySchema,
+  AcceptNegotiationParamsSchema,
+  RejectNegotiationQuerySchema,
+  RejectNegotiationParamsSchema,
+  CancelNegotiationQuerySchema,
+  CancelNegotiationParamsSchema
+} from '../../../schemas/requests/negotiation.request.js';
+import {
+  GetNegotiationsResponseSchema,
+  CreateNegotiationResponseSchema,
+  AcceptNegotiationResponseSchema,
+  RejectNegotiationResponseSchema,
+  CancelNegotiationResponseSchema
 } from '../../../schemas/responses/negotiation.response.js';
 
 import { createResponseDoc } from '../../../docs/common.js';
@@ -34,7 +68,7 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
       body: {
         content: {
           'multipart/form-data': {
-            schema: CreateOrderSchema.extend({
+            schema: CreateOrderRequestSchema.extend({
               images: z
                 .any()
                 .openapi({
@@ -51,7 +85,7 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       createdSuccessfullyResponse: {
         description: 'Order created successfully',
-        content: { 'application/json': { schema: OrderResponseSchema } },
+        content: { 'application/json': { schema: CreateOrderResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -75,12 +109,12 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      query: OrderQuerySchema,
+      query: GetOrdersQuerySchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Orders retrieved successfully',
-        content: { 'application/json': { schema: OrderListResponseSchema } },
+        content: { 'application/json': { schema: GetOrdersResponseSchema } },
       },
       unauthorizedResponse: true,
       validationErrorResponse: true,
@@ -102,12 +136,13 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: OrderIdParamsSchema,
+      query: GetOrderByIdQuerySchema,
+      params: GetOrderByIdParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Order retrieved successfully',
-        content: { 'application/json': { schema: OrderResponseSchema } },
+        content: { 'application/json': { schema: GetOrderByIdResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -131,12 +166,13 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: OrderIdParamsSchema,
+      query: GetOrderLocationQuerySchema,
+      params: GetOrderLocationParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Location of order retrieved successfully',
-        content: { 'application/json': { schema: OrderResponseSchema } },
+        content: { 'application/json': { schema: GetOrderLocationResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -160,12 +196,13 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: OrderIdParamsSchema,
+      query: CancelOrderQuerySchema,
+      params: CancelOrderParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Order cancelled successfully',
-        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
+        content: { 'application/json': { schema: CancelOrderResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -190,12 +227,13 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: OrderIdParamsSchema,
+      query: StartWorkQuerySchema,
+      params: StartWorkParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Work started successfully',
-        content: { 'application/json': { schema: OrderResponseSchema } },
+        content: { 'application/json': { schema: StartWorkResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -220,12 +258,13 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: OrderIdParamsSchema,
+      query: FinishWorkQuerySchema,
+      params: FinishWorkParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Work finished successfully',
-        content: { 'application/json': { schema: OrderResponseSchema } },
+        content: { 'application/json': { schema: FinishWorkResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -245,12 +284,14 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: OrderIdParamsSchema,
-      body: { content: { 'application/json': { schema: OrderRateSchema } } },
+      query: RateOrderQuerySchema,
+      params: RateOrderParamsSchema,
+      body: { content: { 'application/json': { schema: RateOrderRequestSchema } } },
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Order Rated successfully',
+        content: { 'application/json': { schema: RateOrderResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -274,12 +315,13 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: OrderIdParamsSchema,
+      query: GetNegotiationsQuerySchema,
+      params: GetNegotiationsParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Negotiations retrieved successfully',
-        content: { 'application/json': { schema: NegotiationListResponseSchema } },
+        content: { 'application/json': { schema: GetNegotiationsResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -302,13 +344,14 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: OrderIdParamsSchema,
-      body: { content: { 'application/json': { schema: CreateNegotiationSchema } } },
+      query: CreateNegotiationQuerySchema,
+      params: CreateNegotiationParamsSchema,
+      body: { content: { 'application/json': { schema: CreateNegotiationRequestSchema } } },
     },
     responses: createResponseDoc({
       createdSuccessfullyResponse: {
         description: 'Negotiation offer created successfully. Warning: it may contain hasOverlapWarning flag.',
-        content: { 'application/json': { schema: NegotiationResponseSchema } },
+        content: { 'application/json': { schema: CreateNegotiationResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -332,12 +375,13 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: OrderIdParamsSchema,
+      query: AcceptNegotiationQuerySchema,
+      params: AcceptNegotiationParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Negotiation accepted successfully',
-        content: { 'application/json': { schema: OrderResponseSchema } },
+        content: { 'application/json': { schema: AcceptNegotiationResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -361,12 +405,13 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: OrderIdParamsSchema,
+      query: RejectNegotiationQuerySchema,
+      params: RejectNegotiationParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Negotiation rejected successfully',
-        content: { 'application/json': { schema: NegotiationResponseSchema } },
+        content: { 'application/json': { schema: RejectNegotiationResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -389,12 +434,13 @@ export default function registerOrdersDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: OrderIdParamsSchema,
+      query: CancelNegotiationQuerySchema,
+      params: CancelNegotiationParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Negotiation cancelled successfully',
-        content: { 'application/json': { schema: NegotiationResponseSchema } },
+        content: { 'application/json': { schema: CancelNegotiationResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,

@@ -1,14 +1,26 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import {
-  CreateReportSchema,
-  UpdateReportSchema,
-  UpdateReportStatusSchema,
-  ReportIdParamsSchema,
-  ReportQuerySchema,
+  CreateReportRequestSchema,
+  CreateReportQuerySchema,
+  CreateReportParamsSchema,
+  GetReportsQuerySchema,
+  GetReportByIdQuerySchema,
+  GetReportByIdParamsSchema,
+  UpdateReportRequestSchema,
+  UpdateReportQuerySchema,
+  UpdateReportParamsSchema,
+  CancelReportQuerySchema,
+  CancelReportParamsSchema,
+  UpdateReportStatusRequestSchema,
+  UpdateReportStatusQuerySchema,
+  UpdateReportStatusParamsSchema,
 } from '../../../schemas/requests/report.request.js';
 import {
-  ReportResponseSchema,
-  PaginatedReportsResponseSchema,
+  CreateReportResponseSchema,
+  GetReportsResponseSchema,
+  GetReportByIdResponseSchema,
+  UpdateReportResponseSchema,
+  UpdateReportStatusResponseSchema,
 } from '../../../schemas/responses/report.response.js';
 import { createResponseDoc } from '../../../docs/common.js';
 import { z } from '../../../libs/zod.js';
@@ -16,8 +28,8 @@ import { z } from '../../../libs/zod.js';
 export default function registerReportsDocs(registry: OpenAPIRegistry) {
   const TAG = 'Reports';
 
-  const CreateReportMultipartSchema = CreateReportSchema;
-  const UpdateReportMultipartSchema = UpdateReportSchema;
+  const CreateReportMultipartSchema = CreateReportRequestSchema;
+  const UpdateReportMultipartSchema = UpdateReportRequestSchema;
   registry.registerPath({
     method: 'post',
     path: '/api/v1/reports',
@@ -26,6 +38,8 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     security: [{ bearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
+      query: CreateReportQuerySchema,
+      params: CreateReportParamsSchema,
       body: {
         content: {
           'multipart/form-data': {
@@ -48,7 +62,7 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       createdSuccessfullyResponse: {
         description: 'Report created successfully',
-        content: { 'application/json': { schema: ReportResponseSchema } },
+        content: { 'application/json': { schema: CreateReportResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -66,12 +80,12 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     security: [{ bearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      query: ReportQuerySchema,
+      query: GetReportsQuerySchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Reports retrieved successfully',
-        content: { 'application/json': { schema: PaginatedReportsResponseSchema } },
+        content: { 'application/json': { schema: GetReportsResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -86,12 +100,13 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     security: [{ bearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: ReportIdParamsSchema,
+      query: GetReportByIdQuerySchema,
+      params: GetReportByIdParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Report retrieved successfully',
-        content: { 'application/json': { schema: ReportResponseSchema } },
+        content: { 'application/json': { schema: GetReportByIdResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -108,7 +123,8 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     security: [{ bearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: ReportIdParamsSchema,
+      query: UpdateReportQuerySchema,
+      params: UpdateReportParamsSchema,
       body: {
         content: {
           'multipart/form-data': {
@@ -131,7 +147,7 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Report updated successfully',
-        content: { 'application/json': { schema: ReportResponseSchema } },
+        content: { 'application/json': { schema: UpdateReportResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -148,7 +164,8 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     security: [{ bearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: ReportIdParamsSchema,
+      query: CancelReportQuerySchema,
+      params: CancelReportParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: true,
@@ -166,11 +183,12 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     security: [{ bearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }, { $ref: '#/components/parameters/UserType' }],
     request: {
-      params: ReportIdParamsSchema,
+      query: UpdateReportStatusQuerySchema,
+      params: UpdateReportStatusParamsSchema,
       body: {
         content: {
           'application/json': {
-            schema: UpdateReportStatusSchema,
+            schema: UpdateReportStatusRequestSchema,
           },
         },
         required: true,
@@ -179,7 +197,7 @@ export default function registerReportsDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Report status updated successfully',
-        content: { 'application/json': { schema: ReportResponseSchema } },
+        content: { 'application/json': { schema: UpdateReportStatusResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,

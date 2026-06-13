@@ -38,11 +38,11 @@ export default class SpecializationService extends Service {
   }
 
   async getSpecializations(params: {
-    filter?: SpecializationFilter;
+    specializationFilter?: SpecializationFilter;
     pagination?: PaginationOptions;
     sort?: SortOptions<Specialization>;
   }): Promise<PaginatedResultMeta & { specializations: Specialization[] }> {
-    const { filter, pagination, sort } = params;
+    const { specializationFilter: filter, pagination, sort } = params;
 
     const result = await this.specializationRepository.findMany({
       filter: filter || {},

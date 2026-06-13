@@ -2,10 +2,30 @@ import { Router } from 'express';
 import { locationController } from '../../state.js';
 import { createRoute } from '../../types/asyncHandler.js';
 import {
-  LocationQuerySchema,
-  CreateLocationSchema,
-  LocationIdParamsSchema,
-  UpdateLocationSchema,
+  GetLocationsRequestSchema,
+  GetLocationsQuerySchema,
+  GetLocationsParamsSchema,
+  CreateLocationRequestSchema,
+  CreateLocationQuerySchema,
+  CreateLocationParamsSchema,
+  GetMainLocationRequestSchema,
+  GetMainLocationQuerySchema,
+  GetMainLocationParamsSchema,
+  UpdateMainLocationRequestSchema,
+  UpdateMainLocationQuerySchema,
+  UpdateMainLocationParamsSchema,
+  UpdateLocationRequestSchema,
+  UpdateLocationQuerySchema,
+  UpdateLocationParamsSchema,
+  SetMainLocationRequestSchema,
+  SetMainLocationQuerySchema,
+  SetMainLocationParamsSchema,
+  GetLocationByIdRequestSchema,
+  GetLocationByIdQuerySchema,
+  GetLocationByIdParamsSchema,
+  DeleteLocationRequestSchema,
+  DeleteLocationQuerySchema,
+  DeleteLocationParamsSchema,
 } from '../../schemas/requests/location.request.js';
 
 const router = Router();
@@ -13,7 +33,11 @@ const router = Router();
 router.get(
   '/',
   createRoute({
-    schemas: { query: LocationQuerySchema },
+    schemas: { 
+      body: GetLocationsRequestSchema,
+      query: GetLocationsQuerySchema,
+      params: GetLocationsParamsSchema,
+    },
     handler: locationController.list,
   })
 );
@@ -21,7 +45,11 @@ router.get(
 router.post(
   '/',
   createRoute({
-    schemas: { body: CreateLocationSchema },
+    schemas: { 
+      body: CreateLocationRequestSchema,
+      query: CreateLocationQuerySchema,
+      params: CreateLocationParamsSchema,
+    },
     handler: locationController.create,
   })
 );
@@ -29,7 +57,11 @@ router.post(
 router.get(
   '/main',
   createRoute({
-    schemas: {},
+    schemas: { 
+      body: GetMainLocationRequestSchema,
+      query: GetMainLocationQuerySchema,
+      params: GetMainLocationParamsSchema,
+    },
     handler: locationController.getMain,
   })
 );
@@ -37,7 +69,11 @@ router.get(
 router.put(
   '/main',
   createRoute({
-    schemas: { body: UpdateLocationSchema },
+    schemas: { 
+      body: UpdateMainLocationRequestSchema,
+      query: UpdateMainLocationQuerySchema,
+      params: UpdateMainLocationParamsSchema,
+    },
     handler: locationController.updateMain,
   })
 );
@@ -45,7 +81,11 @@ router.put(
 router.put(
   '/:locationId',
   createRoute({
-    schemas: { params: LocationIdParamsSchema, body: UpdateLocationSchema },
+    schemas: { 
+      body: UpdateLocationRequestSchema,
+      query: UpdateLocationQuerySchema,
+      params: UpdateLocationParamsSchema,
+    },
     handler: locationController.update,
   })
 );
@@ -53,7 +93,11 @@ router.put(
 router.patch(
   '/:locationId/set-main',
   createRoute({
-    schemas: { params: LocationIdParamsSchema },
+    schemas: { 
+      body: SetMainLocationRequestSchema,
+      query: SetMainLocationQuerySchema,
+      params: SetMainLocationParamsSchema,
+    },
     handler: locationController.setMain,
   })
 );
@@ -61,8 +105,24 @@ router.patch(
 router.get(
   '/:locationId',
   createRoute({
-    schemas: { params: LocationIdParamsSchema },
+    schemas: { 
+      body: GetLocationByIdRequestSchema,
+      query: GetLocationByIdQuerySchema,
+      params: GetLocationByIdParamsSchema,
+    },
     handler: locationController.getById,
+  })
+);
+
+router.delete(
+  '/:locationId',
+  createRoute({
+    schemas: { 
+      body: DeleteLocationRequestSchema,
+      query: DeleteLocationQuerySchema,
+      params: DeleteLocationParamsSchema,
+    },
+    handler: locationController.delete,
   })
 );
 

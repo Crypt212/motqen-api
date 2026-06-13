@@ -1,6 +1,7 @@
 import { z } from '../../libs/zod.js';
 import { SuccessResponseSchema } from '../responses.js';
-import { ProposalObjectSchema, ProposalWithWorkerSummarySchema, PaginationResponseSchema } from '../common.js';
+import { PaginationResponseSchema } from '../common.js';
+import { ProposalObjectSchema, ProposalWithWorkerSummarySchema } from '../entities/proposal.js';
 
 export const ProposalResponseSchema = SuccessResponseSchema(
   z.object({ proposal: ProposalWithWorkerSummarySchema })
@@ -21,3 +22,15 @@ export const ProposalWithdrawResponseSchema = SuccessResponseSchema(
   z.object({ proposal: ProposalObjectSchema })
 );
 export type ProposalWithdrawResponseDTO = z.infer<typeof ProposalWithdrawResponseSchema>;
+
+export const SubmitProposalResponseSchema = ProposalResponseSchema;
+export type SubmitProposalResponseDTO = z.infer<typeof SubmitProposalResponseSchema>;
+
+export const ListProposalsResponseSchema = ProposalListResponseSchema;
+export type ListProposalsResponseDTO = z.infer<typeof ListProposalsResponseSchema>;
+
+export const GetMyProposalResponseSchema = ProposalResponseSchema;
+export type GetMyProposalResponseDTO = z.infer<typeof GetMyProposalResponseSchema>;
+
+export const GetProposalByIdResponseSchema = ProposalResponseSchema;
+export type GetProposalByIdResponseDTO = z.infer<typeof GetProposalByIdResponseSchema>;

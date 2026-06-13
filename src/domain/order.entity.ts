@@ -1,6 +1,6 @@
 import { IDType } from 'src/repositories/interfaces/Repository.js';
 import { $Enums } from '../generated/prisma/client.js';
-import { FilterFromDescriptor } from '../schemas/common.js';
+
 import { FieldTypeDefinition } from '../types/query.js';
 import { SubSpecialization } from './specialization.entity.js';
 
@@ -60,21 +60,13 @@ export type OrderUpdateInput = Partial<{
   workerUserId: IDType | null;
 }>;
 
-export const OrderFilterDescriptor = {
-  id: { type: 'uuid' },
-  clientUserId: { type: 'uuid' },
-  workerUserId: { type: 'uuid' },
-  rate: { type: 'number' },
-  orderStatus: {
-    type: 'enum',
-    enumValues: ['PENDING', 'PRICE_AGREED', 'PAID', 'COMPLETED', 'CANCELLED'],
-  },
-  orderMode: {
-    type: 'enum',
-    enumValues: ['DIRECT', 'GLOBAL'],
-  },
-  isUrgent: { type: 'boolean' },
-  createdAt: { type: 'date', sortable: true },
-} satisfies Record<string, FieldTypeDefinition>;
-
-export type OrderFilter = FilterFromDescriptor<typeof OrderFilterDescriptor>;
+export type OrderFilter = Partial<{
+  id: IDType;
+  clientUserId: IDType;
+  workerUserId: IDType;
+  rate: number;
+  orderStatus: OrderStatus;
+  orderMode: OrderMode;
+  isUrgent: boolean;
+  createdAt: Date;
+}>;
