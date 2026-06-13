@@ -3,6 +3,7 @@
  * @module middlewares/rateLimitMiddleware
  */
 
+import { RequestHandler } from 'express';
 import rateLimit from 'express-rate-limit';
 import { rateLimitService } from '../state.js';
 import AppError from '../errors/AppError.js';
@@ -58,9 +59,9 @@ export const checkVerifyLimit = asyncHandler(async (req, _, next) => {
  *   RATE_LIMIT_WINDOW_MS  (default: 15 minutes)
  *   RATE_LIMIT_MAX        (default: 100 requests)
  */
-export const ipRateLimiter = asyncHandler(
+export const ipRateLimiter: RequestHandler =
   environment.nodeEnv === 'development'
-    ? (_, __, next) => next()
+    ? (req, res, next) => { next(); }
     : rateLimit({
         windowMs: environment.rateLimit.windowMs ?? 15 * 60 * 1000,
         limit: environment.rateLimit.max ?? 100,
@@ -69,8 +70,7 @@ export const ipRateLimiter = asyncHandler(
         handler: (_, __, next) => {
           next(new AppError('Too many requests, please try again later', 429));
         },
-      })
-);
+      });
 
 /**
  * Stricter IP rate limiter for sensitive routes (auth, OTP, etc.)
@@ -78,9 +78,9 @@ export const ipRateLimiter = asyncHandler(
  *   RATE_LIMIT_SENSITIVE_WINDOW_MS  (default: 15 minutes)
  *   RATE_LIMIT_SENSITIVE_MAX        (default: 10 requests)
  */
-export const sensitiveIpRateLimiter = asyncHandler(
+export const sensitiveIpRateLimiter: RequestHandler =
   environment.nodeEnv === 'development'
-    ? (_, __, next) => next()
+    ? (req, res, next) => { next(); }
     : rateLimit({
         windowMs: environment.rateLimit.sensitiveWindowMs ?? 15 * 60 * 1000,
         limit: environment.rateLimit.sensitiveMax ?? 10,
@@ -89,8 +89,7 @@ export const sensitiveIpRateLimiter = asyncHandler(
         handler: (_, __, next) => {
           next(new AppError('Too many requests on this endpoint, please try again later', 429));
         },
-      })
-);
+      });
 
 // ─── Socket Rate Limiter (per-event, per-user) ──────────────────────────────
 

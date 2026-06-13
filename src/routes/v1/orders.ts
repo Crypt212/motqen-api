@@ -16,10 +16,30 @@ import { Router } from 'express';
 import { orderController } from '../../state.js';
 import { createRoute } from '../../types/asyncHandler.js';
 import {
-  CreateOrderSchema,
-  OrderQuerySchema,
-  OrderIdParamsSchema,
-  OrderRateSchema,
+  CreateOrderRequestSchema,
+  CreateOrderQuerySchema,
+  CreateOrderParamsSchema,
+  GetOrdersRequestSchema,
+  GetOrdersQuerySchema,
+  GetOrdersParamsSchema,
+  GetOrderByIdRequestSchema,
+  GetOrderByIdQuerySchema,
+  GetOrderByIdParamsSchema,
+  CancelOrderRequestSchema,
+  CancelOrderQuerySchema,
+  CancelOrderParamsSchema,
+  GetOrderLocationRequestSchema,
+  GetOrderLocationQuerySchema,
+  GetOrderLocationParamsSchema,
+  StartWorkRequestSchema,
+  StartWorkQuerySchema,
+  StartWorkParamsSchema,
+  FinishWorkRequestSchema,
+  FinishWorkQuerySchema,
+  FinishWorkParamsSchema,
+  RateOrderRequestSchema,
+  RateOrderQuerySchema,
+  RateOrderParamsSchema,
 } from '../../schemas/requests/order.request.js';
 import multer from 'multer';
 import proposalsRouter from './proposals.js';
@@ -30,7 +50,13 @@ import {
   rejectNegotiation,
   cancelNegotiation,
 } from '../../controllers/NegotiationController.js';
-import { CreateNegotiationSchema } from '../../schemas/requests/negotiation.request.js';
+import {
+  GetNegotiationsRequestSchema, GetNegotiationsQuerySchema, GetNegotiationsParamsSchema,
+  CreateNegotiationRequestSchema, CreateNegotiationQuerySchema, CreateNegotiationParamsSchema,
+  AcceptNegotiationRequestSchema, AcceptNegotiationQuerySchema, AcceptNegotiationParamsSchema,
+  RejectNegotiationRequestSchema, RejectNegotiationQuerySchema, RejectNegotiationParamsSchema,
+  CancelNegotiationRequestSchema, CancelNegotiationQuerySchema, CancelNegotiationParamsSchema,
+} from '../../schemas/requests/negotiation.request.js';
 import { parseFormDataJson } from 'src/middlewares/multiformParserMiddleware.js';
 import { authorizeClient, authorizeWorker } from 'src/middlewares/accessMiddleware.js';
 
@@ -45,21 +71,21 @@ router.post(
   parseFormDataJson('orderData'),
   authorizeClient,
   createRoute({
-    schemas: { body: CreateOrderSchema },
+    schemas: { body: CreateOrderRequestSchema, query: CreateOrderQuerySchema, params: CreateOrderParamsSchema },
     handler: orderController.create,
   })
 );
 router.get(
   '/',
   createRoute({
-    schemas: { query: OrderQuerySchema },
+    schemas: { body: GetOrdersRequestSchema, query: GetOrdersQuerySchema, params: GetOrdersParamsSchema },
     handler: orderController.list,
   })
 );
 router.get(
   '/:orderId',
   createRoute({
-    schemas: { params: OrderIdParamsSchema },
+    schemas: { body: GetOrderByIdRequestSchema, query: GetOrderByIdQuerySchema, params: GetOrderByIdParamsSchema },
     handler: orderController.getById,
   })
 );
@@ -67,14 +93,14 @@ router.delete(
   '/:orderId',
   authorizeClient,
   createRoute({
-    schemas: { params: OrderIdParamsSchema },
+    schemas: { body: CancelOrderRequestSchema, query: CancelOrderQuerySchema, params: CancelOrderParamsSchema },
     handler: orderController.cancel,
   })
 );
 router.get(
   '/:orderId/location',
   createRoute({
-    schemas: { params: OrderIdParamsSchema },
+    schemas: { body: GetOrderLocationRequestSchema, query: GetOrderLocationQuerySchema, params: GetOrderLocationParamsSchema },
     handler: orderController.getLocation,
   })
 );
@@ -82,7 +108,7 @@ router.post(
   '/:orderId/start-work',
   authorizeWorker,
   createRoute({
-    schemas: { params: OrderIdParamsSchema },
+    schemas: { body: StartWorkRequestSchema, query: StartWorkQuerySchema, params: StartWorkParamsSchema },
     handler: orderController.startWork,
   })
 );
@@ -90,7 +116,7 @@ router.post(
   '/:orderId/finish-work',
   authorizeWorker,
   createRoute({
-    schemas: { params: OrderIdParamsSchema },
+    schemas: { body: FinishWorkRequestSchema, query: FinishWorkQuerySchema, params: FinishWorkParamsSchema },
     handler: orderController.finishWork,
   })
 );
@@ -98,7 +124,7 @@ router.post(
   '/:orderId/rate',
   authorizeClient,
   createRoute({
-    schemas: { params: OrderIdParamsSchema, body: OrderRateSchema },
+    schemas: { body: RateOrderRequestSchema, query: RateOrderQuerySchema, params: RateOrderParamsSchema },
     handler: orderController.rate,
   })
 );
@@ -111,7 +137,7 @@ router.post(
 router.get(
   '/:orderId/negotiations',
   createRoute({
-    schemas: { params: OrderIdParamsSchema },
+    schemas: { body: GetNegotiationsRequestSchema, query: GetNegotiationsQuerySchema, params: GetNegotiationsParamsSchema },
     handler: getNegotiations,
   })
 );
@@ -119,7 +145,7 @@ router.get(
 router.post(
   '/:orderId/negotiations',
   createRoute({
-    schemas: { params: OrderIdParamsSchema, body: CreateNegotiationSchema },
+    schemas: { body: CreateNegotiationRequestSchema, query: CreateNegotiationQuerySchema, params: CreateNegotiationParamsSchema },
     handler: createNegotiation,
   })
 );
@@ -127,7 +153,7 @@ router.post(
 router.post(
   '/:orderId/negotiations/accept',
   createRoute({
-    schemas: { params: OrderIdParamsSchema },
+    schemas: { body: AcceptNegotiationRequestSchema, query: AcceptNegotiationQuerySchema, params: AcceptNegotiationParamsSchema },
     handler: acceptNegotiation,
   })
 );
@@ -135,7 +161,7 @@ router.post(
 router.post(
   '/:orderId/negotiations/reject',
   createRoute({
-    schemas: { params: OrderIdParamsSchema },
+    schemas: { body: RejectNegotiationRequestSchema, query: RejectNegotiationQuerySchema, params: RejectNegotiationParamsSchema },
     handler: rejectNegotiation,
   })
 );
@@ -143,7 +169,7 @@ router.post(
 router.post(
   '/:orderId/negotiations/cancel',
   createRoute({
-    schemas: { params: OrderIdParamsSchema },
+    schemas: { body: CancelNegotiationRequestSchema, query: CancelNegotiationQuerySchema, params: CancelNegotiationParamsSchema },
     handler: cancelNegotiation,
   })
 );

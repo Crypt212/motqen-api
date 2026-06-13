@@ -8,20 +8,20 @@ import uploadToCloudinary from '../providers/cloudinaryProvider.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import IClientProfileRepository from '../repositories/interfaces/ClientRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
-import { AccountStatus, User, UserFilter } from '../domain/user.entity.js';
+import { User, UserFilter } from '../domain/user.entity.js';
 import { LocationCreateInput, LocationUpdateInput, Location } from '../domain/location.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../types/query.js';
 import { UserState } from '../types/asyncHandler.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
+import AppError from 'src/errors/AppError.js';
 
-type InputUserType = {
-  phoneNumber: string;
+type UserUpdateType = Partial<{
   firstName: string;
   middleName: string;
   lastName: string;
-  status: AccountStatus;
   profileImageBuffer: Buffer;
-};
+}>;
+
 
 /**
  * User Service - Manages user-related operations
@@ -72,9 +72,12 @@ export default class UserService extends Service {
   /**
    * Update a user's basic information
    */
-  async update(params: { filter: UserFilter; data: Partial<InputUserType> }): Promise<User | null> {
+  async update(params: { filter: UserFilter; data: UserUpdateType }): Promise<User> {
     const { filter, data } = params;
     let url = undefined;
+
+    if (!(await this.userRepository.find({ filter }))) throw new AppError('User not found', 404);
+
     if (data.profileImageBuffer) {
       url = (
         await uploadToCloudinary(
@@ -85,16 +88,15 @@ export default class UserService extends Service {
       ).url;
     }
 
-    await this.userRepository.update({
+    const user = await this.userRepository.update({
       filter,
       user: {
         firstName: data.firstName,
         lastName: data.lastName,
-        status: data.status,
         profileImageUrl: typeof url === 'string' ? url : undefined,
       },
     });
-    return await this.userRepository.find({ filter });
+    return user;
   }
 
   /**
@@ -119,12 +121,12 @@ export default class UserService extends Service {
       accountStatus: user.status,
       worker: worker
         ? {
-            id: worker.id,
-            verification: {
-              status: verification?.status,
-              reason: verification?.reason,
-            },
-          }
+          id: worker.id,
+          verification: {
+            status: verification?.status,
+            reason: verification?.reason,
+          },
+        }
         : undefined,
       client: client ? { id: client.id } : undefined,
     };

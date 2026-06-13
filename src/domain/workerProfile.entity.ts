@@ -1,7 +1,5 @@
 import { $Enums } from '../generated/prisma/client.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
-import { FilterFromDescriptor } from '../schemas/common.js';
-import { FieldTypeDefinition } from '../types/query.js';
 
 export type VerificationStatus = $Enums.VerificationStatus;
 
@@ -19,6 +17,18 @@ export type WorkerProfile = {
   updatedAt: Date;
 };
 
+export type WorkerSummary = {
+  id: IDType;
+  userId: IDType;
+  firstName: string;
+  lastName: string;
+  profileImageUrl: string | null;
+  experienceYears: number;
+  rate: number;
+  ratingCount: number;
+  completedJobsCount: number;
+};
+
 export type WorkerProfileCreateInput = {
   experienceYears?: number;
   isInTeam?: boolean;
@@ -28,15 +38,13 @@ export type WorkerProfileCreateInput = {
 
 export type WorkerProfileUpdateInput = Partial<WorkerProfileCreateInput>;
 
-export const WorkerProfileFilterDescriptor = {
-  id: { type: 'uuid' as const },
-  userId: { type: 'uuid' as const },
-  rate: { type: 'number' as const },
-  experienceYears: { type: 'number' as const },
-  acceptsUrgentJobs: { type: 'boolean' as const },
-} satisfies Record<string, FieldTypeDefinition>;
-
-export type WorkerProfileFilter = FilterFromDescriptor<typeof WorkerProfileFilterDescriptor>;
+export type WorkerProfileFilter = Partial<{
+  id: string;
+  userId: string;
+  rate: number;
+  experienceYears: number;
+  acceptsUrgentJobs: boolean;
+}>;
 
 // ==================================================
 

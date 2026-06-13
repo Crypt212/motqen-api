@@ -1,24 +1,8 @@
 import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
-import { UUIDSchema } from '../common.js';
-import { CityObjectSchema, GovernmentObjectSchema } from './government.response.js';
+import { LocationViewSchema } from '../entities/location.js';
 
-
-export const LocationObjectSchema = z.object({
-  id: UUIDSchema,
-  userId: UUIDSchema,
-  address: z.string(),
-  addressNotes: z.string().nullable().optional(),
-  government: GovernmentObjectSchema,
-  city: CityObjectSchema,
-  long: z.number(),
-  lat: z.number(),
-  isMain: z.boolean(),
-  isHidden: z.boolean().default(false),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
 
 export const PaginationMetaSchema = z.object({
   page: z.number(),
@@ -28,12 +12,36 @@ export const PaginationMetaSchema = z.object({
 });
 
 export const LocationListResponseSchema = SuccessResponseSchema(z.object({
-    locations: z.array(LocationObjectSchema),
+    locations: z.array(LocationViewSchema),
     meta: PaginationMetaSchema.optional(),
   }),);
 export type LocationListResponseDTO = z.infer<typeof LocationListResponseSchema>;
 
 export const LocationResponseSchema = SuccessResponseSchema(z.object({
-    location: LocationObjectSchema,
+    location: LocationViewSchema,
   }),);
 export type LocationResponseDTO = z.infer<typeof LocationResponseSchema>;
+
+export const GetLocationsResponseSchema = LocationListResponseSchema;
+export type GetLocationsResponseDTO = z.infer<typeof GetLocationsResponseSchema>;
+
+export const CreateLocationResponseSchema = LocationResponseSchema;
+export type CreateLocationResponseDTO = z.infer<typeof CreateLocationResponseSchema>;
+
+export const GetMainLocationResponseSchema = LocationResponseSchema;
+export type GetMainLocationResponseDTO = z.infer<typeof GetMainLocationResponseSchema>;
+
+export const UpdateMainLocationResponseSchema = LocationResponseSchema;
+export type UpdateMainLocationResponseDTO = z.infer<typeof UpdateMainLocationResponseSchema>;
+
+export const UpdateLocationResponseSchema = LocationResponseSchema;
+export type UpdateLocationResponseDTO = z.infer<typeof UpdateLocationResponseSchema>;
+
+export const SetMainLocationResponseSchema = LocationResponseSchema;
+export type SetMainLocationResponseDTO = z.infer<typeof SetMainLocationResponseSchema>;
+
+export const GetLocationByIdResponseSchema = LocationResponseSchema;
+export type GetLocationByIdResponseDTO = z.infer<typeof GetLocationByIdResponseSchema>;
+
+export const DeleteLocationResponseSchema = SuccessResponseSchema(z.null(),);
+export type DeleteLocationResponseDTO = z.infer<typeof DeleteLocationResponseSchema>;

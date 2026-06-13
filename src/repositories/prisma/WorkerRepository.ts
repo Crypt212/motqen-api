@@ -64,8 +64,6 @@ export default class WorkerProfileRepository
 
   private toDomainDayWorkingHours(record: DayWorkingHoursPrisma): DayWorkingHours {
     return {
-      id: record.id,
-      workerProfileId: record.workerProfileId,
       day: record.day,
       startTime: record.startTime,
       endTime: record.endTime,

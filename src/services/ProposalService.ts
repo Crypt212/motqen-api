@@ -9,6 +9,7 @@ import { VerificationStatus } from 'src/generated/prisma/enums.js';
 import ProposalRepository from '../repositories/prisma/ProposalRepository.js';
 import NegotiationRepository from '../repositories/prisma/NegotiationRepository.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
+import { PaginatedResultMeta } from 'src/types/query.js';
 
 interface ProposalServiceDeps {
   proposalRepository: IProposalRepository;
@@ -92,7 +93,7 @@ export default class ProposalService extends Service {
       // 6. Create proposal and initial negotiation atomically
       return await this.transactionManager.execute(
         { proposalRepo: ProposalRepository, negotiationRepo: NegotiationRepository },
-        async ({ proposalRepo, negotiationRepo }, tx) => {
+        async ({ proposalRepo, negotiationRepo }) => {
           const proposal = await proposalRepo.create({
             proposal: {
               orderId,
@@ -125,10 +126,16 @@ export default class ProposalService extends Service {
   async getProposals({
     orderId,
     userId,
+    filter,
+    pagination,
+    sort,
   }: {
     orderId: IDType;
     userId: IDType;
-  }): Promise<ProposalWithWorkerSummary[]> {
+    filter?: any;
+    pagination?: any;
+    sort?: any;
+  }): Promise<PaginatedResultMeta & { proposals: ProposalWithWorkerSummary[] }> {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: orderId } });
       if (!order) {
@@ -141,9 +148,11 @@ export default class ProposalService extends Service {
       }
 
       const result = await this.proposalRepository.findManyWithWorkerSummary({
-        filter: { orderId },
+        filter: { ...filter, orderId },
+        pagination,
+        sort,
       });
-      return result.proposals;
+      return result;
     });
   }
 

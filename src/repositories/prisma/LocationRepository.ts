@@ -294,4 +294,14 @@ export default class LocationRepository extends Repository implements ILocationR
       throw handlePrismaError(error as Error, 'findMainLocationByUserId');
     }
   }
+
+  async delete({ filter }: { filter: LocationFilter }): Promise<void> {
+    try {
+      await this.prismaClient.location.deleteMany({
+        where: filter as any,
+      });
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'delete');
+    }
+  }
 }

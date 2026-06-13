@@ -122,7 +122,7 @@ export default class NegotiationService extends Service {
     const { orderId, proposalId, role, profileId, pagination } = params;
     return tryCatch(async () => {
       const order = await this.getOrderOrThrow(orderId);
-      this.resolveOrderParty(order, role, profileId);
+      await this.resolveOrderParty(order, role, profileId);
       const resolvedProposalId = await this.resolveProposalId(order, proposalId);
       return this.negotiationRepository.findByProposalId({ proposalId: resolvedProposalId, pagination });
     });

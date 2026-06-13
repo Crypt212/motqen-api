@@ -98,7 +98,7 @@ async function destroySocket() {
     if (sock) {
       sock.ev.removeAllListeners('creds.update');
       sock.ev.removeAllListeners('connection.update');
-      sock.ws.close();
+      await sock.ws.close();
       sock = null;
     }
   } catch (err) {

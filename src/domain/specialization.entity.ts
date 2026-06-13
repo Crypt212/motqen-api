@@ -1,7 +1,6 @@
 import { $Enums } from '../generated/prisma/client.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
-import { FieldTypeDefinition } from '../types/query.js';
-import { FilterFromDescriptor } from '../schemas/common.js';
+
 
 export type SpecializationsWithSubSpecializations =  (Specialization & { subSpecializations: SubSpecialization[] })[];
 export type SpecializationsTreeNode = { mainId: IDType; subIds: IDType[] };
@@ -27,17 +26,13 @@ export type SpecializationCreateInput = {
 
 export type SpecializationUpdateInput = Partial<SpecializationCreateInput>;
 
-export const SpecializationFilterDescriptor = {
-  id: { type: 'uuid' as const },
-  name: { type: 'string' as const },
-  nameAr: { type: 'string' as const },
-  category: { type: 'string' as const },
-  ordersCount: { type: 'number' as const },
-} satisfies Record<string, FieldTypeDefinition>;
-
-export type SpecializationFilter = FilterFromDescriptor<typeof SpecializationFilterDescriptor> & {
-  category?: SpecializationCategory;
-};
+export type SpecializationFilter = Partial<{
+  id: IDType;
+  name: string;
+  nameAr: string;
+  category: SpecializationCategory;
+  ordersCount: number;
+}>;
 
 // =====================================
 
@@ -59,16 +54,12 @@ export type SubSpecializationCreateInput = {
 
 export type SubSpecializationUpdateInput = Partial<SubSpecializationCreateInput>;
 
-export const SubSpecializationFilterDescriptor = {
-  id: { type: 'uuid' as const },
-  mainSpecializationId: { type: 'uuid' as const },
-  name: { type: 'string' as const },
-  nameAr: { type: 'string' as const },
-} satisfies Record<string, FieldTypeDefinition>;
-
-export type SubSpecializationFilter = FilterFromDescriptor<
-  typeof SubSpecializationFilterDescriptor
->;
+export type SubSpecializationFilter = Partial<{
+  id: IDType;
+  mainSpecializationId: IDType;
+  name: string;
+  nameAr: string;
+}>;
 
 // =====================================
 

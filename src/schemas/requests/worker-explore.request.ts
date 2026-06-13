@@ -56,3 +56,26 @@ export type OccupiedTimeSlotDTO = {
   startDate: Date;
   endDate: Date;
 };
+
+import { EmptySchema } from '../common.js';
+
+export const SearchWorkersRequestSchema = EmptySchema;
+export type SearchWorkersRequestDTO = z.infer<typeof SearchWorkersRequestSchema>;
+export const SearchWorkersQuerySchema = ExploreSearchSchema;
+export type SearchWorkersQueryDTO = z.infer<typeof SearchWorkersQuerySchema>;
+export const SearchWorkersParamsSchema = EmptySchema;
+export type SearchWorkersParamsDTO = z.infer<typeof SearchWorkersParamsSchema>;
+
+export const GetWorkerByIdRequestSchema = EmptySchema;
+export type GetWorkerByIdRequestDTO = z.infer<typeof GetWorkerByIdRequestSchema>;
+export const GetWorkerByIdQuerySchema = EmptySchema;
+export type GetWorkerByIdQueryDTO = z.infer<typeof GetWorkerByIdQuerySchema>;
+export const GetWorkerByIdParamsSchema = ExploreWorkerIdParamsSchema;
+export type GetWorkerByIdParamsDTO = z.infer<typeof GetWorkerByIdParamsSchema>;
+
+export const GetWorkerOccupiedTimeSlotsRequestSchema = EmptySchema;
+export type GetWorkerOccupiedTimeSlotsRequestDTO = z.infer<typeof GetWorkerOccupiedTimeSlotsRequestSchema>;
+export const GetWorkerOccupiedTimeSlotsQuerySchema = OccupiedTimeSlotsQuerySchema;
+export type GetWorkerOccupiedTimeSlotsQueryDTO = z.infer<typeof GetWorkerOccupiedTimeSlotsQuerySchema>;
+export const GetWorkerOccupiedTimeSlotsParamsSchema = ExploreWorkerIdParamsSchema;
+export type GetWorkerOccupiedTimeSlotsParamsDTO = z.infer<typeof GetWorkerOccupiedTimeSlotsParamsSchema>;

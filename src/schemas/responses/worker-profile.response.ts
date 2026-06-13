@@ -1,53 +1,9 @@
 import { z } from 'zod';
 import { SuccessResponseSchema } from '../responses.js';
-import { UUIDSchema } from '../common.js';
-import { GovernmentObjectSchema } from './government.response.js';
-import { DayOfWeekSchema } from '../requests/worker-profile.request.js';
-
-const VerificationObjectSchema = z.object({
-  id: UUIDSchema,
-  workerProfileId: UUIDSchema,
-  status: z.enum(['PENDING', 'APPROVED', 'REJECTED']),
-  reason: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
-const PortfolioImageObjectSchema = z.object({
-  id: UUIDSchema,
-  portfolioId: UUIDSchema,
-  imageUrl: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
-const PortfolioObjectSchema = z.object({
-  id: UUIDSchema,
-  workerProfileId: UUIDSchema,
-  description: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  projectImages: z.array(PortfolioImageObjectSchema),
-});
-
-const BadgeObjectSchema = z.object({
-  id: UUIDSchema,
-  workerProfileId: UUIDSchema,
-  badgeType: z.string(),
-  createdAt: z.date(),
-});
-
-const DayWorkingHoursObjectSchema = z.object({
-  day: DayOfWeekSchema,
-  startTime: z.string(),
-  endTime: z.string(),
-});
-
-const OccupiedTimeSlotObjectSchema = z.object({
-  startDate: z.date(),
-  endDate: z.date(),
-});
-
+import { UUIDSchema, DayOfWeekSchema, OccupiedTimeSlotViewSchema as OccupiedTimeSlotObjectSchema } from '../common.js';
+import { GovernmentViewSchema as GovernmentObjectSchema } from '../entities/government.js';
+import { WorkerVerificationViewSchema as VerificationObjectSchema, WorkerPortfolioViewSchema as PortfolioObjectSchema, WorkerBadgeViewSchema as BadgeObjectSchema, WorkerPortfolioProjectImageViewSchema as PortfolioImageObjectSchema } from '../entities/workerProfile.js';
+import { DaysWorkingHoursSchema } from '../entities/workingHours.js';
 export const WorkerVerificationResponseSchema = SuccessResponseSchema(
   z.object({ verification: VerificationObjectSchema })
 );
@@ -61,7 +17,7 @@ export const WorkerBadgesResponseSchema = SuccessResponseSchema(
 );
 
 export const WorkerWorkingHoursResponseSchema = SuccessResponseSchema(
-  z.object({ workingHours: z.array(DayWorkingHoursObjectSchema) })
+  z.object({ workingHours: DaysWorkingHoursSchema })
 );
 
 export const WorkerStatsResponseSchema = SuccessResponseSchema(

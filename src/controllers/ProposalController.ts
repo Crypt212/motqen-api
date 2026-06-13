@@ -1,7 +1,26 @@
 import { asyncHandler } from '../types/asyncHandler.js';
 import ProposalService from '../services/ProposalService.js';
-import { CreateProposalDTO } from '../schemas/requests/proposal.request.js';
-import { ProposalResponseDTO, ProposalListResponseDTO } from '../schemas/responses/proposal.response.js';
+import {
+  SubmitProposalRequestDTO,
+  SubmitProposalQueryDTO,
+  SubmitProposalParamsDTO,
+  ListProposalsRequestDTO,
+  ListProposalsQueryDTO,
+  ListProposalsParamsDTO,
+  GetMyProposalRequestDTO,
+  GetMyProposalQueryDTO,
+  GetMyProposalParamsDTO,
+  GetProposalByIdRequestDTO,
+  GetProposalByIdQueryDTO,
+  GetProposalByIdParamsDTO
+} from '../schemas/requests/proposal.request.js';
+import {
+  SubmitProposalResponseDTO,
+  ListProposalsResponseDTO,
+  GetMyProposalResponseDTO,
+  GetProposalByIdResponseDTO
+} from '../schemas/responses/proposal.response.js';
+import { parseQuery } from '../schemas/common.js';
 
 export default class ProposalController {
   private proposalService: ProposalService;
@@ -10,9 +29,8 @@ export default class ProposalController {
     this.proposalService = deps.proposalService;
   }
 
-  submit = asyncHandler<ProposalResponseDTO, CreateProposalDTO, any, { orderId: string }>(async (req, res) => {
+  submit = asyncHandler<SubmitProposalResponseDTO, SubmitProposalRequestDTO, SubmitProposalQueryDTO, SubmitProposalParamsDTO>(async (req, res) => {
     const { orderId } = req.parsed!.params!;
-    const parsedBody = req.parsed!.body!;
     const workerUserId = req.userState.userId;
 
     const proposal = await this.proposalService.submitProposal({
@@ -29,30 +47,27 @@ export default class ProposalController {
     res.status(201).send({ status: 'success', message: 'Proposal submitted successfully', data: { proposal: fullProposal } });
   });
 
-  list = asyncHandler<ProposalListResponseDTO, any, any, { orderId: string }>(async (req, res) => {
+  list = asyncHandler<ListProposalsResponseDTO, ListProposalsRequestDTO, ListProposalsQueryDTO, ListProposalsParamsDTO>(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userId = req.userState.userId;
+    const { filter, pagination, sortBy, sortOrder } = parseQuery(req.parsed!.query!);
 
-    const proposals = await this.proposalService.getProposals({
+    const result = await this.proposalService.getProposals({
       orderId,
       userId,
+      filter,
+      pagination,
+      sort: sortBy.map((field, index) => ({ sortBy: field as any, sortOrder: sortOrder[index] })),
     });
 
     res.status(200).send({
       status: 'success',
       message: 'Proposals retrieved successfully',
-      data: {
-        proposals,
-        page: 1,
-        limit: proposals.length,
-        count: proposals.length,
-        hasNext: false,
-        hasPrev: false,
-      },
+      data: result,
     });
   });
 
-  getMine = asyncHandler<ProposalResponseDTO, any, any, { orderId: string }>(async (req, res) => {
+  getMine = asyncHandler<GetMyProposalResponseDTO, GetMyProposalRequestDTO, GetMyProposalQueryDTO, GetMyProposalParamsDTO>(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const workerProfileId = req.userState.worker?.id;
 
@@ -64,7 +79,7 @@ export default class ProposalController {
     res.status(200).send({ status: 'success', message: 'Proposal retrieved successfully', data: { proposal } });
   });
 
-  getById = asyncHandler<ProposalResponseDTO, any, any, { orderId: string; proposalId: string }>(async (req, res) => {
+  getById = asyncHandler<GetProposalByIdResponseDTO, GetProposalByIdRequestDTO, GetProposalByIdQueryDTO, GetProposalByIdParamsDTO>(async (req, res) => {
     const { orderId, proposalId } = req.parsed!.params!;
     const userId = req.userState.userId;
 

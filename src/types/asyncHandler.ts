@@ -41,9 +41,9 @@ export type AdminState = {
 };
 
 export type Request = ExpressRequest & { deviceId?: DeviceID, userState?: UserState, adminState?: AdminState };
-export type ParsedRequest<Body = any, Query = any, Params = any> = Request & { parsed?: { body?: Body, query?: Query, params?: Params } };
+export type ParsedRequest<Body, Query, Params> = Request & { parsed?: { body?: Body, query?: Query, params?: Params } };
 
-export type RequestHandler<Body = any, Query = any, Params = any, ResponseBody = any> = (
+export type RequestHandler<Body, Query, Params, ResponseBody> = (
   req: ParsedRequest<Body, Query, Params>,
   res: Response<ResponseBody>,
   next: NextFunction
@@ -52,7 +52,7 @@ export type RequestHandler<Body = any, Query = any, Params = any, ResponseBody =
 /**
  * Controller wrapper to ensure consistent error handling
  */
-export function asyncHandler<TResponse = any, TBody = any, TQuery = any, TParams = any>(controller: RequestHandler<TBody, TQuery, TParams, TResponse>): RequestHandler<TBody, TQuery, TParams, TResponse> {
+export function asyncHandler<TResponseBody, TBody, TQuery, TParams>(controller: RequestHandler<TBody, TQuery, TParams, TResponseBody>): RequestHandler<TBody, TQuery, TParams, TResponseBody> {
   return (req, res, next) => {
     Promise.resolve(controller(req, res, next)).catch(next);
   };
@@ -61,11 +61,11 @@ export function asyncHandler<TResponse = any, TBody = any, TQuery = any, TParams
 
 export function createRoute<TResponseBody, TBody, TQuery, TParams>(params: {
   schemas: {
-    body?: z.ZodType<TBody>,
-    query?: z.ZodType<TQuery>,
-    params?: z.ZodType<TParams>,
+    body: z.ZodType<TBody>,
+    query: z.ZodType<TQuery>,
+    params: z.ZodType<TParams>,
   },
-  inBetweenMiddlewares?: RequestHandler[],
+  inBetweenMiddlewares?: import('express').RequestHandler[],
   handler: RequestHandler<TBody, TQuery, TParams, TResponseBody>
 }) {
   const { schemas, inBetweenMiddlewares, handler } = params;

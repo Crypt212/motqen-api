@@ -1,6 +1,6 @@
 import { z } from '../../libs/zod.js';
-import { UUIDSchema, buildFilterSchema, createQuerySchema } from '../common.js';
-import { OrderFilterDescriptor } from '../../domain/order.entity.js';
+import { UUIDSchema, createQuerySchema } from '../common.js';
+import { OrderFilterSchema } from '../entities/order.js';
 
 export const CreateOrderSchema = z.object({
   orderData: z.object({
@@ -28,6 +28,63 @@ export const OrderRateSchema = z.object({
   comment: z.string().optional(),
 });
 
-export const OrderFilterSchema = buildFilterSchema(OrderFilterDescriptor);
 export const OrderQuerySchema = createQuerySchema(OrderFilterSchema);
 export type OrderQuery = z.infer<typeof OrderQuerySchema>;
+
+import { EmptySchema } from '../common.js';
+
+export const CreateOrderRequestSchema = CreateOrderSchema;
+export type CreateOrderRequestDTO = z.infer<typeof CreateOrderRequestSchema>;
+export const CreateOrderQuerySchema = EmptySchema;
+export type CreateOrderQueryDTO = z.infer<typeof CreateOrderQuerySchema>;
+export const CreateOrderParamsSchema = EmptySchema;
+export type CreateOrderParamsDTO = z.infer<typeof CreateOrderParamsSchema>;
+
+export const GetOrdersRequestSchema = EmptySchema;
+export type GetOrdersRequestDTO = z.infer<typeof GetOrdersRequestSchema>;
+export const GetOrdersQuerySchema = OrderQuerySchema;
+export type GetOrdersQueryDTO = z.infer<typeof GetOrdersQuerySchema>;
+export const GetOrdersParamsSchema = EmptySchema;
+export type GetOrdersParamsDTO = z.infer<typeof GetOrdersParamsSchema>;
+
+export const GetOrderByIdRequestSchema = EmptySchema;
+export type GetOrderByIdRequestDTO = z.infer<typeof GetOrderByIdRequestSchema>;
+export const GetOrderByIdQuerySchema = EmptySchema;
+export type GetOrderByIdQueryDTO = z.infer<typeof GetOrderByIdQuerySchema>;
+export const GetOrderByIdParamsSchema = OrderIdParamsSchema;
+export type GetOrderByIdParamsDTO = z.infer<typeof GetOrderByIdParamsSchema>;
+
+export const CancelOrderRequestSchema = EmptySchema;
+export type CancelOrderRequestDTO = z.infer<typeof CancelOrderRequestSchema>;
+export const CancelOrderQuerySchema = EmptySchema;
+export type CancelOrderQueryDTO = z.infer<typeof CancelOrderQuerySchema>;
+export const CancelOrderParamsSchema = OrderIdParamsSchema;
+export type CancelOrderParamsDTO = z.infer<typeof CancelOrderParamsSchema>;
+
+export const GetOrderLocationRequestSchema = EmptySchema;
+export type GetOrderLocationRequestDTO = z.infer<typeof GetOrderLocationRequestSchema>;
+export const GetOrderLocationQuerySchema = EmptySchema;
+export type GetOrderLocationQueryDTO = z.infer<typeof GetOrderLocationQuerySchema>;
+export const GetOrderLocationParamsSchema = OrderIdParamsSchema;
+export type GetOrderLocationParamsDTO = z.infer<typeof GetOrderLocationParamsSchema>;
+
+export const StartWorkRequestSchema = EmptySchema;
+export type StartWorkRequestDTO = z.infer<typeof StartWorkRequestSchema>;
+export const StartWorkQuerySchema = EmptySchema;
+export type StartWorkQueryDTO = z.infer<typeof StartWorkQuerySchema>;
+export const StartWorkParamsSchema = OrderIdParamsSchema;
+export type StartWorkParamsDTO = z.infer<typeof StartWorkParamsSchema>;
+
+export const FinishWorkRequestSchema = EmptySchema;
+export type FinishWorkRequestDTO = z.infer<typeof FinishWorkRequestSchema>;
+export const FinishWorkQuerySchema = EmptySchema;
+export type FinishWorkQueryDTO = z.infer<typeof FinishWorkQuerySchema>;
+export const FinishWorkParamsSchema = OrderIdParamsSchema;
+export type FinishWorkParamsDTO = z.infer<typeof FinishWorkParamsSchema>;
+
+export const RateOrderRequestSchema = OrderRateSchema;
+export type RateOrderRequestDTO = z.infer<typeof RateOrderRequestSchema>;
+export const RateOrderQuerySchema = EmptySchema;
+export type RateOrderQueryDTO = z.infer<typeof RateOrderQuerySchema>;
+export const RateOrderParamsSchema = OrderIdParamsSchema;
+export type RateOrderParamsDTO = z.infer<typeof RateOrderParamsSchema>;

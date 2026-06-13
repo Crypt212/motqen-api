@@ -15,11 +15,33 @@ import { checkSendOtpLimit, checkVerifyLimit } from '../../middlewares/rateLimit
 import upload from '../../configs/multer.js';
 
 import {
-  RequestOTPSchema,
-  VerifyOTPSchema,
-  RegisterClientSchema,
-  RegisterWorkerSchema,
-  FcmTokenSchema,
+  RequestOTPRequestSchema,
+  RequestOTPQuerySchema,
+  RequestOTPParamsSchema,
+  VerifyOTPRequestSchema,
+  VerifyOTPQuerySchema,
+  VerifyOTPParamsSchema,
+  RegisterClientRequestSchema,
+  RegisterClientQuerySchema,
+  RegisterClientParamsSchema,
+  RegisterWorkerRequestSchema,
+  RegisterWorkerQuerySchema,
+  RegisterWorkerParamsSchema,
+  LoginRequestSchema,
+  LoginQuerySchema,
+  LoginParamsSchema,
+  LogoutRequestSchema,
+  LogoutQuerySchema,
+  LogoutParamsSchema,
+  GenerateAccessTokenRequestSchema,
+  GenerateAccessTokenQuerySchema,
+  GenerateAccessTokenParamsSchema,
+  ReviewStatusRequestSchema,
+  ReviewStatusQuerySchema,
+  ReviewStatusParamsSchema,
+  UpdateFcmTokenRequestSchema,
+  UpdateFcmTokenQuerySchema,
+  UpdateFcmTokenParamsSchema,
 } from '../../schemas/requests/auth.request.js';
 import {
   authenticateAccess,
@@ -36,7 +58,11 @@ const authRouter = Router();
 authRouter.post(
   '/otp/request',
   createRoute({
-    schemas: { body: RequestOTPSchema },
+    schemas: { 
+      body: RequestOTPRequestSchema,
+      query: RequestOTPQuerySchema,
+      params: RequestOTPParamsSchema,
+    },
     inBetweenMiddlewares: [checkSendOtpLimit],
     handler: requestOTP,
   })
@@ -45,7 +71,11 @@ authRouter.post(
 authRouter.post(
   '/otp/verify',
   createRoute({
-    schemas: { body: VerifyOTPSchema },
+    schemas: { 
+      body: VerifyOTPRequestSchema,
+      query: VerifyOTPQuerySchema,
+      params: VerifyOTPParamsSchema,
+    },
     inBetweenMiddlewares: [checkVerifyLimit],
     handler: verifyOTP,
   })
@@ -57,7 +87,11 @@ authRouter.post(
   authenticateRegister,
   parseFormDataJson('userData'),
   createRoute({
-    schemas: { body: RegisterClientSchema },
+    schemas: { 
+      body: RegisterClientRequestSchema,
+      query: RegisterClientQuerySchema,
+      params: RegisterClientParamsSchema,
+    },
     handler: registerClient,
   })
 );
@@ -73,25 +107,79 @@ authRouter.post(
   parseFormDataJson('userData'),
   parseFormDataJson('workerProfile'),
   createRoute({
-    schemas: { body: RegisterWorkerSchema },
+    schemas: { 
+      body: RegisterWorkerRequestSchema,
+      query: RegisterWorkerQuerySchema,
+      params: RegisterWorkerParamsSchema,
+    },
     handler: registerWorker,
   })
 );
 
-authRouter.post('/login', authenticateLogin, login);
+authRouter.post(
+  '/login',
+  authenticateLogin,
+  createRoute({
+    schemas: {
+      body: LoginRequestSchema,
+      query: LoginQuerySchema,
+      params: LoginParamsSchema,
+    },
+    handler: login,
+  })
+);
 
-authRouter.post('/logout', authenticateAccess, isActive, logout);
+authRouter.post(
+  '/logout',
+  authenticateAccess,
+  isActive,
+  createRoute({
+    schemas: {
+      body: LogoutRequestSchema,
+      query: LogoutQuerySchema,
+      params: LogoutParamsSchema,
+    },
+    handler: logout,
+  })
+);
 
-authRouter.get('/access', authenticateRefresh, isActive, generateAccessToken);
+authRouter.get(
+  '/access',
+  authenticateRefresh,
+  isActive,
+  createRoute({
+    schemas: {
+      body: GenerateAccessTokenRequestSchema,
+      query: GenerateAccessTokenQuerySchema,
+      params: GenerateAccessTokenParamsSchema,
+    },
+    handler: generateAccessToken,
+  })
+);
 
-authRouter.get('/review-status', authenticateAccess, reviewStatus);
+authRouter.get(
+  '/review-status',
+  authenticateAccess,
+  createRoute({
+    schemas: {
+      body: ReviewStatusRequestSchema,
+      query: ReviewStatusQuerySchema,
+      params: ReviewStatusParamsSchema,
+    },
+    handler: reviewStatus,
+  })
+);
 
 authRouter.patch(
   '/fcm-token',
   authenticateAccess,
   isActive,
   createRoute({
-    schemas: { body: FcmTokenSchema },
+    schemas: { 
+      body: UpdateFcmTokenRequestSchema,
+      query: UpdateFcmTokenQuerySchema,
+      params: UpdateFcmTokenParamsSchema,
+    },
     handler: updateFcmToken,
   })
 );

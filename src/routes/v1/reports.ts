@@ -2,11 +2,24 @@ import { Router } from 'express';
 import multer from 'multer';
 import { authorizeAdmin } from '../../middlewares/accessMiddleware.js';
 import {
-  CreateReportSchema,
-  UpdateReportSchema,
-  UpdateReportStatusSchema,
-  ReportIdParamsSchema,
-  ReportQuerySchema,
+  CreateReportRequestSchema,
+  CreateReportQuerySchema,
+  CreateReportParamsSchema,
+  GetReportsRequestSchema,
+  GetReportsQuerySchema,
+  GetReportsParamsSchema,
+  GetReportByIdRequestSchema,
+  GetReportByIdQuerySchema,
+  GetReportByIdParamsSchema,
+  UpdateReportRequestSchema,
+  UpdateReportQuerySchema,
+  UpdateReportParamsSchema,
+  CancelReportRequestSchema,
+  CancelReportQuerySchema,
+  CancelReportParamsSchema,
+  UpdateReportStatusRequestSchema,
+  UpdateReportStatusQuerySchema,
+  UpdateReportStatusParamsSchema,
 } from '../../schemas/requests/report.request.js';
 import { reportController } from '../../state.js';
 import { createRoute } from 'src/types/asyncHandler.js';
@@ -21,7 +34,7 @@ reportsRouter.post(
   '/',
   upload.array('images', 5),
   createRoute({
-    schemas: { body: CreateReportSchema },
+    schemas: { body: CreateReportRequestSchema, query: CreateReportQuerySchema, params: CreateReportParamsSchema },
     handler: reportController.create,
   })
 );
@@ -29,7 +42,7 @@ reportsRouter.post(
 reportsRouter.get(
   '/',
   createRoute({
-    schemas: { query: ReportQuerySchema },
+    schemas: { body: GetReportsRequestSchema, query: GetReportsQuerySchema, params: GetReportsParamsSchema },
     handler: reportController.list,
   })
 );
@@ -37,7 +50,7 @@ reportsRouter.get(
 reportsRouter.get(
   '/:reportId',
   createRoute({
-    schemas: { params: ReportIdParamsSchema },
+    schemas: { body: GetReportByIdRequestSchema, query: GetReportByIdQuerySchema, params: GetReportByIdParamsSchema },
     handler: reportController.getById,
   })
 );
@@ -46,7 +59,7 @@ reportsRouter.patch(
   '/:reportId',
   upload.array('images', 5),
   createRoute({
-    schemas: { params: ReportIdParamsSchema, body: UpdateReportSchema },
+    schemas: { body: UpdateReportRequestSchema, query: UpdateReportQuerySchema, params: UpdateReportParamsSchema },
     handler: reportController.update,
   })
 );
@@ -54,7 +67,7 @@ reportsRouter.patch(
 reportsRouter.delete(
   '/:reportId',
   createRoute({
-    schemas: { params: ReportIdParamsSchema },
+    schemas: { body: CancelReportRequestSchema, query: CancelReportQuerySchema, params: CancelReportParamsSchema },
     handler: reportController.cancel,
   })
 );
@@ -63,7 +76,7 @@ reportsRouter.patch(
   '/:reportId/status',
   authorizeAdmin,
   createRoute({
-    schemas: { params: ReportIdParamsSchema, body: UpdateReportStatusSchema },
+    schemas: { body: UpdateReportStatusRequestSchema, query: UpdateReportStatusQuerySchema, params: UpdateReportStatusParamsSchema },
     handler: reportController.updateStatus,
   })
 );

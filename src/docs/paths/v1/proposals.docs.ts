@@ -1,17 +1,31 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import {
-  CreateProposalSchema,
-  OrderProposalParamsSchema,
+  SubmitProposalRequestSchema,
+  SubmitProposalQuerySchema,
+  SubmitProposalParamsSchema,
+  ListProposalsQuerySchema,
+  ListProposalsParamsSchema,
+  GetMyProposalQuerySchema,
+  GetMyProposalParamsSchema,
+  GetProposalByIdQuerySchema,
+  GetProposalByIdParamsSchema,
 } from '../../../schemas/requests/proposal.request.js';
-import { OrderIdParamsSchema } from '../../../schemas/requests/order.request.js';
 import {
   ProposalResponseSchema,
   ProposalListResponseSchema,
 } from '../../../schemas/responses/proposal.response.js';
-import { CreateNegotiationSchema } from '../../../schemas/requests/negotiation.request.js';
 import {
-  NegotiationListResponseSchema,
-  NegotiationResponseSchema,
+  GetNegotiationsQuerySchema, GetNegotiationsParamsSchema,
+  CreateNegotiationRequestSchema, CreateNegotiationQuerySchema, CreateNegotiationParamsSchema,
+  AcceptNegotiationQuerySchema, AcceptNegotiationParamsSchema,
+  RejectNegotiationQuerySchema, RejectNegotiationParamsSchema,
+  CancelNegotiationQuerySchema, CancelNegotiationParamsSchema
+} from '../../../schemas/requests/negotiation.request.js';
+import {
+  GetNegotiationsResponseSchema,
+  CreateNegotiationResponseSchema,
+  RejectNegotiationResponseSchema,
+  CancelNegotiationResponseSchema,
 } from '../../../schemas/responses/negotiation.response.js';
 import { createResponseDoc } from '../../../docs/common.js';
 import { OrderResponseSchema } from 'src/schemas/responses/order.response.js';
@@ -31,11 +45,12 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: OrderIdParamsSchema,
+      query: SubmitProposalQuerySchema,
+      params: SubmitProposalParamsSchema,
       body: {
         content: {
           'application/json': {
-            schema: CreateProposalSchema,
+            schema: SubmitProposalRequestSchema,
           },
         },
       },
@@ -68,7 +83,8 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: OrderIdParamsSchema,
+      query: ListProposalsQuerySchema,
+      params: ListProposalsParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
@@ -97,7 +113,8 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: OrderIdParamsSchema,
+      query: GetMyProposalQuerySchema,
+      params: GetMyProposalParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
@@ -126,7 +143,8 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: OrderProposalParamsSchema,
+      query: GetProposalByIdQuerySchema,
+      params: GetProposalByIdParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
@@ -156,12 +174,13 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: OrderProposalParamsSchema,
+      query: GetNegotiationsQuerySchema,
+      params: GetNegotiationsParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Negotiation history retrieved',
-        content: { 'application/json': { schema: NegotiationListResponseSchema } },
+        content: { 'application/json': { schema: GetNegotiationsResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -184,13 +203,14 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: OrderProposalParamsSchema,
-      body: { content: { 'application/json': { schema: CreateNegotiationSchema } } },
+      query: CreateNegotiationQuerySchema,
+      params: CreateNegotiationParamsSchema,
+      body: { content: { 'application/json': { schema: CreateNegotiationRequestSchema } } },
     },
     responses: createResponseDoc({
       createdSuccessfullyResponse: {
         description: 'Negotiation created',
-        content: { 'application/json': { schema: NegotiationResponseSchema } },
+        content: { 'application/json': { schema: CreateNegotiationResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -215,7 +235,8 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: OrderProposalParamsSchema,
+      query: AcceptNegotiationQuerySchema,
+      params: AcceptNegotiationParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
@@ -245,12 +266,13 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: OrderProposalParamsSchema,
+      query: RejectNegotiationQuerySchema,
+      params: RejectNegotiationParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Negotiation rejected',
-        content: { 'application/json': { schema: NegotiationResponseSchema } },
+        content: { 'application/json': { schema: RejectNegotiationResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,
@@ -274,12 +296,13 @@ export default function registerProposalsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: OrderProposalParamsSchema,
+      query: CancelNegotiationQuerySchema,
+      params: CancelNegotiationParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Negotiation cancelled',
-        content: { 'application/json': { schema: NegotiationResponseSchema } },
+        content: { 'application/json': { schema: CancelNegotiationResponseSchema } },
       },
       badRequestResponse: true,
       unauthorizedResponse: true,

@@ -1,19 +1,44 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import {
-  RegisterClientSchema,
-  RegisterWorkerSchema,
-  RequestOTPSchema,
-  VerifyOTPSchema,
+  RegisterClientRequestSchema,
+  RegisterClientQuerySchema,
+  RegisterClientParamsSchema,
+  RegisterWorkerRequestSchema,
+  RegisterWorkerQuerySchema,
+  RegisterWorkerParamsSchema,
+  RequestOTPRequestSchema,
+  RequestOTPQuerySchema,
+  RequestOTPParamsSchema,
+  VerifyOTPRequestSchema,
+  VerifyOTPQuerySchema,
+  VerifyOTPParamsSchema,
+  LoginRequestSchema,
+  LoginQuerySchema,
+  LoginParamsSchema,
+  LogoutRequestSchema,
+  LogoutQuerySchema,
+  LogoutParamsSchema,
+  GenerateAccessTokenRequestSchema,
+  GenerateAccessTokenQuerySchema,
+  GenerateAccessTokenParamsSchema,
+  ReviewStatusRequestSchema,
+  ReviewStatusQuerySchema,
+  ReviewStatusParamsSchema,
+  UpdateFcmTokenRequestSchema,
+  UpdateFcmTokenQuerySchema,
+  UpdateFcmTokenParamsSchema,
 } from '../../../schemas/requests/auth.request.js';
 import {
   RequestOTPResponseSchema,
   VerifyOTPResponseSchema,
-  RegisterResponseSchema,
+  RegisterClientResponseSchema,
+  RegisterWorkerResponseSchema,
   LoginResponseSchema,
-  AccessTokenResponseSchema,
+  GenerateAccessTokenResponseSchema,
   ReviewStatusResponseSchema,
+  LogoutResponseSchema,
+  UpdateFcmTokenResponseSchema,
 } from '../../../schemas/responses/auth.response.js';
-import { EmptySuccessResponseSchema } from '../../../schemas/responses.js';
 import { z } from '../../../libs/zod.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
@@ -31,8 +56,10 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
       'Sends a one-time password to the provided Egyptian phone number via SMS or WhatsApp.',
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
+      query: RequestOTPQuerySchema,
+      params: RequestOTPParamsSchema,
       body: {
-        content: { 'application/json': { schema: RequestOTPSchema } },
+        content: { 'application/json': { schema: RequestOTPRequestSchema } },
       },
     },
     responses: createResponseDoc({
@@ -60,8 +87,10 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
       'Verifies the OTP and returns either a login token (existing user) or a register token (new user).',
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
+      query: VerifyOTPQuerySchema,
+      params: VerifyOTPParamsSchema,
       body: {
-        content: { 'application/json': { schema: VerifyOTPSchema } },
+        content: { 'application/json': { schema: VerifyOTPRequestSchema } },
       },
     },
     responses: createResponseDoc({
@@ -90,10 +119,12 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
+      query: RegisterClientQuerySchema,
+      params: RegisterClientParamsSchema,
       body: {
         content: {
           'multipart/form-data': {
-            schema: RegisterClientSchema.extend({
+            schema: RegisterClientRequestSchema.extend({
               personal_image: z
                 .any()
                 .openapi({
@@ -110,7 +141,7 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Client registered successfully',
-        content: { 'application/json': { schema: RegisterResponseSchema } },
+        content: { 'application/json': { schema: RegisterClientResponseSchema } },
       },
       badRequestResponse: true,
       validationErrorResponse: true,
@@ -133,10 +164,12 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
+      query: RegisterWorkerQuerySchema,
+      params: RegisterWorkerParamsSchema,
       body: {
         content: {
           'multipart/form-data': {
-            schema: RegisterWorkerSchema.extend({
+            schema: RegisterWorkerRequestSchema.extend({
               personal_image: z.any().openapi({
                 type: 'string',
                 format: 'binary',
@@ -160,7 +193,7 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker registered successfully',
-        content: { 'application/json': { schema: RegisterResponseSchema } },
+        content: { 'application/json': { schema: RegisterWorkerResponseSchema } },
       },
       badRequestResponse: true,
       validationErrorResponse: true,
@@ -182,6 +215,13 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
       'Authenticates an existing user using a login token (from OTP verify) and creates a session. Set it as Bearer <token> in the Authorization header.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      query: LoginQuerySchema,
+      params: LoginParamsSchema,
+      body: {
+        content: { 'application/json': { schema: LoginRequestSchema } },
+      },
+    },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Login successful',
@@ -206,10 +246,17 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     description: "Revokes the user's current session. Requires a valid access token.",
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      query: LogoutQuerySchema,
+      params: LogoutParamsSchema,
+      body: {
+        content: { 'application/json': { schema: LogoutRequestSchema } },
+      },
+    },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Logged out successfully',
-        content: { 'application/json': { schema: EmptySuccessResponseSchema } },
+        content: { 'application/json': { schema: LogoutResponseSchema } },
       },
       unauthorizedResponse: true,
       internalServerError: true,
@@ -229,10 +276,17 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
       'Generates a new access token using a valid refresh token in the Authorization header.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      query: GenerateAccessTokenQuerySchema,
+      params: GenerateAccessTokenParamsSchema,
+      body: {
+        content: { 'application/json': { schema: GenerateAccessTokenRequestSchema } },
+      },
+    },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Access token generated',
-        content: { 'application/json': { schema: AccessTokenResponseSchema } },
+        content: { 'application/json': { schema: GenerateAccessTokenResponseSchema } },
       },
       unauthorizedResponse: true,
       internalServerError: true,
@@ -252,6 +306,13 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
       'Returns whether the authenticated user (worker) has been approved by an admin. Requires access token.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      query: ReviewStatusQuerySchema,
+      params: ReviewStatusParamsSchema,
+      body: {
+        content: { 'application/json': { schema: ReviewStatusRequestSchema } },
+      },
+    },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Approval status returned',
@@ -276,15 +337,12 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
+      query: UpdateFcmTokenQuerySchema,
+      params: UpdateFcmTokenParamsSchema,
       body: {
         content: {
           'application/json': {
-            schema: z.object({
-              fcmToken: z.string().min(1).openapi({
-                description: 'Firebase Cloud Messaging token for push notifications',
-                example: 'eA1B2cD3eF4gH5iJ6kL7mN8oP9qR0sT1uV2wX3yZ4',
-              }),
-            }),
+            schema: UpdateFcmTokenRequestSchema,
           },
         },
       },
@@ -292,7 +350,7 @@ export default function registerAuthDocs(registry: OpenAPIRegistry) {
     responses: createResponseDoc({
       successfulResponse: {
         description: 'FCM token updated successfully',
-        content: { 'application/json': { schema: EmptySuccessResponseSchema } },
+        content: { 'application/json': { schema: UpdateFcmTokenResponseSchema } },
       },
       badRequestResponse: true,
       validationErrorResponse: true,

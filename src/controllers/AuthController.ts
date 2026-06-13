@@ -4,11 +4,33 @@
  */
 
 import {
-  RegisterClientDTO,
-  RequestOTPDTO,
-  VerifyOTPDTO,
-  RegisterWorkerDTO,
-  FcmTokenDTO,
+  RegisterClientRequestDTO,
+  RequestOTPRequestDTO,
+  VerifyOTPRequestDTO,
+  RegisterWorkerRequestDTO,
+  UpdateFcmTokenRequestDTO,
+  RequestOTPQueryDTO,
+  RequestOTPParamsDTO,
+  VerifyOTPQueryDTO,
+  VerifyOTPParamsDTO,
+  RegisterClientQueryDTO,
+  RegisterClientParamsDTO,
+  RegisterWorkerQueryDTO,
+  RegisterWorkerParamsDTO,
+  LoginRequestDTO,
+  LoginQueryDTO,
+  LoginParamsDTO,
+  LogoutRequestDTO,
+  LogoutQueryDTO,
+  LogoutParamsDTO,
+  GenerateAccessTokenRequestDTO,
+  GenerateAccessTokenQueryDTO,
+  GenerateAccessTokenParamsDTO,
+  ReviewStatusRequestDTO,
+  ReviewStatusQueryDTO,
+  ReviewStatusParamsDTO,
+  UpdateFcmTokenQueryDTO,
+  UpdateFcmTokenParamsDTO,
 } from '../schemas/requests/auth.request.js';
 import {
   RequestOTPResponseDTO,
@@ -16,8 +38,10 @@ import {
   RegisterClientResponseDTO,
   RegisterWorkerResponseDTO,
   LoginResponseDTO,
-  AccessTokenResponseDTO,
+  LogoutResponseDTO,
+  GenerateAccessTokenResponseDTO,
   ReviewStatusResponseDTO,
+  UpdateFcmTokenResponseDTO,
 } from '../schemas/responses/auth.response.js';
 import AppError from '../errors/AppError.js';
 import { authService, rateLimitService, presenceService, firebaseProvider } from '../state.js';
@@ -28,7 +52,7 @@ import prisma from '../libs/database.js';
  * Request OTP for phone number verification
  * @description Initiates OTP request by generating and sending OTP to the provided phone number
  */
-export const requestOTP = asyncHandler<RequestOTPResponseDTO, RequestOTPDTO>(async (req, res) => {
+export const requestOTP = asyncHandler<RequestOTPResponseDTO, RequestOTPRequestDTO, RequestOTPQueryDTO, RequestOTPParamsDTO>(async (req, res) => {
   const { method, phoneNumber } = req.parsed!.body!;
   const deviceId = req.deviceId;
 
@@ -43,7 +67,7 @@ export const requestOTP = asyncHandler<RequestOTPResponseDTO, RequestOTPDTO>(asy
  * Verify OTP and return login or register token
  * @description Verifies the OTP and returns either a login or register token based on user existence
  */
-export const verifyOTP = asyncHandler<VerifyOTPResponseDTO, VerifyOTPDTO>(async (req, res) => {
+export const verifyOTP = asyncHandler<VerifyOTPResponseDTO, VerifyOTPRequestDTO, VerifyOTPQueryDTO, VerifyOTPParamsDTO>(async (req, res) => {
   const { phoneNumber, otp, method } = req.parsed!.body!;
   const deviceId = req.deviceId;
 
@@ -65,7 +89,7 @@ export const verifyOTP = asyncHandler<VerifyOTPResponseDTO, VerifyOTPDTO>(async 
  * Register a new client user
  * @description Registers a new client user with basic profile information
  */
-export const registerClient = asyncHandler<RegisterClientResponseDTO, RegisterClientDTO>(async (req, res) => {
+export const registerClient = asyncHandler<RegisterClientResponseDTO, RegisterClientRequestDTO, RegisterClientQueryDTO, RegisterClientParamsDTO>(async (req, res) => {
   const deviceId = req.deviceId;
   const { userData } = req.parsed!.body!;
   const { firstName, middleName, lastName, location } = userData;
@@ -114,7 +138,7 @@ export const registerClient = asyncHandler<RegisterClientResponseDTO, RegisterCl
  * Register a new worker user
  * @description Registers a new worker user with professional profile information
  */
-export const registerWorker = asyncHandler<RegisterWorkerResponseDTO, RegisterWorkerDTO>(async (req, res) => {
+export const registerWorker = asyncHandler<RegisterWorkerResponseDTO, RegisterWorkerRequestDTO, RegisterWorkerQueryDTO, RegisterWorkerParamsDTO>(async (req, res) => {
   const { userData, workerProfile } = req.parsed!.body!;
   const { firstName, middleName, lastName, location } = userData;
   const { experienceYears, isInTeam, acceptsUrgentJobs, specializationsTree, workGovernmentIds } =
@@ -179,7 +203,7 @@ export const registerWorker = asyncHandler<RegisterWorkerResponseDTO, RegisterWo
  * Login an existing user and create session
  * @description Authenticates user with login token and creates a new session
  */
-export const login = asyncHandler<LoginResponseDTO>(async (req, res) => {
+export const login = asyncHandler<LoginResponseDTO, LoginRequestDTO, LoginQueryDTO, LoginParamsDTO>(async (req, res) => {
   const deviceId = req.deviceId;
   const rawToken = req.headers['authorization']?.split(' ')[1];
   if (!rawToken) throw new AppError('Unauthorized, login token not found', 401);
@@ -210,7 +234,7 @@ export const login = asyncHandler<LoginResponseDTO>(async (req, res) => {
  * Logout user and revoke session
  * @description Revokes the user's session based on device fingerprint and cleans up presence
  */
-export const logout = asyncHandler(async (req, res) => {
+export const logout = asyncHandler<LogoutResponseDTO, LogoutRequestDTO, LogoutQueryDTO, LogoutParamsDTO>(async (req, res) => {
   const deviceId = req.deviceId;
   const userId = req.userState.userId;
 
@@ -263,14 +287,14 @@ export const logout = asyncHandler(async (req, res) => {
     await presenceService.handleUserOffline({ userId, reason: 'logout' });
   }
 
-  res.status(200).send({ status: 'success', message: 'Logged out successfully', data: null });
+  res.status(200).send({ status: 'success', message: 'Logged out successfully' });
 });
 
 /**
  * Generate new access token using refresh token
  * @description Validates refresh token and generates a new access token
  */
-export const generateAccessToken = asyncHandler<AccessTokenResponseDTO>(async (req, res) => {
+export const generateAccessToken = asyncHandler<GenerateAccessTokenResponseDTO, GenerateAccessTokenRequestDTO, GenerateAccessTokenQueryDTO, GenerateAccessTokenParamsDTO>(async (req, res) => {
   const deviceId = String(req.headers['x-device-fingerprint']);
   const { userId } = req.userState;
   const adminState = req.adminState;
@@ -290,7 +314,7 @@ export const generateAccessToken = asyncHandler<AccessTokenResponseDTO>(async (r
 /**
  * Reviews the status of a user (pending, approved, rejected)
  */
-export const reviewStatus = asyncHandler<ReviewStatusResponseDTO>(async (req, res) => {
+export const reviewStatus = asyncHandler<ReviewStatusResponseDTO, ReviewStatusRequestDTO, ReviewStatusQueryDTO, ReviewStatusParamsDTO>(async (req, res) => {
   if (req.userState.role === 'CLIENT') {
     res.status(200).send({ status: 'success', message: 'You are a client, you can whatever you want <3', data: { reason: 'You are a client', status: 'APPROVED' } });
     return;
@@ -314,7 +338,7 @@ export const reviewStatus = asyncHandler<ReviewStatusResponseDTO>(async (req, re
 /**
  * Update FCM token for the current session
  */
-export const updateFcmToken = asyncHandler<any, FcmTokenDTO>(async (req, res) => {
+export const updateFcmToken = asyncHandler<UpdateFcmTokenResponseDTO, UpdateFcmTokenRequestDTO, UpdateFcmTokenQueryDTO, UpdateFcmTokenParamsDTO>(async (req, res) => {
   const userId = req.userState.userId;
   const adminState = req.adminState;
   const deviceId = req.deviceId;
@@ -384,5 +408,5 @@ export const updateFcmToken = asyncHandler<any, FcmTokenDTO>(async (req, res) =>
     })();
   }
 
-  res.status(200).send({ status: 'success', message: 'FCM token updated successfully', data: { success: true } });
+  res.status(200).send({ status: 'success', message: 'FCM token updated successfully' });
 });

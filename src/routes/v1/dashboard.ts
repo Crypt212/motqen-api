@@ -10,8 +10,8 @@ import {
   deleteWorkerGovernments,
   getWorkerSpecializations,
   getWorkerWorkingHours,
-  addDaysWorkerWorkingHours,
-  removeWorkerWorkingHours,
+  addWorkerDaysWorkingHours,
+  removeWorkerWorkingDays,
   addWorkerSpecializations,
   deleteWorkerSpecializations,
   getClientProfile,
@@ -25,35 +25,97 @@ import {
   addPortfolioImages,
   deletePortfolioImage,
   getWorkerOccupiedTimeSlots,
-  getWorkerOrdersCount,
+  getWorkerOrdersStatistics,
 } from '../../controllers/DashboardController.js';
-import { authorizeClient, unAuthorizeClient, authorizeApprovedWorker, authorizeWorker, unAuthorizeWorker } from '../../middlewares/accessMiddleware.js';
+import { authorizeClient,
+unAuthorizeClient,
+authorizeApprovedWorker,
+authorizeWorker,
+unAuthorizeWorker } from '../../middlewares/accessMiddleware.js';
 import upload from '../../configs/multer.js';
 
 // Import validators
 import {
-  UpdateUserSchema,
+  GetUserRequestSchema,
+  GetUserQuerySchema,
+  GetUserParamsSchema,
+  UpdateUserRequestSchema,
+  UpdateUserQuerySchema,
+  UpdateUserParamsSchema,
+  GetVerificationRequestSchema,
+  GetVerificationQuerySchema,
+  GetVerificationParamsSchema,
+  ResubmitVerificationRequestSchema,
+  ResubmitVerificationQuerySchema,
+  ResubmitVerificationParamsSchema,
   DeleteWorkerGovernmentsQuerySchema,
-  AddWorkerGovernmentsSchema,
-  DeleteWorkerGovernmentsSchema,
-  AddWorkerSpecializationsSchema,
-  DeleteWorkerSpecializationsSchema,
+  AddWorkerGovernmentsRequestSchema,
+  AddWorkerGovernmentsQuerySchema,
+  AddWorkerGovernmentsParamsSchema,
+  DeleteWorkerGovernmentsRequestSchema,
+  DeleteWorkerGovernmentsParamsSchema,
+  AddWorkerSpecializationsRequestSchema,
+  AddWorkerSpecializationsQuerySchema,
+  AddWorkerSpecializationsParamsSchema,
+  DeleteWorkerSpecializationsRequestSchema,
   DeleteWorkerSpecializationsQuerySchema,
-  CreateClientProfileSchema,
+  DeleteWorkerSpecializationsParamsSchema,
+  GetClientProfileRequestSchema,
+  GetClientProfileQuerySchema,
+  GetClientProfileParamsSchema,
+  CreateClientProfileRequestSchema,
+  CreateClientProfileQuerySchema,
+  CreateClientProfileParamsSchema,
+  CreateWorkerProfileQuerySchema,
+  CreateWorkerProfileParamsSchema,
+  CreatePortfolioRequestSchema,
+  CreatePortfolioQuerySchema,
+  CreatePortfolioParamsSchema,
+  GetPortfolioRequestSchema,
+  GetPortfolioQuerySchema,
+  GetPortfolioParamsSchema,
+  UpdatePortfolioRequestSchema,
+  UpdatePortfolioQuerySchema,
+  UpdatePortfolioParamsSchema,
+  AddPortfolioImagesRequestSchema,
+  AddPortfolioImagesQuerySchema,
+  AddPortfolioImagesParamsSchema,
+  DeletePortfolioImageRequestSchema,
+  DeletePortfolioImageQuerySchema,
+  DeletePortfolioImageParamsSchema,
+  GetWorkerOccupiedTimeSlotsRequestSchema,
+  GetWorkerOccupiedTimeSlotsQuerySchema,
+  GetWorkerOccupiedTimeSlotsParamsSchema,
+  GetWorkerProfileRequestSchema,
+  GetWorkerProfileQuerySchema,
+  GetWorkerProfileParamsSchema,
+  GetWorkerOrdersStatisticsRequestSchema,
+  GetWorkerOrdersStatisticsQuerySchema,
+  GetWorkerOrdersStatisticsParamsSchema,
   // UpdateClientProfileSchema,
-  WorkerGovernmentQuerySchema,
-  WorkerSpecializationQuerySchema,
-  AddDaysWorkingHoursSchema,
-  RemoveDaysWorkingHoursSchema,
+  GetWorkerGovernmentsQuerySchema,
+  GetWorkerGovernmentsRequestSchema,
+  GetWorkerGovernmentsParamsSchema,
+  GetWorkerSpecializationsTreeRequestSchema,
+  GetWorkerSpecializationsTreeQuerySchema,
+  GetWorkerSpecializationsTreeParamsSchema,
+  GetWorkerSpecializationsRequestSchema,
+  GetWorkerSpecializationsQuerySchema,
+  GetWorkerSpecializationsParamsSchema,
+  AddWorkerDaysWorkingHoursRequestSchema,
+  AddWorkerDaysWorkingHoursQuerySchema,
+  AddWorkerDaysWorkingHoursParamsSchema,
+  RemoveWorkerWorkingDaysRequestSchema,
+  RemoveWorkerWorkingDaysQuerySchema,
+  RemoveWorkerWorkingDaysParamsSchema,
+  GetWorkerWorkingHoursRequestSchema,
+  GetWorkerWorkingHoursQuerySchema,
+  GetWorkerWorkingHoursParamsSchema,
+  CreateWorkerProfileRequestSchema,
+  UpdateWorkerProfileRequestSchema,
+  UpdateWorkerProfileQuerySchema,
+  UpdateWorkerProfileParamsSchema,
 } from '../../schemas/requests/dashboard.request.js';
-import {
-  CreatePortfolioSchema,
-  UpdatePortfolioSchema,
-  PortfolioImageIdParamsSchema,
-  OccupiedTimeSlotsQuerySchema,
-  CreateWorkerProfileSchema,
-  UpdateWorkerProfileSchema,
-} from '../../schemas/requests/worker-profile.request.js';
 import { isActive } from '../../middlewares/authMiddleware.js';
 import { createRoute } from '../../types/asyncHandler.js';
 
@@ -64,14 +126,22 @@ const usersRouter = Router();
 
 usersRouter.use('/locations', locationRouter);
 
-usersRouter.get('/', isActive, createRoute({ schemas: {}, handler: getUser }));
+usersRouter.get('/', isActive, createRoute({ schemas: {
+    body: GetUserRequestSchema,
+    query: GetUserQuerySchema,
+    params: GetUserParamsSchema
+}, handler: getUser }));
 
 usersRouter.put(
   '/',
   upload.single('personal_image'),
   isActive,
   createRoute({
-    schemas: { body: UpdateUserSchema },
+    schemas: {
+        body: UpdateUserRequestSchema,
+        query: UpdateUserQuerySchema,
+        params: UpdateUserParamsSchema
+    },
     handler: updateUser,
   })
 );
@@ -87,12 +157,20 @@ usersRouter.post(
   ]),
   parseFormDataJson('workerProfile'),
   createRoute({
-    schemas: { body: CreateWorkerProfileSchema },
+    schemas: {
+        body: CreateWorkerProfileRequestSchema,
+        query: CreateWorkerProfileQuerySchema,
+        params: CreateWorkerProfileParamsSchema
+    },
     handler: createWorkerProfile,
   })
 );
 
-usersRouter.get('/worker-profile/verification', isActive, authorizeWorker, createRoute({ schemas: {}, handler: getVerification }));
+usersRouter.get('/worker-profile/verification', isActive, authorizeWorker, createRoute({ schemas: {
+    body: GetVerificationRequestSchema,
+    query: GetVerificationQuerySchema,
+    params: GetVerificationParamsSchema
+}, handler: getVerification }));
 usersRouter.put(
   '/worker-profile/verification',
   isActive,
@@ -101,7 +179,11 @@ usersRouter.put(
     { name: 'id_image', maxCount: 1 },
     { name: 'personal_with_id_image', maxCount: 1 },
   ]),
-  createRoute({ schemas: {}, handler: resubmitVerification })
+  createRoute({ schemas: {
+      body: ResubmitVerificationRequestSchema,
+      query: ResubmitVerificationQuerySchema,
+      params: ResubmitVerificationParamsSchema
+}, handler: resubmitVerification })
 );
 
 usersRouter.post(
@@ -109,19 +191,31 @@ usersRouter.post(
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { body: CreatePortfolioSchema },
+    schemas: {
+        body: CreatePortfolioRequestSchema,
+        query: CreatePortfolioQuerySchema,
+        params: CreatePortfolioParamsSchema
+    },
     handler: createPortfolio,
   })
 );
 
-usersRouter.get('/worker-profile/portfolio', isActive, authorizeApprovedWorker, createRoute({ schemas: {}, handler: getPortfolio }));
+usersRouter.get('/worker-profile/portfolio', isActive, authorizeApprovedWorker, createRoute({ schemas: {
+    body: GetPortfolioRequestSchema,
+    query: GetPortfolioQuerySchema,
+    params: GetPortfolioParamsSchema
+}, handler: getPortfolio }));
 
 usersRouter.put(
   '/worker-profile/portfolio',
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { body: UpdatePortfolioSchema },
+    schemas: {
+        body: UpdatePortfolioRequestSchema,
+        query: UpdatePortfolioQuerySchema,
+        params: UpdatePortfolioParamsSchema
+    },
     handler: updatePortfolio,
   })
 );
@@ -131,7 +225,11 @@ usersRouter.post(
   isActive,
   authorizeApprovedWorker,
   upload.array('images', 10),
-  createRoute({ schemas: {}, handler: addPortfolioImages })
+  createRoute({ schemas: {
+      body: AddPortfolioImagesRequestSchema,
+      query: AddPortfolioImagesQuerySchema,
+      params: AddPortfolioImagesParamsSchema
+}, handler: addPortfolioImages })
 );
 
 usersRouter.delete(
@@ -139,7 +237,11 @@ usersRouter.delete(
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { params: PortfolioImageIdParamsSchema },
+    schemas: {
+        body: DeletePortfolioImageRequestSchema,
+        query: DeletePortfolioImageQuerySchema,
+        params: DeletePortfolioImageParamsSchema
+    },
     handler: deletePortfolioImage,
   })
 );
@@ -149,21 +251,41 @@ usersRouter.get(
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { query: OccupiedTimeSlotsQuerySchema },
+    schemas: {
+        body: GetWorkerOccupiedTimeSlotsRequestSchema,
+        query: GetWorkerOccupiedTimeSlotsQuerySchema,
+        params: GetWorkerOccupiedTimeSlotsParamsSchema
+    },
     handler: getWorkerOccupiedTimeSlots,
   })
 );
 
-usersRouter.get('/worker-profile', isActive, authorizeApprovedWorker, createRoute({ schemas: {}, handler: getWorkerProfile }));
-usersRouter.get('/worker-profile/orders-count', isActive, authorizeApprovedWorker, createRoute({ schemas: {}, handler: getWorkerOrdersCount }));
-usersRouter.get('/worker-profile/working-hours', isActive, authorizeApprovedWorker, createRoute({ schemas: {}, handler: getWorkerWorkingHours }));
+usersRouter.get('/worker-profile', isActive, authorizeApprovedWorker, createRoute({ schemas: {
+    body: GetWorkerProfileRequestSchema,
+    query: GetWorkerProfileQuerySchema,
+    params: GetWorkerProfileParamsSchema
+}, handler: getWorkerProfile }));
+usersRouter.get('/worker-profile/orders-count', isActive, authorizeApprovedWorker, createRoute({ schemas: {
+    body: GetWorkerOrdersStatisticsRequestSchema,
+    query: GetWorkerOrdersStatisticsQuerySchema,
+    params: GetWorkerOrdersStatisticsParamsSchema
+}, handler: getWorkerOrdersStatistics }));
+usersRouter.get('/worker-profile/working-hours', isActive, authorizeApprovedWorker, createRoute({ schemas: {
+    body: GetWorkerWorkingHoursRequestSchema,
+    query: GetWorkerWorkingHoursQuerySchema,
+    params: GetWorkerWorkingHoursParamsSchema
+}, handler: getWorkerWorkingHours }));
 usersRouter.post(
   '/worker-profile/working-hours',
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { body: AddDaysWorkingHoursSchema },
-    handler: addDaysWorkerWorkingHours,
+    schemas: {
+        body: AddWorkerDaysWorkingHoursRequestSchema,
+        query: AddWorkerDaysWorkingHoursQuerySchema,
+        params: AddWorkerDaysWorkingHoursParamsSchema
+    },
+    handler: addWorkerDaysWorkingHours,
   })
 );
 usersRouter.delete(
@@ -171,8 +293,12 @@ usersRouter.delete(
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { body: RemoveDaysWorkingHoursSchema },
-    handler: removeWorkerWorkingHours,
+    schemas: {
+        body: RemoveWorkerWorkingDaysRequestSchema,
+        query: RemoveWorkerWorkingDaysQuerySchema,
+        params: RemoveWorkerWorkingDaysParamsSchema
+    },
+    handler: removeWorkerWorkingDays,
   })
 );
 
@@ -181,7 +307,11 @@ usersRouter.put(
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { body: UpdateWorkerProfileSchema },
+    schemas: {
+        body: UpdateWorkerProfileRequestSchema,
+        query: UpdateWorkerProfileQuerySchema,
+        params: UpdateWorkerProfileParamsSchema
+    },
     handler: updateWorkerProfile,
   })
 );
@@ -191,7 +321,11 @@ usersRouter.get(
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { query: WorkerGovernmentQuerySchema },
+    schemas: {
+        body: GetWorkerGovernmentsRequestSchema,
+        query: GetWorkerGovernmentsQuerySchema,
+        params: GetWorkerGovernmentsParamsSchema
+    },
     handler: getWorkerGovernments,
   })
 );
@@ -201,7 +335,11 @@ usersRouter.post(
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { body: AddWorkerGovernmentsSchema },
+    schemas: {
+        body: AddWorkerGovernmentsRequestSchema,
+        query: AddWorkerGovernmentsQuerySchema,
+        params: AddWorkerGovernmentsParamsSchema
+    },
     handler: addWorkerGovernments,
   })
 );
@@ -211,7 +349,11 @@ usersRouter.delete(
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { query: DeleteWorkerGovernmentsQuerySchema, body: DeleteWorkerGovernmentsSchema },
+    schemas: {
+        body: DeleteWorkerGovernmentsRequestSchema,
+        query: DeleteWorkerGovernmentsQuerySchema,
+        params: DeleteWorkerGovernmentsParamsSchema
+    },
     handler: deleteWorkerGovernments,
   })
 );
@@ -221,7 +363,11 @@ usersRouter.get(
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { query: WorkerSpecializationQuerySchema },
+    schemas: {
+        body: GetWorkerSpecializationsTreeRequestSchema,
+        query: GetWorkerSpecializationsTreeQuerySchema,
+        params: GetWorkerSpecializationsTreeParamsSchema
+    },
     handler: getWorkerSpecializationsTree,
   })
 );
@@ -231,7 +377,11 @@ usersRouter.get(
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { query: WorkerSpecializationQuerySchema },
+    schemas: {
+        body: GetWorkerSpecializationsRequestSchema,
+        query: GetWorkerSpecializationsQuerySchema,
+        params: GetWorkerSpecializationsParamsSchema
+    },
     handler: getWorkerSpecializations,
   })
 );
@@ -241,7 +391,11 @@ usersRouter.post(
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { body: AddWorkerSpecializationsSchema },
+    schemas: {
+        body: AddWorkerSpecializationsRequestSchema,
+        query: AddWorkerSpecializationsQuerySchema,
+        params: AddWorkerSpecializationsParamsSchema
+    },
     handler: addWorkerSpecializations,
   })
 );
@@ -251,7 +405,11 @@ usersRouter.delete(
   isActive,
   authorizeApprovedWorker,
   createRoute({
-    schemas: { query: DeleteWorkerSpecializationsQuerySchema, body: DeleteWorkerSpecializationsSchema },
+    schemas: {
+        body: DeleteWorkerSpecializationsRequestSchema,
+        query: DeleteWorkerSpecializationsQuerySchema,
+        params: DeleteWorkerSpecializationsParamsSchema
+    },
     handler: deleteWorkerSpecializations,
   })
 );
@@ -262,13 +420,21 @@ usersRouter.post(
   unAuthorizeClient,
   parseFormDataJson('clientProfile'),
   createRoute({
-    schemas: { body: CreateClientProfileSchema },
+    schemas: {
+        body: CreateClientProfileRequestSchema,
+        query: CreateClientProfileQuerySchema,
+        params: CreateClientProfileParamsSchema
+    },
     handler: createClientProfile,
   })
 );
 
 
-usersRouter.get('/client-profile', isActive, authorizeClient, createRoute({ schemas: {}, handler: getClientProfile }));
+usersRouter.get('/client-profile', isActive, authorizeClient, createRoute({ schemas: {
+    body: GetClientProfileRequestSchema,
+    query: GetClientProfileQuerySchema,
+    params: GetClientProfileParamsSchema
+}, handler: getClientProfile }));
 
 // usersRouter.put(
 //   '/client-profile',

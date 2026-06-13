@@ -181,4 +181,15 @@ export default class LocationService extends Service {
       return location;
     });
   }
+
+  async deleteLocation(params: { userId: string; locationId: string }): Promise<void> {
+    return tryCatch(async () => {
+      const { userId, locationId } = params;
+      const location = await this.locationRepository.find({ filter: { id: locationId } });
+      if (!location) throw new AppError('Location not found', 404);
+      if (location.userId !== userId) throw new AppError('Forbidden', 403);
+      
+      await this.locationRepository.delete({ filter: { id: locationId, userId } });
+    });
+  }
 }

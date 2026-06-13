@@ -2,44 +2,45 @@ import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
 
-import { GovernmentObjectSchema } from './government.response.js';
 import {
-  OccupiedTimeSlotObjectSchema,
+  OccupiedTimeSlotViewSchema,
   PaginationResponseSchema,
-  PortfolioObjectSchema,
-  ProjectImageSchema,
-  UserObjectSchema,
-  LoggedInUserObjectSchema,
   UUIDSchema,
-  SpecializationObjectSchema,
-  SpecializationWithSubSpecializationsObjectSchema,
-  ClientProfileObjectSchema,
-  WorkerProfileObjectSchema,
 } from '../common.js';
-import { DaysWorkingHoursSchema } from '../requests/worker-profile.request.js';
-import { LocationObjectSchema } from './location.response.js';
+import { DaysWorkingHoursSchema } from '../entities/workingHours.js';
+import { UserWithWorkerAndClientProfileIdsViewSchema, UserViewSchema } from '../entities/user.js';
+import { ClientProfileViewSchema } from '../entities/clientProfile.js';
+import { WorkerVerificationViewSchema, WorkerProfileViewSchema, WorkerPortfolioWithImagesViewSchema, WorkerPortfolioProjectImageViewSchema } from '../entities/workerProfile.js';
+import { SpecializationViewSchema, SpecializationWithSubSpecializationsViewSchema } from '../entities/specialization.js';
+import { LocationViewSchema } from '../entities/location.js';
+import { GovernmentViewSchema } from '../entities/government.js';
 
-export const DashboardUserResponseSchema = SuccessResponseSchema(z.object({
-  user: LoggedInUserObjectSchema,
+export const GetUserResponseSchema = SuccessResponseSchema(z.object({
+  user: UserWithWorkerAndClientProfileIdsViewSchema,
 }),);
-export type DashboardUserResponseDTO = z.infer<typeof DashboardUserResponseSchema>;
+export type GetUserResponseDTO = z.infer<typeof GetUserResponseSchema>;
 
-export const DashboardUpdateUserResponseSchema = SuccessResponseSchema(z.object({
-  user: UserObjectSchema,
+export const UpdateUserResponseSchema = SuccessResponseSchema(z.object({
+  user: UserViewSchema,
 }),);
-export type DashboardUpdateUserResponseDTO = z.infer<typeof DashboardUpdateUserResponseSchema>;
+export type UpdateUserResponseDTO = z.infer<typeof UpdateUserResponseSchema>;
 
-export const DashboardClientProfileResponseSchema = SuccessResponseSchema(z.object({
-  clientProfile: ClientProfileObjectSchema,
+export const GetClientProfileResponseSchema = SuccessResponseSchema(z.object({
+  clientProfile: ClientProfileViewSchema,
 }),);
-export type DashboardClientProfileResponseDTO = z.infer<typeof DashboardClientProfileResponseSchema>;
+export type GetClientProfileResponseDTO = z.infer<typeof GetClientProfileResponseSchema>;
 
-export const DashboardWorkerProfileResponseSchema = SuccessResponseSchema(z.object({
-  workerProfile: WorkerProfileObjectSchema,
+export const GetWorkerProfileResponseSchema = SuccessResponseSchema(z.object({
+  workerProfile: WorkerProfileViewSchema,
 }),);
-export type DashboardWorkerProfileResponseDTO = z.infer<typeof DashboardWorkerProfileResponseSchema>;
+export type GetWorkerProfileResponseDTO = z.infer<typeof GetWorkerProfileResponseSchema>;
 
-export const DashboardWorkerOrdersStatisticsResponseSchema = SuccessResponseSchema(z.object({
+export const UpdateWorkerProfileResponseSchema = SuccessResponseSchema(z.object({
+  workerProfile: WorkerProfileViewSchema,
+}),);
+export type UpdateWorkerProfileResponseDTO = z.infer<typeof UpdateWorkerProfileResponseSchema>;
+
+export const GetWorkerOrdersStatisticsResponseSchema = SuccessResponseSchema(z.object({
   ordersCounts: z.object({
     pending: z.number(),
     canceled: z.number(),
@@ -48,94 +49,132 @@ export const DashboardWorkerOrdersStatisticsResponseSchema = SuccessResponseSche
   })
 
 }),);
-export type DashboardWorkerOrdersStatisticsResponseDTO = z.infer<typeof DashboardWorkerOrdersStatisticsResponseSchema>;
+export type GetWorkerOrdersStatisticsResponseDTO = z.infer<typeof GetWorkerOrdersStatisticsResponseSchema>;
 
-export const DashboardClientProfileWithTokensResponseSchema = SuccessResponseSchema(z.object({
-  clientProfile: ClientProfileObjectSchema,
+export const CreateClientProfileResponseSchema = SuccessResponseSchema(z.object({
+  clientProfile: ClientProfileViewSchema,
   accessToken: z.string(),
   refreshToken: z.string(),
 }),);
-export type DashboardClientProfileWithTokensResponseDTO = z.infer<typeof DashboardClientProfileWithTokensResponseSchema>;
+export type CreateClientProfileResponseDTO = z.infer<typeof CreateClientProfileResponseSchema>;
 
-export const DashboardWorkerProfileWithTokensResponseSchema = SuccessResponseSchema(z.object({
-  workerProfile: WorkerProfileObjectSchema,
+export const CreateWorkerProfileResponseSchema = SuccessResponseSchema(z.object({
+  workerProfile: WorkerProfileViewSchema,
   accessToken: z.string(),
   refreshToken: z.string(),
 }),);
-export type DashboardWorkerProfileWithTokensResponseDTO = z.infer<typeof DashboardWorkerProfileWithTokensResponseSchema>;
+export type CreateWorkerProfileResponseDTO = z.infer<typeof CreateWorkerProfileResponseSchema>;
 
-export const DashboardLocationsResponseSchema = SuccessResponseSchema(z.object({
-  locations: z.array(LocationObjectSchema),
+export const GetUserLocationsResponseSchema = SuccessResponseSchema(z.object({
+  locations: z.array(LocationViewSchema),
 }),);
-export type DashboardLocationsResponseDTO = z.infer<typeof DashboardLocationsResponseSchema>;
+export type GetUserLocationsResponseDTO = z.infer<typeof GetUserLocationsResponseSchema>;
 
-export const DashboardLocationResponseSchema = SuccessResponseSchema(z.object({
-  location: LocationObjectSchema,
+export const AddUserLocationResponseSchema = SuccessResponseSchema(z.object({
+  location: LocationViewSchema,
 }),);
-export type DashboardLocationResponseDTO = z.infer<typeof DashboardLocationResponseSchema>;
+export type AddUserLocationResponseDTO = z.infer<typeof AddUserLocationResponseSchema>;
 
-export const UserResponseSchema = SuccessResponseSchema(
-  z.object({
-    user: UserObjectSchema
-  })
-);
-export type UserResponseDTO = z.infer<typeof UserResponseSchema>;
+export const UpdateUserLocationResponseSchema = SuccessResponseSchema(z.object({
+  location: LocationViewSchema,
+}),);
+export type UpdateUserLocationResponseDTO = z.infer<typeof UpdateUserLocationResponseSchema>;
 
-export const WorkerProfileResponseSchema = SuccessResponseSchema(
-  z.object({
-    workerProfile: WorkerProfileObjectSchema,
-  })
-);
-export type WorkerProfileResponseDTO = z.infer<typeof WorkerProfileResponseSchema>;
+export const GetVerificationResponseSchema = SuccessResponseSchema(z.object({
+  verification: WorkerVerificationViewSchema
+}));
+export type GetVerificationResponseDTO = z.infer<typeof GetVerificationResponseSchema>;
 
-export const ClientProfileResponseSchema = SuccessResponseSchema(
-  z.object({
-    clientProfile: ClientProfileObjectSchema
-  })
-);
-export type ClientProfileResponseDTO = z.infer<typeof ClientProfileResponseSchema>;
+export const ResubmitVerificationResponseSchema = SuccessResponseSchema(z.object({
+  verification: WorkerVerificationViewSchema
+}));
+export type ResubmitVerificationResponseDTO = z.infer<typeof ResubmitVerificationResponseSchema>;
 
-export const WorkGovernmentsResponseSchema = SuccessResponseSchema(
-  PaginationResponseSchema.extend({ governments: z.array(GovernmentObjectSchema) })
+export const GetWorkerGovernmentsResponseSchema = SuccessResponseSchema(
+  PaginationResponseSchema.extend({ governments: z.array(GovernmentViewSchema) })
 );
-export type WorkGovernmentsResponseDTO = z.infer<typeof WorkGovernmentsResponseSchema>;
+export type GetWorkerGovernmentsResponseDTO = z.infer<typeof GetWorkerGovernmentsResponseSchema>;
 
-export const SpecializationsWithSubSpecializationsResponseSchema = SuccessResponseSchema(
-  z.array(SpecializationWithSubSpecializationsObjectSchema)
+export const GetWorkerSpecializationsTreeResponseSchema = SuccessResponseSchema(
+  z.array(SpecializationWithSubSpecializationsViewSchema)
 );
-export type SpecializationsWithSubSpecializationsResponseDTO = z.infer<typeof SpecializationsWithSubSpecializationsResponseSchema>;
+export type GetWorkerSpecializationsTreeResponseDTO = z.infer<typeof GetWorkerSpecializationsTreeResponseSchema>;
+
+export const GetWorkerSpecializationsResponseSchema = SuccessResponseSchema(
+  PaginationResponseSchema.extend({ specializationIds: z.array(UUIDSchema) }),
+);
+export type GetWorkerSpecializationsResponseDTO = z.infer<typeof GetWorkerSpecializationsResponseSchema>;
 
 export const SpecializationsResponseSchema = SuccessResponseSchema(
-  PaginationResponseSchema.extend({ specializations: z.array(SpecializationObjectSchema) }),
+  PaginationResponseSchema.extend({ specializations: z.array(SpecializationViewSchema) }),
 );
 export type SpecializationsResponseDTO = z.infer<typeof SpecializationsResponseSchema>;
 
-export const SpecializationIdsResponseSchema = SuccessResponseSchema(
-  PaginationResponseSchema.extend({ specializationIds: z.array(UUIDSchema) }),
-);
-export type SpecializationIdsResponseDTO = z.infer<typeof SpecializationIdsResponseSchema>;
-
-export const WorkingHoursResponseSchema = SuccessResponseSchema(
+export const GetWorkerWorkingHoursResponseSchema = SuccessResponseSchema(
   z.object({
     workingHours: DaysWorkingHoursSchema
   })
 );
-export type WorkingHoursResponseDTO = z.infer<typeof WorkingHoursResponseSchema>;
+export type GetWorkerWorkingHoursResponseDTO = z.infer<typeof GetWorkerWorkingHoursResponseSchema>;
 
-export const PortfolioWithImagesResponseSchema = SuccessResponseSchema(z.object({
-  portfolio: PortfolioObjectSchema.extend({ projectImages: z.array(ProjectImageSchema) })
+export const AddWorkerDaysWorkingHoursResponseSchema = SuccessResponseSchema(
+  z.object({
+    workingHours: DaysWorkingHoursSchema
+  })
+);
+export type AddWorkerDaysWorkingHoursResponseDTO = z.infer<typeof AddWorkerDaysWorkingHoursResponseSchema>;
+
+export const CreatePortfolioResponseSchema = SuccessResponseSchema(z.object({
+  portfolio: WorkerPortfolioWithImagesViewSchema
+}));
+export type CreatePortfolioResponseDTO = z.infer<typeof CreatePortfolioResponseSchema>;
+
+export const GetPortfolioResponseSchema = SuccessResponseSchema(z.object({
+  portfolio: WorkerPortfolioWithImagesViewSchema
+}));
+export type GetPortfolioResponseDTO = z.infer<typeof GetPortfolioResponseSchema>;
+
+export const UpdatePortfolioResponseSchema = SuccessResponseSchema(z.object({
+  portfolio: WorkerPortfolioWithImagesViewSchema
+}));
+export type UpdatePortfolioResponseDTO = z.infer<typeof UpdatePortfolioResponseSchema>;
+
+export const AddPortfolioImagesResponseSchema = SuccessResponseSchema(z.object({
+  images: z.array(WorkerPortfolioProjectImageViewSchema)
 }));
 
-export type PortfolioWithImagesResponseDTO = z.infer<typeof PortfolioWithImagesResponseSchema>;
+export type AddPortfolioImagesResponseDTO = z.infer<typeof AddPortfolioImagesResponseSchema>;
 
-export const ImagesResponseSchema = SuccessResponseSchema(z.object({
-  images: z.array(ProjectImageSchema)
+export const GetWorkerOccupiedTimeSlotsResponseSchema = SuccessResponseSchema(z.object({
+  occupiedSlots: z.array(OccupiedTimeSlotViewSchema)
 }));
 
-export type ImagesResponseDTO = z.infer<typeof ImagesResponseSchema>;
+export type GetWorkerOccupiedTimeSlotsResponseDTO = z.infer<typeof GetWorkerOccupiedTimeSlotsResponseSchema>;
 
-export const OccupiedTimeSlotsResponseSchema = SuccessResponseSchema(z.object({
-  occupiedSlots: z.array(OccupiedTimeSlotObjectSchema)
-}));
+export const RemoveWorkerWorkingDaysResponseSchema = SuccessResponseSchema(z.any());
 
-export type OccupiedTimeSlotsResponseDTO = z.infer<typeof OccupiedTimeSlotsResponseSchema>;
+export type RemoveWorkerWorkingDaysResponseDTO = z.infer<typeof RemoveWorkerWorkingDaysResponseSchema>;
+
+export const AddWorkerGovernmentsResponseSchema = SuccessResponseSchema(z.any());
+
+export type AddWorkerGovernmentsResponseDTO = z.infer<typeof AddWorkerGovernmentsResponseSchema>;
+
+export const DeleteWorkerGovernmentsResponseSchema = SuccessResponseSchema(z.any());
+
+export type DeleteWorkerGovernmentsResponseDTO = z.infer<typeof DeleteWorkerGovernmentsResponseSchema>;
+
+export const AddWorkerSpecializationsResponseSchema = SuccessResponseSchema(z.any());
+
+export type AddWorkerSpecializationsResponseDTO = z.infer<typeof AddWorkerSpecializationsResponseSchema>;
+
+export const DeleteWorkerSpecializationsResponseSchema = SuccessResponseSchema(z.any());
+
+export type DeleteWorkerSpecializationsResponseDTO = z.infer<typeof DeleteWorkerSpecializationsResponseSchema>;
+
+export const DeleteUserLocationResponseSchema = SuccessResponseSchema(z.any());
+
+export type DeleteUserLocationResponseDTO = z.infer<typeof DeleteUserLocationResponseSchema>;
+
+export const DeletePortfolioImageResponseSchema = SuccessResponseSchema(z.any());
+
+export type DeletePortfolioImageResponseDTO = z.infer<typeof DeletePortfolioImageResponseSchema>;
