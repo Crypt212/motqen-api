@@ -30,7 +30,7 @@ export const adminCookieConfig = {
     options: {
       ...baseCookieOptions,
       maxAge: parseDurationToMs(environment.jwt.access.expiresIn),
-      path: '/api/v1/admin',
+      path: '/api/v1', // Allow all /api/v1/* endpoints to access this cookie
     } satisfies CookieOptions,
   },
 
@@ -40,7 +40,7 @@ export const adminCookieConfig = {
     options: {
       ...baseCookieOptions,
       maxAge: parseDurationToMs(environment.jwt.refresh.expiresIn),
-      path: '/api/v1/admin/auth',
+      path: '/api/v1', // Allow all /api/v1/* endpoints to access this cookie
     } satisfies CookieOptions,
   },
 
@@ -51,7 +51,7 @@ export const adminCookieConfig = {
       ...baseCookieOptions,
       httpOnly: false, // Must be readable by frontend JS to include in headers
       maxAge: parseDurationToMs(environment.jwt.access.expiresIn),
-      path: '/api/v1/admin',
+      path: '/api/v1', // Allow all /api/v1/* endpoints to access this cookie
     } satisfies CookieOptions,
   },
 } as const;

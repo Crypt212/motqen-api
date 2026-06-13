@@ -142,9 +142,9 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     method: 'get',
     path: '/api/v1/me/worker-profile',
     tags: ['Dashboard'],
-    summary: 'Get Craftsman Profile Details',
+    summary: 'Get workers Profile Details',
     description:
-      'Returns the complete profile of the authenticated craftsman/worker. Includes experience, specializations, operating governments, rating, badges, verification status, and portfolio. User must be registered as a Worker.',
+      'Returns the complete profile of the authenticated workers/worker. Includes experience, specializations, operating governments, rating, badges, verification status, and portfolio. User must be registered as a Worker.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     responses: createResponseDoc({
@@ -166,9 +166,9 @@ export default function registerDashboardDocs(registry: OpenAPIRegistry) {
     method: 'get',
     path: '/api/v1/me/worker-profile/orders-count',
     tags: ['Dashboard'],
-    summary: 'Get Craftsman orders count: cancelled, completed, pending, today',
+    summary: 'Get workers orders count: cancelled, completed, pending, today',
     description:
-      'Returns the number of orders for the authenticated craftsman/worker. User must be registered as a Worker.',
+      'Returns the number of orders for the authenticated workers/worker. User must be registered as a Worker.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     responses: createResponseDoc({

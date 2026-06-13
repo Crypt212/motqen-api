@@ -21,8 +21,23 @@ const initApp: () => Promise<express.Application> = async () => {
   app.use(helmet());
   app.use(
     cors({
-      origin: '*',
-      credentials: true,
+      origin: (origin, callback) => {
+        // Allow both 5173 and 5174 for development flexibility
+        const allowedOrigins = [
+          'http://localhost:5173',
+          'http://localhost:5174',
+          environment.frontend.url
+        ].filter(Boolean);
+        
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      credentials: true, // Allow credentials (cookies)
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token', 'x-device-fingerprint'],
     })
   );
   app.use(express.urlencoded({ extended: true }));

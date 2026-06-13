@@ -13,6 +13,7 @@ export default class AdminAuthService {
 
   async validateLogin(username: string, password: string) {
     const admin = await this.adminRepository.find({ filter: { username } });
+    console.log('🔍 Admin found:', admin ? `${admin.username} (${admin.status})` : 'NOT FOUND');
     if (!admin || admin.status !== 'ACTIVE') {
       throw new AppError('Invalid credentials', 401);
     }
@@ -21,13 +22,22 @@ export default class AdminAuthService {
       .scryptSync(password, process.env.ADMIN_PASSWORD_SALT ?? 'default-admin-salt', 64)
       .toString('hex');
     const storedHash = admin.passwordHash;
+    console.log('🔐 Password validation:');
+    console.log('   Salt:', process.env.ADMIN_PASSWORD_SALT ?? 'default-admin-salt');
+    console.log('   Calculated hash length:', hash.length);
+    console.log('   Stored hash length:', storedHash?.length);
+    console.log('   Calculated hash:', hash.substring(0, 32) + '...');
+    console.log('   Stored hash:', storedHash?.substring(0, 32) + '...');
+
     if (
       !storedHash ||
       storedHash.length !== hash.length ||
       !crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(storedHash, 'hex'))
     ) {
+      console.log('❌ Password validation FAILED');
       throw new AppError('Invalid credentials', 401);
     }
+    console.log('✅ Password validation PASSED');
 
     return admin;
   }

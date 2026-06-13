@@ -16,6 +16,7 @@ export const login = asyncHandler(async (req, res) => {
   try {
     admin = await adminAuthService.validateLogin(username, password);
   } catch (error) {
+    console.log('❌ Login validation failed:', (error as any).message);
     await adminAuditLogService.record({
       action: AdminAuditActions.ADMIN_LOGIN_FAILED,
       category: 'AUTH',
@@ -64,6 +65,8 @@ export const login = asyncHandler(async (req, res) => {
     userAgent: getUserAgent(req.headers['user-agent']),
   });
 
+  console.log('✅ Login successful for:', admin.username);
+  console.log('📤 Sending response with admin profile:', admin.id);
   // Only return admin profile data — tokens are in cookies, not in the body
   new SuccessResponse('Admin login successful', {
     admin: {
@@ -78,6 +81,7 @@ export const login = asyncHandler(async (req, res) => {
       updatedAt: admin.updatedAt,
     },
   }).send(res);
+  console.log('📤 Response sent');
 });
 
 export const logout = asyncHandler(async (req, res) => {
@@ -88,7 +92,7 @@ export const logout = asyncHandler(async (req, res) => {
 
   // Clear all admin cookies on logout
   for (const name of ADMIN_COOKIE_NAMES) {
-    res.clearCookie(name, { path: '/api/v1/admin' });
+    res.clearCookie(name, { path: '/api/v1' });
   }
 
   await adminAuditLogService.record({

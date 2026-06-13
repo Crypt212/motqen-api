@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import prisma from '../../src/libs/database.js';
 
-// Craftsman Specializations Data
+// workers Specializations Data
 const specializations = [
   {
     name: 'Carpentry',

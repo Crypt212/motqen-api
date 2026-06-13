@@ -2,8 +2,8 @@ import 'dotenv/config';
 import crypto from 'crypto';
 import prisma from '../src/libs/database.js';
 
-const username = (process.env.SUPER_ADMIN_USERNAME || 'superadmin').trim();
-const password = process.env.SUPER_ADMIN_PASSWORD || 'SuperAdmin123!';
+const username = (process.env.SUPER_ADMIN_USERNAME || 'sosa').trim();
+const password = process.env.SUPER_ADMIN_PASSWORD || 'sosaAdmin@2004';
 const firstName = process.env.SUPER_ADMIN_FIRST_NAME || 'Super';
 const lastName = process.env.SUPER_ADMIN_LAST_NAME || 'Admin';
 const salt = process.env.ADMIN_PASSWORD_SALT || 'default-admin-salt';
