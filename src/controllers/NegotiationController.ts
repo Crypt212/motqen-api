@@ -42,6 +42,13 @@ export const getNegotiations = asyncHandler<GetNegotiationsResponseDTO, GetNegot
   const profileId = role === 'WORKER' ? userState.worker!.id! : userState.client!.id!;
   const { pagination } = parseQuery(req.parsed!.query!);
 
+  console.log(
+    orderId,
+    proposalId,
+    role,
+    profileId,
+    pagination,
+  );
   const result = await negotiationService.getNegotiations({
     orderId,
     proposalId,
