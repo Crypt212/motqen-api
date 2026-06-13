@@ -78,12 +78,12 @@ export default class NegotiationService extends Service {
       // Direct order but with different worker
       if (order.workerProfileId && profileId !== order.workerProfileId)
         throw new AppError('This order is not assigned to you', 403);
-    }
 
-    if (!order.workerProfileId) {
-      const proposals = await this.proposalRepository.findMany({ filter: { workerProfileId: profileId, orderId: order.id } });
-      if (proposals.proposals.length === 0) {
-        throw new AppError('You are not a party to this order', 403);
+      if (!order.workerProfileId) {
+        const proposals = await this.proposalRepository.findMany({ filter: { workerProfileId: profileId, orderId: order.id } });
+        if (proposals.proposals.length === 0) {
+          throw new AppError('You are not a party to this order', 403);
+        }
       }
     }
 
