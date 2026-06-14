@@ -1,11 +1,11 @@
 import { z } from '../../libs/zod.js';
 
-import { SuccessResponseSchema } from "../responses.js";
+import { SuccessResponseSchema, MessageOnlyResponseSchema } from "../responses.js";
 import {
-  ClientProfileObjectSchema,
-  WorkerProfileObjectSchema,
-  UserObjectSchema,
 } from '../common.js';
+import { UserViewSchema } from '../entities/user.js';
+import { ClientProfileViewSchema } from '../entities/clientProfile.js';
+import { WorkerProfileViewSchema } from '../entities/workerProfile.js';
 
 
 export const RequestOTPResponseSchema = SuccessResponseSchema(z.object({
@@ -24,17 +24,10 @@ export const VerifyOTPResponseSchema = SuccessResponseSchema(z.object({
 }),);
 export type VerifyOTPResponseDTO = z.infer<typeof VerifyOTPResponseSchema>;
 
-export const RegisterResponseSchema = SuccessResponseSchema(z.object({
-  accessToken: z.string(),
-  refreshToken: z.string(),
-  user: UserObjectSchema,
-}),);
-export type RegisterResponseDTO = z.infer<typeof RegisterResponseSchema>;
-
 export const LoginResponseSchema = SuccessResponseSchema(z.object({
   accessToken: z.string(),
   refreshToken: z.string(),
-  user: UserObjectSchema,
+  user: UserViewSchema,
 }),);
 export type LoginResponseDTO = z.infer<typeof LoginResponseSchema>;
 
@@ -51,8 +44,8 @@ export type ReviewStatusResponseDTO = z.infer<typeof ReviewStatusResponseSchema>
 
 export const RegisterClientResponseSchema = SuccessResponseSchema(
   z.object({
-    user: UserObjectSchema,
-    clientProfile: ClientProfileObjectSchema.describe('ClientProfile object'),
+    user: UserViewSchema,
+    clientProfile: ClientProfileViewSchema.describe('ClientProfile object'),
     accessToken: z.string(),
     refreshToken: z.string(),
   })
@@ -61,10 +54,19 @@ export type RegisterClientResponseDTO = z.infer<typeof RegisterClientResponseSch
 
 export const RegisterWorkerResponseSchema = SuccessResponseSchema(
   z.object({
-    user: UserObjectSchema,
-    workerProfile: WorkerProfileObjectSchema.describe('WorkerProfile object'),
+    user: UserViewSchema,
+    workerProfile: WorkerProfileViewSchema.describe('WorkerProfile object'),
     accessToken: z.string(),
     refreshToken: z.string(),
   })
 );
 export type RegisterWorkerResponseDTO = z.infer<typeof RegisterWorkerResponseSchema>;
+
+export const LogoutResponseSchema = MessageOnlyResponseSchema;
+export type LogoutResponseDTO = z.infer<typeof LogoutResponseSchema>;
+
+export const GenerateAccessTokenResponseSchema = AccessTokenResponseSchema;
+export type GenerateAccessTokenResponseDTO = z.infer<typeof GenerateAccessTokenResponseSchema>;
+
+export const UpdateFcmTokenResponseSchema = MessageOnlyResponseSchema;
+export type UpdateFcmTokenResponseDTO = z.infer<typeof UpdateFcmTokenResponseSchema>;

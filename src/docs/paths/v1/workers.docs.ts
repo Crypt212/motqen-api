@@ -1,12 +1,26 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
-import { ExploreSearchSchema, ExploreWorkerIdParamsSchema } from '../../../schemas/requests/worker-explore.request.js';
 import {
-  ExploreSearchResponseSchema,
-  ExploreDetailResponseSchema,
-  OccupiedTimeSlotsResponseSchema,
+  SearchWorkersQuerySchema,
+  GetWorkerByIdQuerySchema,
+  GetWorkerByIdParamsSchema,
+  GetWorkerOccupiedTimeSlotsParamsSchema,
+  GetWorkerOccupiedTimeSlotsQuerySchema
+} from '../../../schemas/requests/worker-explore.request.js';
+import {
+  SearchWorkersResponseSchema,
+  GetWorkerByIdResponseSchema,
+  GetWorkerOccupiedTimeSlotsResponseSchema,
 } from '../../../schemas/responses/worker-explore.response.js';
-import { WorkerWorkingHoursResponseSchema } from '../../../schemas/responses/worker-profile.response.js';
-import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
+import {
+  GetWorkerSpecializationsTreeQuerySchema,
+  GetWorkerSpecializationsTreeParamsSchema,
+  GetWorkerWorkingHoursQuerySchema,
+  GetWorkerWorkingHoursParamsSchema
+} from '../../../schemas/requests/dashboard.request.js';
+import {
+  GetWorkerWorkingHoursResponseSchema,
+  GetWorkerSpecializationsTreeResponseSchema,
+} from '../../../schemas/responses/dashboard.response.js';
 import { createResponseDoc } from '../../../docs/common.js';
 import { z } from '../../../libs/zod.js';
 
@@ -29,12 +43,12 @@ export default function registerWorkersDocs(registry: OpenAPIRegistry) {
 Each worker includes userInfo, location (with nested city/government), specializationTree, and workInfo.`,
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      query: ExploreSearchSchema,
+      query: SearchWorkersQuerySchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Explore results retrieved successfully',
-        content: { 'application/json': { schema: ExploreSearchResponseSchema } },
+        content: { 'application/json': { schema: SearchWorkersResponseSchema } },
       },
       validationErrorResponse: true,
       internalServerError: true,
@@ -54,12 +68,13 @@ Each worker includes userInfo, location (with nested city/government), specializ
       'Returns the full public profile for the selected worker card. Only approved workers with active accounts are returned.',
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: ExploreWorkerIdParamsSchema,
+      query: GetWorkerByIdQuerySchema,
+      params: GetWorkerByIdParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker details retrieved successfully',
-        content: { 'application/json': { schema: ExploreDetailResponseSchema } },
+        content: { 'application/json': { schema: GetWorkerByIdResponseSchema } },
       },
       notFoundResponse: true,
       validationErrorResponse: true,
@@ -79,11 +94,14 @@ Each worker includes userInfo, location (with nested city/government), specializ
     description:
       'Returns the specializations and thier sub-specializations for the selected worker card. Only approved workers with active accounts are returned.',
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
-    request: { },
+    request: { 
+      query: GetWorkerSpecializationsTreeQuerySchema,
+      params: GetWorkerSpecializationsTreeParamsSchema 
+    },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Worker details retrieved successfully',
-        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
+        content: { 'application/json': { schema: GetWorkerSpecializationsTreeResponseSchema } },
       },
       notFoundResponse: true,
       validationErrorResponse: true,
@@ -104,13 +122,13 @@ Each worker includes userInfo, location (with nested city/government), specializ
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: ExploreWorkerIdParamsSchema,
-      query: z.object({ selectedDate: z.string().openapi({ description: 'YYYY-MM-DD' }) }),
+      params: GetWorkerOccupiedTimeSlotsParamsSchema,
+      query: GetWorkerOccupiedTimeSlotsQuerySchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Occupied time slots retrieved',
-        content: { 'application/json': { schema: OccupiedTimeSlotsResponseSchema } },
+        content: { 'application/json': { schema: GetWorkerOccupiedTimeSlotsResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -130,10 +148,14 @@ Each worker includes userInfo, location (with nested city/government), specializ
     description: 'Returns the current working-hours schedule for the explored worker.',
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
+    request: {
+      query: GetWorkerWorkingHoursQuerySchema,
+      params: GetWorkerWorkingHoursParamsSchema,
+    },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Working hours retrieved',
-        content: { 'application/json': { schema: WorkerWorkingHoursResponseSchema } },
+        content: { 'application/json': { schema: GetWorkerWorkingHoursResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,

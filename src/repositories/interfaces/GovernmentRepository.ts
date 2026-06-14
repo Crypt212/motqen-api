@@ -58,4 +58,9 @@ export default interface IGovernemntRepository {
    * Delete a city
    */
   deleteCity(params: { filter: CityFilter }): Promise<void>;
+  
+  /**
+   * Update a city
+   */
+  updateCity(params: { filter: CityFilter; data: Partial<CityCreateInput> }): Promise<City>;
 }

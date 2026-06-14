@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased] - 2026-06-13
+
+### Changed
+- **Architectural Standardization (The Quartet Pattern)**: Migrated the entire routing and validation layer to a strictly typed "Quartet" structure (`Request`, `Response`, `Query`, `Params`) per endpoint.
+- **Unified Filtering & Pagination**: Removed deprecated `buildFilterSchema` and `FilterDescriptor` types. Introduced `createFilterMetadata` for entity sorting definitions and `createQuerySchema` to universally generate robust pagination, sorting, and dynamic filtering schemas.
+- **Controller Refactoring**: Upgraded all controllers (`Auth`, `Dashboard`, `Government`, `Location`, `Negotiation`, `Order`, `Proposal`, `Report`, `Specialization`, `Worker`) to utilize `asyncHandler<Res, Req, Query, Params>`. Integrated `parseQuery(req.parsed!.query!)` natively to pass standardized `filter`, `pagination`, and `sort` objects seamlessly to the service and repository layers.
+- **Route Validation Mastery**: Enforced exact `body`, `query`, and `params` schema injection into `createRoute` across all API domains ensuring impenetrable validation walls at the router level.
+- **OpenAPI Swagger Alignment**: Overhauled all `v1/*.docs.ts` documentation to completely eliminate generic schemas in favor of the explicit Quartet schemas. Enforced documentation of `Query` and `Params` parameters (even `EmptySchema` aliases) across all domains for 100% Swagger parity.
+- **Entity Schema Consolidation**: Created a dedicated `src/schemas/entities/` directory standardizing entity Zod definitions (`clientProfile.ts`, `order.ts`, `proposal.ts`, `workerProfile.ts`, etc.), cleanly separating domain entities from HTTP request payloads.
+- **Schema Cleanup**: Deleted legacy validation files (e.g., `worker-profile.request.ts`) and consolidated user/worker endpoints logically into Dashboard and Auth schemas.
+
 ## [Unreleased] - 2026-06-08
 
 ### Changed

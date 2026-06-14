@@ -1,11 +1,42 @@
 import { asyncHandler } from '../types/asyncHandler.js';
 import OrderService from '../services/OrderService.js';
-import { FilterFromDescriptor, parseQueryParams } from '../schemas/common.js';
-import { OrderFilterSchema, CreateOrderDTO, OrderQuery } from '../schemas/requests/order.request.js';
-import { OrderResponseDTO, OrderListResponseDTO } from '../schemas/responses/order.response.js';
-import { LocationResponseDTO } from '../schemas/responses/location.response.js';
-import { FieldTypeDefinition, SortOptions } from 'src/types/query.js';
-import { Order } from 'src/domain/order.entity.js';
+import { parseQuery } from '../schemas/common.js';
+import {
+  CreateOrderRequestDTO,
+  CreateOrderQueryDTO,
+  CreateOrderParamsDTO,
+  GetOrdersRequestDTO,
+  GetOrdersQueryDTO,
+  GetOrdersParamsDTO,
+  GetOrderByIdRequestDTO,
+  GetOrderByIdQueryDTO,
+  GetOrderByIdParamsDTO,
+  CancelOrderRequestDTO,
+  CancelOrderQueryDTO,
+  CancelOrderParamsDTO,
+  GetOrderLocationRequestDTO,
+  GetOrderLocationQueryDTO,
+  GetOrderLocationParamsDTO,
+  StartWorkRequestDTO,
+  StartWorkQueryDTO,
+  StartWorkParamsDTO,
+  FinishWorkRequestDTO,
+  FinishWorkQueryDTO,
+  FinishWorkParamsDTO,
+  RateOrderRequestDTO,
+  RateOrderQueryDTO,
+  RateOrderParamsDTO
+} from '../schemas/requests/order.request.js';
+import {
+  CreateOrderResponseDTO,
+  GetOrdersResponseDTO,
+  GetOrderByIdResponseDTO,
+  CancelOrderResponseDTO,
+  GetOrderLocationResponseDTO,
+  StartWorkResponseDTO,
+  FinishWorkResponseDTO,
+  RateOrderResponseDTO
+} from '../schemas/responses/order.response.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
 import LocationService from 'src/services/LocationService.js';
 import AppError from 'src/errors/AppError.js';
@@ -19,7 +50,7 @@ export default class OrderController {
     this.locationService = deps.locationService;
   }
 
-  create = asyncHandler<OrderResponseDTO, CreateOrderDTO>(async (req, res) => {
+  create = asyncHandler<CreateOrderResponseDTO, CreateOrderRequestDTO, CreateOrderQueryDTO, CreateOrderParamsDTO>(async (req, res) => {
     const parsedBody = req.parsed!.body!;
     const images = (req.files as Express.Multer.File[]) || [];
     const clientUserId = req.userState.userId;
@@ -39,11 +70,8 @@ export default class OrderController {
     res.status(201).send({ status: 'success', message: 'Order created successfully', data: { order } });
   });
 
-  list = asyncHandler<OrderListResponseDTO, any, OrderQuery>(async (req, res) => {
-    const { filter, pagination, sort } = parseQueryParams(
-      req.parsed!.query!,
-      OrderFilterSchema
-    );
+  list = asyncHandler<GetOrdersResponseDTO, GetOrdersRequestDTO, GetOrdersQueryDTO, GetOrdersParamsDTO>(async (req, res) => {
+    const { filter, pagination, sort } = parseQuery(req.parsed!.query!);
 
     const userState = req.userState!;
     const adminState = req.adminState;
@@ -53,14 +81,14 @@ export default class OrderController {
       role: userState.role,
       clientUserId: filter.clientUserId as IDType,
       workerUserId: filter.workerUserId as IDType,
-      filter: filter as FilterFromDescriptor<Record<string, FieldTypeDefinition>>,
+      filter,
       pagination,
-      sort: sort as SortOptions<Order>,
+      sort,
     });
     res.status(200).send({ status: 'success', message: 'Orders retrieved successfully', data: result });
   });
 
-  getById = asyncHandler<OrderResponseDTO, any, any, { orderId: string }>(async (req, res) => {
+  getById = asyncHandler<GetOrderByIdResponseDTO, GetOrderByIdRequestDTO, GetOrderByIdQueryDTO, GetOrderByIdParamsDTO>(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     const order = await this.orderService.getOrderById({
@@ -71,7 +99,7 @@ export default class OrderController {
     res.status(200).send({ status: 'success', message: 'Order retrieved successfully', data: { order } });
   });
 
-  getLocation = asyncHandler<LocationResponseDTO, any, any, { orderId: string }>(async (req, res) => {
+  getLocation = asyncHandler<GetOrderLocationResponseDTO, GetOrderLocationRequestDTO, GetOrderLocationQueryDTO, GetOrderLocationParamsDTO>(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     const order = await this.orderService.getOrderById({
@@ -87,18 +115,18 @@ export default class OrderController {
     res.status(200).send({ status: 'success', message: 'Location of order retrieved successfully', data: { location } });
   });
 
-  cancel = asyncHandler<any, any, any, { orderId: string }>(async (req, res) => {
+  cancel = asyncHandler<CancelOrderResponseDTO, CancelOrderRequestDTO, CancelOrderQueryDTO, CancelOrderParamsDTO>(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     await this.orderService.cancelOrder({
       orderId: orderId as string,
       clientUserId: userState.userId,
     });
-    res.status(200).send({ status: 'success', message: 'Order cancelled successfully', data: null });
+    res.status(200).send({ status: 'success', message: 'Order cancelled successfully' });
   });
 
 
-  startWork = asyncHandler<OrderResponseDTO, any, any, { orderId: string }>(async (req, res) => {
+  startWork = asyncHandler<StartWorkResponseDTO, StartWorkRequestDTO, StartWorkQueryDTO, StartWorkParamsDTO>(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     const order = await this.orderService.startWork({
@@ -108,7 +136,7 @@ export default class OrderController {
     res.status(200).send({ status: 'success', message: 'Work started successfully', data: { order } });
   });
 
-  finishWork = asyncHandler<OrderResponseDTO, any, any, { orderId: string }>(async (req, res) => {
+  finishWork = asyncHandler<FinishWorkResponseDTO, FinishWorkRequestDTO, FinishWorkQueryDTO, FinishWorkParamsDTO>(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     const order = await this.orderService.finishWork({
@@ -118,7 +146,7 @@ export default class OrderController {
     res.status(200).send({ status: 'success', message: 'Work finished successfully', data: { order } });
   });
 
-  rate = asyncHandler<any, { rate: number, comment?: string }, any, { orderId: string }>(async (req, res) => {
+  rate = asyncHandler<RateOrderResponseDTO, RateOrderRequestDTO, RateOrderQueryDTO, RateOrderParamsDTO>(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const { rate, comment } = req.parsed!.body!;
     const userState = req.userState!;
@@ -128,6 +156,6 @@ export default class OrderController {
       rate,
       comment,
     });
-    res.status(200).send({ status: 'success', message: 'Order rated successfully', data: {} });
+    res.status(200).send({ status: 'success', message: 'Order rated successfully' });
   });
 }

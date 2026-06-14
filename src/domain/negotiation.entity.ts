@@ -29,6 +29,16 @@ export type CreateNegotiationInput = {
   note?: string;
 };
 
+export type LatestNegotiationSnapshot = {
+  id: IDType;
+  price: number;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  startDate: Date;
+  estimatedDurationHours: number;
+  direction: 'WORKER_TO_CLIENT' | 'CLIENT_TO_WORKER';
+  createdAt: Date;
+};
+
 /**
  * Lightweight order projection used only for negotiation auth + business checks.
  * Not a full Order entity — that will be defined when the Orders module is built.

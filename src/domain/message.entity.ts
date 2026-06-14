@@ -1,7 +1,7 @@
 import { $Enums } from '../generated/prisma/client.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { FieldTypeDefinition } from '../types/query.js';
-import { FilterFromDescriptor } from '../schemas/common.js';
+
 import { User } from './user.entity.js';
 
 export type MessageType = $Enums.MessageType;
@@ -25,12 +25,10 @@ export type MessageCreateInput = {
   type?: MessageType;
 };
 
-export const MessageFilterDescriptor = {
-  id: { type: 'uuid' as const },
-  conversationId: { type: 'uuid' as const },
-  senderId: { type: 'uuid' as const },
-  messageNumber: { type: 'number' as const },
-  type: { type: 'enum', enumValues: ['TEXT', 'IMAGE', 'ORDER'] as const },
-} satisfies Record<string, FieldTypeDefinition>;
-
-export type MessageFilter = FilterFromDescriptor<typeof MessageFilterDescriptor>;
+export type MessageFilter = Partial<{
+  id: IDType;
+  conversationId: IDType;
+  senderId: IDType;
+  messageNumber: number;
+  type: MessageType;
+}>;

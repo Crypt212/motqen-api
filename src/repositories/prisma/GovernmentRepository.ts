@@ -8,6 +8,7 @@ import {
   GovernmentUpdateInput,
   City,
   CityFilter,
+  CityUpdateInput,
 } from '../../domain/government.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { isEmptyFilter } from './utils.js';
@@ -233,6 +234,31 @@ export default class GovernmentRepository extends Repository implements IGovernm
       });
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'deleteCity');
+    }
+  }
+
+  async updateCity(params: { filter: CityFilter; data: CityUpdateInput }): Promise<City> {
+    try {
+      const { filter, data } = params;
+      if (isEmptyFilter(filter)) {
+        throw new Error('City ID is required for update');
+      }
+
+      const existing = await this.prismaClient.city.findFirst({
+        where: filter,
+      });
+
+      if (!existing) {
+        throw new Error('City not found');
+      }
+
+      const updated = await this.prismaClient.city.update({
+        where: { id: existing.id },
+        data: data,
+      });
+      return this.toDomainCity(updated);
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'updateCity');
     }
   }
 }

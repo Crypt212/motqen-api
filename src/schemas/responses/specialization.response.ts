@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 import { SuccessResponseSchema } from "../responses.js";
-import { SpecializationObjectSchema, SubSpecializationObjectSchema, PaginationResponseSchema } from '../common.js';
+import { PaginationResponseSchema } from '../common.js';
+import { SpecializationViewSchema as SpecializationObjectSchema, SubSpecializationViewSchema as SubSpecializationObjectSchema } from '../entities/specialization.js';
 
 
 export const SpecializationListResponseSchema = SuccessResponseSchema(
@@ -26,3 +27,27 @@ export type SubSpecializationResponseDTO = z.infer<typeof SubSpecializationRespo
 
 export const DeleteResponseSchema = SuccessResponseSchema(z.null());
 export type DeleteResponseDTO = z.infer<typeof DeleteResponseSchema>;
+
+export const GetSpecializationsResponseSchema = SpecializationListResponseSchema;
+export type GetSpecializationsResponseDTO = z.infer<typeof GetSpecializationsResponseSchema>;
+
+export const GetSpecializationByIdResponseSchema = SpecializationResponseSchema;
+export type GetSpecializationByIdResponseDTO = z.infer<typeof GetSpecializationByIdResponseSchema>;
+
+export const GetSubSpecializationsResponseSchema = SubSpecializationListResponseSchema;
+export type GetSubSpecializationsResponseDTO = z.infer<typeof GetSubSpecializationsResponseSchema>;
+
+export const CreateSpecializationResponseSchema = SpecializationResponseSchema;
+export type CreateSpecializationResponseDTO = z.infer<typeof CreateSpecializationResponseSchema>;
+
+export const UpdateSpecializationResponseSchema = SpecializationResponseSchema;
+export type UpdateSpecializationResponseDTO = z.infer<typeof UpdateSpecializationResponseSchema>;
+
+export const DeleteSpecializationResponseSchema = DeleteResponseSchema;
+export type DeleteSpecializationResponseDTO = z.infer<typeof DeleteSpecializationResponseSchema>;
+
+export const CreateSubSpecializationResponseSchema = SubSpecializationResponseSchema;
+export type CreateSubSpecializationResponseDTO = z.infer<typeof CreateSubSpecializationResponseSchema>;
+
+export const DeleteSubSpecializationResponseSchema = DeleteResponseSchema;
+export type DeleteSubSpecializationResponseDTO = z.infer<typeof DeleteSubSpecializationResponseSchema>;

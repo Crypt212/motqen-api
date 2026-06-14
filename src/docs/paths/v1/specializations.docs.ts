@@ -1,20 +1,35 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import {
-  CreateSpecializationSchema,
-  UpdateSpecializationSchema,
-  CreateSubSpecializationSchema,
-  SpecializationIdParamsSchema,
-  SubSpecializationIdParamsSchema,
-  SpecializationQuerySchema,
-  SubSpecializationQuerySchema,
+  GetSpecializationsQuerySchema,
+  GetSpecializationsParamsSchema,
+  GetSpecializationByIdQuerySchema,
+  GetSpecializationByIdParamsSchema,
+  GetSubSpecializationsQuerySchema,
+  GetSubSpecializationsParamsSchema,
+  CreateSpecializationQuerySchema,
+  CreateSpecializationParamsSchema,
+  CreateSpecializationRequestSchema,
+  UpdateSpecializationQuerySchema,
+  UpdateSpecializationParamsSchema,
+  UpdateSpecializationRequestSchema,
+  DeleteSpecializationQuerySchema,
+  DeleteSpecializationParamsSchema,
+  CreateSubSpecializationQuerySchema,
+  CreateSubSpecializationParamsSchema,
+  CreateSubSpecializationRequestSchema,
+  DeleteSubSpecializationQuerySchema,
+  DeleteSubSpecializationParamsSchema
 } from '../../../schemas/requests/specialization.request.js';
 import {
-  SpecializationResponseSchema,
-  SpecializationListResponseSchema,
-  SubSpecializationResponseSchema,
-  SubSpecializationListResponseSchema,
+  GetSpecializationsResponseSchema,
+  GetSpecializationByIdResponseSchema,
+  GetSubSpecializationsResponseSchema,
+  CreateSpecializationResponseSchema,
+  UpdateSpecializationResponseSchema,
+  DeleteSpecializationResponseSchema,
+  CreateSubSpecializationResponseSchema,
+  DeleteSubSpecializationResponseSchema
 } from '../../../schemas/responses/specialization.response.js';
-import { MessageOnlyResponseSchema } from '../../../schemas/responses.js';
 import { createResponseDoc } from '../../../docs/common.js';
 
 export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
@@ -30,12 +45,13 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     description: 'Returns a list of all specializations. Public endpoint.',
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      query: SpecializationQuerySchema,
+      query: GetSpecializationsQuerySchema,
+      params: GetSpecializationsParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Specializations retrieved',
-        content: { 'application/json': { schema: SpecializationListResponseSchema } },
+        content: { 'application/json': { schema: GetSpecializationsResponseSchema } },
       },
       internalServerError: true,
     }),
@@ -53,12 +69,13 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     description: 'Returns a single specialization by its UUID. Public endpoint.',
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: SpecializationIdParamsSchema,
+      query: GetSpecializationByIdQuerySchema,
+      params: GetSpecializationByIdParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Specialization retrieved',
-        content: { 'application/json': { schema: SpecializationResponseSchema } },
+        content: { 'application/json': { schema: GetSpecializationByIdResponseSchema } },
       },
       notFoundResponse: true,
       validationErrorResponse: true,
@@ -78,13 +95,13 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     description: 'Returns all sub-specializations under a parent specialization. Public endpoint.',
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: SpecializationIdParamsSchema,
-      query: SubSpecializationQuerySchema,
+      params: GetSubSpecializationsParamsSchema,
+      query: GetSubSpecializationsQuerySchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Sub-specializations retrieved',
-        content: { 'application/json': { schema: SubSpecializationListResponseSchema } },
+        content: { 'application/json': { schema: GetSubSpecializationsResponseSchema } },
       },
       notFoundResponse: true,
       internalServerError: true,
@@ -104,14 +121,16 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
+      query: CreateSpecializationQuerySchema,
+      params: CreateSpecializationParamsSchema,
       body: {
-        content: { 'application/json': { schema: CreateSpecializationSchema } },
+        content: { 'application/json': { schema: CreateSpecializationRequestSchema } },
       },
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Specialization created',
-        content: { 'application/json': { schema: SpecializationResponseSchema } },
+        content: { 'application/json': { schema: CreateSpecializationResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -133,15 +152,16 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: SpecializationIdParamsSchema,
+      query: UpdateSpecializationQuerySchema,
+      params: UpdateSpecializationParamsSchema,
       body: {
-        content: { 'application/json': { schema: UpdateSpecializationSchema } },
+        content: { 'application/json': { schema: UpdateSpecializationRequestSchema } },
       },
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Specialization updated',
-        content: { 'application/json': { schema: SpecializationResponseSchema } },
+        content: { 'application/json': { schema: UpdateSpecializationResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -164,12 +184,13 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: SpecializationIdParamsSchema,
+      query: DeleteSpecializationQuerySchema,
+      params: DeleteSpecializationParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Specialization deleted',
-        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
+        content: { 'application/json': { schema: DeleteSpecializationResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -192,15 +213,16 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: SpecializationIdParamsSchema,
+      query: CreateSubSpecializationQuerySchema,
+      params: CreateSubSpecializationParamsSchema,
       body: {
-        content: { 'application/json': { schema: CreateSubSpecializationSchema } },
+        content: { 'application/json': { schema: CreateSubSpecializationRequestSchema } },
       },
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Sub-specialization created',
-        content: { 'application/json': { schema: SubSpecializationResponseSchema } },
+        content: { 'application/json': { schema: CreateSubSpecializationResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
@@ -224,12 +246,13 @@ export default function registerSpecializationsDocs(registry: OpenAPIRegistry) {
     security: [{ BearerAuth: [] }],
     parameters: [{ $ref: '#/components/parameters/DeviceFingerprint' }],
     request: {
-      params: SpecializationIdParamsSchema.merge(SubSpecializationIdParamsSchema),
+      query: DeleteSubSpecializationQuerySchema,
+      params: DeleteSubSpecializationParamsSchema,
     },
     responses: createResponseDoc({
       successfulResponse: {
         description: 'Sub-specialization deleted',
-        content: { 'application/json': { schema: MessageOnlyResponseSchema } },
+        content: { 'application/json': { schema: DeleteSubSpecializationResponseSchema } },
       },
       unauthorizedResponse: true,
       forbiddenResponse: true,
