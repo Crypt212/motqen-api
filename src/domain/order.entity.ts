@@ -35,6 +35,8 @@ export type Order = {
   orderMode: OrderMode;
   clientName?: string;
   workerName?: string | null;
+  client?: any;
+  craftsman?: any;
   disputeExists?: boolean;
   reportExists?: boolean;
 };

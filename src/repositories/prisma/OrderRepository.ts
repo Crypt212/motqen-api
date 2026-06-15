@@ -83,6 +83,20 @@ export default class OrderRepository extends Repository implements IOrderReposit
       orderMode: record.orderMode as any,
       clientName: this.formatFullName(record.clientProfile.user),
       workerName: record.workerProfile?.user ? this.formatFullName(record.workerProfile.user) : null,
+      client: {
+        id: record.clientProfile.userId,
+        fullName: this.formatFullName(record.clientProfile.user),
+        phoneNumber: record.clientProfile.user.phoneNumber,
+        location: record.location?.address ?? '',
+        rating: 5,
+      },
+      craftsman: record.workerProfile?.user ? {
+        id: record.workerProfile.userId,
+        fullName: this.formatFullName(record.workerProfile.user),
+        phoneNumber: record.workerProfile.user.phoneNumber,
+        primarySpecialty: record.subSpecialization?.nameAr ?? record.subSpecialization?.name ?? '',
+        overallRating: record.workerProfile.rate,
+      } : null,
       disputeExists: Array.isArray((record as any).disputes) ? (record as any).disputes.length > 0 : undefined,
       reportExists: Array.isArray((record as any).reports) ? (record as any).reports.length > 0 : undefined,
     };

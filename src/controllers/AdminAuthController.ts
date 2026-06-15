@@ -67,7 +67,9 @@ export const login = asyncHandler(async (req, res) => {
 
   console.log('✅ Login successful for:', admin.username);
   console.log('📤 Sending response with admin profile:', admin.id);
-  // Only return admin profile data — tokens are in cookies, not in the body
+  // Return admin profile data + CSRF token for double-submit pattern
+  // Access/refresh tokens are in httpOnly cookies, CSRF token is also in a readable cookie
+  // Frontend stores CSRF token from response and includes it in x-csrf-token header
   new SuccessResponse('Admin login successful', {
     admin: {
       id: admin.id,
@@ -80,6 +82,7 @@ export const login = asyncHandler(async (req, res) => {
       createdAt: admin.createdAt,
       updatedAt: admin.updatedAt,
     },
+    csrfToken, // Include CSRF token in response body for frontend storage
   }).send(res);
   console.log('📤 Response sent');
 });
@@ -135,5 +138,6 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     adminCookieConfig.csrfToken.options
   );
 
-  new SuccessResponse('New access token issued', null).send(res);
+  // Return rotated CSRF token in response body for frontend storage
+  new SuccessResponse('New access token issued', { csrfToken }).send(res);
 });

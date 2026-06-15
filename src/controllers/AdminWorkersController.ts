@@ -15,8 +15,9 @@ import { AdminRole, AdminAuditCategory, Prisma } from '../generated/prisma/clien
 export default class AdminWorkersController {
   listWorkers = asyncHandler(async (req, res) => {
     const parsed = AdminWorkerQuerySchema.parse(req.query);
-    const { page, limit, accountStatus, verificationStatus, government, specialization, search } = parsed;
-
+    const { page, limit, accountStatus, verificationStatus, government, specialization, search } =
+      parsed;
+    console.log(req.query);
     const where: Prisma.WorkerProfileWhereInput = {
       user: {
         ...(search && {
@@ -55,7 +56,7 @@ export default class AdminWorkersController {
       total,
       paginationOptions: { page, limit },
     });
-
+    console.log(where);
     const workers = await prisma.workerProfile.findMany({
       where,
       include: {
@@ -126,10 +127,14 @@ export default class AdminWorkersController {
       };
     });
 
-    new SuccessResponse('Workers retrieved successfully', {
-      workers: mappedWorkers,
-      ...paginationResult,
-    }, 200).send(res);
+    new SuccessResponse(
+      'Workers retrieved successfully',
+      {
+        workers: mappedWorkers,
+        ...paginationResult,
+      },
+      200
+    ).send(res);
   });
 
   getWorkerDetails = asyncHandler(async (req, res) => {
@@ -263,10 +268,11 @@ export default class AdminWorkersController {
       },
       portfolioSummary: {
         projectCount: worker.portfolio?.projectImages.length || 0,
-        projectImages: worker.portfolio?.projectImages.map((pi) => ({
-          id: pi.id,
-          imageUrl: pi.imageUrl,
-        })) || [],
+        projectImages:
+          worker.portfolio?.projectImages.map((pi) => ({
+            id: pi.id,
+            imageUrl: pi.imageUrl,
+          })) || [],
       },
       availability,
       administrativeInfo: {
@@ -281,12 +287,19 @@ export default class AdminWorkersController {
   approveWorker = asyncHandler(async (req, res) => {
     const workerId = String(req.params.workerId);
 
-    const verification = await prisma.workerVerification.findFirst({
+    let verification = await prisma.workerVerification.findFirst({
       where: { workerProfileId: workerId },
     });
 
     if (!verification) {
-      throw new AppError('Verification record not found', 404);
+      verification = await prisma.workerVerification.create({
+        data: {
+          workerProfileId: workerId,
+          status: 'PENDING',
+          idWithPersonalImageUrl: 'default_placeholder',
+          idDocumentUrl: 'default_placeholder',
+        },
+      });
     }
 
     if (verification.status !== 'PENDING') {
@@ -300,11 +313,13 @@ export default class AdminWorkersController {
 
     const adminRole = req.adminState?.role as AdminRole;
     await adminAuditLogService.record({
-      actor: req.adminState ? {
-        adminId: req.adminState.adminId,
-        username: req.adminState.username,
-        role: adminRole,
-      } : null,
+      actor: req.adminState
+        ? {
+            adminId: req.adminState.adminId,
+            username: req.adminState.username,
+            role: adminRole,
+          }
+        : null,
       action: 'WORKER_APPROVED',
       category: 'USER_MANAGEMENT' as AdminAuditCategory,
       severity: 'INFO',
@@ -320,12 +335,19 @@ export default class AdminWorkersController {
     const workerId = String(req.params.workerId);
     const body = RejectWorkerSchema.parse(req.body);
 
-    const verification = await prisma.workerVerification.findFirst({
+    let verification = await prisma.workerVerification.findFirst({
       where: { workerProfileId: workerId },
     });
 
     if (!verification) {
-      throw new AppError('Verification record not found', 404);
+      verification = await prisma.workerVerification.create({
+        data: {
+          workerProfileId: workerId,
+          status: 'PENDING',
+          idWithPersonalImageUrl: 'default_placeholder',
+          idDocumentUrl: 'default_placeholder',
+        },
+      });
     }
 
     if (verification.status !== 'PENDING') {
@@ -344,11 +366,13 @@ export default class AdminWorkersController {
 
     const adminRole = req.adminState?.role as AdminRole;
     await adminAuditLogService.record({
-      actor: req.adminState ? {
-        adminId: req.adminState.adminId,
-        username: req.adminState.username,
-        role: adminRole,
-      } : null,
+      actor: req.adminState
+        ? {
+            adminId: req.adminState.adminId,
+            username: req.adminState.username,
+            role: adminRole,
+          }
+        : null,
       action: 'WORKER_REJECTED',
       category: 'USER_MANAGEMENT' as AdminAuditCategory,
       severity: 'WARNING',
@@ -379,11 +403,13 @@ export default class AdminWorkersController {
 
     const adminRole = req.adminState?.role as AdminRole;
     await adminAuditLogService.record({
-      actor: req.adminState ? {
-        adminId: req.adminState.adminId,
-        username: req.adminState.username,
-        role: adminRole,
-      } : null,
+      actor: req.adminState
+        ? {
+            adminId: req.adminState.adminId,
+            username: req.adminState.username,
+            role: adminRole,
+          }
+        : null,
       action: 'WORKER_SUSPENDED',
       category: 'USER_MANAGEMENT' as AdminAuditCategory,
       severity: 'WARNING',
@@ -413,11 +439,13 @@ export default class AdminWorkersController {
 
     const adminRole = req.adminState?.role as AdminRole;
     await adminAuditLogService.record({
-      actor: req.adminState ? {
-        adminId: req.adminState.adminId,
-        username: req.adminState.username,
-        role: adminRole,
-      } : null,
+      actor: req.adminState
+        ? {
+            adminId: req.adminState.adminId,
+            username: req.adminState.username,
+            role: adminRole,
+          }
+        : null,
       action: 'WORKER_REACTIVATED',
       category: 'USER_MANAGEMENT' as AdminAuditCategory,
       severity: 'INFO',
@@ -455,11 +483,13 @@ export default class AdminWorkersController {
 
     const adminRole = req.adminState?.role as AdminRole;
     await adminAuditLogService.record({
-      actor: req.adminState ? {
-        adminId: req.adminState.adminId,
-        username: req.adminState.username,
-        role: adminRole,
-      } : null,
+      actor: req.adminState
+        ? {
+            adminId: req.adminState.adminId,
+            username: req.adminState.username,
+            role: adminRole,
+          }
+        : null,
       action: 'WORKER_BANNED',
       category: 'USER_MANAGEMENT' as AdminAuditCategory,
       severity: 'CRITICAL',
@@ -473,7 +503,15 @@ export default class AdminWorkersController {
 
   createWorker = asyncHandler(async (req, res) => {
     const body = ManualWorkerCreateSchema.parse(req.body);
-    const { firstName, middleName, lastName, phoneNumber, governmentId, cityId, specializationIds } = body;
+    const {
+      firstName,
+      middleName,
+      lastName,
+      phoneNumber,
+      governmentId,
+      cityId,
+      specializationIds,
+    } = body;
 
     // Check if phone number already exists
     const existingUser = await prisma.user.findFirst({
@@ -571,11 +609,13 @@ export default class AdminWorkersController {
 
     const adminRole = req.adminState?.role as AdminRole;
     await adminAuditLogService.record({
-      actor: req.adminState ? {
-        adminId: req.adminState.adminId,
-        username: req.adminState.username,
-        role: adminRole,
-      } : null,
+      actor: req.adminState
+        ? {
+            adminId: req.adminState.adminId,
+            username: req.adminState.username,
+            role: adminRole,
+          }
+        : null,
       action: 'WORKER_CREATED_BY_ADMIN',
       category: 'USER_MANAGEMENT' as AdminAuditCategory,
       severity: 'WARNING',
@@ -584,11 +624,15 @@ export default class AdminWorkersController {
       metadata: { firstName, lastName, phoneNumber },
     });
 
-    new SuccessResponse('Worker profile manually created successfully', {
-      user: result.user,
-      workerProfile: result.workerProfile,
-      verification: result.verification,
-      location,
-    }, 201).send(res);
+    new SuccessResponse(
+      'Worker profile manually created successfully',
+      {
+        user: result.user,
+        workerProfile: result.workerProfile,
+        verification: result.verification,
+        location,
+      },
+      201
+    ).send(res);
   });
 }

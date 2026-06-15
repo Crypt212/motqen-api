@@ -40,6 +40,7 @@ import {
   activityLogQuerySchema,
   userAggregationParamsSchema,
 } from '../../../schemas/financial/dashboard.schema.js';
+import { asyncHandler } from 'src/types/asyncHandler.js';
 
 const router: Router = Router();
 
@@ -52,12 +53,7 @@ const router: Router = Router();
  * @desc    Admin login with username and password
  * @access  Public (rate-limited to prevent brute force)
  */
-router.post(
-  '/auth/login',
-  sensitiveIpRateLimiter,
-  validateBody(AdminLoginSchema),
-  login
-);
+router.post('/auth/login', sensitiveIpRateLimiter, validateBody(AdminLoginSchema), login);
 
 /**
  * @route   POST /api/v1/admin/auth/logout
@@ -71,10 +67,39 @@ router.post('/auth/logout', authenticateAdminAccess, logout);
  * @desc    Refresh access token using refresh token from cookie
  * @access  Private (admin with valid refresh token)
  */
+router.get('/auth/access', authenticateAdminRefresh, refreshAccessToken);
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 1b: CURRENT ADMIN SESSION (Me)
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * @route   GET /api/v1/admin/auth/me
+ * @desc    Get current logged-in admin profile
+ * @access  Private (admin)
+ */
 router.get(
-  '/auth/access',
-  authenticateAdminRefresh,
-  refreshAccessToken
+  '/auth/me',
+  authenticateAdminAccess,
+  asyncHandler(async (req, res, next): Promise<void> => {
+    try {
+      const admin = req.adminState;
+      if (!admin) {
+        res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        return;
+      }
+      res.json({
+        status: 'success',
+        data: {
+          id: admin.adminId,
+          username: admin.username,
+          role: admin.role,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  })
 );
 
 // ════════════════════════════════════════════════════════════════════════════

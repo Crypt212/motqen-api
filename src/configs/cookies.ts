@@ -50,8 +50,9 @@ export const adminCookieConfig = {
     options: {
       ...baseCookieOptions,
       httpOnly: false, // Must be readable by frontend JS to include in headers
+      sameSite: 'lax', // Lax allows cookies on cross-origin user-initiated requests (fetch/XHR with credentials)
       maxAge: parseDurationToMs(environment.jwt.access.expiresIn),
-      path: '/api/v1', // Allow all /api/v1/* endpoints to access this cookie
+      path: '/', // Allow frontend JS running at root paths to access this cookie
     } satisfies CookieOptions,
   },
 } as const;

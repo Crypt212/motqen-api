@@ -91,8 +91,8 @@ export const UserActivityParamsSchema = z.object({
 });
 
 export const UserActivityQuerySchema = z.object({
-  page: z.number().int().min(1).optional().default(1),
-  limit: z.number().int().min(1).max(100).optional().default(20),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   type: z.enum(['ORDER', 'DISPUTE', 'REPORT', 'WITHDRAWAL', 'NOTIFICATION', 'MODERATION']).optional(),
 });
 
@@ -120,8 +120,8 @@ export const AdminUserExtendedFilterSchema = z.object({
   specializationId: UUIDSchema.optional(),
 
   // Pagination
-  page: z.number().int().min(1).optional().default(1),
-  limit: z.number().int().min(1).max(100).optional().default(20),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 
   // Sorting
   sortBy: z.enum(['createdAt', 'firstName', 'lastName', 'phoneNumber', 'updatedAt']).optional(),
