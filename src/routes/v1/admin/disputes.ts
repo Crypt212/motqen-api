@@ -154,6 +154,9 @@ router.post('/:id/request-info', disputeController.requestMoreInfo);
  */
 router.post('/:id/resolve', disputeController.resolveDispute);
 
+router.patch('/:id/status', disputeController.updateDisputeStatus);
+router.put('/:id/status', disputeController.updateDisputeStatus);
+
 /**
  * @swagger
  * /admin/disputes/{id}/messages:

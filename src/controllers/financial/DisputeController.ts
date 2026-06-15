@@ -170,4 +170,26 @@ export class DisputeController {
       else res.status(500).json({ error: e.message });
     }
   };
+
+  public updateDisputeStatus = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = req.params.id as string;
+      const { status } = req.body;
+      await this.enforceOwnership(req, id);
+
+      if (!status) {
+        res.status(400).json({ error: 'status is required' });
+        return;
+      }
+
+      const data = await this.disputeService.updateStatus(id, status);
+      res.status(200).json({ status: 'success', data });
+    } catch (e: any) {
+      if (e.statusCode === 403) res.status(403).json({ error: e.message });
+      else if (e.message.includes('not found')) res.status(404).json({ error: e.message });
+      else if (e.message.includes('Invalid')) res.status(400).json({ error: e.message });
+      else if (e.message.includes('Cannot update')) res.status(409).json({ error: e.message });
+      else res.status(500).json({ error: e.message });
+    }
+  };
 }

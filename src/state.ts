@@ -310,6 +310,12 @@ export const disputeController = new DisputeController(disputeService);
 
 import AdminCasesService from './services/AdminCasesService.js';
 import AdminCasesController from './controllers/AdminCasesController.js';
+import { AdminPlatformDashboardService } from './services/admin/AdminPlatformDashboardService.js';
+import { AdminPlatformDashboardController } from './controllers/admin/AdminPlatformDashboardController.js';
+import { AdminFinanceService } from './services/admin/AdminFinanceService.js';
+import { AdminFinanceController } from './controllers/admin/AdminFinanceController.js';
+import { AdminNotificationService } from './services/admin/AdminNotificationService.js';
+import { AdminNotificationController } from './controllers/admin/AdminNotificationController.js';
 
 export const adminCasesService = new AdminCasesService(
   adminIssuesService,
@@ -321,3 +327,22 @@ export const adminCasesController = new AdminCasesController();
 export const reportRepository = new ReportRepository(prisma);
 export const reportService = new ReportService({ reportRepository });
 export const reportController = new ReportController({ reportService });
+
+export const adminPlatformDashboardService = new AdminPlatformDashboardService(prisma);
+export const adminPlatformDashboardController = new AdminPlatformDashboardController(
+  adminPlatformDashboardService
+);
+
+export const adminFinanceService = new AdminFinanceService(
+  prisma,
+  dashboardService,
+  escrowService,
+  withdrawalService,
+  refundService,
+  feeRuleRepository,
+  activityLogRepository
+);
+export const adminFinanceController = new AdminFinanceController(adminFinanceService);
+
+export const adminNotificationService = new AdminNotificationService(prisma, notificationService);
+export const adminNotificationController = new AdminNotificationController(adminNotificationService);

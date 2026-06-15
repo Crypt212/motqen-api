@@ -151,4 +151,30 @@ export class DisputeService {
   async getMessages(disputeId: string) {
     return this.disputeRepo.getMessages(disputeId);
   }
+
+  async updateStatus(disputeId: string, status: string) {
+    const dispute = await this.disputeRepo.findById(disputeId);
+    if (!dispute) throw new Error('Dispute not found');
+
+    const statusMap: Record<string, DisputeStatus> = {
+      Open: 'OPEN',
+      OPEN: 'OPEN',
+      'Under Review': 'AWAITING_INFO',
+      AWAITING_INFO: 'AWAITING_INFO',
+      Resolved: 'RESOLVED',
+      RESOLVED: 'RESOLVED',
+      Closed: 'DISMISSED',
+      DISMISSED: 'DISMISSED',
+    };
+
+    const mappedStatus = statusMap[status];
+    if (!mappedStatus) throw new Error(`Invalid dispute status: ${status}`);
+
+    if (['RESOLVED', 'DISMISSED'].includes(dispute.status)) {
+      throw new Error(`Cannot update dispute in status ${dispute.status}`);
+    }
+
+    const updated = await this.disputeRepo.updateStatus(disputeId, mappedStatus);
+    return { id: updated.id, status };
+  }
 }

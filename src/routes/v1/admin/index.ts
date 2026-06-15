@@ -19,6 +19,9 @@ import adminPlatformUsersRouter from './platform-users.js';
 import adminUsersRouter from './users.js';
 import adminOrdersRouter from './orders.js';
 import adminWorkersRouter from './workers.js';
+import adminPlatformDashboardRouter from './platform-dashboard.js';
+import adminFinanceRouter from './admin-finance.js';
+import adminNotificationsRouter from './notifications.js';
 import adminCasesRouter from './cases.js';
 
 const adminRouter: Router = Router();
@@ -42,6 +45,9 @@ adminRouter.use('/platform-users', adminPlatformUsersRouter);
 adminRouter.use('/users', adminUsersRouter);
 adminRouter.use('/orders', adminOrdersRouter);
 adminRouter.use('/disputes', disputeRouter);
-adminRouter.use('/workers', adminWorkersRouter); // Mount workers at /api/v1/admin/workers
+adminRouter.use('/workers', adminWorkersRouter);
+adminRouter.use('/admin-dashboard', adminPlatformDashboardRouter);
+adminRouter.use('/admin-finance', adminFinanceRouter);
+adminRouter.use('/notifications', adminNotificationsRouter);
 
 export default adminRouter;
