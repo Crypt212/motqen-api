@@ -24,7 +24,7 @@
  */
 
 import { logger } from '../libs/winston.js';
-import { chatService, contactDetectionService, userRepository } from '../state.js';
+import { chatService, contactDetectionService, notificationService, userRepository } from '../state.js';
 
 /**
  * Register all event handlers for a connected socket.
@@ -83,6 +83,15 @@ export function registerSocketHandlers(
       // 3. Emit new_message to recipient
       if (partnerId) {
         io.to(`user:${partnerId}`).emit('new_message', { message, conversationId });
+
+        // Push FCM if partner is offline
+        const online = await presence.isOnline({ userId: partnerId });
+        if (!online) {
+          notificationService.notify(partnerId, {
+            type: 'NEW_MESSAGE',
+            ctx: { conversationId },
+          }).catch(() => {});
+        }
       }
 
       // 4. ACK sender
