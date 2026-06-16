@@ -3,11 +3,9 @@ import helmet from 'helmet';
 import cors from 'cors';
 import v1Router from './routes/v1/api.js';
 import errorHandler from './middlewares/errorMiddleware.js';
-import { ipRateLimiter } from './middlewares/rateLimitMiddleware.js';
 import redisClient from './libs/redis.js';
 import prismaClient from './libs/database.js';
 import swaggerUi from 'swagger-ui-express';
-import { verifyDeviceId } from './middlewares/authMiddleware.js';
 import { asyncHandler } from './types/asyncHandler.js';
 import { generateOpenAPISpec } from './libs/openapi.js';
 
@@ -23,7 +21,7 @@ const initApp = async () => {
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
 
-  app.use('/api/v1', verifyDeviceId, ipRateLimiter, v1Router);
+  app.use('/api/v1', v1Router);
 
   // Health check
   app.get(
@@ -40,13 +38,10 @@ const initApp = async () => {
 
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(generateOpenAPISpec()));
 
-  app.get(
-    '/docs.json',
-    (_, res) => {
-      res.setHeader('Content-Type', 'application/json');
-      res.send(generateOpenAPISpec());
-    }
-  );
+  app.get('/docs.json', (_, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(generateOpenAPISpec());
+  });
 
   app.use(errorHandler);
 
