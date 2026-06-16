@@ -55,14 +55,20 @@ export class NotificationService {
     const payload = mapEventToNotification(event);
 
     if (saveNotification) {
-      const created = await this.repo.create({
-        userId,
-        type: payload.type,
-        title: payload.title,
-        body: payload.body,
-        data: payload.data,
-        isSent: false,
-      });
+      let created: Notification;
+      try {
+        created = await this.repo.create({
+          userId,
+          type: payload.type,
+          title: payload.title,
+          body: payload.body,
+          data: payload.data,
+          isSent: false,
+        });
+      } catch (err) {
+        console.log('NotificationService.notify error', err);
+        throw err;
+      }
 
       await this.redis.del(UNREAD_COUNT_KEY(userId));
 

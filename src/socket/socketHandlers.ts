@@ -51,7 +51,7 @@ export function registerSocketHandlers(
   // ─── send_message ───────────────────────────────────────────────────────────
   socket.on('send_message', async ({ conversationId, content, type = 'TEXT' }, ack) => {
     try {
-      if (type !== 'TEXT') {
+      if (type !== 'TEXT' && type !== 'ORDER') {
         if (typeof ack === 'function') {
           ack({ ok: false, error: 'Invalid message type' });
         }

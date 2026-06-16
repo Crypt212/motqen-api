@@ -1,0 +1,10 @@
+-- AlterEnum
+ALTER TYPE "MessageType" ADD VALUE 'ORDER';
+
+-- AlterEnum
+ALTER TYPE "NotificationType" ADD VALUE 'RATING';
+ALTER TYPE "NotificationType" ADD VALUE 'NEW_ORDER';
+ALTER TYPE "NotificationType" ADD VALUE 'ORDER_RATED';
+ALTER TYPE "NotificationType" ADD VALUE 'NEW_PROPOSAL';
+ALTER TYPE "NotificationType" ADD VALUE 'NEW_MESSAGE';
+ALTER TYPE "NotificationType" ADD VALUE 'TEST_NOTIFICATION';
