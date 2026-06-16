@@ -233,11 +233,11 @@ export function mapEventToNotification(event: NotificationEventContext): Notific
       };
     }
     case 'NEW_MESSAGE': {
-      const { conversationId } = event.ctx;
+      const { conversationId, senderName, content } = event.ctx;
       return {
         type: 'NEW_MESSAGE',
-        title: 'رسالة جديدة 💬',
-        body: 'لديك رسالة جديدة في المحادثة',
+        title: senderName,
+        body: content,
         data: { screen: 'home', entityId: conversationId, entityType: 'none' },
       };
     }

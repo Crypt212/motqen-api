@@ -87,9 +87,12 @@ export function registerSocketHandlers(
         // Push FCM if partner is offline
         const online = await presence.isOnline({ userId: partnerId });
         if (!online) {
+          const senderName = [message.sender?.firstName, message.sender?.middleName, message.sender?.lastName]
+            .filter(Boolean)
+            .join(' ');
           notificationService.notify(partnerId, {
             type: 'NEW_MESSAGE',
-            ctx: { conversationId },
+            ctx: { conversationId, senderName, content: message.content },
           }).catch(() => {});
         }
       }

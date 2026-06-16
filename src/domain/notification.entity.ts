@@ -67,5 +67,5 @@ export type NotificationEventContext =
   | { type: 'NEW_ORDER'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'ORDER_RATED'; ctx: { orderId: string; orderTitle: string } }
   | { type: 'NEW_PROPOSAL'; ctx: { orderId: string; orderTitle: string } }
-  | { type: 'NEW_MESSAGE'; ctx: { conversationId: string } }
+  | { type: 'NEW_MESSAGE'; ctx: { conversationId: string; senderName: string; content: string } }
   | { type: 'TEST_NOTIFICATION'; ctx: { message?: string } };
