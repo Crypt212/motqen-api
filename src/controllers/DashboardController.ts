@@ -134,6 +134,7 @@ import { asyncHandler } from '../types/asyncHandler.js';
 import { parseQuery } from '../schemas/common.js';
 import { LoggedInUser } from 'src/domain/user.entity.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
+import { logger } from 'src/libs/winston.js';
 
 export const getUser = asyncHandler<GetUserResponseDTO, GetUserRequestDTO, GetUserQueryDTO, GetUserParamsDTO>(async (req, res) => {
   const userId = req.userState.userId;
@@ -176,9 +177,11 @@ export const createClientProfile = asyncHandler<CreateClientProfileResponseDTO, 
   const clientProfileBody = req.parsed!.body!;
 
   const createData = {
-    ...clientProfileBody,
   };
 
+  console.log("creating client profile:-");
+  console.log("userId: ", userId);
+  console.log("data: ", createData);
   const clientProfile = await clientProfileService.create({
     userId,
     data: createData,

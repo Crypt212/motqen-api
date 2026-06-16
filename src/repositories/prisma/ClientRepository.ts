@@ -12,10 +12,9 @@ import { PrismaClient } from '../../generated/prisma/client.js';
 
 export default class ClientProfileRepository
   extends Repository
-  implements IClientProfileRepository
-{
+  implements IClientProfileRepository {
   constructor(
-    prisma: PrismaClient | import('../../generated/prisma/client.js').Prisma.TransactionClient
+    prisma: PrismaClient | import('src/generated/prisma/client.js').Prisma.TransactionClient
   ) {
     super(prisma);
   }
@@ -61,12 +60,12 @@ export default class ClientProfileRepository
     clientProfile: ClientProfileCreateInput;
   }): Promise<ClientProfile> {
     try {
-      const record = await this.prismaClient.clientProfile.create({
-        data: {
-          userId: params.userId,
-          ...params.clientProfile,
-        },
-      });
+      const data = {
+        userId: params.userId,
+        ...params.clientProfile,
+      };
+      console.log("prisma creation data for client: ", data)
+      const record = await this.prismaClient.clientProfile.create({ data });
       return this.toDomain(record);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'create');

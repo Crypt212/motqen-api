@@ -68,5 +68,3 @@ export const validateQuery = (schema: z.ZodTypeAny) => validateZod(schema, 'quer
  * router.get('/users/:id', validateParams(UserIdParamsSchema), userController.get);
  */
 export const validateParams = (schema: z.ZodTypeAny) => validateZod(schema, 'params');
-
-type NextFunction = (err?: Error) => void;

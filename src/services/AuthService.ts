@@ -34,6 +34,7 @@ import WorkerProfileRepository from '../repositories/prisma/WorkerRepository.js'
 import ClientProfileRepository from '../repositories/prisma/ClientRepository.js';
 import GovernmentRepository from '../repositories/prisma/GovernmentRepository.js';
 import { TransactionManager } from 'src/repositories/prisma/TransactionManager.js';
+import { redisClearCache } from 'src/utils/redis.js';
 const MAX_VERIFY_ATTEMPTS = 5;
 
 /**
@@ -611,6 +612,7 @@ export default class AuthService extends Service {
    */
   async logout(params: { userId: IDType; deviceId: string }): Promise<void> {
     try {
+      console.log("userId to be revoked: ", params.userId)
       await this.sessionRepository.revoke({
         filter: {
           userId: params.userId,
@@ -618,6 +620,8 @@ export default class AuthService extends Service {
         },
         revokedBy: params.userId,
       });
+
+      await redisClearCache('access:' + params.userId);
     } catch (err) {
       logger.error('Failed to revoke session:', err);
       throw err;

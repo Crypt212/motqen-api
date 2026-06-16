@@ -22,6 +22,7 @@ import { SpecializationsTree, SpecializationsWithSubSpecializations } from '../d
 import { Day, DayWorkingHours, DayWorkingHoursCreateInput, DayWorkingHoursReturn } from '../domain/workingHours.entity.js';
 import IDataCache from '../cache/interfaces/DataCache.js';
 import { ExploreWorkerPublicDetail } from '../types/exploreWorker.js';
+import environment from 'src/configs/environment.js';
 
 type WorkerProfileCreateType = {
   experienceYears: number;
@@ -126,8 +127,8 @@ export default class WorkerService extends Service {
         verification: {
           idWithPersonalImageUrl: selfiWithID,
           idDocumentUrl: nationalID,
-          status: 'PENDING',
-          reason: 'Waiting for verification',
+          status: environment.nodeEnv === 'development' ? 'APPROVED' : 'PENDING',
+          reason: environment.nodeEnv === 'development' ? '' : 'Waiting for verification',
         },
       });
 

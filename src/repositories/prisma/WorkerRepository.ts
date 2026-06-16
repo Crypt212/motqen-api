@@ -16,7 +16,7 @@ import {
 import { Day, DayWorkingHours, DayWorkingHoursCreateInput, DayWorkingHoursReturn } from '../../domain/workingHours.entity.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
-import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
+import { Prisma, PrismaClient } from 'src/generated/prisma/client.js';
 import { ExploreWorkerPublicDetail, } from '../../types/exploreWorker.js';
 import { Government, GovernmentFilter } from 'src/domain/government.entity.js';
 import { convertDayNumberToEnum } from 'src/utils/dayNumberToEnum.js';
@@ -28,7 +28,7 @@ export default class WorkerProfileRepository
   extends Repository
   implements IWorkerProfileRepository {
   constructor(
-    prisma: PrismaClient | import('../../generated/prisma/client.js').Prisma.TransactionClient
+    prisma: PrismaClient | import('src/generated/prisma/client.js').Prisma.TransactionClient
   ) {
     super(prisma);
   }

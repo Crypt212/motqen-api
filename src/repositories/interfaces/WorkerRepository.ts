@@ -13,7 +13,7 @@ import {
 import { DayWorkingHours, DayWorkingHoursCreateInput, DayWorkingHoursReturn } from '../../domain/workingHours.entity.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { IDType } from '../interfaces/Repository.js';
-import { Day, Portfolio, ProjectImage, WorkerBadge } from '../../generated/prisma/client.js';
+import { Day, Portfolio, ProjectImage, WorkerBadge } from 'src/generated/prisma/client.js';
 import { Government, GovernmentFilter } from 'src/domain/government.entity.js';
 
 export default interface IWorkerProfileRepository {
