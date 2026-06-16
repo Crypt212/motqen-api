@@ -25,7 +25,7 @@ import {
   FinishWorkParamsDTO,
   RateOrderRequestDTO,
   RateOrderQueryDTO,
-  RateOrderParamsDTO
+  RateOrderParamsDTO,
 } from '../schemas/requests/order.request.js';
 import {
   CreateOrderResponseDTO,
@@ -35,22 +35,28 @@ import {
   GetOrderLocationResponseDTO,
   StartWorkResponseDTO,
   FinishWorkResponseDTO,
-  RateOrderResponseDTO
+  RateOrderResponseDTO,
 } from '../schemas/responses/order.response.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
 import LocationService from 'src/services/LocationService.js';
 import AppError from 'src/errors/AppError.js';
+import { notificationService } from 'src/state.js';
 
 export default class OrderController {
   private orderService: OrderService;
   private locationService: LocationService;
 
-  constructor(deps: { orderService: OrderService, locationService: LocationService }) {
+  constructor(deps: { orderService: OrderService; locationService: LocationService }) {
     this.orderService = deps.orderService;
     this.locationService = deps.locationService;
   }
 
-  create = asyncHandler<CreateOrderResponseDTO, CreateOrderRequestDTO, CreateOrderQueryDTO, CreateOrderParamsDTO>(async (req, res) => {
+  create = asyncHandler<
+    CreateOrderResponseDTO,
+    CreateOrderRequestDTO,
+    CreateOrderQueryDTO,
+    CreateOrderParamsDTO
+  >(async (req, res) => {
     const parsedBody = req.parsed!.body!;
     const images = (req.files as Express.Multer.File[]) || [];
     const clientUserId = req.userState.userId;
@@ -67,10 +73,26 @@ export default class OrderController {
       images,
     });
 
-    res.status(201).send({ status: 'success', message: 'Order created successfully', data: { order } });
+    if (parsedBody.orderData.orderMode === 'DIRECT') {
+      await notificationService.notify(order.workerUserId, {
+        type: 'NEW_ORDER',
+        ctx: {
+          orderId: order.id,
+          orderTitle: order.title,
+        },
+      });
+    }
+    res
+      .status(201)
+      .send({ status: 'success', message: 'Order created successfully', data: { order } });
   });
 
-  list = asyncHandler<GetOrdersResponseDTO, GetOrdersRequestDTO, GetOrdersQueryDTO, GetOrdersParamsDTO>(async (req, res) => {
+  list = asyncHandler<
+    GetOrdersResponseDTO,
+    GetOrdersRequestDTO,
+    GetOrdersQueryDTO,
+    GetOrdersParamsDTO
+  >(async (req, res) => {
     const { filter, pagination, sort } = parseQuery(req.parsed!.query!);
 
     const userState = req.userState!;
@@ -85,10 +107,17 @@ export default class OrderController {
       pagination,
       sort,
     });
-    res.status(200).send({ status: 'success', message: 'Orders retrieved successfully', data: result });
+    res
+      .status(200)
+      .send({ status: 'success', message: 'Orders retrieved successfully', data: result });
   });
 
-  getById = asyncHandler<GetOrderByIdResponseDTO, GetOrderByIdRequestDTO, GetOrderByIdQueryDTO, GetOrderByIdParamsDTO>(async (req, res) => {
+  getById = asyncHandler<
+    GetOrderByIdResponseDTO,
+    GetOrderByIdRequestDTO,
+    GetOrderByIdQueryDTO,
+    GetOrderByIdParamsDTO
+  >(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     const order = await this.orderService.getOrderById({
@@ -96,10 +125,17 @@ export default class OrderController {
       userId: userState.userId,
       role: userState.role,
     });
-    res.status(200).send({ status: 'success', message: 'Order retrieved successfully', data: { order } });
+    res
+      .status(200)
+      .send({ status: 'success', message: 'Order retrieved successfully', data: { order } });
   });
 
-  getLocation = asyncHandler<GetOrderLocationResponseDTO, GetOrderLocationRequestDTO, GetOrderLocationQueryDTO, GetOrderLocationParamsDTO>(async (req, res) => {
+  getLocation = asyncHandler<
+    GetOrderLocationResponseDTO,
+    GetOrderLocationRequestDTO,
+    GetOrderLocationQueryDTO,
+    GetOrderLocationParamsDTO
+  >(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     const order = await this.orderService.getOrderById({
@@ -110,52 +146,133 @@ export default class OrderController {
 
     const location = await this.locationService.getLocationById({
       userId: order.clientUserId,
-      locationId: order.locationId
+      locationId: order.locationId,
     });
-    res.status(200).send({ status: 'success', message: 'Location of order retrieved successfully', data: { location } });
+    res.status(200).send({
+      status: 'success',
+      message: 'Location of order retrieved successfully',
+      data: { location },
+    });
   });
 
-  cancel = asyncHandler<CancelOrderResponseDTO, CancelOrderRequestDTO, CancelOrderQueryDTO, CancelOrderParamsDTO>(async (req, res) => {
+  cancel = asyncHandler<
+    CancelOrderResponseDTO,
+    CancelOrderRequestDTO,
+    CancelOrderQueryDTO,
+    CancelOrderParamsDTO
+  >(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
-    await this.orderService.cancelOrder({
+    const order = await this.orderService.cancelOrder({
       orderId: orderId as string,
       clientUserId: userState.userId,
     });
+    await Promise.all([
+      notificationService.notify(order.clientUserId, {
+        type: 'ORDER_CANCELLED',
+        ctx: {
+          orderId: orderId as string,
+          orderTitle: '',
+        },
+      }),
+      notificationService.notify(order.workerUserId!, {
+        type: 'ORDER_CANCELLED',
+        ctx: {
+          orderId: orderId as string,
+          orderTitle: '',
+        },
+      }),
+    ]);
+
     res.status(200).send({ status: 'success', message: 'Order cancelled successfully' });
   });
 
-
-  startWork = asyncHandler<StartWorkResponseDTO, StartWorkRequestDTO, StartWorkQueryDTO, StartWorkParamsDTO>(async (req, res) => {
+  startWork = asyncHandler<
+    StartWorkResponseDTO,
+    StartWorkRequestDTO,
+    StartWorkQueryDTO,
+    StartWorkParamsDTO
+  >(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     const order = await this.orderService.startWork({
       orderId: orderId as string,
       workerUserId: userState.userId,
     });
-    res.status(200).send({ status: 'success', message: 'Work started successfully', data: { order } });
+    await notificationService.notify(order.clientUserId, {
+      type: 'WORK_STARTED',
+      ctx: {
+        orderId: order.id,
+        orderTitle: order.title,
+      },
+    });
+    res
+      .status(200)
+      .send({ status: 'success', message: 'Work started successfully', data: { order } });
   });
 
-  finishWork = asyncHandler<FinishWorkResponseDTO, FinishWorkRequestDTO, FinishWorkQueryDTO, FinishWorkParamsDTO>(async (req, res) => {
+  finishWork = asyncHandler<
+    FinishWorkResponseDTO,
+    FinishWorkRequestDTO,
+    FinishWorkQueryDTO,
+    FinishWorkParamsDTO
+  >(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userState = req.userState!;
     const order = await this.orderService.finishWork({
       orderId: orderId,
       workerUserId: userState.userId,
     });
-    res.status(200).send({ status: 'success', message: 'Work finished successfully', data: { order } });
+    await notificationService.notify(order.clientUserId, {
+      type: 'WORK_DONE',
+      ctx: {
+        orderId: order.id,
+        workerId: order.workerUserId!,
+      },
+    });
+    await notificationService.notify(order.clientUserId, {
+      type: 'ORDER_COMPLETED',
+      ctx: {
+        orderId: order.id,
+        orderTitle: order.title,
+      },
+    });
+    res
+      .status(200)
+      .send({ status: 'success', message: 'Work finished successfully', data: { order } });
   });
 
-  rate = asyncHandler<RateOrderResponseDTO, RateOrderRequestDTO, RateOrderQueryDTO, RateOrderParamsDTO>(async (req, res) => {
+  rate = asyncHandler<
+    RateOrderResponseDTO,
+    RateOrderRequestDTO,
+    RateOrderQueryDTO,
+    RateOrderParamsDTO
+  >(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const { rate, comment } = req.parsed!.body!;
     const userState = req.userState!;
-    await this.orderService.rateOrder({
+    const order = await this.orderService.rateOrder({
       orderId: orderId,
       clientUserId: userState.userId,
       rate,
       comment,
     });
+    await Promise.all([
+      notificationService.notify(order.workerUserId!, {
+        type: 'RATING',
+        ctx: {
+          orderId: order.id,
+          orderTitle: order.title,
+        },
+      }),
+      notificationService.notify(order.workerUserId!, {
+        type: 'ORDER_RATED',
+        ctx: {
+          orderId: order.id,
+          orderTitle: order.title,
+        },
+      }),
+    ]);
     res.status(200).send({ status: 'success', message: 'Order rated successfully' });
   });
 }

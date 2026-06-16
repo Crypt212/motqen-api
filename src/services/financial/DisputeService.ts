@@ -4,6 +4,7 @@ import ITransactionLogRepository from '../../repositories/interfaces/financial/T
 import { EscrowService } from './EscrowService.js';
 import { logActivity } from './helpers/activityLogger.js';
 import { DisputeResolution, DisputeStatus } from '../../domain/financial/dispute.entity.js';
+import { notificationService } from '../../state.js';
 
 export class DisputeService {
   constructor(
@@ -21,7 +22,13 @@ export class DisputeService {
     eventTimeline?: unknown[];
   }) {
     // Verify order exists
-    const order = await this.prisma.order.findUnique({ where: { id: data.orderId } });
+    const order = await this.prisma.order.findUnique({
+      where: { id: data.orderId },
+      include: {
+        clientProfile: true,
+        workerProfile: true,
+      },
+    });
     if (!order) throw new Error('Order not found');
 
     // Check for existing open dispute
@@ -39,6 +46,22 @@ export class DisputeService {
       entityId: dispute.id,
       metadata: { orderId: data.orderId },
     });
+
+    // Notify all parties — DISPUTE_OPENED
+    const title = order.title;
+    const notifyData = { disputeId: dispute.id, orderTitle: title };
+    if (order.clientProfile?.userId) {
+      notificationService.notify(order.clientProfile.userId, {
+        type: 'DISPUTE_OPENED',
+        ctx: notifyData,
+      }).catch(() => {});
+    }
+    if (order.workerProfile?.userId) {
+      notificationService.notify(order.workerProfile.userId, {
+        type: 'DISPUTE_OPENED',
+        ctx: notifyData,
+      }).catch(() => {});
+    }
 
     return dispute;
   }
@@ -92,7 +115,11 @@ export class DisputeService {
       metadata: { message },
     });
 
-    // TODO: trigger notification to the user who opened the dispute
+    // Trigger notification to the user who opened the dispute
+    notificationService.notify(dispute.openedBy, {
+      type: 'DISPUTE_UPDATED',
+      ctx: { disputeId, updateMessage: message },
+    }).catch(() => {});
 
     return { status: 'AWAITING_INFO' };
   }
@@ -137,6 +164,27 @@ export class DisputeService {
       entityId: disputeId,
       metadata: { resolution, reason, orderId: dispute.orderId },
     });
+
+    // Notify all parties — DISPUTE_RESOLVED
+    const resolvedOrder = await this.prisma.order.findUnique({
+      where: { id: dispute.orderId },
+      include: { clientProfile: true, workerProfile: true },
+    });
+    if (resolvedOrder) {
+      const resolutionMsg = resolution;
+      if (resolvedOrder.clientProfile?.userId) {
+        notificationService.notify(resolvedOrder.clientProfile.userId, {
+          type: 'DISPUTE_RESOLVED',
+          ctx: { disputeId, resolution: resolutionMsg },
+        }).catch(() => {});
+      }
+      if (resolvedOrder.workerProfile?.userId) {
+        notificationService.notify(resolvedOrder.workerProfile.userId, {
+          type: 'DISPUTE_RESOLVED',
+          ctx: { disputeId, resolution: resolutionMsg },
+        }).catch(() => {});
+      }
+    }
 
     return updatedDispute;
   }

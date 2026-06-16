@@ -66,7 +66,9 @@ export default class OrderService extends Service {
         if (!orderData.workerUserId) {
           throw new AppError('Worker user ID is required for direct orders', 400);
         }
-        const worker = await this.workerProfileRepository.find({ workerFilter: { userId: orderData.workerUserId } });
+        const worker = await this.workerProfileRepository.find({
+          workerFilter: { userId: orderData.workerUserId },
+        });
         if (!worker) {
           throw new AppError('Worker not found', 400);
         }
@@ -83,7 +85,9 @@ export default class OrderService extends Service {
         if (!orderData.startDate) {
           throw new AppError('Start date is required for direct orders', 400);
         }
-        const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: orderData.workerUserId } });
+        const workerVerification = await this.workerProfileRepository.findVerification({
+          workerFilter: { userId: orderData.workerUserId },
+        });
         if (!workerVerification || workerVerification.status !== VerificationStatus.APPROVED) {
           throw new AppError('Worker is not verified', 400);
         }
@@ -120,7 +124,9 @@ export default class OrderService extends Service {
             imageUrls,
           });
 
-          const specialization = await specializationsRepo.findBySubSpecializationId({ subSpecializationId: order.subSpecialization.id });
+          const specialization = await specializationsRepo.findBySubSpecializationId({
+            subSpecializationId: order.subSpecialization.id,
+          });
           await specializationsRepo.increamentOrderCount({
             specializationId: specialization.id,
           });
@@ -130,7 +136,7 @@ export default class OrderService extends Service {
             const proposal = await proposalRepo.create({
               proposal: {
                 orderId: order.id,
-                workerProfileId
+                workerProfileId,
               },
             });
 
@@ -156,7 +162,7 @@ export default class OrderService extends Service {
   async getOrders(params: {
     userId: string;
     isAdmin: boolean;
-    role: "WORKER" | "CLIENT";
+    role: 'WORKER' | 'CLIENT';
     clientUserId?: string;
     workerUserId?: string;
     filter: OrderFilter;
@@ -172,12 +178,21 @@ export default class OrderService extends Service {
       };
 
       if (!params.isAdmin) {
-        if (params.role === "WORKER") {
+        if (params.role === 'WORKER') {
+          const subSpecializationsIds = (
+            await this.workerProfileRepository.findSpecializationsWithSubSpecializations({
+              filter: { userId: params.userId },
+            })
+          ).reduce(
+            (acc, { subSpecializations }) => [...acc, ...subSpecializations.map((s) => s.id)],
+            []
+          );
 
-          const subSpecializationsIds = (await this.workerProfileRepository.findSpecializationsWithSubSpecializations({ filter: { userId: params.userId } }))
-            .reduce((acc, { subSpecializations }) => [...acc, ...subSpecializations.map(s => s.id)], []);
-
-            const workingGovernmentIds = (await this.workerProfileRepository.findWorkGovernments({ workerProfileFilter: { userId: params.userId } })).governments .map(g => g.id);
+          const workingGovernmentIds = (
+            await this.workerProfileRepository.findWorkGovernments({
+              workerProfileFilter: { userId: params.userId },
+            })
+          ).governments.map((g) => g.id);
 
           return await this.orderRepository.findForWorker({
             workerUserId: params.userId,
@@ -187,9 +202,7 @@ export default class OrderService extends Service {
             pagination: params.pagination,
             sort: params.sort,
           });
-
-        } else if (params.role === "CLIENT") {
-
+        } else if (params.role === 'CLIENT') {
           return await this.orderRepository.findForClient({
             clientUserId: params.userId,
             filter: finalFilter,
@@ -199,39 +212,37 @@ export default class OrderService extends Service {
         } else {
           throw new AppError('User type not supported', 400);
         }
-      } else return this.orderRepository.findMany({ filter: finalFilter, pagination: params.pagination, sort: params.sort });
-
+      } else
+        return this.orderRepository.findMany({
+          filter: finalFilter,
+          pagination: params.pagination,
+          sort: params.sort,
+        });
     });
   }
 
-  async getOrderById(params: {
-    orderId: string;
-    userId: string;
-    role: "WORKER" | "CLIENT";
-  }) {
+  async getOrderById(params: { orderId: string; userId: string; role: 'WORKER' | 'CLIENT' }) {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
       if (!order) {
         throw new AppError('Order not found', 404);
       }
 
-      if (params.role === "WORKER") {
+      if (params.role === 'WORKER') {
         const isAssigned = order.workerUserId && order.workerUserId === params.userId;
-        if (!isAssigned && order.orderMode !== "GLOBAL") {
+        if (!isAssigned && order.orderMode !== 'GLOBAL') {
           throw new AppError('Access denied', 403);
         }
-      } else if (params.role === "CLIENT") {
+      } else if (params.role === 'CLIENT') {
         const isOwner = order.clientUserId === params.userId;
-        if (!isOwner)
-          throw new AppError('Access denied', 403);
+        if (!isOwner) throw new AppError('Access denied', 403);
       } else throw new AppError('User type not supported', 400);
-
 
       return order;
     });
   }
 
-  async cancelOrder(params: { orderId: string; clientUserId?: string }) {
+  async cancelOrder(params: { orderId: string; clientUserId?: string }): Promise<Order> {
     return tryCatch(async () => {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
       if (!order) throw new AppError('Order not found', 404);
@@ -244,14 +255,15 @@ export default class OrderService extends Service {
         throw new AppError('Cannot cancel order in current status', 400);
       }
 
-      await this.transactionManager.execute(
+      return await this.transactionManager.execute(
         { orderRepo: OrderRepository, timeSlotRepo: WorkerOccupiedTimeSlotRepository },
         async ({ orderRepo, timeSlotRepo }) => {
-          await orderRepo.update({
+          const updatedOrder = await orderRepo.update({
             filter: { id: params.orderId },
             order: { orderStatus: 'CANCELLED' },
           });
           await timeSlotRepo.deleteByOrderId({ orderId: params.orderId });
+          return updatedOrder;
         }
       );
     });
@@ -262,10 +274,11 @@ export default class OrderService extends Service {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
       if (!order) throw new AppError('Order not found', 404);
 
-      if (order.workerUserId !== params.workerUserId)
-        throw new AppError('Access denied', 403);
+      if (order.workerUserId !== params.workerUserId) throw new AppError('Access denied', 403);
 
-      const workerVerification = await this.workerProfileRepository.findVerification({ workerFilter: { userId: params.workerUserId } });
+      const workerVerification = await this.workerProfileRepository.findVerification({
+        workerFilter: { userId: params.workerUserId },
+      });
       if (!workerVerification || workerVerification.status !== VerificationStatus.APPROVED) {
         throw new AppError('Worker is not verified', 400);
       }
@@ -293,8 +306,7 @@ export default class OrderService extends Service {
       const order = await this.orderRepository.find({ filter: { id: params.orderId } });
       if (!order) throw new AppError('Order not found', 404);
 
-      if (order.workerUserId !== params.workerUserId)
-        throw new AppError('Access denied', 403);
+      if (order.workerUserId !== params.workerUserId) throw new AppError('Access denied', 403);
 
       if (!canTransitionWorkStatus(order.workStatus, 'DONE'))
         throw new AppError('Cannot finish work in current status', 400);
@@ -302,7 +314,11 @@ export default class OrderService extends Service {
         throw new AppError('Cannot complete order in current status', 400);
 
       return await this.transactionManager.execute(
-        { orderRepo: OrderRepository, timeSlotRepo: WorkerOccupiedTimeSlotRepository, workerProfileRepo: WorkerProfileRepository },
+        {
+          orderRepo: OrderRepository,
+          timeSlotRepo: WorkerOccupiedTimeSlotRepository,
+          workerProfileRepo: WorkerProfileRepository,
+        },
         async ({ orderRepo, timeSlotRepo, workerProfileRepo }) => {
           const updated = await orderRepo.update({
             filter: { id: params.orderId },
@@ -313,9 +329,11 @@ export default class OrderService extends Service {
             },
           });
 
-          await timeSlotRepo.deleteByOrderId({ orderId: params.orderId, });
+          await timeSlotRepo.deleteByOrderId({ orderId: params.orderId });
 
-          const workerProfileId = (await workerProfileRepo.find({ workerFilter: { userId: order.workerUserId } })).id;
+          const workerProfileId = (
+            await workerProfileRepo.find({ workerFilter: { userId: order.workerUserId } })
+          ).id;
 
           await workerProfileRepo.increaseCompletedOrders({
             workerProfileId,
@@ -332,7 +350,7 @@ export default class OrderService extends Service {
     clientUserId: string;
     rate: number;
     comment?: string;
-  }) {
+  }): Promise<Order> {
     const { orderId, clientUserId, rate, comment } = params;
     const order = await this.orderRepository.find({ filter: { id: orderId } });
     if (!order) throw new AppError('Order not found', 404);
@@ -344,20 +362,23 @@ export default class OrderService extends Service {
 
     if (order.rate !== -1) throw new AppError('Cannot rate order more than once', 400);
 
-    await this.transactionManager.execute(
+    return await this.transactionManager.execute(
       { orderRepo: OrderRepository, workerProfileRepo: WorkerProfileRepository },
       async ({ orderRepo, workerProfileRepo }) => {
-        await orderRepo.update({
+        const order = await orderRepo.update({
           filter: { id: orderId },
           order: { rate, comment },
         });
 
-        const workerProfileId = (await workerProfileRepo.find({ workerFilter: { userId: order.workerUserId } })).id;
+        const workerProfileId = (
+          await workerProfileRepo.find({ workerFilter: { userId: order.workerUserId } })
+        ).id;
 
         await workerProfileRepo.addRating({
           workerProfileId,
           rate,
         });
+        return order;
       }
     );
   }

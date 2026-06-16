@@ -1,5 +1,5 @@
 /**
- * @fileoverview Presence Service - Handle user online/offline state and cleanup
+ * @fileoverview Presence Service - Manage user online/offline state and cleanup
  * @module services/PresenceService
  */
 
@@ -49,36 +49,18 @@ export default class PresenceService extends Service {
     reason: 'logout' | 'disconnect';
     socketId?: string;
   }): Promise<void> {
-    const { userId, reason, socketId } = params;
+    const { userId, reason } = params;
 
     try {
-      // Get user's conversations to cleanup and notify partners
-      const convs =
-        await this.conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
-          userId,
-          filter: {},
-        });
-      const conversationIds = convs.conversationParticipantsWithMessages.map((c) => c.id);
-
       // Remove all presence data from Redis
-      await this.presenceCache.removeAllSockets({ userId });
-      await this.presenceCache.removeAllInChat({ userId });//, conversationIds }); TODO: Figure out why this is failing
+      await this.presenceCache.removeSocket({ userId });
+      await this.presenceCache.removeFromAllEnterSets({ userId });
 
       // Update DB status to offline
       await this.prisma.user.update({
         where: { id: userId },
         data: { isOnline: false },
       });
-
-      // Notify all unique partners that user is offline
-      const partnersEmitted = new Set<string>();
-      for (const conv of convs.conversationParticipantsWithMessages) {
-        const partner = conv.participants.find((p) => p.userId !== userId);
-        if (partner && !partnersEmitted.has(partner.userId)) {
-          emitToUser(partner.userId, 'user_offline', { userId });
-          partnersEmitted.add(partner.userId);
-        }
-      }
 
       // If logout, tell client to disconnect their socket
       if (reason === 'logout') {
@@ -88,53 +70,6 @@ export default class PresenceService extends Service {
       logger.info(`[presence] user ${userId} is now offline (${reason})`);
     } catch (err) {
       logger.error('[presence] handleUserOffline error:', err);
-      throw err;
-    }
-  }
-
-  /**
-   * Handle single socket disconnect - only does full cleanup if no more sockets remain.
-   * This should be called on socket disconnect event.
-   */
-  async handleSocketDisconnect(params: { userId: IDType; socketId: string }): Promise<void> {
-    const { userId, socketId } = params;
-
-    try {
-      // Remove this socket from online set
-      await this.presenceCache.removeSocket({ userId, socketId });
-
-      // Get conversations for this user
-      const convs =
-        await this.conversationRepository.findNonEmptyConversationsWithParticipantsAndMessages({
-          userId,
-          filter: {},
-          pagination: { page: 1, limit: 100 },
-        });
-      const conversationIds = convs.conversationParticipantsWithMessages.map((c) => c.id);
-
-      // Remove socket from all inChat sets
-      await this.presenceCache.leaveAllChats({ userId }); //, socketId, conversationIds }); TODO: Figure out why this is failing
-
-      // Emit partner_offline to online partners for each conversation
-      for (const conv of convs.conversationParticipantsWithMessages) {
-        const partner = conv.participants.find((p) => p.userId !== userId);
-        if (!partner) continue;
-
-        const isPartnerOnline = await this.presenceCache.isOnline({ userId: partner.userId });
-        if (isPartnerOnline) {
-          emitToUser(partner.userId, 'partner_offline', { conversationId: conv.id });
-        }
-      }
-
-      // Check if all devices are now offline
-      const remaining = await this.presenceCache.countSockets({ userId });
-
-      if (remaining === 0) {
-        // Do full cleanup
-        await this.handleUserOffline({ userId, reason: 'disconnect' });
-      }
-    } catch (err) {
-      logger.error('[presence] handleSocketDisconnect error:', err);
       throw err;
     }
   }

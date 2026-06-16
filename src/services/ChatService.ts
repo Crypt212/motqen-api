@@ -62,6 +62,52 @@ export default class ChatService extends Service {
     this._presence = params.presence;
   }
 
+  // ─── Cache Helpers ─────────────────────────────────────────────────────────
+
+  private async syncCountersCache(
+    conversationId: IDType,
+    userId: IDType,
+    lastReceived: number,
+    lastRead: number
+  ) {
+    await this.presence
+      .setParticipantCounters({ conversationId, userId, lastReceived, lastRead })
+      .catch((err) => console.error('[ChatService] Error syncing counters cache:', err));
+  }
+
+  async getChatSnapshot(params: { conversationId: IDType; userId: IDType }) {
+    const { conversationId, userId } = params;
+    const partnerId = await this.getPartnerIdCached({ conversationId, userId });
+
+    let counters = await this.presence.getParticipantCounters({
+      conversationId,
+      userId: partnerId,
+    });
+    if (!counters) {
+      const partner = await this.conversationRepository.findParticipant({
+        conversationId,
+        userId: partnerId,
+      });
+      counters = {
+        lastReceived: partner?.lastReceivedMessageNumber || 0,
+        lastRead: partner?.lastReadMessageNumber || 0,
+      };
+      await this.syncCountersCache(
+        conversationId,
+        partnerId,
+        counters.lastReceived,
+        counters.lastRead
+      );
+    }
+
+    const conv = await this.conversationRepository.findById({ id: conversationId });
+    return {
+      partnerLastReceivedMessageNumber: counters.lastReceived,
+      partnerLastReadMessageNumber: counters.lastRead,
+      messageCounter: conv?.messageCounter || 0,
+    };
+  }
+
   // ─── Conversation ──────────────────────────────────────────────────────────
 
   /**
@@ -258,12 +304,12 @@ export default class ChatService extends Service {
         type: type || 'TEXT',
       });
 
-      // Sender always "receives" their own message
-      await this.conversationRepository.updateLastReceived({
+      await this.syncCountersCache(
         conversationId,
-        userId: senderId,
-        messageNumber: message.messageNumber,
-      });
+        senderId,
+        message.messageNumber,
+        message.messageNumber
+      );
 
       return message;
     });
@@ -337,11 +383,18 @@ export default class ChatService extends Service {
         return { readUpTo: message.messageNumber };
       }
 
-      await this.conversationRepository.updateLastRead({
+      const updated = await this.conversationRepository.updateLastRead({
         conversationId,
         userId,
         messageNumber: message.messageNumber,
       });
+
+      await this.syncCountersCache(
+        conversationId,
+        userId,
+        updated.lastReceivedMessageNumber,
+        updated.lastReadMessageNumber
+      );
 
       return { readUpTo: message.messageNumber };
     });
@@ -362,7 +415,7 @@ export default class ChatService extends Service {
       if (!conv) throw new AppError('Conversation not found', 404);
 
       // Reading implies receiving — bump both counters
-      await Promise.all([
+      const [updatedRead, updatedReceived] = await Promise.all([
         this.conversationRepository.updateLastRead({
           conversationId,
           userId,
@@ -374,6 +427,13 @@ export default class ChatService extends Service {
           messageNumber: conv.messageCounter,
         }),
       ]);
+
+      await this.syncCountersCache(
+        conversationId,
+        userId,
+        updatedReceived.lastReceivedMessageNumber,
+        updatedRead.lastReadMessageNumber
+      );
     });
   }
 
@@ -387,7 +447,14 @@ export default class ChatService extends Service {
     userId: IDType;
     after?: number;
     limit?: number;
-  }): Promise<Message[]> {
+  }): Promise<{
+    messages: Message[];
+    snapshot: {
+      partnerLastReceivedMessageNumber: number;
+      partnerLastReadMessageNumber: number;
+      messageCounter: number;
+    };
+  }> {
     const { conversationId, userId, after, limit } = params;
     const pageSize = limit ?? 30;
 
@@ -422,6 +489,14 @@ export default class ChatService extends Service {
                 userId,
                 messageNumber: highestReceived,
               })
+              .then((updated) =>
+                this.syncCountersCache(
+                  conversationId,
+                  userId,
+                  updated.lastReceivedMessageNumber,
+                  updated.lastReadMessageNumber
+                )
+              )
               .catch((err) =>
                 console.error('[ChatService] Error auto-syncing delivery in getMessages:', err)
               );
@@ -429,7 +504,8 @@ export default class ChatService extends Service {
         }
       }
 
-      return messages;
+      const snapshot = await this.getChatSnapshot({ conversationId, userId });
+      return { messages, snapshot };
     });
   }
 
@@ -441,7 +517,14 @@ export default class ChatService extends Service {
     userId: IDType;
     afterMessageNumber: number;
     limit: number;
-  }): Promise<Message[]> {
+  }): Promise<{
+    messages: Message[];
+    snapshot: {
+      partnerLastReceivedMessageNumber: number;
+      partnerLastReadMessageNumber: number;
+      messageCounter: number;
+    };
+  }> {
     const { conversationId, userId, afterMessageNumber, limit } = params;
     return tryCatch(async () => {
       const participant = await this.conversationRepository.findParticipant({
@@ -467,6 +550,14 @@ export default class ChatService extends Service {
                 userId,
                 messageNumber: highestReceived,
               })
+              .then((updated) =>
+                this.syncCountersCache(
+                  conversationId,
+                  userId,
+                  updated.lastReceivedMessageNumber,
+                  updated.lastReadMessageNumber
+                )
+              )
               .catch((err) =>
                 console.error(
                   '[ChatService] Error auto-syncing delivery in getMissedMessages:',
@@ -477,7 +568,8 @@ export default class ChatService extends Service {
         }
       }
 
-      return messages;
+      const snapshot = await this.getChatSnapshot({ conversationId, userId });
+      return { messages, snapshot };
     });
   }
 
@@ -503,6 +595,52 @@ export default class ChatService extends Service {
     });
   }
 
+  /**
+   * Optimized participant validation and partner ID lookup using Redis.
+   * Caches participants in Redis to avoid DB hits on subsequent calls.
+   * Replaces the 2-step validateParticipant + findPartnerId flow.
+   */
+  async getPartnerIdCached(params: { conversationId: IDType; userId: IDType }): Promise<IDType> {
+    const { conversationId, userId } = params;
+    return tryCatch(async () => {
+      // 1. Check Redis cache
+      const members = await this.presence.getChatMembers({ conversationId });
+
+      // 2. Cache Hit
+      if (members && members.length > 0) {
+        const userIdStr = String(userId);
+        if (!members.includes(userIdStr)) {
+          throw new AppError('Not a participant in this conversation', 403);
+        }
+        const partnerStr = members.find((m) => m !== userIdStr);
+        if (!partnerStr) throw new AppError('Conversation has no partner', 400);
+        return partnerStr as IDType;
+      }
+
+      // 3. Cache Miss - Hit DB
+      const participant = await this.conversationRepository.findParticipant({
+        conversationId,
+        userId,
+      });
+      if (!participant) throw new AppError('Not a participant in this conversation', 403);
+
+      const partnerId = await this.conversationRepository.findPartnerId({
+        conversationId,
+        userId,
+      });
+
+      if (!partnerId) throw new AppError('Conversation has no partner', 400);
+
+      // 4. Update Cache
+      await this.presence.addChatMembers({
+        conversationId,
+        userIds: [String(userId), String(partnerId)],
+      });
+
+      return partnerId;
+    });
+  }
+
   // ─── Delivery tracking ─────────────────────────────────────────────────────
 
   /**
@@ -512,25 +650,41 @@ export default class ChatService extends Service {
   async markAsDelivered(params: {
     conversationId: IDType;
     userId: IDType;
-    messageNumber: number;
-  }): Promise<ConversationParticipant> {
-    const { conversationId, userId, messageNumber } = params;
+    lastMessageId: IDType;
+  }): Promise<{ deliveredUpTo: number }> {
+    const { conversationId, userId, lastMessageId } = params;
     return tryCatch(async () => {
+      const message = await this.messageRepository.findById({
+        messageId: lastMessageId,
+      });
+      if (!message) throw new AppError('Message not found', 404);
+      if (message.conversationId !== conversationId)
+        throw new AppError('Message does not belong to this conversation', 400);
+
       const participant = await this.conversationRepository.findParticipant({
         conversationId,
         userId,
       });
       if (!participant) throw new AppError('Not a participant in this conversation', 403);
 
-      if (messageNumber <= participant.lastReceivedMessageNumber) {
-        return participant;
+      if (message.messageNumber <= participant.lastReceivedMessageNumber) {
+        return { deliveredUpTo: message.messageNumber };
       }
 
-      return this.conversationRepository.updateLastReceived({
+      const updated = await this.conversationRepository.updateLastReceived({
         conversationId,
         userId,
-        messageNumber,
+        messageNumber: message.messageNumber,
       });
+
+      await this.syncCountersCache(
+        conversationId,
+        userId,
+        updated.lastReceivedMessageNumber,
+        updated.lastReadMessageNumber
+      );
+
+      return { deliveredUpTo: message.messageNumber };
     });
   }
 

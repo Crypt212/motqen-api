@@ -8,6 +8,7 @@ import { IPaymentRepository } from '../../repositories/interfaces/financial/Paym
 import { IPaymentProvider } from '../../providers/interfaces/IPaymentProvider.js';
 import { generateDeterministicKey } from './helpers/idempotencyHelper.js';
 import { logActivity } from './helpers/activityLogger.js';
+import { notificationService } from '../../state.js';
 
 export class RefundService {
   constructor(
@@ -28,6 +29,16 @@ export class RefundService {
     idempotencyKey: string, 
     notes?: string
   ) {
+    // Fetch order for notification target
+    const orderForNotif = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { clientProfileId: true },
+    });
+    const clientUser = orderForNotif
+      ? await this.prisma.clientProfile.findUnique({ where: { id: orderForNotif.clientProfileId } })
+      : null;
+    const refundRecipientId = clientUser?.userId;
+
     return this.prisma.$transaction(async (tx) => {
       // Get EscrowHold
       const escrow = await this.escrowHoldRepo.findByOrderId(orderId);
@@ -93,6 +104,13 @@ export class RefundService {
           entityId: refund.refund.id,
           metadata: { amount: escrow.totalAmount.toString(), orderId },
         });
+
+        if (refundRecipientId) {
+          notificationService.notify(refundRecipientId, {
+            type: 'REFUND_PROCESSED',
+            ctx: { orderId, amount: Number(escrow.totalAmount) },
+          }).catch(() => {});
+        }
 
         return refund.refund;
       } else if (escrow.status === 'RELEASED') {
@@ -189,6 +207,13 @@ export class RefundService {
           entityId: refundObj.id,
           metadata: { amount: escrow.workerAmount.toString(), orderId },
         });
+
+        if (refundRecipientId) {
+          notificationService.notify(refundRecipientId, {
+            type: 'REFUND_PROCESSED',
+            ctx: { orderId, amount: Number(escrow.workerAmount) },
+          }).catch(() => {});
+        }
 
         return refundObj;
       }

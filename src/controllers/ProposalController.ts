@@ -12,13 +12,13 @@ import {
   GetMyProposalParamsDTO,
   GetProposalByIdRequestDTO,
   GetProposalByIdQueryDTO,
-  GetProposalByIdParamsDTO
+  GetProposalByIdParamsDTO,
 } from '../schemas/requests/proposal.request.js';
 import {
   SubmitProposalResponseDTO,
   ListProposalsResponseDTO,
   GetMyProposalResponseDTO,
-  GetProposalByIdResponseDTO
+  GetProposalByIdResponseDTO,
 } from '../schemas/responses/proposal.response.js';
 import { parseQuery } from '../schemas/common.js';
 
@@ -29,7 +29,12 @@ export default class ProposalController {
     this.proposalService = deps.proposalService;
   }
 
-  submit = asyncHandler<SubmitProposalResponseDTO, SubmitProposalRequestDTO, SubmitProposalQueryDTO, SubmitProposalParamsDTO>(async (req, res) => {
+  submit = asyncHandler<
+    SubmitProposalResponseDTO,
+    SubmitProposalRequestDTO,
+    SubmitProposalQueryDTO,
+    SubmitProposalParamsDTO
+  >(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const workerUserId = req.userState.userId;
 
@@ -44,10 +49,19 @@ export default class ProposalController {
       userId: workerUserId,
     });
 
-    res.status(201).send({ status: 'success', message: 'Proposal submitted successfully', data: { proposal: fullProposal } });
+    res.status(201).send({
+      status: 'success',
+      message: 'Proposal submitted successfully',
+      data: { proposal: fullProposal },
+    });
   });
 
-  list = asyncHandler<ListProposalsResponseDTO, ListProposalsRequestDTO, ListProposalsQueryDTO, ListProposalsParamsDTO>(async (req, res) => {
+  list = asyncHandler<
+    ListProposalsResponseDTO,
+    ListProposalsRequestDTO,
+    ListProposalsQueryDTO,
+    ListProposalsParamsDTO
+  >(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const userId = req.userState.userId;
     const { filter, pagination, sort } = parseQuery(req.parsed!.query!);
@@ -67,19 +81,31 @@ export default class ProposalController {
     });
   });
 
-  getMine = asyncHandler<GetMyProposalResponseDTO, GetMyProposalRequestDTO, GetMyProposalQueryDTO, GetMyProposalParamsDTO>(async (req, res) => {
+  getMine = asyncHandler<
+    GetMyProposalResponseDTO,
+    GetMyProposalRequestDTO,
+    GetMyProposalQueryDTO,
+    GetMyProposalParamsDTO
+  >(async (req, res) => {
     const { orderId } = req.parsed!.params!;
     const workerProfileId = req.userState.worker?.id;
 
     const proposal = await this.proposalService.getMyProposal({
       orderId,
-      workerProfileId
+      workerProfileId,
     });
 
-    res.status(200).send({ status: 'success', message: 'Proposal retrieved successfully', data: { proposal } });
+    res
+      .status(200)
+      .send({ status: 'success', message: 'Proposal retrieved successfully', data: { proposal } });
   });
 
-  getById = asyncHandler<GetProposalByIdResponseDTO, GetProposalByIdRequestDTO, GetProposalByIdQueryDTO, GetProposalByIdParamsDTO>(async (req, res) => {
+  getById = asyncHandler<
+    GetProposalByIdResponseDTO,
+    GetProposalByIdRequestDTO,
+    GetProposalByIdQueryDTO,
+    GetProposalByIdParamsDTO
+  >(async (req, res) => {
     const { orderId, proposalId } = req.parsed!.params!;
     const userId = req.userState.userId;
 
@@ -89,8 +115,8 @@ export default class ProposalController {
       userId,
     });
 
-    res.status(200).send({ status: 'success', message: 'Proposal retrieved successfully', data: { proposal } });
+    res
+      .status(200)
+      .send({ status: 'success', message: 'Proposal retrieved successfully', data: { proposal } });
   });
-
-
 }

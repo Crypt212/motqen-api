@@ -10,6 +10,7 @@ import ProposalRepository from '../repositories/prisma/ProposalRepository.js';
 import NegotiationRepository from '../repositories/prisma/NegotiationRepository.js';
 import { IDType } from 'src/repositories/interfaces/Repository.js';
 import { PaginatedResultMeta } from 'src/types/query.js';
+import { notificationService } from '../state.js';
 
 interface ProposalServiceDeps {
   proposalRepository: IProposalRepository;
@@ -91,7 +92,7 @@ export default class ProposalService extends Service {
       }
 
       // 6. Create proposal and initial negotiation atomically
-      return await this.transactionManager.execute(
+      const proposal = await this.transactionManager.execute(
         { proposalRepo: ProposalRepository, negotiationRepo: NegotiationRepository },
         async ({ proposalRepo, negotiationRepo }) => {
           const proposal = await proposalRepo.create({
@@ -101,15 +102,11 @@ export default class ProposalService extends Service {
             },
           });
 
-          // Fetch the client's userId (since OrderForNegotiation doesn't have it directly, we assume order has it from orderRepo)
-          // Wait, order here is from orderRepo.find which includes clientProfile.user
-          const clientUserId = order.clientUserId;
-
           await negotiationRepo.create({
             data: {
               orderId,
               proposalId: proposal.id,
-              senderId: clientUserId,
+              senderId: order.clientUserId,
               direction: 'CLIENT_TO_WORKER',
               price: order.initialPrice ?? 0,
               startDate: order.startDate ?? new Date(),
@@ -120,6 +117,14 @@ export default class ProposalService extends Service {
           return proposal;
         }
       );
+
+      // Notify the client — NEW_PROPOSAL
+      notificationService.notify(order.clientUserId, {
+        type: 'NEW_PROPOSAL',
+        ctx: { orderId: order.id, orderTitle: order.title },
+      }).catch(() => {});
+
+      return proposal;
     });
   }
 

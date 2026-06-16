@@ -36,7 +36,7 @@ export type UserCreateInput = {
   status: AccountStatus;
 };
 
-export type UserUpdateInput = Partial<UserCreateInput> & { lastNotificationReadAt?: Date | null };
+export type UserUpdateInput = Partial<UserCreateInput> & { lastNotificationReadAt?: Date | null; isOnline?: boolean };
 
 export type UserFilter = Partial<{
   id: IDType;

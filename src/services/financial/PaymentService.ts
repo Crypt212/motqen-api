@@ -22,6 +22,7 @@ import {
   WebhookValidationError,
 } from '../../errors/WebHookError.js';
 import { emitToUser } from '../../socket/socket-emitter.js';
+import { notificationService } from '../../state.js';
 
 type WebhookStep = 'VALIDATION' | 'TX_ATTEMPT' | 'TX_PAYMENT' | 'TX_ORDER_STATUS' | 'TX_EFFECTS';
 
@@ -258,6 +259,16 @@ export class PaymentService {
       escrowId: ctx.escrowId,
       amount: ctx.amountBigInt.toString(),
     });
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: ctx.orderId },
+      select: { title: true },
+    });
+
+    notificationService.notify(ctx.userId, {
+      type: 'PAYMENT_RECEIVED',
+      ctx: { orderId: ctx.orderId, orderTitle: order?.title || '' },
+    }).catch(() => {});
   }
 
   async processWebhook(rawPayload: PaymobWebhookPayload, eventID: string) {

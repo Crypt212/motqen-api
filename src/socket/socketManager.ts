@@ -19,6 +19,7 @@ import { registerSocketHandlers } from './socketHandlers.js';
 import { initEmitter } from './socket-emitter.js';
 import { chatService, rateLimitCache } from '../state.js';
 import prisma from '../libs/database.js';
+import AppError from 'src/errors/AppError.js';
 
 /** Initialize the Socket.IO server and attach it to the HTTP server. */
 export async function initSocketServer(httpServer: import('http').Server): Promise<Server> {
@@ -49,7 +50,10 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
   io.use((socket, next) => {
     socketAuth(socket, next)
       .then(() => logger.info(`[socket] authenticated: ${socket.data.userId}`))
-      .catch(() => logger.warn('[socket] authentication failed'));
+      .catch((err) => {
+        logger.warn('[socket] authentication failed', err);
+        next(err instanceof AppError ? err : new AppError('Authentication failed', 401));
+      });
   });
 
   // ─── Connection handler ──────────────────────────────────────────────────────
@@ -65,12 +69,15 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
     // 1. Join user room — all devices of this user share one room
     await socket.join(`user:${userId}`);
 
-    // 2. Register socket in Redis presence Set — returns total active sockets
-    const socketCount = await presence.addSocket({ userId, socketId: socket.id });
-
     try {
-      // 3. Mark user as available in DB — only on first connection
-      if (socketCount === 1) {
+      // 2. Check if user is already online (before setting new socket)
+      const isAlreadyOnline = await presence.isOnline({ userId });
+
+      // 3. Register socket in Redis (single-device model overwrites previous)
+      await presence.setSocket({ userId, socketId: socket.id });
+
+      // 4. Mark user as available in DB and emit to presence room — only on transition to online
+      if (!isAlreadyOnline) {
         await prisma.user.update({
           where: { id: userId },
           data: { isOnline: true },
@@ -93,15 +100,15 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
   cp."lastReceivedMessageNumber",
   cp."lastReadMessageNumber",
   c."messageCounter",
-  (c."messageCounter" - cp."lastReadMessageNumber") AS "missed"
+  (c."messageCounter" - cp."lastReceivedMessageNumber") AS "missed"
 FROM conversation_participants cp
 JOIN conversations c ON c.id = cp."conversationId"
 WHERE cp."userId" = ${userId}
-  AND c."messageCounter" > cp."lastReadMessageNumber"
+  AND c."messageCounter" > cp."lastReceivedMessageNumber"
         `;
 
       if (participantRows.length > 0) {
-        socket.emit('missed_conversations', participantRows);
+        socket.emit('missed_messages_available', participantRows);
       }
     } catch (err) {
       logger.error('[socket] onConnection initialization error', err);

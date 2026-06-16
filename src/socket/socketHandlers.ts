@@ -22,10 +22,9 @@
  *   missed_conversations   { conversationId, unreadCount }      → reconnecting user
  *   pong                                                        → requesting socket
  */
-import { chatPresenceCache } from '../state.js';
 
 import { logger } from '../libs/winston.js';
-import { chatService, conversationRepository, contactDetectionService } from '../state.js';
+import { chatService, contactDetectionService, userRepository } from '../state.js';
 
 /**
  * Register all event handlers for a connected socket.
@@ -38,28 +37,31 @@ export function registerSocketHandlers(
   const presence = chatService.presence;
 
   // ─── ping / pong (keep-alive + TTL refresh) ────────────────────────────────
-  socket.on('ping', async () => {
+  socket.on('ping', async ({ partnerId }: { partnerId?: string } = {}) => {
     void presence.refreshPresence({ userId });
+
+    // If user is actively viewing a partner's chat, refresh the enter TTL
+    if (partnerId) {
+      void presence.refreshChatEnterTTL({ partnerId });
+    }
+
     socket.emit('pong');
   });
 
   // ─── send_message ───────────────────────────────────────────────────────────
-  socket.on('send_message', async ({ conversationId, content, type = 'TEXT', localId }, ack) => {
+  socket.on('send_message', async ({ conversationId, content, type = 'TEXT' }, ack) => {
     try {
-      if (type !== 'TEXT' && type !== 'ORDER') {
+      if (type !== 'TEXT') {
         if (typeof ack === 'function') {
           ack({ ok: false, error: 'Invalid message type' });
         }
         return;
       }
 
-      // 1. DB-based participant validation (authoritative)
-      await chatService.validateParticipant({ conversationId, userId });
+      // 1. Cached participant validation + partner ID lookup (Redis → DB fallback)
+      const partnerId = await chatService.getPartnerIdCached({ conversationId, userId });
 
-      // 2. Fetch partner ID efficiently
-      const partnerId = await conversationRepository.findPartnerId({ conversationId, userId });
-
-      // 3. Send the message (atomic counter increment + insert in tx)
+      // 2. Send the message (atomic counter increment + insert in tx)
       //    sendMessage also auto-updates sender's lastReceivedMessageNumber
       const message = await chatService.sendMessage({
         conversationId,
@@ -78,46 +80,14 @@ export function registerSocketHandlers(
           });
       });
 
-      // 4. Check recipient presence
-      const [delivered, recipientInChat] = await Promise.all([
-        presence.isOnline({ userId: partnerId }),
-        presence.isInChat({ conversationId, userId: partnerId }),
-      ]);
-
-      // 5. If recipient is online → mark as delivered in DB
-      if (delivered && partnerId) {
-        await chatService.markAsDelivered({
-          conversationId,
-          userId: partnerId,
-          messageNumber: message.messageNumber,
-        });
-
-        // Notify sender that their message was delivered
-        socket.emit('messages_delivered', {
-          conversationId,
-          deliveredUpTo: message.messageNumber,
-        });
-      }
-
-      // 6. If recipient is inside this chat → auto-mark as read immediately
-      if (recipientInChat) {
-        await chatService.markAllAsRead({ conversationId, userId: partnerId });
-      }
-
-      // 7. Emit new_message to recipient
+      // 3. Emit new_message to recipient
       if (partnerId) {
         io.to(`user:${partnerId}`).emit('new_message', { message, conversationId });
       }
 
-      // 8. ACK sender with delivery + read status
+      // 4. ACK sender
       if (typeof ack === 'function') {
-        ack({
-          ok: true,
-          message,
-          delivered,
-          read: recipientInChat,
-          localId,
-        });
+        ack({ ok: true, message });
       }
     } catch (err: unknown) {
       logger.error('[socket] send_message error', err);
@@ -128,14 +98,13 @@ export function registerSocketHandlers(
   // ─── read ───────────────────────────────────────────────────────────────────
   socket.on('read', async ({ conversationId, lastMessageId }, ack) => {
     try {
-      // 1. DB-based participant validation
-      await chatService.validateParticipant({ conversationId, userId });
+      // 1. Cached participant validation + partner ID lookup
+      const partnerId = await chatService.getPartnerIdCached({ conversationId, userId });
 
       // 2. Mark as read (validates message belongs to this conversation)
       const { readUpTo } = await chatService.markAsRead({ conversationId, userId, lastMessageId });
 
       // 3. Notify partner
-      const partnerId = await conversationRepository.findPartnerId({ conversationId, userId });
       if (partnerId) {
         io.to(`user:${partnerId}`).emit('messages_read', { conversationId, readUpTo });
       }
@@ -147,12 +116,40 @@ export function registerSocketHandlers(
     }
   });
 
+  // ─── delivered ──────────────────────────────────────────────────────────────
+  socket.on('delivered', async ({ conversationId, lastMessageId }, ack) => {
+    try {
+      // 1. Cached participant validation + partner ID lookup
+      const partnerId = await chatService.getPartnerIdCached({ conversationId, userId });
+
+      // 2. Mark as delivered (validates message belongs to this conversation)
+      const { deliveredUpTo } = await chatService.markAsDelivered({
+        conversationId,
+        userId,
+        lastMessageId,
+      });
+
+      // 3. Notify partner
+      if (partnerId) {
+        io.to(`user:${partnerId}`).emit('messages_delivered', { conversationId, deliveredUpTo });
+      }
+
+      if (typeof ack === 'function') ack({ ok: true, deliveredUpTo });
+    } catch (err: unknown) {
+      logger.error('[socket] delivered error', err);
+      if (err instanceof Error && typeof ack === 'function') ack({ ok: false, error: err.message });
+    }
+  });
+
   // ─── typing_indicator ───────────────────────────────────────────────────────
   socket.on('typing_indicator', async ({ conversationId, isTyping }) => {
     try {
-      // Light Redis check (soft auth — low risk event, no DB write)
-      const inChat = await presence.isInChat({ conversationId, userId });
-      if (!inChat) return; // silently ignore if not in chat
+      // Use getPartnerIdCached for validation + partner lookup
+      const partnerId = await chatService.getPartnerIdCached({ conversationId, userId });
+
+      // Only emit typing if the current user is inside the partner's chat screen (soft-auth)
+      const inChat = await presence.isViewingMyChat({ viewerId: userId, userId: partnerId });
+      if (!inChat) return; // silently ignore if user hasn't entered chat
 
       if (isTyping) {
         void presence.setTyping({ conversationId, userId });
@@ -161,7 +158,6 @@ export function registerSocketHandlers(
       }
 
       // Emit to partner only
-      const partnerId = await conversationRepository.findPartnerId({ conversationId, userId });
       if (partnerId) {
         io.to(`user:${partnerId}`).emit('typing', { conversationId, userId, isTyping });
       }
@@ -173,19 +169,14 @@ export function registerSocketHandlers(
   // ─── enter_chat ─────────────────────────────────────────────────────────────
   socket.on('enter_chat', async ({ conversationId }, ack) => {
     try {
-      // 1. DB-based participant validation
-      await chatService.validateParticipant({ conversationId, userId });
+      // he will send  last message number he have {nullable}
+      // 1. Cached participant validation + partner ID lookup
+      const partnerId = await chatService.getPartnerIdCached({ conversationId, userId });
 
-      // 2. Track per-socket inChat (multi-device safe)
-      void presence.enterChat({ conversationId, userId });
-
-      // 3. Auto-mark all messages as read (also bumps lastReceivedMessageNumber)
-      await chatService.markAllAsRead({ conversationId, userId });
+      // 2. Track user as viewing partner's chat screen
+      void presence.enterChat({ userId, partnerId });
 
       let isPartnerOnline = false;
-
-      // 4. Notify partner — entered chat + their messages are now delivered
-      const partnerId = await conversationRepository.findPartnerId({ conversationId, userId });
 
       if (partnerId) {
         isPartnerOnline = await presence.isOnline({ userId: partnerId });
@@ -194,18 +185,11 @@ export function registerSocketHandlers(
         void socket.join(`presence:${partnerId}`);
 
         io.to(`user:${partnerId}`).emit('partner_entered_chat', { conversationId });
-
-        // Tell partner their messages are delivered (up to their own messageCounter)
-        const conv = await conversationRepository.findById({ id: conversationId });
-        if (conv) {
-          io.to(`user:${partnerId}`).emit('messages_delivered', {
-            conversationId,
-            deliveredUpTo: conv.messageCounter,
-          });
-        }
       }
 
-      if (typeof ack === 'function') ack({ ok: true, isPartnerOnline });
+      const snapshot = await chatService.getChatSnapshot({ conversationId, userId });
+
+      if (typeof ack === 'function') ack({ ok: true, isPartnerOnline, ...snapshot });
     } catch (err: unknown) {
       logger.error('[socket] enter_chat error', err);
       if (err instanceof Error && typeof ack === 'function') ack({ ok: false, error: err.message });
@@ -215,11 +199,12 @@ export function registerSocketHandlers(
   // ─── leave_chat ─────────────────────────────────────────────────────────────
   socket.on('leave_chat', async ({ conversationId }, ack) => {
     try {
-      // Remove from inChat set
-      void presence.leaveChat({ conversationId, userId });
+      // Use cached lookup to get partnerId
+      const partnerId = await chatService.getPartnerIdCached({ conversationId, userId });
 
-      // Notify partner
-      const partnerId = await conversationRepository.findPartnerId({ conversationId, userId });
+      // Remove from partner's enter set
+      void presence.leaveChat({ userId, partnerId });
+
       if (partnerId) {
         // Auto-unsubscribe from partner's presence updates
         void socket.leave(`presence:${partnerId}`);
@@ -237,12 +222,11 @@ export function registerSocketHandlers(
   // ─── disconnect ─────────────────────────────────────────────────────────────
   socket.on('disconnect', async () => {
     try {
-      let numSockets = await chatPresenceCache.removeSocket({ userId, socketId: socket.id });
-      if (numSockets === 0) {
-        // Full cleanup: Remove from all active chat rooms
-        await chatPresenceCache.removeAllInChat({ userId });
-        socket.to(`presence:${userId}`).emit('partner_offline', { userId });
-      }
+      // Single-device model: remove socket and clean up all enter sets
+      await presence.removeSocket({ userId });
+      await presence.removeFromAllEnterSets({ userId });
+      await userRepository.update({ filter: { id: userId }, user: { isOnline: false } });
+      socket.to(`presence:${userId}`).emit('partner_offline', { userId });
     } catch (err) {
       logger.error('[socket] disconnect cleanup error', err);
     }

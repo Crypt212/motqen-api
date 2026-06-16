@@ -44,7 +44,7 @@ import {
   UpdateFcmTokenResponseDTO,
 } from '../schemas/responses/auth.response.js';
 import AppError from '../errors/AppError.js';
-import { authService, rateLimitService, presenceService, firebaseProvider } from '../state.js';
+import { authService, rateLimitService, presenceService, notificationService } from '../state.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import prisma from '../libs/database.js';
 
@@ -247,8 +247,8 @@ export const logout = asyncHandler<LogoutResponseDTO, LogoutRequestDTO, LogoutQu
   await authService.logout({ userId, deviceId });
 
   // Unsubscribe from topics in the background
-  if (session?.fcmToken && firebaseProvider.isReady()) {
-    await(async () => {
+  if (session?.fcmToken) {
+    setImmediate(async () => {
       try {
         const user = await prisma.user.findUnique({
           where: { id: userId },
@@ -263,7 +263,6 @@ export const logout = asyncHandler<LogoutResponseDTO, LogoutRequestDTO, LogoutQu
 
         const topics = ['all', 'admins', 'workers', 'clients'];
 
-        // Add all possible government topics the user might have been in
         if (user.workerProfile) {
           user.workerProfile.workGovernments.forEach((gov) => topics.push(`gov_${gov.id}`));
         }
@@ -273,12 +272,12 @@ export const logout = asyncHandler<LogoutResponseDTO, LogoutRequestDTO, LogoutQu
 
         const uniqueTopics = [...new Set(topics)];
         for (const topic of uniqueTopics) {
-          await firebaseProvider.unsubscribeFromTopic([session.fcmToken!], topic).catch(() => {});
+          notificationService.unsubscribeFromTopic(userId, deviceId, topic, session.fcmToken!);
         }
       } catch (err) {
         console.error('Failed to unsubscribe FCM token from topics:', err);
       }
-    })();
+    });
   }
 
   // Check if user has active sockets and handle offline cleanup
@@ -360,53 +359,47 @@ export const updateFcmToken = asyncHandler<UpdateFcmTokenResponseDTO, UpdateFcmT
   });
 
   // Subscribe to topics in the background
-  if (firebaseProvider.isReady()) {
-    await (async () => {
-      try {
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          include: {
-            workerProfile: { include: { workGovernments: { select: { id: true } } } },
-            clientProfile: true,
-            locations: { where: { isMain: true }, select: { governmentId: true }, take: 1 },
-          },
-        });
+  setImmediate(async () => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          workerProfile: { include: { workGovernments: { select: { id: true } } } },
+          clientProfile: true,
+          locations: { where: { isMain: true }, select: { governmentId: true }, take: 1 },
+        },
+      });
 
-        if (!user) return;
+      if (!user) return;
 
-        const topics = ['all'];
+      const topics = ['all'];
 
-        // Role-based topics
-        if (adminState) {
-          topics.push('admins');
-        }
-        if (user.workerProfile) {
-          topics.push('workers');
-          // Government-based topics for workers
-          user.workerProfile.workGovernments.forEach((gov) => {
-            topics.push(`gov_${gov.id}`);
-          });
-        }
-        if (user.clientProfile) {
-          topics.push('clients');
-        }
-
-        // Location-based topics (main location)
-        if (user.locations.length > 0) {
-          topics.push(`gov_${user.locations[0].governmentId}`);
-        }
-
-        // Filter unique topics
-        const uniqueTopics = [...new Set(topics)];
-
-        for (const topic of uniqueTopics) {
-          await firebaseProvider.subscribeToTopic([fcmToken], topic);
-        }
-      } catch (err) {
-        console.error('Failed to subscribe FCM token to topics:', err);
+      if (adminState) {
+        topics.push('admins');
       }
-    })();
-  }
+      if (user.workerProfile) {
+        topics.push('workers');
+        user.workerProfile.workGovernments.forEach((gov) => {
+          topics.push(`gov_${gov.id}`);
+        });
+      }
+      if (user.clientProfile) {
+        topics.push('clients');
+      }
+
+      if (user.locations.length > 0) {
+        topics.push(`gov_${user.locations[0].governmentId}`);
+      }
+
+      const uniqueTopics = [...new Set(topics)];
+
+      for (const topic of uniqueTopics) {
+        notificationService.subscribeToTopic(userId, deviceId, topic, fcmToken);
+      }
+    } catch (err) {
+      console.error('Failed to subscribe FCM token to topics:', err);
+    }
+  });
 
   res.status(200).send({ status: 'success', message: 'FCM token updated successfully' });
 });

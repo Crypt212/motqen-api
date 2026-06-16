@@ -12,6 +12,8 @@ import { PayoutMethod, WithdrawRequest, PayoutMethodType } from '../../domain/fi
 import AppError from '../../errors/AppError.js';
 import { PayoutMethodInput, ListWithdrawRequestsOptions, CursorPaginatedResult } from '../../schemas/financial/withdrawal.schema.js';
 import { PayoutMethodUpdateInput } from '../../repositories/interfaces/financial/PayoutMethodRepository.js';
+import { notificationService } from '../../state.js';
+import type { NotificationEventContext } from '../../domain/notification.entity.js';
 
 export type WorkerBalanceView = Omit<
   WorkerBalance,
@@ -57,7 +59,7 @@ export class WithdrawalService {
     payoutMethodId: string,
     idempotencyKey: string
   ): Promise<{ request: WithdrawRequest }> {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 1. Lock WorkerBalance
       const balance = await this.workerBalanceRepo.lockForUpdate(workerProfileId, tx);
       if (!balance) throw new AppError('Worker balance not found', 404);
@@ -114,6 +116,15 @@ export class WithdrawalService {
 
       return result;
     });
+
+    if (result.created) {
+      this.notifyWorkerWithdrawal(workerProfileId, {
+        type: 'WITHDRAW_REQUESTED',
+        ctx: { withdrawId: result.request.id, amount: Number(amount) },
+      }).catch(() => {});
+    }
+
+    return result;
   }
   /**
    * Admin starts processing a withdrawal request.
@@ -157,7 +168,13 @@ export class WithdrawalService {
         metadata: { amount: request.amount.toString() },
       });
 
-      return execResult.execution;
+      return { execution: execResult.execution, workerProfileId: request.workerProfileId };
+    }).then(async (result) => {
+      this.notifyWorkerWithdrawal(result.workerProfileId, {
+        type: 'WITHDRAW_APPROVED',
+        ctx: { withdrawId: requestId, amount: result.execution.amount ? Number(result.execution.amount) : 0 },
+      }).catch(() => {});
+      return result.execution;
     });
   }
 
@@ -165,7 +182,7 @@ export class WithdrawalService {
    * Reject a PENDING withdrawal request.
    */
   async rejectRequest(requestId: string, adminId: string, notes?: string) {
-    return this.prisma.$transaction(async (tx) => {
+    const request = await this.prisma.$transaction(async (tx) => {
       const request = await this.withdrawRequestRepo.findById(requestId, tx);
       if (!request) throw new AppError('Withdraw request not found', 404);
       if (request.status !== 'PENDING')
@@ -211,7 +228,14 @@ export class WithdrawalService {
         entityId: requestId,
         metadata: { amount: request.amount.toString(), notes },
       });
+
+      return request;
     });
+
+    this.notifyWorkerWithdrawal(request.workerProfileId, {
+      type: 'WITHDRAW_REJECTED',
+      ctx: { withdrawId: requestId, rejectionReason: notes },
+    }).catch(() => {});
   }
 
   /**
@@ -224,8 +248,7 @@ export class WithdrawalService {
     externalRefId: string,
     adminId: string
   ) {
-
-    return this.prisma.$transaction(async (tx) => {
+    const request = await this.prisma.$transaction(async (tx) => {
       const execution = await this.payoutExecutionRepo.lockForUpdate(executionId, tx);
       if (!execution) throw new AppError('Payout execution not found', 404);
       if (execution.status !== 'PENDING')
@@ -294,7 +317,14 @@ export class WithdrawalService {
         entityId: executionId,
         metadata: { amount: request.amount.toString(), externalRefId, proofOfPaymentUrl },
       });
+
+      return request;
     });
+
+    this.notifyWorkerWithdrawal(request.workerProfileId, {
+      type: 'PAYOUT_COMPLETED',
+      ctx: { payoutId: executionId, amount: Number(request.amount) },
+    }).catch(() => {});
   }
 
   async failPayout(executionId: string, reason: string, adminId: string) {
@@ -455,5 +485,18 @@ export class WithdrawalService {
 
       return { status: 'SETTLED', id: debtId };
     });
+  }
+
+  private async notifyWorkerWithdrawal(workerProfileId: string, event: NotificationEventContext): Promise<void> {
+    try {
+      const profile = await this.prisma.workerProfile.findUnique({
+        where: { id: workerProfileId },
+        select: { userId: true },
+      });
+      if (!profile) return;
+      await notificationService.notify(profile.userId, event);
+    } catch {
+      // Fire-and-forget
+    }
   }
 }

@@ -200,6 +200,9 @@ export default class NegotiationService extends Service {
       // Notify the opposing party via socket
       this.notifyOpponent(order, party, 'negotiation_created', negotiation);
 
+      // Send push notification to opponent — NEGOTIATION_OFFER
+      this.notifyNegotiationOffer(order, party, price).catch(() => {});
+
       return { ...negotiation, hasOverlapWarning };
     });
   }
@@ -315,6 +318,23 @@ export default class NegotiationService extends Service {
         });
       }
 
+      // Send push notification to worker — NEGOTIATION_ACCEPTED
+      const workerProfile = await prisma.workerProfile.findUnique({
+        where: { id: result.workerProfileId },
+      });
+      if (workerProfile) {
+        notificationService.notify(workerProfile.userId, {
+          type: 'NEGOTIATION_ACCEPTED',
+          ctx: { orderId: order.id, orderTitle: order.title },
+        }).catch(() => {});
+      }
+
+      // Send push notification to client — PAYMENT_REQUIRED
+      notificationService.notify(clientUser!.userId, {
+        type: 'PAYMENT_REQUIRED',
+        ctx: { orderId: order.id, orderTitle: order.title, amount: latest.price },
+      }).catch(() => {});
+
       return result.updatedOrder;
     });
   }
@@ -354,6 +374,9 @@ export default class NegotiationService extends Service {
 
       // Notify the opposing party
       this.notifyOpponent(order, party, 'negotiation_rejected', { orderId });
+
+      // Send push notification — NEGOTIATION_REJECTED
+      this.notifyNegotiationRejected(order, latest.direction).catch(() => {});
 
       return rejected;
     });
@@ -423,6 +446,46 @@ export default class NegotiationService extends Service {
       // TODO: Resolve opponent userId for socket notification when
       // the Orders module provides the user-profile relationship.
       // For now this is a no-op placeholder that matches the architecture.
+    } catch {
+      // Fire-and-forget
+    }
+  }
+
+  private async notifyNegotiationOffer(order: OrderForNegotiation, party: OrderParty, proposedAmount: number): Promise<void> {
+    try {
+      let opponentUserId: string | undefined;
+      if (party.role === 'CLIENT' && order.workerProfileId) {
+        const wp = await prisma.workerProfile.findUnique({ where: { id: order.workerProfileId } });
+        opponentUserId = wp?.userId;
+      } else if (party.role === 'WORKER') {
+        const cp = await prisma.clientProfile.findUnique({ where: { id: order.clientProfileId } });
+        opponentUserId = cp?.userId;
+      }
+      if (!opponentUserId) return;
+      await notificationService.notify(opponentUserId, {
+        type: 'NEGOTIATION_OFFER',
+        ctx: { orderId: order.id, orderTitle: order.title, proposedAmount },
+      });
+    } catch {
+      // Fire-and-forget
+    }
+  }
+
+  private async notifyNegotiationRejected(order: OrderForNegotiation, latestDirection: string): Promise<void> {
+    try {
+      let opponentUserId: string | undefined;
+      if (latestDirection === 'CLIENT_TO_WORKER') {
+        const cp = await prisma.clientProfile.findUnique({ where: { id: order.clientProfileId } });
+        opponentUserId = cp?.userId;
+      } else if (latestDirection === 'WORKER_TO_CLIENT' && order.workerProfileId) {
+        const wp = await prisma.workerProfile.findUnique({ where: { id: order.workerProfileId } });
+        opponentUserId = wp?.userId;
+      }
+      if (!opponentUserId) return;
+      await notificationService.notify(opponentUserId, {
+        type: 'NEGOTIATION_REJECTED',
+        ctx: { orderId: order.id, orderTitle: order.title },
+      });
     } catch {
       // Fire-and-forget
     }
