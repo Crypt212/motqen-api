@@ -62,9 +62,9 @@ export function asyncHandler<TResponseBody, TBody, TQuery, TParams>(controller: 
 
 export function createRoute<TResponseBody, TBody, TQuery, TParams>(params: {
   schemas: {
-    body: z.ZodType<TBody>,
-    query: z.ZodType<TQuery>,
-    params: z.ZodType<TParams>,
+    body: z.ZodType<TBody> & z.ZodObject,
+    query: z.ZodType<TQuery> & z.ZodObject,
+    params: z.ZodType<TParams> & z.ZodObject,
   },
   inBetweenMiddlewares?: import('express').RequestHandler[],
   handler: RequestHandler<TBody, TQuery, TParams, TResponseBody>
