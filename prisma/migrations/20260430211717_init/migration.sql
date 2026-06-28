@@ -1,5 +1,4 @@
- CREATE EXTENSION postgis;
-
+CREATE EXTENSION IF NOT EXISTS postgis;
 -- CreateEnum
 CREATE TYPE "OrderType" AS ENUM ('PREVIEW', 'SERVICE');
 

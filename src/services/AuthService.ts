@@ -15,7 +15,7 @@ import IRateLimitCache from '../cache/interfaces/RateLimitCache.js';
 import ITokenCache from '../cache/interfaces/tokenCache.js';
 import { generateToken, verifyAndDecodeToken } from '../utils/tokens.js';
 import { logger } from '../libs/winston.js';
-import { emitToUser } from '../socket/socket-emitter.js';
+import emitter from '../socket/socket-emitter.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
 import IUserRepository from '../repositories/interfaces/UserRepository.js';
 import IWorkerProfileRepository from '../repositories/interfaces/WorkerRepository.js';
@@ -553,7 +553,7 @@ export default class AuthService extends Service {
     });
 
     // Notify the user that all other sessions have been revoked
-    emitToUser(user.id, 'session_revoked', {
+    emitter.ToUser(user.id, 'session_revoked', {
       reason: 'new_login',
       message: 'You have been logged out because a new session was started on another device',
     });

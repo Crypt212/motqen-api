@@ -1,16 +1,22 @@
 import { IDType } from '../repositories/interfaces/Repository.js';
 import { logger } from '../libs/winston.js';
+import { Server } from 'socket.io';
+import ISocketEmitter from './interfaces/ISocketEmitter.js';
 
-let _io: import('socket.io').Server | undefined;
+class SocketEmitter implements ISocketEmitter {
+  private io?: Server;
 
-export const initEmitter = (io: import('socket.io').Server) => {
-  _io = io;
-};
-
-export const emitToUser = (userId: IDType, event: string, data: unknown) => {
-  if (!_io) {
-    logger.warn('[socket-emitter] emitToUser called before initEmitter');
-    return;
+  init(io: Server): void {
+    this.io = io;
   }
-  _io.to(`user:${userId}`).emit(event, data);
-};
+
+  ToUser(userId: IDType, event: string, data: unknown): void {
+    if (!this.io) {
+      logger.warn('[socket-emitter] emitToUser called before initEmitter');
+      return;
+    }
+    this.io.to(`user:${userId}`).emit(event, data);
+  }
+}
+
+export default new SocketEmitter();

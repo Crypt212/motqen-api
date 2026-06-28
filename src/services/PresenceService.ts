@@ -6,7 +6,7 @@
 import Service from './Service.js';
 import IChatPresenceCache from '../cache/interfaces/ChatPresenceCache.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
-import { emitToUser } from '../socket/socket-emitter.js';
+import emitter from '../socket/socket-emitter.js';
 import { logger } from '../libs/winston.js';
 import { PrismaClient } from '../generated/prisma/client.js';
 import ConversationRepository from '../repositories/prisma/ConversationRepository.js';
@@ -64,7 +64,7 @@ export default class PresenceService extends Service {
 
       // If logout, tell client to disconnect their socket
       if (reason === 'logout') {
-        emitToUser(userId, 'force_logout', { reason: 'logged_out' });
+        emitter.ToUser(userId, 'force_logout', { reason: 'logged_out' });
       }
 
       logger.info(`[presence] user ${userId} is now offline (${reason})`);

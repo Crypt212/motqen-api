@@ -22,6 +22,7 @@ import {
 } from '../domain/conversation.entity.js';
 import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../types/query.js';
+import IChatService from './interfaces/IChatService.js';
 
 export type ConversationWithMeta = {
   id: string;
@@ -40,7 +41,7 @@ export type ConversationWithMeta = {
  * @class
  * @extends Service
  */
-export default class ChatService extends Service {
+export default class ChatService extends Service implements IChatService {
   private conversationRepository: IConversationRepository;
   private messageRepository: IMessageRepository;
   private workerProfileRepository: IWorkerProfileRepository;
@@ -77,24 +78,25 @@ export default class ChatService extends Service {
 
   async getChatSnapshot(params: { conversationId: IDType; userId: IDType }) {
     const { conversationId, userId } = params;
-    const partnerId = await this.getPartnerIdCached({ conversationId, userId });
+    const partnerIds = await this.resolveParticipants({ conversationId, userId });
 
     let counters = await this.presence.getParticipantCounters({
       conversationId,
-      userId: partnerId,
+      userId: partnerIds[0],
     });
     if (!counters) {
-      const partner = await this.conversationRepository.findParticipant({
+      const { me } = await this.conversationRepository.findParticipants({
         conversationId,
-        userId: partnerId,
+        userId: partnerIds[0],
       });
+      if (!me) throw new AppError('Partner not found in conversation', 404);
       counters = {
-        lastReceived: partner?.lastReceivedMessageNumber || 0,
-        lastRead: partner?.lastReadMessageNumber || 0,
+        lastReceived: me?.lastReceivedMessageNumber || 0,
+        lastRead: me?.lastReadMessageNumber || 0,
       };
       await this.syncCountersCache(
         conversationId,
-        partnerId,
+        partnerIds[0],
         counters.lastReceived,
         counters.lastRead
       );
@@ -124,8 +126,7 @@ export default class ChatService extends Service {
     const { workerId, clientId } = params;
 
     // Guard: both IDs must be present (undefined means the caller did not resolve roles)
-    if (!workerId || !clientId)
-      throw new AppError('workerId and clientId are required', 400);
+    if (!workerId || !clientId) throw new AppError('workerId and clientId are required', 400);
 
     if (workerId === clientId)
       throw new AppError('A user cannot start a conversation with themselves', 400);
@@ -373,13 +374,13 @@ export default class ChatService extends Service {
       if (message.conversationId !== conversationId)
         throw new AppError('Message does not belong to this conversation', 400);
 
-      const participant = await this.conversationRepository.findParticipant({
+      const { me } = await this.conversationRepository.findParticipants({
         conversationId,
         userId,
       });
-      if (!participant) throw new AppError('Not a participant in this conversation', 403);
+      if (!me) throw new AppError('Not a participant in this conversation', 403);
 
-      if (message.messageNumber <= participant.lastReadMessageNumber) {
+      if (message.messageNumber <= me.lastReadMessageNumber) {
         return { readUpTo: message.messageNumber };
       }
 
@@ -460,11 +461,11 @@ export default class ChatService extends Service {
 
     return tryCatch(async () => {
       // Validate participation (DB truth)
-      const participant = await this.conversationRepository.findParticipant({
+      const { others } = await this.conversationRepository.findParticipants({
         conversationId,
         userId,
       });
-      if (!participant)
+      if (!others.length)
         throw new AppError('Conversation not found or you are not participate', 404);
 
       let messages: Message[];
@@ -481,7 +482,7 @@ export default class ChatService extends Service {
       // Sync delivery state
       if (messages.length > 0) {
         const highestReceived = Math.max(...messages.map((m) => m.messageNumber));
-        if (highestReceived > participant.lastReceivedMessageNumber) {
+        if (highestReceived > others[0].lastReceivedMessageNumber) {
           setImmediate(() => {
             this.conversationRepository
               .updateLastReceived({
@@ -527,11 +528,11 @@ export default class ChatService extends Service {
   }> {
     const { conversationId, userId, afterMessageNumber, limit } = params;
     return tryCatch(async () => {
-      const participant = await this.conversationRepository.findParticipant({
+      const { others } = await this.conversationRepository.findParticipants({
         conversationId,
         userId,
       });
-      if (!participant) throw new AppError('Conversation not found', 404);
+      if (!others.length) throw new AppError('Conversation not found', 404);
 
       const messages = await this.messageRepository.findPage({
         conversationId,
@@ -542,7 +543,7 @@ export default class ChatService extends Service {
       // Sync delivery state
       if (messages.length > 0) {
         const highestReceived = Math.max(...messages.map((m) => m.messageNumber));
-        if (highestReceived > participant.lastReceivedMessageNumber) {
+        if (highestReceived > others[0].lastReceivedMessageNumber) {
           setImmediate(() => {
             this.conversationRepository
               .updateLastReceived({
@@ -586,12 +587,12 @@ export default class ChatService extends Service {
   }): Promise<ConversationParticipant> {
     const { conversationId, userId } = params;
     return tryCatch(async () => {
-      const participant = await this.conversationRepository.findParticipant({
+      const { me } = await this.conversationRepository.findParticipants({
         conversationId,
         userId,
       });
-      if (!participant) throw new AppError('Not a participant in this conversation', 403);
-      return participant;
+      if (!me) throw new AppError('Not a participant in this conversation', 403);
+      return me;
     });
   }
 
@@ -600,7 +601,7 @@ export default class ChatService extends Service {
    * Caches participants in Redis to avoid DB hits on subsequent calls.
    * Replaces the 2-step validateParticipant + findPartnerId flow.
    */
-  async getPartnerIdCached(params: { conversationId: IDType; userId: IDType }): Promise<IDType> {
+  async resolveParticipants(params: { conversationId: IDType; userId: IDType }): Promise<IDType[]> {
     const { conversationId, userId } = params;
     return tryCatch(async () => {
       // 1. Check Redis cache
@@ -614,30 +615,23 @@ export default class ChatService extends Service {
         }
         const partnerStr = members.find((m) => m !== userIdStr);
         if (!partnerStr) throw new AppError('Conversation has no partner', 400);
-        return partnerStr as IDType;
+        return [members.find((m) => m !== userIdStr) as IDType];
       }
 
       // 3. Cache Miss - Hit DB
-      const participant = await this.conversationRepository.findParticipant({
+      const { me, others } = await this.conversationRepository.findParticipants({
         conversationId,
         userId,
       });
-      if (!participant) throw new AppError('Not a participant in this conversation', 403);
-
-      const partnerId = await this.conversationRepository.findPartnerId({
-        conversationId,
-        userId,
-      });
-
-      if (!partnerId) throw new AppError('Conversation has no partner', 400);
+      if (!me) throw new AppError('Not a participant in this conversation', 403);
 
       // 4. Update Cache
       await this.presence.addChatMembers({
         conversationId,
-        userIds: [String(userId), String(partnerId)],
+        userIds: [String(userId), ...others.map((p) => String(p.userId))],
       });
 
-      return partnerId;
+      return others.map((p) => p.userId as IDType);
     });
   }
 
@@ -661,13 +655,13 @@ export default class ChatService extends Service {
       if (message.conversationId !== conversationId)
         throw new AppError('Message does not belong to this conversation', 400);
 
-      const participant = await this.conversationRepository.findParticipant({
+      const { others } = await this.conversationRepository.findParticipants({
         conversationId,
         userId,
       });
-      if (!participant) throw new AppError('Not a participant in this conversation', 403);
+      if (!others.length) throw new AppError('Not a participant in this conversation', 403);
 
-      if (message.messageNumber <= participant.lastReceivedMessageNumber) {
+      if (message.messageNumber <= others[0].lastReceivedMessageNumber) {
         return { deliveredUpTo: message.messageNumber };
       }
 

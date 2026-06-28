@@ -9,7 +9,7 @@ import {
   ConversationUpdateInput,
   ConversationWithParticipantsAndMessages,
 } from '../../domain/conversation.entity.js';
-import { isEmptyFilter, getEmptyPaginatedResult } from './utils.js';
+import { isEmptyFilter } from './utils.js';
 import { PaginationOptions, PaginatedResultMeta, SortOptions } from '../../types/query.js';
 import { handlePagination, handleSort } from '../../utils/handleFilteration.js';
 import { PrismaClient } from '../../generated/prisma/client.js';
@@ -342,37 +342,22 @@ export default class ConversationRepository extends Repository implements IConve
     }
   }
 
-  async findParticipant(params: {
+  async findParticipants(params: {
     conversationId: IDType;
     userId: IDType;
-  }): Promise<ConversationParticipant | null> {
+  }): Promise<{ me: ConversationParticipant; others: ConversationParticipant[] } | null> {
     try {
-      const participant = await this.prismaClient.conversationParticipant.findUnique({
-        where: {
-          conversationId_userId: {
-            conversationId: params.conversationId,
-            userId: params.userId,
-          },
-        },
-      });
-      return participant ? this.toDomainParticipant(participant) : null;
-    } catch (error: unknown) {
-      throw handlePrismaError(error as Error, 'findParticipant');
-    }
-  }
-
-  async findPartnerId(params: { conversationId: IDType; userId: IDType }): Promise<IDType | null> {
-    try {
-      const partner = await this.prismaClient.conversationParticipant.findFirst({
+      const participant = await this.prismaClient.conversationParticipant.findMany({
         where: {
           conversationId: params.conversationId,
-          userId: { not: params.userId },
         },
-        select: { userId: true },
       });
-      return partner ? partner.userId : null;
+      return {
+        me: participant.find((p) => p.userId === params.userId) ?? null,
+        others: participant.filter((p) => p.userId !== params.userId),
+      };
     } catch (error: unknown) {
-      throw handlePrismaError(error as Error, 'findPartnerId');
+      throw handlePrismaError(error as Error, 'findParticipant');
     }
   }
 
@@ -553,6 +538,39 @@ export default class ConversationRepository extends Repository implements IConve
       return this.toDomainParticipant(rows[0] as ConversationParticipant);
     } catch (error: unknown) {
       throw handlePrismaError(error as Error, 'updateLastReceived');
+    }
+  }
+
+  async findUnReceivedConversations(params: { userId: IDType }): Promise<
+    Array<{
+      conversationId: string;
+      lastReceivedMessageNumber: number;
+      lastReadMessageNumber: number;
+      messageCounter: number;
+    }>
+  > {
+    try {
+      const { userId } = params;
+      return await this.prismaClient.$queryRaw<
+        Array<{
+          conversationId: string;
+          lastReceivedMessageNumber: number;
+          lastReadMessageNumber: number;
+          messageCounter: number;
+        }>
+      >`
+        SELECT
+          cp."conversationId",
+          cp."lastReceivedMessageNumber",
+          cp."lastReadMessageNumber",
+          c."messageCounter"
+        FROM conversation_participants cp
+        JOIN conversations c ON c.id = cp."conversationId"
+        WHERE cp."userId" = ${userId}
+          AND c."messageCounter" > cp."lastReceivedMessageNumber"
+      `;
+    } catch (error: unknown) {
+      throw handlePrismaError(error as Error, 'findUnreadConversations');
     }
   }
 }

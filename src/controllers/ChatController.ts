@@ -8,7 +8,7 @@ import AppError from '../errors/AppError.js';
 import { asyncHandler } from '../types/asyncHandler.js';
 import { chatService, conversationRepository } from '../state.js';
 import { IDType } from '../repositories/interfaces/Repository.js';
-import { emitToUser } from '../socket/socket-emitter.js';
+import emitter from '../socket/socket-emitter.js';
 import { parseQuery } from '../schemas/common.js';
 import {
   CreateConversationRequestDTO, CreateConversationQueryDTO, CreateConversationParamsDTO,
@@ -137,7 +137,7 @@ export const sendImageMessage = asyncHandler<any, SendImageMessageRequestDTO, Se
   const conv = await conversationRepository.findWithParticipant({ conversationId, userId });
   const partner = conv.participants.find((p) => p.userId !== userId);
   if (partner) {
-    emitToUser(partner.userId, 'new_message', { message, conversationId });
+    emitter.ToUser(partner.userId, 'new_message', { message, conversationId });
   }
   new SuccessResponse('Image message sent', message, 201).send(res);
 });

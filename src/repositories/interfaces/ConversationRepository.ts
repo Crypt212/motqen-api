@@ -79,18 +79,10 @@ export default interface IConversationRepository {
   /**
    * Find conversation participant
    */
-  findParticipant(params: {
+  findParticipants(params: {
     conversationId: IDType;
     userId: IDType;
-  }): Promise<ConversationParticipant | null>;
-
-  /**
-   * Find the partner's user ID in a conversation efficiently.
-   */
-  findPartnerId(params: {
-    conversationId: IDType;
-    userId: IDType;
-  }): Promise<IDType | null>;
+  }): Promise<{ me: ConversationParticipant; others: ConversationParticipant[] } | null>;
 
   /**
    * Create a conversation
@@ -153,4 +145,16 @@ export default interface IConversationRepository {
     userId: IDType;
     messageNumber: number;
   }): Promise<ConversationParticipant>;
+
+  /**
+   * Find conversations with unread messages for a user
+   */
+  findUnReceivedConversations(params: { userId: IDType }): Promise<
+    Array<{
+      conversationId: string;
+      lastReceivedMessageNumber: number;
+      lastReadMessageNumber: number;
+      messageCounter: number;
+    }>
+  >;
 }

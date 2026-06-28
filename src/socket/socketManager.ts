@@ -15,18 +15,16 @@ import environment from '../configs/environment.js';
 import { logger } from '../libs/winston.js';
 import { socketAuth } from '../middlewares/socketMiddleware.js';
 import { createSocketRateLimiter } from '../middlewares/rateLimitMiddleware.js';
-import { registerSocketHandlers } from './socketHandlers.js';
-import { initEmitter } from './socket-emitter.js';
-import { chatService, rateLimitCache } from '../state.js';
+import emitter from './socket-emitter.js';
+import { chatService, rateLimitCache, conversationRepository } from '../state.js';
 import prisma from '../libs/database.js';
 import AppError from 'src/errors/AppError.js';
+import { eventService, presenceEventService } from '../state.js';
 
 /** Initialize the Socket.IO server and attach it to the HTTP server. */
 export async function initSocketServer(httpServer: import('http').Server): Promise<Server> {
   // ─── Create Socket.IO server ────────────────────────────────────────────────
   const io = new Server(httpServer, {
-    // Recommended: only use WebSocket transport after upgrade to avoid
-    // sticky-session requirements when scaling
     transports: ['websocket', 'polling'],
     pingTimeout: 60000,
     pingInterval: 25000,
@@ -36,7 +34,7 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
     },
   });
 
-  initEmitter(io);
+  emitter.init(io);
 
   // ─── Redis Adapter (multi-node pub/sub) ─────────────────────────────────────
   // Use two separate Redis clients as required by the adapter
@@ -85,37 +83,21 @@ export async function initSocketServer(httpServer: import('http').Server): Promi
         socket.to(`presence:${userId}`).emit('partner_online', { userId });
       }
 
-      // 4. Single query: join conversation_participants with conversations
-      //    to get unreceived/unread counts directly, avoiding N+1 loops
-      const participantRows = await prisma.$queryRaw<
-        Array<{
-          conversationId: string;
-          lastReceivedMessageNumber: number;
-          lastReadMessageNumber: number;
-          messageCounter: number;
-        }>
-      >`
-        SELECT
-  cp."conversationId",
-  cp."lastReceivedMessageNumber",
-  cp."lastReadMessageNumber",
-  c."messageCounter",
-  (c."messageCounter" - cp."lastReceivedMessageNumber") AS "missed"
-FROM conversation_participants cp
-JOIN conversations c ON c.id = cp."conversationId"
-WHERE cp."userId" = ${userId}
-  AND c."messageCounter" > cp."lastReceivedMessageNumber"
-        `;
+      // 4. Find conversations with unread messages
+      const unReceivedConversations = await conversationRepository.findUnReceivedConversations({
+        userId,
+      });
 
-      if (participantRows.length > 0) {
-        socket.emit('missed_messages_available', participantRows);
+      if (unReceivedConversations.length > 0) {
+        socket.emit('missed_messages_available', unReceivedConversations);
       }
     } catch (err) {
       logger.error('[socket] onConnection initialization error', err);
     }
 
     // 8. Register all event handlers for this socket
-    registerSocketHandlers(io, socket);
+    eventService.register(socket);
+    presenceEventService.register(socket);
   });
 
   logger.info('✅ Socket.IO server initialized');

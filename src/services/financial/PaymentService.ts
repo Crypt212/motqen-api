@@ -21,7 +21,7 @@ import {
   WebhookProcessingError,
   WebhookValidationError,
 } from '../../errors/WebHookError.js';
-import { emitToUser } from '../../socket/socket-emitter.js';
+import emitter from '../../socket/socket-emitter.js';
 import { notificationService } from '../../state.js';
 
 type WebhookStep = 'VALIDATION' | 'TX_ATTEMPT' | 'TX_PAYMENT' | 'TX_ORDER_STATUS' | 'TX_EFFECTS';
@@ -253,7 +253,7 @@ export class PaymentService {
   }
 
   private async txSideEffects(ctx: WebhookContext) {
-    emitToUser(ctx.userId, 'OrderPaid', {
+    emitter.ToUser(ctx.userId, 'OrderPaid', {
       orderId: ctx.orderId,
       paymentId: ctx.paymentId,
       escrowId: ctx.escrowId,

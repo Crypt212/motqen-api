@@ -20,7 +20,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:reset": "npx prisma migrate reset --force",
-    "seed": "npm run seed:users && npm run seed:conversations && npm run seed:governments && npm run seed:specializations && npm run seed:chat",
+    "seed": "npm run seed:governments && npm run seed:specializations && npm run seed:users && npm run seed:conversations && npm run seed:chat",
     "seed:users": "npx tsx seeds/samples/createTestUsers.js",
     "seed:conversations": "npx tsx ./seeds/samples/createConversations.js",
     "seed:chat": "npx tsx seeds/samples/createChatSeeds.js",

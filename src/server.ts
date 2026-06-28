@@ -19,7 +19,7 @@ const startServer = async () => {
     // Initialize Socket.IO (connects own Redis pub/sub clients internally)
     await initSocketServer(httpServer);
 
-    await connectWhatsApp();
+    // await connectWhatsApp();
     httpServer.listen(environment.backend.port, () =>
       logger.info(`✅ Listening on port ${environment.backend.port}`)
     );
