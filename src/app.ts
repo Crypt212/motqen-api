@@ -1,8 +1,6 @@
 import express from 'express';
-import helmetExport from 'helmet';
+import helmet from 'helmet';
 import cors from 'cors';
-import type { RequestHandler } from 'express';
-import type { HelmetOptions } from 'helmet';
 import v1Router from './routes/v1/api.js';
 import errorHandler from './middlewares/errorMiddleware.js';
 import { ipRateLimiter } from './middlewares/rateLimitMiddleware.js';
@@ -12,8 +10,6 @@ import swaggerUi from 'swagger-ui-express';
 import { verifyDeviceId } from './middlewares/authMiddleware.js';
 import { asyncHandler } from './types/asyncHandler.js';
 import { generateOpenAPISpec } from './libs/openapi.js';
-
-const helmet = helmetExport as unknown as (options?: HelmetOptions) => RequestHandler;
 
 const initApp = async () => {
   const app = express();
