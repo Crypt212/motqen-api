@@ -374,14 +374,14 @@ export default class AuthService extends Service {
     }
 
     try {
-      const hashedOTP = hashOTP(OTP);
-
       if (!OTP)
         throw new AppError(
           'OTP is not provided',
           422,
           new OTPErrorDetails({ type: 'FAILED_ATTEMPT' })
         );
+
+      const hashedOTP = hashOTP(OTP);
 
       const otp = await this.otpCache.getOtp(phoneNumber, method);
 

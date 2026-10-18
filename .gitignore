@@ -17,3 +17,5 @@ src/generated
 specs
 
 PLAN.md
+.vercel
+.env*

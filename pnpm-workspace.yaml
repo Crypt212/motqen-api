@@ -1,0 +1,7 @@
+allowBuilds:
+  '@prisma/engines': false
+  '@scarf/scarf': false
+  '@whiskeysockets/baileys': false
+  esbuild: false
+  prisma: false
+  protobufjs: false
