@@ -65,22 +65,11 @@ async function cancelExpiredUnpaidOrders(expiryMs: number): Promise<void> {
   ]);
 }
 
-
-async function main(): Promise<void> {
-  logger.info('[order-timeout] Starting cron...');
+/**
+ * Runs both timeout sweeps sequentially. Called by the BullMQ cron worker
+ * (see src/workers/cron.worker.ts) on the 'order-timeout' job.
+ */
+export async function runOrderTimeout(): Promise<void> {
   await freeAgreedUnpaidOrders(paymentExpiryMs);
   await cancelExpiredUnpaidOrders(expiryMs);
-  setInterval(() => {
-    Promise.all([
-      freeAgreedUnpaidOrders(paymentExpiryMs),
-      cancelExpiredUnpaidOrders(expiryMs),
-    ]).catch((err: unknown) => {
-      logger.error('[order-timeout] Background execution error', { error: err });
-    });
-  }, environment.cron.intervalMs);
 }
-
-main().catch((err) => {
-  logger.error('[order-timeout] Fatal error', err);
-  process.exit(1);
-});
