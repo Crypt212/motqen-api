@@ -56,15 +56,6 @@ export default class ChatEvents extends Events {
           type,
         });
 
-        contentdetection
-          .add('scan', { messageId: message.id }, { jobId: `scan_${message.id}` })
-          .catch((err) =>
-            logger.error('Failed to enqueue content detection', {
-              messageId: message.id,
-              error: err instanceof Error ? err.message : err,
-            }),
-          );
-
         if (partnerIds.length > 0) {
           for (const partnerId of partnerIds) {
             const online = await this.chatService.presence.isOnline({ userId: partnerId });
