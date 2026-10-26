@@ -22,6 +22,17 @@ export const notificationQueue = new Queue<NotificationJob>('notifications', {
   },
 });
 
+export type ContentDetectionJob = { messageId: string };
+
+export const contentdetection = new Queue<ContentDetectionJob>('contentdetection', {
+  connection,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+    removeOnComplete: 500,
+    removeOnFail: 2000,
+  },
+});
 /**
  * Queue for long-running housekeeping jobs (was process-local crons).
  * Jobs are created by the job schedulers registered in src/cron/scheduler.ts

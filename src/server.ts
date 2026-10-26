@@ -7,10 +7,10 @@ import { logger } from './libs/winston.js';
 import { initSocketServer } from './socket/socketManager.js';
 import { connectWhatsApp } from './providers/whatsapp.js';
 import { notificationWorker } from './workers/notifications.worker.js';
-import { notificationQueue, cronQueue } from './queue/queue.js';
+import { notificationQueue, cronQueue, contentdetection } from './queue/queue.js';
 import { cronWorker } from './workers/cron.worker.js';
+import { contentDetectionWorker } from './workers/contentDetection.js';
 import { registerCronJobs } from './cron/scheduler.js';
-
 const startServer = async () => {
   try {
     await redisClient.connect();
@@ -25,6 +25,7 @@ const startServer = async () => {
 
     // Start the BullMQ notification worker in-process (no separate process yet)
     logger.info('✅ Notification worker started');
+    logger.info('✅ Content detection worker started');
 
     // Cron housekeeping moved to BullMQ job schedulers (replaces setInterval crons)
     await registerCronJobs().catch((error) => {
@@ -43,7 +44,7 @@ const startServer = async () => {
 
 let shuttingDown = false;
 
-const shutdown = async (signal: string) => {
+const shutdown = async (signal: string): Promise<void> => {
   if (shuttingDown) return;
   shuttingDown = true;
 
@@ -52,7 +53,9 @@ const shutdown = async (signal: string) => {
     // Stop the workers first so they stop claiming new jobs, then close the queues.
     await cronWorker.close();
     await notificationWorker.close();
+    await contentDetectionWorker.close();
     await notificationQueue.close();
+    await contentdetection.close();
     await cronQueue.close();
   } catch (error) {
     logger.error('❌ Error during shutdown', error);

@@ -5,7 +5,7 @@ const { combine, timestamp, errors, json } = winston.format;
 
 const format =
   environment.nodeEnv === 'production'
-    ? json()
+    ? combine(errors({ stack: true }), json())
     : combine(timestamp(), errors({ stack: true }), json());
 export const logger = winston.createLogger({
   level: environment.logging.level || 'info',

@@ -13,6 +13,23 @@ import { sendMessage } from './whatsapp.js';
 const { accountSid, authToken, virtualNumber } = environment.twilio;
 
 /**
+ * Twilio client is created lazily and only when credentials are present:
+ * the SDK validates credential FORMAT at construction and would otherwise
+ * crash every process that imports this module (server startup, workers,
+ * test scripts) even when SMS sending is unused.
+ */
+let twilioClient: ReturnType<typeof twilio> | undefined;
+function getClient(): ReturnType<typeof twilio> {
+  if (!twilioClient) {
+    if (!accountSid || !authToken || !accountSid.startsWith('AC')) {
+      throw new Error('Twilio credentials are missing or invalid — cannot send SMS');
+    }
+    twilioClient = twilio(accountSid, authToken);
+  }
+  return twilioClient;
+}
+
+/**
  * Sends an OTP to the given phone number via the specified method
  * @throws {AppError} If the delivery method is invalid or sending fails
  * @example
@@ -30,9 +47,8 @@ export default async function (method: Method, OTP: string, phoneNumber: string)
   }
 }
 
-const client = twilio(accountSid, authToken);
-
 export async function sendViaSMS(message: string, to: string) {
+  const client = getClient();
   try {
     const messageResponse = await client.messages.create({
       body: message,

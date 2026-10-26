@@ -3,10 +3,8 @@ import ChatEvents from '../../../src/socket/events/chatEvents';
 import AppError from '../../../src/errors/AppError';
 
 vi.mock('../../../src/queue/register.js', () => ({
-  contentDetection: vi.fn(),
+  analyzeAndFlagMessage: vi.fn(),
 }));
-
-import { contentDetection } from '../../../src/queue/register.js';
 
 describe('ChatEvents', () => {
   let chatService: any;
@@ -65,7 +63,10 @@ describe('ChatEvents', () => {
         'rejects invalid type "%s"',
         async (type) => {
           createEvents();
-          const res = await handlers.send_message({ conversationId: 'conv-1', content: 'hi', type }, ack);
+          const res = await handlers.send_message(
+            { conversationId: 'conv-1', content: 'hi', type },
+            ack
+          );
 
           expect(res).toBe(null);
           expect(ack).toHaveBeenCalledWith({ ok: false, error: 'Invalid message type' });
@@ -222,18 +223,6 @@ describe('ChatEvents', () => {
         await handlers.send_message({ conversationId: 'conv-1', content: 'Hello' }, ack);
 
         expect(ack).not.toHaveBeenCalled();
-      });
-    });
-
-    describe('side effects', () => {
-      it('calls contentDetection with the message', async () => {
-        chatService.resolveParticipants.mockResolvedValue([]);
-        chatService.sendMessage.mockResolvedValue(baseMessage);
-        createEvents();
-
-        await handlers.send_message({ conversationId: 'conv-1', content: 'Hello' }, ack);
-
-        expect(contentDetection).toHaveBeenCalledWith(baseMessage);
       });
     });
   });

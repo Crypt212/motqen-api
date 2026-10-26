@@ -23,6 +23,8 @@ import {
 import RepositoryError, { RepositoryErrorType } from '../errors/RepositoryError.js';
 import { PaginatedResultMeta, PaginationOptions, SortOptions } from '../types/query.js';
 import IChatService from './interfaces/IChatService.js';
+import { contentdetection } from '../queue/queue.js';
+import { logger } from 'src/libs/winston.js';
 
 export type ConversationWithMeta = {
   id: string;
@@ -305,6 +307,14 @@ export default class ChatService extends Service implements IChatService {
         type: type || 'TEXT',
       });
 
+      contentdetection
+        .add('scan', { messageId: message.id }, { jobId: `scan_${message.id}` })
+        .catch((err) =>
+          logger.error('Failed to enqueue content detection', {
+            messageId: message.id,
+            error: err.message,
+          })
+        );
       await this.syncCountersCache(
         conversationId,
         senderId,

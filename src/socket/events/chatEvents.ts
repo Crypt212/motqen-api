@@ -2,11 +2,10 @@ import Events from './Events.js';
 import { IDType } from '../../repositories/interfaces/Repository.js';
 import { Message } from '../../domain/conversation.entity.js';
 import { logger } from '../../libs/winston.js';
-import { contentDetection } from '../../queue/register.js';
 import IChatService from '../../services/interfaces/IChatService.js';
 import INotificationService from '../../services/interfaces/INotificationService.js';
 import ISocketemitter from '../interfaces/ISocketEmitter.js';
-
+import { contentdetection } from '../../queue/queue.js';
 type AckFn = (response: {
   ok: boolean;
   error?: string;
@@ -57,7 +56,14 @@ export default class ChatEvents extends Events {
           type,
         });
 
-        contentDetection(message);
+        contentdetection
+          .add('scan', { messageId: message.id }, { jobId: `scan_${message.id}` })
+          .catch((err) =>
+            logger.error('Failed to enqueue content detection', {
+              messageId: message.id,
+              error: err instanceof Error ? err.message : err,
+            }),
+          );
 
         if (partnerIds.length > 0) {
           for (const partnerId of partnerIds) {
