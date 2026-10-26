@@ -1,20 +1,20 @@
 import { logger } from '../libs/winston.js';
 import prisma from '../libs/database.js';
-import { NegotiationStatus, OrderStatus, ProposalStatus } from 'src/generated/prisma/enums.js';
-import environment from 'src/configs/environment.js';
+import { NegotiationStatus, OrderStatus, ProposalStatus } from '../generated/prisma/enums.js';
+import environment from '../configs/environment.js';
 
-const payingPeriodSeconds = environment.cron.order.paymentExpiryIntervalHours;
-const expirationTimeoutSeconds = environment.cron.order.expiryIntervalHours;
+const paymentExpiryMs = environment.cron.order.paymentExpiryMs;
+const expiryMs = environment.cron.order.expiryMs;
 
 /**
  * turns the state of unpaid orders which has the state "PRICE_AGREED" and has passed the timeout period, back to "PENDING"
  */
-async function freeAgreedUnpaidOrders(timeoutSeconds: number): Promise<void> {
+async function freeAgreedUnpaidOrders(paymentExpiryMs: number): Promise<void> {
 
   // find all negotiations that have been accepted by both parties but have not been paid after the timeout period
   const negotiations = await prisma.negotiation.findMany({
     where: {
-      updatedAt: { lt: new Date(Date.now() - timeoutSeconds * 1000) },
+      updatedAt: { lt: new Date(Date.now() - paymentExpiryMs) },
       status: NegotiationStatus.ACCEPTED,
       order: { orderStatus: OrderStatus.PRICE_AGREED } // order still not paid
     }
@@ -40,12 +40,12 @@ async function freeAgreedUnpaidOrders(timeoutSeconds: number): Promise<void> {
 }
 
 /**
- * cancels unpaid orders for which start date has passed by the amount of timeoutSeconds
+ * cancels unpaid orders for which start date has passed by the amount of expiryMs
  */
-async function cancelExpiredUnpaidOrders(expirationTimeoutSeconds: number): Promise<void> {
+async function cancelExpiredUnpaidOrders(expiryMs: number): Promise<void> {
   const orders = await prisma.order.findMany({
     where: {
-      startDate: { lt: new Date(Date.now() - expirationTimeoutSeconds * 1000) },
+      startDate: { lt: new Date(Date.now() - expiryMs) },
       orderStatus: { in: [OrderStatus.PENDING, OrderStatus.PRICE_AGREED] }
     }
   });
@@ -58,20 +58,19 @@ async function cancelExpiredUnpaidOrders(expirationTimeoutSeconds: number): Prom
   await prisma.workerOccupiedTimeSlot.deleteMany({ where: { orderId: { in: orderIds } } });
 }
 
-// ─── Entry point ────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
   logger.info('[order-timeout] Starting cron...');
-  await freeAgreedUnpaidOrders(payingPeriodSeconds);
-  await cancelExpiredUnpaidOrders(expirationTimeoutSeconds);
+  await freeAgreedUnpaidOrders(paymentExpiryMs);
+  await cancelExpiredUnpaidOrders(expiryMs);
   setInterval(() => {
     Promise.all([
-      freeAgreedUnpaidOrders(payingPeriodSeconds),
-      cancelExpiredUnpaidOrders(expirationTimeoutSeconds),
+      freeAgreedUnpaidOrders(paymentExpiryMs),
+      cancelExpiredUnpaidOrders(expiryMs),
     ]).catch((err: unknown) => {
       logger.error('[order-timeout] Background execution error', { error: err });
     });
-  }, environment.cron.intervalSeconds);
+  }, environment.cron.intervalMs);
 }
 
 main().catch((err) => {

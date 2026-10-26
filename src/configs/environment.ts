@@ -101,11 +101,13 @@ const cron = {
   escrowReleaseInterval: process.env.ESCROW_RELEASE_CRON_INTERVAL || '*/5 * * * *',
 
   order: {
-    expiryIntervalHours: Number(process.env.CRON_ORDER_TIMEOUT_EXPIRATION_TIMEOUT_HOURS) || 24,
-    paymentExpiryIntervalHours: Number(process.env.CRON_ORDER_TIMEOUT_PAYMENT_PERIOD_HOURS) || 24,
+    // Env vars are hours; exposed as ms so callers can use them directly
+    // (they used to be passed to Date.now() math and setInterval as ms).
+    expiryMs: (Number(process.env.CRON_ORDER_TIMEOUT_EXPIRATION_TIMEOUT_HOURS) || 24) * 60 * 60 * 1000,
+    paymentExpiryMs: (Number(process.env.CRON_ORDER_TIMEOUT_PAYMENT_PERIOD_HOURS) || 24) * 60 * 60 * 1000,
   },
 
-  intervalSeconds: Number(process.env.CRON_JOB_INTERVAL_SECONDS) || 60 * 60 * 3,
+  intervalMs: (Number(process.env.CRON_JOB_INTERVAL_SECONDS) || 60 * 60 * 3) * 1000,
 };
 
 const firebase = {
