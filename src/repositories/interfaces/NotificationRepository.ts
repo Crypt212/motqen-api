@@ -2,6 +2,7 @@ import type { Notification, NotificationCreateInput} from '../../domain/notifica
 
 export default interface INotificationRepository {
   create(data: NotificationCreateInput): Promise<Notification>;
+  findById(id: string): Promise<Notification | null>;
   findByUserId(userId: string, limit?: number, cursor?: string): Promise<{ notifications: Notification[]; nextCursor: string | null }>;
   findUnsentSince(since?: Date, limit?: number): Promise<Notification[]>;
   markSent(notificationId: string): Promise<void>;

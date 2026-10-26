@@ -36,6 +36,22 @@ export class NotificationRepository implements INotificationRepository {
     return result;
   }
 
+  async findById(id: string): Promise<Notification | null> {
+    const row = await this.prisma.notification.findUnique({ where: { id } });
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      userId: row.userId,
+      type: row.type as unknown as NotificationType,
+      title: row.title,
+      body: row.body,
+      data: row.data as unknown as NotificationData,
+      isSent: row.isSent,
+      createdAt: row.createdAt,
+    };
+  }
+
   async findByUserId(userId: string, limit: number = 20, cursor?: string): Promise<{ notifications: Notification[]; nextCursor: string | null }> {
     const take = limit + 1;
     const rows = await this.prisma.notification.findMany({

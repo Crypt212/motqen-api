@@ -8,11 +8,11 @@ import type IWorkerProfileRepository from '../repositories/interfaces/WorkerRepo
 import type { NotificationType, BroadcastTargetRole } from '../generated/prisma/client.js';
 import type {
   NotificationEventContext,
-  NotificationPayload,
   NotificationData,
   Notification,
 } from '../domain/notification.entity.js';
 import { mapEventToNotification } from '../utils/notificationMapper.js';
+import { notificationQueue } from '../queue/queue.js';
 import { UserState } from '../types/asyncHandler.js';
 
 const UNREAD_COUNT_TTL = 300;
@@ -26,7 +26,7 @@ export class NotificationService {
     private sessionRepo: ISessionRepository,
     private userRepo: IUserRepository,
     private firebaseProvider: IFirebaseProvider,
-    private workerProfileRepository: IWorkerProfileRepository,
+    private workerProfileRepository: IWorkerProfileRepository
   ) {}
 
   async buildUserTopics(state: UserState): Promise<string[]> {
@@ -50,7 +50,7 @@ export class NotificationService {
   async notify(
     userId: string,
     event: NotificationEventContext,
-    saveNotification: boolean = true,
+    saveNotification: boolean = true
   ): Promise<void> {
     const payload = mapEventToNotification(event);
 
@@ -72,13 +72,35 @@ export class NotificationService {
 
       await this.redis.del(UNREAD_COUNT_KEY(userId));
 
-      this.sendFCMToUser(userId, payload, created.id).catch((err) => {
-        logger.error('FCM send failed (fire-and-forget)', { userId, error: err });
-      });
+      notificationQueue
+        .add(
+          'push',
+          { kind: 'saved', notificationId: created.id, userId },
+          { jobId: `notif_${created.id}` } // no ':' — bullmq 6 forbids it in custom ids
+        )
+        .catch((err) => {
+          logger.error('Failed to enqueue saved notification job', {
+            notificationId: created.id,
+            userId,
+            error: err,
+          });
+        });
     } else {
-      this.sendFCMToUser(userId, payload, null).catch((err) => {
-        logger.error('FCM send failed (fire-and-forget)', { userId, error: err });
-      });
+      // Not persisted: carry the full serialized payload in the job itself.
+      notificationQueue
+        .add('push', {
+          kind: 'transient',
+          userId,
+          title: payload.title,
+          body: payload.body,
+          data: this.serializeData(payload.data),
+        })
+        .catch((err) => {
+          logger.error('Failed to enqueue transient notification job', {
+            userId,
+            error: err,
+          });
+        });
     }
   }
 
@@ -120,7 +142,7 @@ export class NotificationService {
   async getNotifications(
     userId: string,
     cursor?: string,
-    limit: number = 20,
+    limit: number = 20
   ): Promise<{ notifications: Notification[]; nextCursor: string | null; unreadCount: number }> {
     const result = await this.repo.findByUserId(userId, limit, cursor);
     const unreadCount = await this.getUnreadCount(userId);
@@ -148,7 +170,7 @@ export class NotificationService {
     userId: string,
     deviceId: string,
     topic: string,
-    fcm?: string,
+    fcm?: string
   ): Promise<void> {
     const fcmToken =
       fcm ??
@@ -175,7 +197,7 @@ export class NotificationService {
     userId: string,
     deviceId: string,
     topic: string,
-    fcm?: string,
+    fcm?: string
   ): Promise<void> {
     const fcmToken =
       fcm ??
@@ -200,10 +222,19 @@ export class NotificationService {
 
   // ─── Private methods ──────────────────────────────────────────────────
 
-  private async sendFCMToUser(
+  /**
+   * Send the push via FCM. Runs inside the BullMQ worker, so it must THROW on
+   * retryable failures (BullMQ retries with exponential backoff) and stay silent
+   * on non-retryable ones:
+   *  - Firebase not ready / no valid tokens -> return (nothing to retry)
+   *  - Firebase errors (network, auth, ...) -> rethrow
+   *  - successCount === 0 with only invalid-token failures -> clear tokens, no throw
+   *  - successCount === 0 with any other failure -> throw
+   */
+  async deliverPush(
     userId: string,
-    payload: NotificationPayload,
-    notificationId: string | null,
+    payload: { title: string; body: string; data: NotificationData | Record<string, string> },
+    notificationId: string | null
   ): Promise<void> {
     if (!this.firebaseProvider.isReady()) {
       logger.warn('Firebase not initialized — skipping FCM send', { userId });
@@ -222,6 +253,7 @@ export class NotificationService {
 
     const serializedData = this.serializeData(payload.data);
 
+    // Firebase-level errors (network/auth/...) propagate — BullMQ retries on them.
     const response = await this.firebaseProvider.sendMulticast({
       tokens,
       title: payload.title,
@@ -238,6 +270,12 @@ export class NotificationService {
       'messaging/registration-token-not-registered',
     ];
 
+    const failures = response.responses.filter((resp) => resp.error);
+    const allInvalidToken =
+      response.successCount === 0 &&
+      failures.length > 0 &&
+      failures.every((resp) => invalidCodes.includes(resp.error!.code));
+
     for (let i = 0; i < response.responses.length; i++) {
       const resp = response.responses[i];
       if (resp.error && invalidCodes.includes(resp.error.code)) {
@@ -252,9 +290,20 @@ export class NotificationService {
         }
       }
     }
+
+    if (response.successCount === 0) {
+      if (!allInvalidToken) {
+        const firstError = failures[0]?.error;
+        const reason =
+          firstError?.message ?? firstError?.code ?? 'all FCM tokens failed with unknown error';
+        throw new Error(`FCM multicast failed: ${reason}`);
+      }
+      // All failures were invalid tokens (cleared above); nothing to retry.
+      logger.warn('FCM send failed for all tokens, all invalid — tokens cleared', { userId });
+    }
   }
 
-  private serializeData(data: NotificationData): Record<string, string> {
+  serializeData(data: NotificationData | Record<string, string>): Record<string, string> {
     const result: Record<string, string> = {};
     for (const [key, value] of Object.entries(data)) {
       if (value !== undefined) {

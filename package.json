@@ -51,6 +51,7 @@
     "@socket.io/redis-adapter": "^8.3.0",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "axios": "^1.15.0",
+    "bullmq": "^6.4.2",
     "cloudinary": "^2.9.0",
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",

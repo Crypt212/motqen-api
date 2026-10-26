@@ -1,7 +1,20 @@
 import type {
+  Notification,
   NotificationPayload,
   NotificationEventContext,
 } from '../domain/notification.entity.js';
+
+/**
+ * Rebuild the FCM payload from a stored notification row.
+ */
+export function toPayload(notification: Notification): NotificationPayload {
+  return {
+    type: notification.type,
+    title: notification.title,
+    body: notification.body,
+    data: notification.data,
+  };
+}
 
 export function mapEventToNotification(event: NotificationEventContext): NotificationPayload {
   switch (event.type) {
