@@ -20,6 +20,7 @@ async function freeAgreedUnpaidOrders(paymentExpiryMs: number): Promise<void> {
     }
   })
   const negotiationIds = negotiations.map(n => n.id);
+  if (negotiationIds.length === 0) return;
 
   const orders = await prisma.order.findMany({
     where: {
@@ -32,11 +33,14 @@ async function freeAgreedUnpaidOrders(paymentExpiryMs: number): Promise<void> {
   });
 
   const orderIds = orders.map((o) => o.id);
+  if (orderIds.length === 0) return;
 
-  await prisma.order.updateMany({ where: { id: { in: orderIds } }, data: { orderStatus: OrderStatus.PENDING }, });
-  await prisma.negotiation.updateMany({ where: { id: { in: negotiationIds }, status: NegotiationStatus.ACCEPTED }, data: { status: NegotiationStatus.CANCELLED } });
-  await prisma.proposal.updateMany({ where: { orderId: { in: orderIds } }, data: { status: ProposalStatus.NEGOTIATING } });
-  await prisma.workerOccupiedTimeSlot.deleteMany({ where: { orderId: { in: orderIds } } });
+  await prisma.$transaction([
+    prisma.order.updateMany({ where: { id: { in: orderIds }, orderStatus: OrderStatus.PRICE_AGREED }, data: { orderStatus: OrderStatus.PENDING } }),
+    prisma.negotiation.updateMany({ where: { id: { in: negotiationIds }, status: NegotiationStatus.ACCEPTED }, data: { status: NegotiationStatus.CANCELLED } }),
+    prisma.proposal.updateMany({ where: { orderId: { in: orderIds } }, data: { status: ProposalStatus.NEGOTIATING } }),
+    prisma.workerOccupiedTimeSlot.deleteMany({ where: { orderId: { in: orderIds } } }),
+  ]);
 }
 
 /**
@@ -51,11 +55,14 @@ async function cancelExpiredUnpaidOrders(expiryMs: number): Promise<void> {
   });
 
   const orderIds = orders.map((o) => o.id);
+  if (orderIds.length === 0) return;
 
-  await prisma.order.updateMany({ where: { id: { in: orderIds } }, data: { orderStatus: OrderStatus.CANCELLED }, });
-  await prisma.proposal.updateMany({ where: { orderId: { in: orderIds } }, data: { status: ProposalStatus.DISMISSED } });
-  await prisma.negotiation.updateMany({ where: { orderId: { in: orderIds }, status: NegotiationStatus.ACCEPTED }, data: { status: NegotiationStatus.CANCELLED } });
-  await prisma.workerOccupiedTimeSlot.deleteMany({ where: { orderId: { in: orderIds } } });
+  await prisma.$transaction([
+    prisma.order.updateMany({ where: { id: { in: orderIds }, orderStatus: { in: [OrderStatus.PENDING, OrderStatus.PRICE_AGREED] } }, data: { orderStatus: OrderStatus.CANCELLED } }),
+    prisma.proposal.updateMany({ where: { orderId: { in: orderIds } }, data: { status: ProposalStatus.DISMISSED } }),
+    prisma.negotiation.updateMany({ where: { orderId: { in: orderIds }, status: NegotiationStatus.ACCEPTED }, data: { status: NegotiationStatus.CANCELLED } }),
+    prisma.workerOccupiedTimeSlot.deleteMany({ where: { orderId: { in: orderIds } } }),
+  ]);
 }
 
 
