@@ -18,22 +18,39 @@ const { accountSid, authToken, virtualNumber } = environment.twilio;
  * @example
  * await SendOTPProvider('SMS', '123456', '+201234567890');
  */
-export default async function (method: Method, OTP: string, phoneNumber: string) {
+export default async function(method: Method, OTP: string, phoneNumber: string) {
   if (environment.nodeEnv === 'development') {
     logger.info(`OTP: ${OTP} for ${phoneNumber} via ${method}`);
   }
   if (method === 'SMS') {
-    // await sendViaSMS(`Your OTP is ${OTP}`, phoneNumber);
+    await sendViaSMS(`Your OTP is ${OTP}`, phoneNumber);
   } else if (method === 'WHATSAPP') {
     console.log(`Sending OTP ${OTP} to ${phoneNumber} via WhatsApp`);
     await sendMessage(`2${phoneNumber}`, `Your OTP is ${OTP}`);
   }
 }
 
-const client = twilio(accountSid, authToken);
+let twilioClient;
+
+try {
+  twilioClient = twilio(accountSid, authToken);
+} catch (error) {
+  if (error instanceof Error)
+    logger.error(error.message);
+  else
+    logger.error(error);
+  twilioClient = undefined;
+}
+
+const client = twilioClient;
 
 export async function sendViaSMS(message: string, to: string) {
   try {
+    if (!client) {
+      logger.warn("No SMS client! Failed to send SMS.");
+      return { success: false };
+    }
+
     const messageResponse = await client.messages.create({
       body: message,
       from: virtualNumber,
@@ -42,11 +59,8 @@ export async function sendViaSMS(message: string, to: string) {
 
     return { success: true, messageId: messageResponse.sid };
   } catch (error) {
-    if (error instanceof Error) {
+    if (error instanceof Error)
       throw new AppError(error.message, 500);
-    } else if (error instanceof AppError) {
-      throw error;
-    }
     throw error;
   }
 }
