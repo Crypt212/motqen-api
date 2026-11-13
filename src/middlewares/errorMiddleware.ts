@@ -12,7 +12,7 @@ const errorHandler: ErrorRequestHandler = function (
   res: Response,
   __: NextFunction
 ) {
-  logger.info(err);
+  logger.error(err);
 
   if (!(err instanceof Error)) {
     return res.status(500).json({
